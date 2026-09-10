@@ -16,7 +16,7 @@ export type ConnectionStatus = {
 };
 
 export type ConnectionSink = {
-  onMessage(message: unknown, receivedAtMs: number, bootstrap: boolean): void;
+  onMessage(message: unknown, receivedAtMs: number, bootstrap: boolean, serverOffsetMs?: number): void;
   onStatus(status: ConnectionStatus): void;
 };
 
@@ -404,6 +404,7 @@ export function createConnection(
         { code: 'DuelStarted', gameId: snapshot.gameId ?? gameId, duel: { state: snapshot } },
         receivedAtMs,
         true,
+        status.serverOffsetMs,
       );
       status.lastUpdateMs = receivedAtMs;
       lobbyRetryAttempt = 0;
@@ -487,7 +488,7 @@ export function createConnection(
       const isReconnectSnapshot =
         reconnectSnapshotPending && isRecord(message) && message.code === 'DuelStarted';
       if (isReconnectSnapshot) reconnectSnapshotPending = false;
-      sink.onMessage(message, receivedAtMs, isReconnectSnapshot);
+      sink.onMessage(message, receivedAtMs, isReconnectSnapshot, status.serverOffsetMs);
       publish({ lastUpdateMs: receivedAtMs });
     });
 

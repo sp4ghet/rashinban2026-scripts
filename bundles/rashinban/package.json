@@ -6,12 +6,24 @@
     "compatibleRange": "^2.0.0",
     "graphics": [
       {
+        "file": "presenter.html",
+        "width": 1920,
+        "height": 1080
+      },
+      {
         "file": "dummy.html",
         "width": 1920,
         "height": 1080
       }
     ],
     "dashboardPanels": [
+      {
+        "name": "presenter-control",
+        "title": "Duels Presenter",
+        "file": "presenter-control.html",
+        "width": 3,
+        "headerColor": "#335f9b"
+      },
       {
         "name": "dummy-control",
         "title": "Dummy Overlay",

@@ -1,8 +1,10 @@
 import type NodeCG from "@nodecg/types";
 
 import { REPLICANTS } from "../types/replicants";
+import { registerPresenter } from './presenter/register.ts';
 
 export = (nodecg: NodeCG.ServerAPI) => {
+  registerPresenter(nodecg);
   const lowerThirdVisible = nodecg.Replicant<boolean>(
     REPLICANTS.lowerThirdVisible,
     { defaultValue: false },

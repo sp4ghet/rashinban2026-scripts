@@ -157,6 +157,26 @@ async function flush(): Promise<void> {
   await waitForImmediate();
 }
 
+test('bootstrap delivers the latest server offset before a status publication', async () => {
+  const responses = [profile(), party('lobby-one'), phonebook('lobby-one'),
+    json({ gameId: 'lobby-one' }, { 'X-ServerTime': '1970-01-01T00:00:06.000Z' })];
+  let delivered: number | undefined;
+  let published = 0;
+  const connection = createConnection(
+    { cookie: 'test-only', partyId: 'p', clientVersion: 'fixture' },
+    {
+      onMessage(_value, _at, _bootstrap, offset) { delivered = offset; },
+      onStatus(status) { published = status.serverOffsetMs; },
+    },
+    { fetch: async () => responses.shift()!, openSocket: () => new FakeSocket(), now: () => 1000, schedule: () => () => {} },
+  );
+  connection.start();
+  await flush();
+  assert.equal(delivered, 5000);
+  assert.equal(published, 0);
+  connection.stop();
+});
+
 test('authentication failure stops discovery', async () => {
   let status: ConnectionStatus | undefined;
   const pending: Array<() => void> = [];
