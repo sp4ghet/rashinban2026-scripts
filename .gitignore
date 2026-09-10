@@ -5,6 +5,8 @@ node_modules/
 /db/
 /logs/
 /assets/
+/cfg/rashinban.json
+/.secrets/
 
 # Build output (regenerate with `npm run build`)
 bundles/rashinban/graphics/*.js
