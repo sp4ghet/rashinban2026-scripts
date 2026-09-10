@@ -2,7 +2,7 @@ import { REPLICANTS, type RendererStatus, type PresenterClients } from '../types
 import type { DuelState, SeriesState, Timeline, Views } from '../types/presenter.ts';
 import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
 import { project } from '../presenter/projection.ts';
-import { layoutKind } from './presenter/layout.ts';
+import { layoutKind, multiplierLabel, distanceLabel } from './presenter/layout.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
 import type { GameRenderer, RenderFrame } from './presenter/renderer.ts';
 import { clientRole, createPresenterClient } from './presenter/client.ts';
@@ -92,7 +92,9 @@ function frame() {
     element('transition').hidden = visible.phase !== 'results-transition';
     write('round-number', timing.round === null ? '—' : String(timing.round));
     write('mode', state?.mode ?? '—');
-    write('multiplier', `×${state?.rounds.find(round => round.number === timing.round)?.multiplier ?? 1}`);
+    const multiplier = multiplierLabel(state ?? null, timing, { left: match.left.playerId, right: match.right.playerId });
+    write('multiplier', multiplier.replace(' · ', '\n'));
+    element('multiplier').classList.toggle('split', multiplier.startsWith('L '));
     for (const side of ['left', 'right'] as const) {
       const competitor = match[side];
       const player = visible.players.find(item => item.id === competitor.playerId);
@@ -106,7 +108,7 @@ function frame() {
       element(`${side}-lock`).hidden = visible.phase !== 'live' || !player?.locked;
       write(`${side}-score`, player?.score == null ? '—' : String(player.score));
       const distance = player?.distanceM;
-      write(`${side}-distance`, distance == null ? '—' : distance < 1000 ? `${Math.round(distance)} m` : `${(distance / 1000).toLocaleString('en-US', { maximumFractionDigits: 1 })} km`);
+      write(`${side}-distance`, distanceLabel(distance, player?.score));
     }
     element('timer').hidden = visible.remainingMs === null;
     element('timer').classList.toggle('urgent', timing.music === 'urgent');

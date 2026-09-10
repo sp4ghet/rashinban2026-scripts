@@ -1,5 +1,7 @@
 node_modules/
 .worktrees/
+/.superpowers/sdd/
+/artifacts/presenter-validation/
 
 # NodeCG runtime state (replicant db, logs, uploaded assets)
 /db/

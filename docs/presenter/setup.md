@@ -26,7 +26,52 @@ Paste only the `_ncfa` cookie value between the quotes. The `.secrets/` director
 
 As an alternative, set the `GEOGUESSR_NCFA` environment variable for the NodeCG process. That variable takes precedence over `cookieFile`.
 
-Restart NodeCG after changing either config. Authentication failures stop discovery without retrying; update the secret and restart or reconnect after the cookie expires. Network and game-server interruptions retry with bounded backoff while the extension continues polling the party for lobby changes.
+Restart NodeCG after changing public config. Reconnect reloads the server-only secret file, so a replacement cookie does not require a process restart. If `GEOGUESSR_NCFA` is set, update that process environment and restart because it takes precedence over the file. Authentication failures stop discovery without retrying. Network and game-server interruptions retry with bounded backoff while the extension continues polling the party for lobby changes.
+
+## Operator startup and recovery
+
+Run `npm run build` and `npm start`, then open `http://localhost:9090/` and the
+**Duels Presenter** panel. Add the program and audio URLs from [OBS setup](obs.md).
+Use [media selection](media.md) to load assets, then verify readiness and the
+program/audio owner before showing the output.
+
+Set public `presenter.input` to `live` or `replay`, then restart NodeCG. Replay
+never opens a live spectator connection. In replay mode, choose Full duel,
+Manual rounds, Maximum round time, or Aborted game and click **Restart selected
+replay**. Live party controls are hidden and rejected by the server in replay;
+replay fixture requests are likewise rejected in live mode.
+
+In live mode, enter a **Live party ID** and click **Reconnect spectator**.
+Blank or whitespace selects automatic active-party discovery. IDs accept
+letters, digits, underscores and hyphens, up to 128 characters. Invalid values
+are rejected before stopping the current connection. The panel shows selected,
+configured-default and connected party identities separately; status updates
+do not overwrite an unsaved draft. Selection is a session override. A reconnect
+request without a selector retains it; a NodeCG restart restores the public
+config default.
+
+Enter competitor names/handles and wins, map the GeoGuessr player IDs to left
+and right, then **Apply series**. **Swap sides** swaps the draft; apply it to
+publish. Wins are integers 0–2 and never increment from duel results. To reset
+a series, enter new identities/mappings and set both wins to zero, then apply.
+New lobbies and NodeCG restarts preserve the saved series; remap player IDs
+when needed. Unequal damage multipliers are labeled L/R in the center and
+follow this mapping, including the multiplier of the displayed result round.
+
+Choose **Chroma** or **Rendered** and green or magenta, then **Apply
+presentation**. Change the corresponding OBS regional filters/composition too.
+Rendered view failures preserve the scoreboard and cameras; chroma provides
+the fallback for both complete player views. The rendered results map still
+requires a valid Google key.
+
+Keep game control in GeoGuessr: start the next round manually there. During
+data loss, the last accepted state remains visible and connection status
+reports stale/reconnecting. A timer reaching zero does not invent a result.
+Reconnection replaces state without replaying historical celebrations; a new
+round cancels an unfinished old effect. Host abort shows **GAME ABORTED** and
+does not increment series wins. A new lobby preserves wins while replacing
+duel state. For audio failures, use the local activation and ownership checks
+in [OBS setup](obs.md).
 
 ## Google player views and results map
 

@@ -26,6 +26,24 @@ npm run dev     # esbuild watch + NodeCG together
 Other scripts: `npm run build` (one-shot build), `npm start` (NodeCG only,
 requires a prior build), `npm run typecheck`.
 
+## Duels presenter
+
+The custom 1v1 presenter supports MOVE, NM and NMPZ, whole-feed chroma or
+rendered views, manual BO3 scores, round results, 5K celebrations and authored
+music/cue assets. Start rounds in GeoGuessr. Replay fixtures work without a
+live cookie; rendered Google imagery and live spectator acceptance require
+your credentials.
+
+- [Operator setup and recovery](docs/presenter/setup.md)
+- [Media and soundtrack ownership](docs/presenter/media.md)
+- [OBS rectangles, regional keying and audio](docs/presenter/obs.md)
+- [Validation evidence and outstanding event checks](docs/presenter/validation.md)
+
+Program: `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program`.
+Separate audio: `http://localhost:9090/bundles/rashinban/graphics/presenter-audio.html?role=audio`.
+Use `?role=preview` for silent graphic inspection. The dashboard includes
+party selection/reconnect, side mapping, media, mute and output-mode controls.
+
 ## Layout
 
 - `bundles/rashinban/` — the NodeCG bundle. TypeScript sources live in

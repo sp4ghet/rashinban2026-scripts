@@ -159,6 +159,10 @@ test('presenter boots isolated replay and validates HTTP edits before publishing
     assert.ok(skippedEffects > 0);
     assert.deepEqual(reps.get('presenterSeries')?.value, series);
     assert.equal((await post('reconnect', { fixture: '../../.secrets/geoguessr.json' })).status, 400);
+    const replayBefore = reps.get('presenterTimeline')!.value;
+    assert.equal((await post('reconnect', { partyId: 'another-party' })).status, 400);
+    assert.equal((await post('reconnect', { partyId: '' })).status, 400);
+    assert.equal(reps.get('presenterTimeline')!.value, replayBefore);
     assert.equal((await post('reconnect', { fixture: 'gs2-ws-full-duel-sequence-aborted.json' })).status, 200);
     // Drain real coordinator/replay callbacks on a controlled clock, preserving their actual boundaries.
     for (let i = 0; i < 10000; i++) {
@@ -269,4 +273,35 @@ test('live reconnect bootstraps duplicate versions and terminal results survive 
     if (previousSecret === undefined) delete process.env.GEOGUESSR_NCFA;
     else process.env.GEOGUESSR_NCFA = previousSecret;
   }
+});
+
+test('live party selector validates before stopping, supports automatic discovery, and retains session selection', async () => {
+  const reps = new Map<string, any>(); const listeners = new Map<string, Function>();
+  const urls: string[] = []; let stops = 0;
+  const previousSecret = process.env.GEOGUESSR_NCFA; process.env.GEOGUESSR_NCFA = 'test-only-in-memory';
+  const transport: ConnectionDeps = {
+    async fetch(url) { urls.push(String(url)); return new Response(JSON.stringify(String(url).includes('/profiles/') ? { user: { id: 'spectator' } } : { partyId: 'observed-party', lobbyId: null })); },
+    now: () => 1000, schedule() { return () => { stops++; }; },
+    openSocket() { throw Error('No lobby'); },
+  };
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  const reconnect = (body?: unknown) => { let result: any; listeners.get('presenter:control')!({ action: 'reconnect', body }, (err: unknown, value: unknown) => { result = err ? 'rejected' : value; }); return result; };
+  try {
+    registerPresenter({ bundleConfig: { presenter: { input: 'live', partyId: 'configured-party', clientVersion: 'fixture' } },
+      Replicant(name: string, opts: any) { const rep = { value: opts.defaultValue }; reps.set(name, rep); return rep; },
+      Router: express.Router, mount() {}, listenFor: (name: string, fn: Function) => listeners.set(name, fn),
+    } as unknown as NodeCG.ServerAPI, { now: () => 1000, schedule: () => () => {}, connection: transport });
+    await flush(); assert.ok(urls.some(url => url.endsWith('/configured-party')));
+    const before = reps.get('presenterConnection').value; const stoppedBefore = stops;
+    for (const partyId of ['../bad', 'bad party', 'x'.repeat(129), 42, null]) assert.equal(reconnect({ partyId }), 'rejected');
+    assert.equal(reconnect({ fixture: 'gs2-ws-full-duel-sequence.json' }), 'rejected');
+    assert.equal(stops, stoppedBefore); assert.equal(reps.get('presenterConnection').value, before);
+    assert.notEqual(reconnect({ partyId: 'selected_party-2' }), 'rejected'); await flush();
+    assert.ok(urls.at(-1)!.endsWith('/selected_party-2'));
+    assert.equal(reps.get('presenterConnection').value.selectedPartyId, 'selected_party-2');
+    assert.notEqual(reconnect(), 'rejected'); await flush(); assert.ok(urls.at(-1)!.endsWith('/selected_party-2'));
+    assert.notEqual(reconnect({ partyId: '   ' }), 'rejected'); await flush(); assert.ok(urls.at(-1)!.endsWith('/active'));
+    assert.equal(reps.get('presenterConnection').value.selectedPartyId, null);
+    assert.equal(reps.get('presenterConnection').value.configuredPartyId, 'configured-party');
+  } finally { if (previousSecret === undefined) delete process.env.GEOGUESSR_NCFA; else process.env.GEOGUESSR_NCFA = previousSecret; }
 });

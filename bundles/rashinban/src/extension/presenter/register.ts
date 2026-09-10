@@ -30,6 +30,8 @@ function record(input: unknown): Record<string, unknown> {
 export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock): void {
   const config = (nodecg.bundleConfig as { presenter?: Record<string, unknown> }).presenter ?? {};
   const input = config.input === 'replay' ? 'replay' : 'live';
+  const configuredPartyId = typeof config.partyId === 'string' ? config.partyId.trim() || null : null;
+  let selectedPartyId = configuredPartyId;
   let fixture: unknown = config.replayFixture ?? REPLAY_FIXTURES[0];
   const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings, { defaultValue: structuredClone(DEFAULT_SETTINGS), persistent: true });
   const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia, { defaultValue: structuredClone(EMPTY_MEDIA), persistent: true });
@@ -42,6 +44,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   const connection = nodecg.Replicant<PresenterConnection>(REPLICANTS.presenterConnection, { persistent: false, defaultValue: {
     state: 'disconnected', partyId: null, gameId: null, lastUpdateMs: null, error: null, serverOffsetMs: 0,
     input, replayFixture: input === 'replay' && typeof fixture === 'string' ? fixture : null, warnings: [],
+    configuredPartyId, selectedPartyId,
   } });
   const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel, { persistent: false, defaultValue: null });
   const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRenderer, { persistent: false, defaultValue: { status: 'unreported', updatedAtMs: null } });
@@ -205,14 +208,22 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   }
   function reconnect(body: unknown): void {
     const value = body === undefined ? {} : record(body);
-    if (Object.keys(value).some(key => key !== 'fixture')) throw new Error('Invalid reconnect');
-    if (input === 'replay') { startReplay(value.fixture ?? fixture); return; }
+    if (Object.keys(value).some(key => !['fixture', 'partyId'].includes(key))) throw new Error('Invalid reconnect');
+    if (input === 'replay') {
+      if ('partyId' in value) throw new Error('Party selection is disabled in replay mode');
+      startReplay(value.fixture ?? fixture); return;
+    }
     if ('fixture' in value) throw new Error('Replay is disabled in live mode');
+    if ('partyId' in value) {
+      if (typeof value.partyId !== 'string' || !/^[\w-]{0,128}$/.test(value.partyId.trim())) throw new Error('Invalid party selection');
+      selectedPartyId = value.partyId.trim() || null;
+    }
     source?.stop(); reset();
+    connection.value = { ...connection.value, selectedPartyId };
     try {
       const credentials = loadConnectionConfig({
         ...config,
-        partyId: typeof config.partyId === 'string' ? config.partyId : null,
+        partyId: selectedPartyId,
         clientVersion: typeof config.clientVersion === 'string' ? config.clientVersion : '',
         cookieFile: typeof config.cookieFile === 'string' ? config.cookieFile : '.secrets/geoguessr.json',
       });

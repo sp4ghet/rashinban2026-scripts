@@ -10,6 +10,7 @@ export type PresenterMediaStatus = { generation: string | null; effect: string; 
 
 export type PresenterConnection = ConnectionStatus & {
   input: 'live' | 'replay'; replayFixture: string | null; warnings: string[];
+  configuredPartyId?: string | null; selectedPartyId?: string | null;
 };
 export const RENDERER_STATUSES = ['unreported', 'loading', 'api-ready', 'missing-key', 'api-error', 'view-error', 'pano-error'] as const;
 export type RendererStatus = typeof RENDERER_STATUSES[number];

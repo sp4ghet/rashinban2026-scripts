@@ -69,10 +69,19 @@ Sound keys are `pin`, `guess`, `countdown`, `results`, `count`, `damage`, and `f
 
 On 2026-09-11, temporary VP8/Opus WebM clips played through the real presenter in isolated Chrome: single duration 2.024 s, double duration 2.016 s. Natural completion, empty/missing media, invalid container, autoplay rejection, ownership transfer, cancellation, mute, cue-mode silence, and camera coverage/restoration were exercised. Temporary generated assets are not committed.
 
-The same isolated Chrome setup exercised three synthetic 48 kHz PCM WAV music layers: shared scheduled starts, advancing muted layers, partial missing-file playback, separate/embedded handoff, silent duplicate/preview sources, and lease expiry while the owning page's JavaScript was blocked for 7.2 seconds. The audio clock continued and its pre-scheduled gate reached zero before takeover. These are test tones; production assets and integrated OBS audiovisual timing remain separate acceptance work.
+The same isolated Chrome setup exercised three synthetic 48 kHz PCM WAV music layers: shared scheduled starts, advancing muted layers, partial missing-file playback, separate/embedded handoff, silent duplicate/preview sources, and lease expiry while the owning page's JavaScript was blocked for 7.2 seconds. The audio clock continued and its pre-scheduled gate reached zero before takeover. These are test tones; see [final OBS validation](validation.md) for measured audiovisual timing and its limits.
 
-The isolated OBS composition check also played these VP8/Opus WebM fixtures full-screen with visible green/magenta patches. That check used a separate synthetic page with muted video. It establishes visual format acceptance for those files, not integrated presenter audio timing or arbitrary WebM codecs. MP4 is uploadable but has not been accepted by an OBS playback test. Other codecs and the actual event files still require testing.
+The final isolated OBS check played both VP8/Opus WebM fixtures through the real presenter, with natural completion and visible green/magenta patches in its full-screen unfiltered layer. It establishes acceptance for those files, not arbitrary WebM codecs or final soundtracks. MP4 is uploadable but has not been accepted by an OBS playback test. Other codecs and the actual event files still require testing.
 
-Use an unfiltered full-frame presenter layer during 5K playback. A whole-page chroma key removes matching colors from the video itself. The tested OBS arrangement switches phase-specific scene/group composition: keyed player/camera slots during live play, keyed cameras during results, and full unfiltered graphic during 5K. Integrated presenter-to-OBS phase switching and audiovisual measurement remain Task 11 acceptance work.
+Use an unfiltered full-frame presenter layer during 5K playback. A whole-page chroma key removes matching colors from the video itself. The tested OBS arrangement switches phase-specific scene/group composition: keyed player/camera slots during live play, keyed cameras during results, and full unfiltered graphic during 5K. These switches require operator actions or external automation; no presenter-to-OBS bridge is included. See [OBS setup](obs.md) for exact rectangles and composition.
+
+**OBS silent-source limitation:** 50 ms test cues were lost after silence in
+both separate and embedded output, despite correct scheduler calls. Continuous
+nonzero authored music restored the clicks; short checks then aligned within
+9 ms using a measured 90 ms OBS video delay. The long timing test applies to
+that continuous-music condition. Empty music/cue-only operation and recovery
+from prolonged silence remain unaccepted on this OBS setup. No generated
+keep-alive signal was added to production. Test the intended assets and audio
+paths before use; selecting embedded alone does not resolve this observation.
 
 NodeCG behavior was checked against the installed 2.8.0 primary source (`src/server/bundle-parser/assets.ts` and `src/server/server/assets.ts`) and the official [Replicant documentation](https://www.nodecg.dev/docs/classes/replicant/) and [concepts documentation](https://www.nodecg.dev/docs/concepts-and-terminology/). Browser Replicants are read on change events; asset categories are declared in the bundle manifest.

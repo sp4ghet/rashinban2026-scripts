@@ -150,6 +150,8 @@ function status() {
   const replay = value?.input === 'replay';
   element('replay-label').hidden = !replay;
   element('replay-controls').hidden = !replay;
+  element('live-controls').hidden = replay;
+  element('party-selection').textContent = `Selected: ${value?.selectedPartyId ?? 'automatic'} · Config default: ${value?.configuredPartyId ?? 'automatic'} · Connected party: ${value?.partyId ?? 'none'}`;
   element('reconnect').textContent = replay ? 'Restart selected replay' : 'Reconnect spectator';
   element('connection-status').textContent = value ? `${replay ? 'Replay' : 'Spectator'} · ${value.state}` : 'Connecting to NodeCG…';
   element('game-status').textContent = `${duel.value?.mode ?? 'No game'} · ${timeline.value?.phase ?? 'waiting-game'}${duel.value ? ` · Round ${duel.value.round}` : ''}`;
@@ -166,7 +168,9 @@ settings.on('change', value => {
   input('music-gain').value = String(value.musicGain); input('effects-gain').value = String(value.effectsGain);
 });
 duel.on('change', () => { mappingOptions(); status(); });
+let partyInitialized = false;
 connection.on('change', (value, previous) => {
+  if (value && !partyInitialized) { input('party-id').value = value.selectedPartyId ?? ''; partyInitialized = true; }
   if (value?.replayFixture && value.replayFixture !== previous?.replayFixture) select('replay-fixture').value = value.replayFixture;
   status();
 });
@@ -192,4 +196,4 @@ element('settings-form').addEventListener('submit', event => {
     audioOutput: select('audio-output').value, muted: input('muted').checked,
     musicGain: Number(input('music-gain').value), effectsGain: Number(input('effects-gain').value) });
 });
-element('reconnect').addEventListener('click', () => void control('reconnect', connection.value?.input === 'replay' ? { fixture: select('replay-fixture').value } : undefined));
+element('reconnect').addEventListener('click', () => void control('reconnect', connection.value?.input === 'replay' ? { fixture: select('replay-fixture').value } : { partyId: input('party-id').value }));

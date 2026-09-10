@@ -27,6 +27,13 @@ test('submission identity is stable across repeated state versions and never inf
   assert.equal(interactionCues(before, next, 2000)[0].id, cues[0].id);
   assert.deepEqual(interactionCues(next, next, 2000), []);
   assert.deepEqual(interactionCues(before, before, 2000), []);
+  const initial = advanceTimeline(null, before, 500, true, DEFAULT_TIMING);
+  const submitted = advanceTimeline(initial, next, 1000, false, DEFAULT_TIMING);
+  assert.deepEqual(submitted.cues.filter(c => c.kind === 'guess'), [{ id: `${next.gameId}/${next.round}/${next.players[1].id}/guess`, kind: 'guess', playerId: next.players[1].id, atMs: 1200, untilMs: 1450 }]);
+  assert.equal(advanceTimeline(initial, next, 2000, false, DEFAULT_TIMING).cues.find(c => c.kind === 'guess')!.id, cues[0].id);
+  assert.equal(advanceTimeline(submitted, next, 2000, false, DEFAULT_TIMING).cues.filter(c => c.kind === 'guess').length, 0);
+  assert.equal(advanceTimeline(initial, before, 2000, false, DEFAULT_TIMING).cues.filter(c => c.kind === 'guess').length, 0);
+  assert.equal(advanceTimeline(submitted, next, 2000, true, DEFAULT_TIMING).cues.filter(c => c.kind === 'guess').length, 0);
 });
 test('state and telemetry share pin history even when a timer tick sees an unchanged snapshot', () => {
   const state = live(); const id = state.players[0].id;

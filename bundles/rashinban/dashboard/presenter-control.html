@@ -11,6 +11,7 @@
 <label>Transfer program ownership<select id="program-client"><option value="">Choose program source</option></select></label>
 <button id="transfer-program" disabled>Transfer program</button>
 <p class="help">Use presenter.html?role=program for the program source and presenter-audio.html?role=audio for separate audio. Plain URLs are silent previews. A second program waits until ownership is transferred or the active source disconnects for six seconds. Append &amp;audioUnlock=1 to show a local browser audio activation button when needed.</p>
+<div id="live-controls"><label>Live party ID (blank: automatic discovery)<input id="party-id" maxlength="128" placeholder="Automatic discovery"></label><div id="party-selection" class="help"></div></div>
 <button id="reconnect" class="wide">Reconnect spectator</button>
 <form id="series-form"><h2>Series &amp; player mapping</h2><div class="row">
 <fieldset class="side"><label>Left name<input id="left-name" maxlength="80"></label><label>Handle<input id="left-handle" maxlength="80"></label><label>Wins<input id="left-wins" type="number" min="0" max="2" step="1"></label><label>GeoGuessr player<select id="left-player"></select></label></fieldset>
