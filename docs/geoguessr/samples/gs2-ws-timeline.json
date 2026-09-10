@@ -1,0 +1,297 @@
+[
+ {
+  "t": 1789042511413,
+  "code": "SpectatorCount",
+  "version": null
+ },
+ {
+  "t": 1789042511415,
+  "code": "DuelStarted",
+  "version": 5
+ },
+ {
+  "t": 1789042528121,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042528378,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042529658,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042529916,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042530178,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042531193,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042532116,
+  "code": "DuelPinPlaced",
+  "version": 6
+ },
+ {
+  "t": 1789042532472,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042532984,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042533240,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042533496,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042533755,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042534017,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042534264,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042534522,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042534776,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042535374,
+  "code": "DuelPinPlaced",
+  "version": 7
+ },
+ {
+  "t": 1789042535545,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042536057,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042536184,
+  "code": "DuelPlayerGuessed",
+  "version": 8
+ },
+ {
+  "t": 1789042536428,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042536482,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042536568,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042536573,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042536825,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042537080,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042537085,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042537346,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042537590,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042537600,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042537848,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042537861,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042538108,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042538114,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042538361,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042538370,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042538616,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042538872,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042539401,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042539516,
+  "code": "DuelPinPlaced",
+  "version": 9
+ },
+ {
+  "t": 1789042539895,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042542480,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042542967,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042543509,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042543991,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042544023,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042544278,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042544503,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042544760,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042544792,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042545048,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042545272,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042545527,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042545563,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042546039,
+  "code": "LiveStreamSamples",
+  "version": null
+ },
+ {
+  "t": 1789042551382,
+  "code": "DuelRoundTimedOut",
+  "version": 11
+ },
+ {
+  "t": 1789042551645,
+  "code": "LiveStreamSamples",
+  "version": null
+ }
+]

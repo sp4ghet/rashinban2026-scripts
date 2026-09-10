@@ -1,5 +1,5 @@
 import * as esbuild from "esbuild";
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const watch = process.argv.includes("--watch");
@@ -24,7 +24,32 @@ const browserCommon = {
   sourcemap: true,
 };
 
+/**
+ * Tampermonkey userscripts: each tampermonkey/src/*.user.ts becomes
+ * tampermonkey/<name>.user.js with its ==UserScript== header preserved as a
+ * banner (esbuild would otherwise strip the comment block).
+ */
+function userscriptBuilds() {
+  return entries("tampermonkey/src")
+    .filter((f) => f.endsWith(".user.ts"))
+    .map((entry) => {
+      const header = readFileSync(entry, "utf8").match(/\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScript==/)?.[0];
+      if (!header) throw new Error(`${entry}: missing ==UserScript== header`);
+      return {
+        entryPoints: [entry],
+        outfile: path.join("tampermonkey", path.basename(entry, ".ts") + ".js"),
+        bundle: true,
+        format: "iife",
+        platform: "browser",
+        target: "es2020",
+        banner: { js: header },
+        legalComments: "none",
+      };
+    });
+}
+
 const builds = [
+  ...userscriptBuilds(),
   {
     ...browserCommon,
     entryPoints: entries(`${bundleRoot}/src/graphics`),

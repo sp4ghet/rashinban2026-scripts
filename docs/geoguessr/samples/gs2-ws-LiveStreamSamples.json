@@ -1,0 +1,72 @@
+{
+  "code": "LiveStreamSamples",
+  "playerId": "65701c932c6e4a0a9881791e",
+  "payload": [
+    {
+      "time": 1789042526683,
+      "type": "MapDisplay",
+      "payload": {
+        "isActive": true,
+        "isSticky": false,
+        "size": 4
+      }
+    },
+    {
+      "time": 1789042526699,
+      "type": "MapBoundingBox",
+      "payload": {
+        "north": 67.646416,
+        "east": 143.4268,
+        "south": -68.87581,
+        "west": -135.71382
+      }
+    },
+    {
+      "time": 1789042529633,
+      "type": "PinPosition",
+      "payload": {
+        "lat": 26.236977,
+        "lng": -102.37943
+      }
+    },
+    {
+      "time": 1789042535005,
+      "type": "GuessWithLatLng",
+      "payload": {
+        "lat": -4.565503,
+        "lng": -80.984344
+      }
+    },
+    {
+      "time": 1789042021609,
+      "type": "PanoPosition",
+      "payload": {
+        "lat": 11.842681505947155,
+        "lng": -72.21444034044441,
+        "panoId": "O9xBbpaw2OmBxx8vmwlWvQ"
+      }
+    },
+    {
+      "time": 1789042535078,
+      "type": "Timer",
+      "payload": {
+        "time": 14791
+      }
+    },
+    {
+      "time": 1789042535370,
+      "type": "PanoZoom",
+      "payload": {
+        "zoom": 1
+      }
+    },
+    {
+      "time": 1789050625819,
+      "type": "PanoPov",
+      "payload": {
+        "heading": 3.8821652,
+        "pitch": 0.11363686
+      }
+    }
+  ]
+}

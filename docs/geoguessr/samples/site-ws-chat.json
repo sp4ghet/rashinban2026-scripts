@@ -1,0 +1,27 @@
+{
+  "subscribed": {
+    "code": "Subscribed",
+    "topic": "chat:Party:TextMessages:715272a1-2304-4c7f-9948-ad1da55fae57",
+    "level": "TextMessages"
+  },
+  "subscribeDenied": {
+    "code": "SubscribeDenied",
+    "topic": "chat:Party:None:715272a1-2304-4c7f-9948-ad1da55fae57"
+  },
+  "chatText": {
+    "code": "ChatMessage",
+    "topic": "chat:Party:TextMessages:715272a1-2304-4c7f-9948-ad1da55fae57",
+    "payload": "{\"id\":\"AmwNbfRaaa\",\"payloadType\":\"Text\",\"textPayload\":\"test chat\",\"invitePayload\":null,\"recipientType\":\"Game\",\"recipientId\":\"715272a1-2304-4c7f-9948-ad1da55fae57\",\"sourceType\":\"User\",\"sourceId\":\"65701c932c6e4a0a9881791e\",\"sentAt\":\"2026-09-10T14:29:55.0175163Z\",\"roomId\":\"715272a1-2304-4c7f-9948-ad1da55fae57\",\"context\":\"Party\",\"channel\":null,\"clubPayload\":null,\"reactionPayload\":null,\"blocksPayload\":null}",
+    "accessToken": null,
+    "client": "Unknown",
+    "timestamp": "2026-09-10T14:29:55.0175176Z"
+  },
+  "chatEmote": {
+    "code": "ChatMessage",
+    "topic": "chat:Party:TextMessages:715272a1-2304-4c7f-9948-ad1da55fae57",
+    "payload": "{\"id\":\"cQEvreOIoS\",\"payloadType\":\"Emote\",\"textPayload\":\":wave:\",\"invitePayload\":null,\"recipientType\":\"Game\",\"recipientId\":null,\"sourceType\":\"User\",\"sourceId\":\"65701c932c6e4a0a9881791e\",\"sentAt\":\"2026-09-10T14:31:26.339363Z\",\"roomId\":\"715272a1-2304-4c7f-9948-ad1da55fae57\",\"context\":\"InGame\",\"channel\":null,\"clubPayload\":null,\"reactionPayload\":null,\"blocksPayload\":null}",
+    "accessToken": null,
+    "client": "Unknown",
+    "timestamp": "2026-09-10T14:31:26.3393636Z"
+  }
+}

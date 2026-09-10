@@ -1,0 +1,85 @@
+{
+  "partyId": "715272a1-2304-4c7f-9948-ad1da55fae57",
+  "owner": {
+    "nick": "sp4ghet",
+    "flair": 7,
+    "pin": "pin/cf5f13cfe499c1da70b988edcdebbfa8.png",
+    "fullBodyPin": "pin/e3d8cce150f585f62850afe672def346.png",
+    "userId": "5ec26de5a789c45a9c13cf3c",
+    "team": null,
+    "isGuest": false,
+    "isPresent": true,
+    "isPlaying": false,
+    "isBenched": false,
+    "isInCurrentGame": false,
+    "isEligibleAsOwner": true,
+    "victories": 0,
+    "clientType": "Unknown",
+    "club": {
+      "tag": "RTDS",
+      "clubId": "e8a271fb-9f65-4ab8-b7a4-dc506d7c2b3c",
+      "level": 22
+    }
+  },
+  "lobbyId": "6aa29d5f364a2fb2ff228fd3",
+  "gameState": "Ongoing",
+  "gameType": "Duels",
+  "chatAccessToken": "<redacted>",
+  "bannedPlayerIds": null,
+  "mutedPlayerIds": [],
+  "expiresAt": "2026-09-11T00:06:55.0000000Z",
+  "timestamp": "2026-09-10T12:12:48.8313543Z",
+  "partySettings": {
+    "allowedCommunication": "TextMessages",
+    "isolateInGameChat": false,
+    "allowGuests": true,
+    "allowSwitchingTeams": true,
+    "maxPartySize": 100,
+    "masterControl": true,
+    "masterControlAutoStartRounds": true,
+    "hideJoinInfo": true
+  },
+  "gameSettings": {
+    "forbidMoving": true,
+    "forbidZooming": true,
+    "forbidRotating": true,
+    "guessMapType": "roadmap",
+    "mapSlug": "64ce812adc7614680516ff8c",
+    "timeAfterGuess": 15,
+    "initialHealth": 6000,
+    "maxRoundTime": 0,
+    "maxNumberOfRounds": 30,
+    "multiplierIncrement": 0,
+    "roundWinMultiplierIncrement": 5,
+    "roundsWithoutDamageMultiplier": 1,
+    "disableHealing": true,
+    "countAllGuesses": false,
+    "powerUpSkipRound": false,
+    "powerUpRoadLabels": false,
+    "powerUpUpgradeMovement": false,
+    "powerUpScoreMarker": false,
+    "blinkMode": false,
+    "blinkTimeTeamOne": 1000,
+    "blinkTimeTeamTwo": 1000,
+    "roundTime": 10,
+    "roundCount": 5,
+    "individualInitialHealth": false,
+    "initialHealthTeamOne": 0,
+    "initialHealthTeamTwo": 0
+  },
+  "joinCode": {
+    "code": "<redacted>",
+    "resourceType": "PartiesV2",
+    "resourceId": "715272a1-2304-4c7f-9948-ad1da55fae57",
+    "expires": "2026-09-13T11:43:35.0000000Z"
+  },
+  "isCommunity": false,
+  "communitySettings": {
+    "language": "en",
+    "gameModes": [
+      "LiveChallenge"
+    ],
+    "vibe": "Chill"
+  },
+  "isHostLess": false
+}

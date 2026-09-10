@@ -1,0 +1,211 @@
+{
+  "code": "DuelRoundTimedOut",
+  "gameId": "6aa2ae37e42c97106f6cb9dd",
+  "duel": {
+    "state": {
+      "gameId": "6aa2ae37e42c97106f6cb9dd",
+      "gameServerNodeId": "8572118768954f1b877ded5bd7c29b1e",
+      "teams": [
+        {
+          "id": "7605ba3d-2539-451f-b147-d09eabcb3941",
+          "name": "blue",
+          "health": 6000,
+          "players": [
+            {
+              "playerId": "65701c932c6e4a0a9881791e",
+              "guesses": [
+                {
+                  "roundNumber": 1,
+                  "lat": -16.923413441575974,
+                  "lng": 145.76674997439036,
+                  "distance": 631.2129657283,
+                  "created": "2026-09-10T13:19:54.7880258Z",
+                  "isTeamsBestGuessOnRound": true,
+                  "score": 4998
+                }
+              ],
+              "countryCode": "",
+              "progressChange": null,
+              "pin": null,
+              "helpRequested": false,
+              "isSteam": false
+            }
+          ],
+          "roundResults": [
+            {
+              "roundNumber": 1,
+              "score": 4998,
+              "healthBefore": 6000,
+              "healthAfter": 6000,
+              "bestGuess": {
+                "roundNumber": 1,
+                "lat": -16.923413441575974,
+                "lng": 145.76674997439036,
+                "distance": 631.2129657283,
+                "created": "2026-09-10T13:19:54.7880258Z",
+                "isTeamsBestGuessOnRound": true,
+                "score": 4998
+              },
+              "damageDealt": 0,
+              "multiplier": 1
+            }
+          ],
+          "currentMultiplier": 1
+        },
+        {
+          "id": "72c45317-fcfb-459b-a000-977c26b7e5f0",
+          "name": "red",
+          "health": 6000,
+          "players": [
+            {
+              "playerId": "6aa29a4e4752c83aa99d7655",
+              "guesses": [
+                {
+                  "roundNumber": 1,
+                  "lat": -16.92314448942025,
+                  "lng": 145.76717909985908,
+                  "distance": 593.118775056,
+                  "created": "2026-09-10T13:19:54.7880268Z",
+                  "isTeamsBestGuessOnRound": true,
+                  "score": 4998
+                }
+              ],
+              "countryCode": "",
+              "progressChange": null,
+              "pin": null,
+              "helpRequested": false,
+              "isSteam": false
+            }
+          ],
+          "roundResults": [
+            {
+              "roundNumber": 1,
+              "score": 4998,
+              "healthBefore": 6000,
+              "healthAfter": 6000,
+              "bestGuess": {
+                "roundNumber": 1,
+                "lat": -16.92314448942025,
+                "lng": 145.76717909985908,
+                "distance": 593.118775056,
+                "created": "2026-09-10T13:19:54.7880268Z",
+                "isTeamsBestGuessOnRound": true,
+                "score": 4998
+              },
+              "damageDealt": 0,
+              "multiplier": 1
+            }
+          ],
+          "currentMultiplier": 1
+        }
+      ],
+      "rounds": [
+        {
+          "roundNumber": 1,
+          "panorama": {
+            "panoId": "545A34626E4C3058584D6C7947334A6359774A684151",
+            "lat": -16.92446733303177,
+            "lng": 145.7725804264295,
+            "countryCode": "au",
+            "heading": 321.2675421694748,
+            "pitch": -0.1141418211253864,
+            "zoom": 0
+          },
+          "hasProcessedRoundTimeout": true,
+          "isHealingRound": false,
+          "multiplier": 1,
+          "damageMultiplier": 1,
+          "startTime": "2026-09-10T13:18:54.0324783Z",
+          "endTime": "2026-09-10T13:19:54.0324783Z",
+          "timerStartTime": "2026-09-10T13:18:54.0324783Z",
+          "skippedByPlayerId": null
+        }
+      ],
+      "currentRoundNumber": 1,
+      "status": "Ongoing",
+      "version": 11,
+      "options": {
+        "initialHealth": 6000,
+        "individualInitialHealth": false,
+        "initialHealthTeamOne": 0,
+        "initialHealthTeamTwo": 0,
+        "roundTime": 15,
+        "maxRoundTime": 60,
+        "gracePeriodTime": 0,
+        "maxNumberOfRounds": 50,
+        "healingRounds": [
+          5
+        ],
+        "movementOptions": {
+          "forbidMoving": true,
+          "forbidZooming": false,
+          "forbidRotating": false,
+          "speedLimit": false
+        },
+        "mapSlug": "696fe47c5b07bed052077a95",
+        "isRated": false,
+        "map": {
+          "name": "A Moving World",
+          "slug": "696fe47c5b07bed052077a95",
+          "bounds": {
+            "min": {
+              "lat": -54.93796135505917,
+              "lng": -177.3745103358231
+            },
+            "max": {
+              "lat": 78.2190710967324,
+              "lng": 178.54388568513284
+            }
+          },
+          "maxErrorDistance": 14999250
+        },
+        "roundsWithoutDamageMultiplier": 1,
+        "multiplierIncrement": 0,
+        "roundWinMultiplierIncrement": 5,
+        "disableHealing": true,
+        "isTeamDuels": false,
+        "gameContext": null,
+        "roundStartingBehavior": "Default",
+        "competitiveGameMode": "None",
+        "countAllGuesses": false,
+        "masterControlAutoStartRounds": true,
+        "allowSpectators": true,
+        "guessMapType": "roadmap",
+        "progressionSystem": null,
+        "blinkMode": false,
+        "blinkTimeTeamOne": 1000,
+        "blinkTimeTeamTwo": 1000
+      },
+      "context": {
+        "type": "Party",
+        "id": "715272a1-2304-4c7f-9948-ad1da55fae57"
+      },
+      "movementOptions": {
+        "forbidMoving": true,
+        "forbidZooming": false,
+        "forbidRotating": false,
+        "speedLimit": false
+      },
+      "mapBounds": {
+        "min": {
+          "lat": -54.93796135505917,
+          "lng": -177.3745103358231
+        },
+        "max": {
+          "lat": 78.2190710967324,
+          "lng": 178.54388568513284
+        }
+      },
+      "initialHealth": 6000,
+      "maxNumberOfRounds": 50,
+      "result": null,
+      "isPaused": false,
+      "gameMasterId": "5ec26de5a789c45a9c13cf3c"
+    },
+    "pin": null,
+    "fromPanoId": null,
+    "location": null,
+    "playerId": null
+  },
+  "timestamp": "2026-09-10T13:19:54.7880571Z"
+}
