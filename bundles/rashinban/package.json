@@ -4,6 +4,11 @@
   "private": true,
   "nodecg": {
     "compatibleRange": "^2.0.0",
+    "assetCategories": [
+      { "name": "music", "title": "Presenter music", "allowedTypes": ["wav", "mp3", "ogg", "m4a"] },
+      { "name": "effects", "title": "Presenter cue sounds", "allowedTypes": ["wav", "mp3", "ogg", "m4a"] },
+      { "name": "video", "title": "Presenter celebrations", "allowedTypes": ["webm", "mp4"] }
+    ],
     "graphics": [
       {
         "file": "presenter.html",

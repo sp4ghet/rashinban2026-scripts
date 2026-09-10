@@ -1,6 +1,8 @@
 import { REPLICANTS, type PresenterConnection, type PresenterRenderer, type PresenterClients } from '../types/replicants.ts';
 import type { DuelState, SeriesState, Timeline } from '../types/presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
+import { CUE_KINDS, EMPTY_MEDIA, MUSIC_CONTEXTS, type AssetInventory, type MediaManifest, type Stem } from '../presenter/media.ts';
+import type { PresenterMediaStatus } from '../types/replicants.ts';
 
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
 const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings);
@@ -9,10 +11,76 @@ const connection = nodecg.Replicant<PresenterConnection>(REPLICANTS.presenterCon
 const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
 const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRenderer);
 const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
+const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia);
+const mediaStatus = nodecg.Replicant<PresenterMediaStatus>(REPLICANTS.presenterMediaStatus);
+const inventories = { music: nodecg.Replicant<AssetInventory>('assets:music'), effects: nodecg.Replicant<AssetInventory>('assets:effects'), video: nodecg.Replicant<AssetInventory>('assets:video') };
 const element = (id: string) => document.getElementById(id)!;
 const input = (id: string) => element(id) as HTMLInputElement;
 const select = (id: string) => element(id) as HTMLSelectElement;
 let seriesDraft: SeriesState | null = null;
+
+function assetOptions(menu: HTMLSelectElement, category: keyof typeof inventories, chosen = menu.value) {
+  menu.replaceChildren(new Option('None', ''));
+  for (const item of inventories[category].value ?? []) menu.add(new Option(item.base ?? item.url.split('/').pop()!, item.url));
+  if (chosen && ![...menu.options].some(option => option.value === chosen)) menu.add(new Option(`Unavailable · ${chosen.split('/').pop()}`, chosen));
+  menu.value = chosen;
+}
+for (const category of ['music', 'effects', 'video'] as const) inventories[category].on('change', () => {
+  document.querySelectorAll<HTMLSelectElement>(`select[data-assets="${category}"]`).forEach(menu => assetOptions(menu, category));
+});
+function field(parent: HTMLElement, title: string, key: string, value: string, max?: number) {
+  const label = document.createElement('label'); label.textContent = title;
+  const el = document.createElement('input'); el.dataset.field = key; el.value = value;
+  if (max !== undefined) { el.type = 'number'; el.min = '0'; el.max = String(max); el.step = 'any'; }
+  label.append(el); parent.append(label); return el;
+}
+function menuField(parent: HTMLElement, title: string, category: keyof typeof inventories, value: string) {
+  const label = document.createElement('label'); label.textContent = title;
+  const menu = document.createElement('select'); menu.dataset.assets = category; assetOptions(menu, category, value);
+  label.append(menu); parent.append(label); return menu;
+}
+function addStem(stem: Stem) {
+  const row = document.createElement('fieldset'); row.className = 'media-stem';
+  field(row, 'Stem ID', 'id', stem.id); menuField(row, 'Music asset', 'music', stem.url);
+  const numbers = document.createElement('div'); numbers.className = 'row'; row.append(numbers);
+  field(numbers, 'Loop start (s)', 'loopStartS', String(stem.loopStartS), 86400); field(numbers, 'Loop end (s)', 'loopEndS', String(stem.loopEndS), 86400);
+  for (const context of MUSIC_CONTEXTS) field(numbers, `${context} gain`, context, String(stem.gains[context]), 1);
+  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove stem'; remove.onclick = () => row.remove(); row.append(remove);
+  element('media-stems').append(row);
+}
+for (const context of MUSIC_CONTEXTS) field(element('media-fades'), context, context, '0', 120000);
+for (const kind of CUE_KINDS) menuField(element('media-sounds'), kind, 'effects', '').dataset.cue = kind;
+element('add-stem').onclick = () => addStem({ id: `stem-${document.querySelectorAll('.media-stem').length + 1}`, url: '', loopStartS: 0, loopEndS: 8, gains: { idle: 0, round: 0, urgent: 0, results: 0 } });
+media.on('change', value => {
+  if (!value) return;
+  for (const variant of ['single', 'double'] as const) {
+    const asset = value.fiveK[variant]; assetOptions(select(`${variant}-video`), 'video', asset?.url ?? '');
+    select(`${variant}-soundtrack`).value = asset?.soundtrack ?? 'embedded'; input(`${variant}-watchdog`).value = String(asset?.watchdogMs ?? 10000);
+  }
+  element('media-stems').replaceChildren(); value.stems.forEach(addStem);
+  for (const context of MUSIC_CONTEXTS) (element('media-fades').querySelector(`[data-field="${context}"]`) as HTMLInputElement).value = String(value.fadeMs[context]);
+  for (const kind of CUE_KINDS) assetOptions(element('media-sounds').querySelector(`[data-cue="${kind}"]`) as HTMLSelectElement, 'effects', value.sounds[kind] ?? '');
+});
+mediaStatus.on('change', value => {
+  const labels = { idle: 'No celebration yet', pending: 'Waiting for video completion', missing: 'Video not selected or unavailable; results revealed normally', complete: 'Video completed', failed: 'Video failed or autoplay was blocked; results revealed normally', watchdog: 'Video timed out; results revealed normally' };
+  element('media-status').textContent = value ? `${value.effect === 'none' ? '' : value.effect + ' · '}${labels[value.status]}` : labels.idle;
+});
+element('media-form').addEventListener('submit', event => {
+  event.preventDefault();
+  const next = structuredClone(EMPTY_MEDIA);
+  for (const variant of ['single', 'double'] as const) {
+    const url = select(`${variant}-video`).value;
+    next.fiveK[variant] = url ? { url, watchdogMs: Number(input(`${variant}-watchdog`).value), soundtrack: select(`${variant}-soundtrack`).value as 'embedded' | 'cue' | 'silent' } : null;
+  }
+  for (const row of document.querySelectorAll<HTMLElement>('.media-stem')) {
+    const read = (key: string) => (row.querySelector(`[data-field="${key}"]`) as HTMLInputElement).value;
+    next.stems.push({ id: read('id'), url: row.querySelector('select')!.value, loopStartS: Number(read('loopStartS')), loopEndS: Number(read('loopEndS')),
+      gains: Object.fromEntries(MUSIC_CONTEXTS.map(context => [context, Number(read(context))])) as Stem['gains'] });
+  }
+  for (const context of MUSIC_CONTEXTS) next.fadeMs[context] = Number((element('media-fades').querySelector(`[data-field="${context}"]`) as HTMLInputElement).value);
+  for (const kind of CUE_KINDS) { const url = (element('media-sounds').querySelector(`[data-cue="${kind}"]`) as HTMLSelectElement).value; if (url) next.sounds[kind] = url; }
+  void control('media', next);
+});
 
 async function control(action: string, body?: unknown) {
   element('error').textContent = '';

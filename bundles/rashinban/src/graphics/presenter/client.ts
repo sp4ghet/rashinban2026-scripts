@@ -72,15 +72,15 @@ export function createPresenterClient(deps: ClientDeps) {
       }
       adopt = false; return due;
     },
-    effectCompletion(value: Timeline): () => Promise<boolean> {
+    effectCompletion(value: Timeline): (failed?: boolean) => Promise<boolean> {
       ownsProgram(); const token = ownership;
       const generation = value.generation; const effect = value.effect;
       const cueId = value.cues.find(cue => cue.kind === 'five-k')?.id;
-      return async () => {
+      return async (failed = false) => {
         const at = now(); const cue = timeline?.cues.find(item => item.id === cueId && item.kind === 'five-k');
         if (!ownsProgram() || ownership !== token || !timeline || timeline.generation !== generation
           || effect === 'none' || timeline.effect !== effect || !cue || at < cue.atMs || at >= cue.untilMs) return false;
-        try { return await deps.send('presenter:effect-ended', { clientId: deps.clientId, generation, effect, cueId }) === true; }
+        try { return await deps.send('presenter:effect-ended', { clientId: deps.clientId, generation, effect, cueId, ...(failed ? { failed: true } : {}) }) === true; }
         catch { return false; }
       };
     },

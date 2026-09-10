@@ -5,8 +5,39 @@ import express from 'express';
 import type NodeCG from '@nodecg/types';
 import { registerPresenter } from '../../extension/presenter/register.ts';
 import { DEFAULT_SETTINGS } from '../settings.ts';
+import { EMPTY_MEDIA } from '../media.ts';
 import { sample } from './fixtures.ts';
 import type { ConnectionDeps } from '../../extension/presenter/connection.ts';
+
+test('available celebration holds results with its own deadline; missing double skips without substituting single', () => {
+  const reps = new Map<string, any>(); const listeners = new Map<string, Function>();
+  const tasks: { fn: () => void; at: number; active: boolean }[] = []; let now = 1900000000000;
+  registerPresenter({ bundleConfig: { presenter: { input: 'replay' } },
+    Replicant(name: string, opts: any) { const rep = Object.assign(new EventEmitter(), { value: opts.defaultValue, opts }); reps.set(name, rep); return rep; },
+    Router: express.Router, mount() {}, listenFor: (name: string, fn: Function) => listeners.set(name, fn), log: { info() {}, warn() {} },
+  } as unknown as NodeCG.ServerAPI, { now: () => now, schedule(fn, ms) { const task = { fn, at: now + ms, active: true }; tasks.push(task); return () => { task.active = false; }; } });
+  const url = '/assets/rashinban/video/single.webm';
+  const media = { ...EMPTY_MEDIA, fiveK: { single: { url, watchdogMs: 5000, soundtrack: 'embedded' }, double: null } };
+  let error: unknown; listeners.get('presenter:control')!({ action: 'media', body: media }, (err: unknown) => { error = err; });
+  assert.equal(error, null); assert.equal(reps.get('presenterMedia').opts.persistent, true);
+  reps.get('assets:video').value = [{ url }];
+  listeners.get('presenter:control')!({ action: 'settings', body: { ...DEFAULT_SETTINGS, timing: { ...DEFAULT_SETTINGS.timing, leadMs: 0, effectWatchdogMs: 0 } } });
+  for (let i = 0; i < 10000 && reps.get('presenterTimeline').value.effect !== 'single-5k'; i++) {
+    const task = tasks.filter(t => t.active).sort((a, b) => a.at - b.at)[0]; if (!task) break; now = task.at; task.active = false; task.fn();
+  }
+  const t = reps.get('presenterTimeline').value; assert.equal(t.effect, 'single-5k');
+  const start = t.cues[0].atMs; assert.equal(t.effectDeadlineMs, start + 5000);
+  now = start; listeners.get('presenter:control')!({ action: 'settings', body: DEFAULT_SETTINGS });
+  assert.equal(reps.get('presenterTimeline').value.effect, 'single-5k'); assert.equal(reps.get('presenterTimeline').value.revealAtMs, null);
+  reps.get('presenterTimeline').value.effect = 'double-5k';
+  listeners.get('presenter:control')!({ action: 'settings', body: DEFAULT_SETTINGS });
+  assert.equal(reps.get('presenterTimeline').value.effect, 'none'); assert.equal(reps.get('presenterTimeline').value.revealAtMs, start + 200);
+  assert.equal(reps.get('presenterMediaStatus').value.status, 'missing');
+  assert.equal(reps.get('presenterMediaStatus').value.effect, 'double-5k');
+  const before = reps.get('presenterMedia').value;
+  listeners.get('presenter:control')!({ action: 'media', body: { ...media, stems: [{ id: '' }] } }, (err: unknown) => { error = err; });
+  assert.ok(error); assert.deepEqual(reps.get('presenterMedia').value, before);
+});
 
 test('presenter boots isolated replay and validates HTTP edits before publishing state', async () => {
   const app = express();

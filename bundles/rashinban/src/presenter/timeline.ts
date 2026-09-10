@@ -96,7 +96,8 @@ function liveCues(timeline: Timeline, state: DuelState, nowMs: number, bootstrap
 }
 
 /** Accept normalized authoritative state; call again on time boundaries even without a new snapshot. */
-export function advanceTimeline(previous: Timeline | null, state: DuelState | null, nowMs: number, bootstrap: boolean, timing: Timing): Timeline {
+export function advanceTimeline(previous: Timeline | null, state: DuelState | null, nowMs: number, bootstrap: boolean, timing: Timing,
+  effectWatchdogs: Partial<Record<Exclude<EffectKind, 'none'>, number>> = {}): Timeline {
   const replace = bootstrap || previous === null || previous.gameId !== (state?.gameId ?? null)
     || previous.round !== (state?.round ?? null) || (state?.aborted && previous.phase !== 'aborted');
   let timeline = replace ? fresh(previous, state, nowMs) : { ...previous! };
@@ -114,10 +115,11 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
       if (effect === 'none') timeline = scheduleReveal(timeline, nowMs, timing);
       else {
         const startAtMs = nowMs + timing.leadMs;
+        const watchdogMs = effectWatchdogs[effect] ?? timing.effectWatchdogMs;
         timeline = {
           ...timeline,
-          effectDeadlineMs: startAtMs + timing.effectWatchdogMs,
-          cues: [cue(timeline, 'five-k', startAtMs, startAtMs + timing.effectWatchdogMs)],
+          effectDeadlineMs: startAtMs + watchdogMs,
+          cues: [cue(timeline, 'five-k', startAtMs, startAtMs + watchdogMs)],
         };
       }
     }

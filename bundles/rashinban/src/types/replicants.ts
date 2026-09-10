@@ -5,6 +5,8 @@ import type { DuelState, SeriesState, Timeline, Views } from './presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
 import type { ConnectionStatus } from '../extension/presenter/connection.ts';
 import type { ClientReady, Lease } from '../presenter/clock.ts';
+import type { MediaManifest } from '../presenter/media.ts';
+export type PresenterMediaStatus = { generation: string | null; effect: string; status: 'idle' | 'pending' | 'missing' | 'complete' | 'failed' | 'watchdog' };
 
 export type PresenterConnection = ConnectionStatus & {
   input: 'live' | 'replay'; replayFixture: string | null; warnings: string[];
@@ -26,6 +28,8 @@ export const REPLICANTS = {
   presenterTimeline: 'presenterTimeline',
   presenterRenderer: 'presenterRenderer',
   presenterClients: 'presenterClients',
+  presenterMedia: 'presenterMedia',
+  presenterMediaStatus: 'presenterMediaStatus',
 } as const;
 
 export interface ReplicantMap {
@@ -39,4 +43,6 @@ export interface ReplicantMap {
   [REPLICANTS.presenterTimeline]: Timeline;
   [REPLICANTS.presenterRenderer]: PresenterRenderer;
   [REPLICANTS.presenterClients]: PresenterClients;
+  [REPLICANTS.presenterMedia]: MediaManifest;
+  [REPLICANTS.presenterMediaStatus]: PresenterMediaStatus;
 }

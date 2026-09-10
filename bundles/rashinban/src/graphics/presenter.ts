@@ -6,6 +6,8 @@ import { layoutKind } from './presenter/layout.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
 import type { GameRenderer, RenderFrame } from './presenter/renderer.ts';
 import { clientRole, createPresenterClient } from './presenter/client.ts';
+import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
+import { createVideoPlayer } from './presenter/video.ts';
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
@@ -13,13 +15,31 @@ const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSetting
 const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
 const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews);
 const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
+const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia);
+const videoAssets = nodecg.Replicant<AssetInventory>('assets:video');
+let selectedMedia = EMPTY_MEDIA;
+const videoPlayer = createVideoPlayer(() => {
+  const video = document.createElement('video'); video.className = 'celebration-video'; document.body.append(video); return video;
+}, (fn, ms) => { const id = setTimeout(fn, ms); return () => clearTimeout(id); });
+media.on('change', value => {
+  try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
+  videoPlayer.preload(selectedMedia);
+});
 const role = clientRole(location.search);
 const clientId = crypto.randomUUID();
 const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
   send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });
 document.body.dataset.clientId = clientId; document.body.dataset.role = role;
-clients.on('change', value => { if (value) client.updateClients(value); });
-timeline.on('change', value => { if (value) client.updateTimeline(value); });
+function reconcileVideo() {
+  const options = settings.value ?? DEFAULT_SETTINGS;
+  videoPlayer.update(timeline.value?.generation ?? null, client.ownsProgram(), timeline.value?.effect ?? 'none', options.muted, options.effectsGain);
+}
+clients.on('change', value => { if (value) client.updateClients(value); reconcileVideo(); });
+timeline.on('change', value => { if (value) client.updateTimeline(value); reconcileVideo(); });
+settings.on('change', reconcileVideo);
+// Replicant events stop stale playback even when RAF is suspended. The timer
+// also enforces local lease/clock expiry if the network drops while hidden.
+const mediaGuard = setInterval(reconcileVideo, 250);
 void client.start();
 const element = (id: string) => document.getElementById(id)!;
 const write = (id: string, value: string) => { const el = element(id); if (el.textContent !== value) el.textContent = value; };
@@ -40,17 +60,22 @@ const apiKey = publicConfig.presenter?.googleMapsApiKey;
 publishRenderer('loading');
 void createGoogleRenderer(document.body, typeof apiKey === 'string' ? apiKey : '', rendererError, () => publishRenderer('api-ready'))
   .then(value => { renderer = value; publishRenderer('api-ready'); }).catch(() => {});
-window.addEventListener('pagehide', () => { client.dispose(); renderer?.dispose(); });
+window.addEventListener('pagehide', () => { clearInterval(mediaGuard); videoPlayer.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {
   document.body.dataset.program = String(client.ownsProgram());
-  // Consume current cues even before media is installed, establishing bootstrap
-  // and ownership boundaries for the effect player added in the next milestone.
-  client.pollCues();
   const state = duel.value;
   const timing = timeline.value;
   const match = series.value;
   const options = settings.value ?? DEFAULT_SETTINGS;
+  // This is the single cue consumer. Later cue-audio dispatch joins this loop.
+  for (const cue of client.pollCues()) if (cue.kind === 'five-k' && timing) {
+    const complete = client.effectCompletion(timing);
+    const asset = celebrationAsset(selectedMedia, timing.effect, videoAssets.value ?? []);
+    if (asset) videoPlayer.play(asset, timing.generation, (_generation, failed) => { void complete(failed); }, options.muted, options.effectsGain);
+    else void complete(true);
+  }
+  reconcileVideo();
   document.documentElement.style.setProperty('--key-color', options.keyColor);
   document.body.dataset.source = options.viewSource;
   document.body.dataset.layout = layoutKind(state?.mode ?? 'NMPZ', options.viewSource);

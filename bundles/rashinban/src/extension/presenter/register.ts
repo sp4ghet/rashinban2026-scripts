@@ -11,6 +11,8 @@ import { createConnection, createDefaultConnectionDeps, type ConnectionDeps } fr
 import { loadConnectionConfig } from './secrets.ts';
 import { createReplay, loadReplay, REPLAY_FIXTURES, shiftMessageClock } from './replay.ts';
 import { mountPresenterRoutes, PRESENTER_ACTIONS, type PresenterAction } from './routes.ts';
+import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../../presenter/media.ts';
+import type { PresenterMediaStatus } from '../../types/replicants.ts';
 
 type Clock = { now(): number; schedule(fn: () => void, delayMs: number): () => void; connection?: ConnectionDeps };
 const clock: Clock = { now: () => Date.now(), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } };
@@ -29,6 +31,10 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   const input = config.input === 'replay' ? 'replay' : 'live';
   let fixture: unknown = config.replayFixture ?? REPLAY_FIXTURES[0];
   const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings, { defaultValue: structuredClone(DEFAULT_SETTINGS), persistent: true });
+  const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia, { defaultValue: structuredClone(EMPTY_MEDIA), persistent: true });
+  try { media.value = parseMedia(media.value); } catch { media.value = structuredClone(EMPTY_MEDIA); }
+  const videoAssets = nodecg.Replicant<AssetInventory>('assets:video', { defaultValue: [], persistent: false });
+  const mediaStatus = nodecg.Replicant<PresenterMediaStatus>(REPLICANTS.presenterMediaStatus, { defaultValue: { generation: null, effect: 'none', status: 'idle' }, persistent: false });
   const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries, { defaultValue: structuredClone(DEFAULT_SERIES), persistent: true });
   try { settings.value = parseSettings(settings.value); } catch { settings.value = structuredClone(DEFAULT_SETTINGS); }
   try { series.value = parseSeries(series.value); } catch { series.value = structuredClone(DEFAULT_SERIES); }
@@ -91,11 +97,19 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   function tick(bootstrap = false): void {
     cancelWake?.(); cancelWake = null;
     const now = deps.now();
-    let next = advanceTimeline(timeline.value, duel.value, now, bootstrap, settings.value.timing);
-    // No playable video exists at this milestone. Complete at the first eligible
-    // effect boundary; do not hold results for the ten-second media watchdog.
+    let next = advanceTimeline(timeline.value, duel.value, now, bootstrap, settings.value.timing, {
+      'single-5k': media.value.fiveK.single?.watchdogMs, 'double-5k': media.value.fiveK.double?.watchdogMs,
+    });
+    if (timeline.value.effect !== 'none' && next.effect === 'none' && timeline.value.effectDeadlineMs !== null && now >= timeline.value.effectDeadlineMs) {
+      mediaStatus.value = { generation: next.generation, effect: timeline.value.effect, status: 'watchdog' };
+    }
     const effectStart = next.cues.find(cue => cue.kind === 'five-k')?.atMs;
-    if (next.effect !== 'none' && effectStart !== undefined && now >= effectStart) {
+    const asset = celebrationAsset(media.value, next.effect, videoAssets.value);
+    if (next.effect !== 'none' && effectStart !== undefined && timeline.value.effect === 'none' && asset) {
+      mediaStatus.value = { generation: next.generation, effect: next.effect, status: 'pending' };
+    }
+    if (next.effect !== 'none' && !asset && effectStart !== undefined && now >= effectStart) {
+      mediaStatus.value = { generation: next.generation, effect: next.effect, status: 'missing' };
       next = finishEffect(next, next.generation, now, settings.value.timing);
       next = advanceTimeline(next, duel.value, now, false, settings.value.timing);
     }
@@ -103,22 +117,24 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
     // and prior timeline objects before publishing across that boundary.
     timeline.value = JSON.parse(JSON.stringify(next)) as Timeline;
     const wake = nextTimelineWakeAtMs(next, duel.value, now);
-    const skipAt = next.effect !== 'none' && effectStart !== undefined && effectStart > now ? effectStart : null;
+    const skipAt = next.effect !== 'none' && !asset && effectStart !== undefined && effectStart > now ? effectStart : null;
     const at = wake === null ? skipAt : skipAt === null ? wake : Math.min(wake, skipAt);
     if (at !== null) cancelWake = deps.schedule(() => tick(), at - now);
   }
-  function reset(): void { duel.value = null; views.value = null; tick(true); }
+  function reset(): void { duel.value = null; views.value = null; mediaStatus.value = { generation: null, effect: 'none', status: 'idle' }; tick(true); }
   nodecg.listenFor('presenter:effect-ended', (request: unknown, ack) => {
     let accepted = false;
     try {
       const value = record(request); const current = timeline.value; const now = deps.now();
       const cue = current.cues.find(item => item.kind === 'five-k' && item.id === value.cueId);
       const owner = clients.value.clients.find(client => client.clientId === value.clientId);
-      if (Object.keys(value).every(key => ['clientId', 'generation', 'effect', 'cueId'].includes(key))
+      if (Object.keys(value).every(key => ['clientId', 'generation', 'effect', 'cueId', 'failed'].includes(key))
+        && (value.failed === undefined || typeof value.failed === 'boolean')
         && typeof value.clientId === 'string' && owner?.role === 'program'
         && eligibleCompletion(clients.value.program, value.clientId, now)
         && value.generation === current.generation && current.phase === 'results-transition' && current.effect !== 'none' && value.effect === current.effect
         && cue && cue.atMs <= now && now < cue.untilMs) {
+        mediaStatus.value = { generation: current.generation, effect: current.effect, status: value.failed ? 'failed' : 'complete' };
         timeline.value = JSON.parse(JSON.stringify(finishEffect(current, current.generation, now, settings.value.timing))) as Timeline;
         tick(); accepted = true;
       }
@@ -179,10 +195,11 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
       connection.value = { ...connection.value, state: 'auth-error', error: 'Check server-side GeoGuessr connection configuration' };
     }
   }
-  function current() { return { settings: settings.value, series: series.value, connection: connection.value, timeline: timeline.value, clients: clients.value }; }
+  function current() { return { settings: settings.value, series: series.value, connection: connection.value, timeline: timeline.value, clients: clients.value, media: media.value }; }
   function control(action: PresenterAction, body: unknown): unknown {
     if (action === 'series') series.value = parseSeries(body);
     else if (action === 'settings') { settings.value = parseSettings(body); tick(); }
+    else if (action === 'media') { media.value = parseMedia(body); tick(); }
     else if (action === 'reconnect') reconnect(body);
     else if (action === 'program/transfer') {
       const value = record(body); const now = deps.now(); const next = copyClients();
