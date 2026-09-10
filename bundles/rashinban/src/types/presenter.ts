@@ -66,3 +66,36 @@ export type ApplyResult = {
   accepted: boolean;
   warnings: string[];
 };
+
+export type Bounds = { north: number; east: number; south: number; west: number };
+
+export type PlayerView = {
+  panorama: Panorama;
+  mapBounds: Bounds | null;
+  pin: Point | null;
+  mapActive: boolean;
+  mapSticky: boolean;
+  mapSize: number;
+  lastByType: Record<string, number>;
+};
+
+export type Views = {
+  gameId: string;
+  round: number;
+  players: Record<string, PlayerView>;
+};
+
+export type Competitor = {
+  id: string;
+  playerId: string | null;
+  name: string;
+  handle: string;
+  wins: number;
+};
+
+export type SeriesState = {
+  id: string;
+  source: 'manual';
+  left: Competitor;
+  right: Competitor;
+};
