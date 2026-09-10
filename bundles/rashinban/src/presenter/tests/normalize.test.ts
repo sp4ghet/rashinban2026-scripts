@@ -106,6 +106,14 @@ test('Created snapshot preserves null round times', () => {
   );
 });
 
+test('manual-start control is read from captured options even without a named starting behavior', () => {
+  const input = cloneSample('gs2-ws-DuelStarted-created-not-started.json');
+  const options = record(record(record(input.duel).state).options);
+  delete options.roundStartingBehavior;
+  const result = applySnapshot(null, input);
+  assert.equal(result.state?.manualRoundStart, true);
+});
+
 test('abort and finish snapshots remain distinguishable', () => {
   const aborted = applySnapshot(null, sample('gs2-ws-DuelAborted.json'));
   const finished = applySnapshot(null, sample('gs2-ws-DuelFinished.json'));

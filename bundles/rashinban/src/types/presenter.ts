@@ -53,6 +53,7 @@ export type DuelState = {
   mode: Mode;
   status: 'Created' | 'Ongoing' | 'Finished';
   paused: boolean;
+  manualRoundStart: boolean;
   initialHealth: number;
   players: [DuelPlayer, DuelPlayer];
   rounds: Round[];
@@ -99,3 +100,31 @@ export type SeriesState = {
   left: Competitor;
   right: Competitor;
 };
+
+export type Phase = 'waiting-game' | 'waiting-host' | 'pre-round' | 'live'
+  | 'results-transition' | 'results-reveal' | 'between-rounds' | 'finished' | 'aborted';
+export type MusicContext = 'idle' | 'round' | 'urgent' | 'results';
+export type EffectKind = 'none' | 'single-5k' | 'double-5k';
+export type CueKind = 'pin' | 'guess' | 'countdown' | 'results' | 'count' | 'damage' | 'five-k';
+export type Cue = { id: string; kind: CueKind; atMs: number; untilMs: number; playerId: string | null };
+export type Timeline = {
+  generation: string;
+  revision: number;
+  gameId: string | null;
+  round: number | null;
+  phase: Phase;
+  musicEpochMs: number;
+  music: MusicContext;
+  effect: EffectKind;
+  effectDeadlineMs: number | null;
+  revealAtMs: number | null;
+  damageAtMs: number | null;
+  holdAtMs: number | null;
+  cues: Cue[];
+  // Observations suppress replay when snapshots or scheduled ticks repeat.
+  observed: Record<string, { pin: Point | null; guessed: boolean; pinCueAtMs: number | null }>;
+  countdownEndAtMs: number | null;
+};
+export type Timing = { leadMs: number; countMs: number; damageMs: number; effectWatchdogMs: number; pinRateLimitMs?: number };
+export type VisiblePlayer = { id: string; health: number; locked: boolean; score: number | null; distanceM: number | null };
+export type Projection = { phase: Phase; remainingMs: number | null; answer: Panorama | null; players: VisiblePlayer[] };

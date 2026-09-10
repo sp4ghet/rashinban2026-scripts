@@ -203,6 +203,8 @@ function decodeState(message: RecordValue, code: string): DuelState {
     mode: mode(options.movementOptions),
     status: status(source.status),
     paused: boolean(source.isPaused),
+    manualRoundStart: options.roundStartingBehavior === 'ManuallyStartAllRounds'
+      || options.masterControlAutoStartRounds === false,
     initialHealth: number(options.initialHealth),
     players,
     rounds: array(source.rounds).map(round),
