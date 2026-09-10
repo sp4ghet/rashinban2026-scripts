@@ -142,12 +142,52 @@ can fire the 5K effect the moment the guess arrives, before the round result
 is revealed. Detect it by diffing `players[].guesses` length between
 consecutive states and checking the appended guess.
 
-### Multipliers and damage
+### Multipliers and damage (confirmed against all four captured duels)
 
-`teams[].roundResults[].multiplier` and `rounds[].multiplier` show the damage
-multiplier progression (1 → 1.5 → 2 → 2.5 with the default
-`roundWinMultiplierIncrement`). `roundResults[].damageDealt` is the damage the
-team dealt that round (0 for the loser).
+Party settings → state fields (names from the party UI, per the user):
+
+| Party setting | `options` field | In captures | Effect |
+|---|---|---|---|
+| Individual Multiplier Increment | `roundWinMultiplierIncrement` | `5` = 0.5x | the round winner's multiplier grows by this after the round (both on a tie) |
+| Mutual Multiplier Increment | `multiplierIncrement` | `0` = 0x | both players' multipliers grow by this after **every** round, regardless of the winner |
+| Rounds without multipliers | `roundsWithoutDamageMultiplier` | `1` | rounds before increments apply; with 1, round 2 is the first that can carry a multiplier |
+
+Values are stored in tenths (`5` = 0.5x). Confirmed on 2026-09-10 with a
+fifth duel using Individual 0.5x, **Mutual 0.5x**, Rounds without multipliers
+**2** (`samples/gs2-ws-full-duel-sequence-mutual-multiplier.json`):
+
+```
+after round n, if n >= roundsWithoutDamageMultiplier:
+    every team's multiplier += mutual
+    the round winner's multiplier += individual   (both teams on an exact tie)
+damage to the loser = roundHalfEven((winner score - loser score) × winner's multiplier)
+```
+
+- `teams[].currentMultiplier` is the multiplier the team will use in the
+  **next** round; `roundResults[].multiplier` is the one it used that round.
+  The server does not apply the increment after the round that finishes the
+  game (final `currentMultiplier` equals the last round's).
+- `rounds[].multiplier` and `rounds[].damageMultiplier` (always equal) are the
+  **mutual component only**: `1 + max(0, n − exempt) × mutual`
+  (`1, 1, 1.5, 2, 2.5, 3` in the Mutual capture, all `1` with Mutual off). A
+  team's multiplier is that plus `individual × (its counted wins and ties)`.
+- "Rounds without multipliers" exempts the *increments after* rounds
+  `1..N-1`: with 2, red won round 1 and got nothing, blue won round 2 and went
+  `1 → 2` (mutual + individual) while red went `1 → 1.5`. So round `N+1` is
+  the first played with a multiplier; with the default 1 that is round 2.
+- **Damage = (winner score − loser score) × winner's multiplier**, rounded
+  half-to-even (`187 × 1.5 = 280.5 → 280`, `3865 × 1.5 = 5797.5 → 5798`,
+  `213 × 2.5 = 532.5 → 532`; the server is evidently .NET).
+  `roundResults[].damageDealt` is that value on the winner's entry and 0 on
+  the loser's.
+- On an **exact tie both multipliers get the individual increment** and no
+  damage is dealt (`samples/gs2-ws-full-duel-sequence.json` round 4,
+  `251/251`).
+- Multipliers never decrease.
+
+A replica of this rule reproduces every `roundResults[].multiplier`,
+`rounds[].multiplier`, `damageDealt` and `healthAfter` in all four completed
+captures (see `pinpointing-duels-userscripts.md`, "Presenter-managed HP").
 
 Duel state shape (`samples/gs2-ws-DuelStarted.json`):
 

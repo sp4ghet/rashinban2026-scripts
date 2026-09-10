@@ -33,6 +33,10 @@ requires a prior build), `npm run typecheck`.
   HTML in `graphics/`, `dashboard/`, and `extension/`.
 - `cfg/nodecg.json` — NodeCG config (port 9090).
 - `overlays/`, `tampermonkey/` — non-NodeCG overlays and userscripts.
+- `docs/geoguessr/` — reverse-engineered presenter-mode protocol
+  (`presenter-protocol.md`, raw captures in `samples/`) and research on the
+  GeoClassics "Pinpointing Duels" ruleset (`pinpointing-duels-userscripts.md`,
+  vendored scripts in `reference/`).
 
 To add an overlay: create `src/graphics/<name>.ts` + `graphics/<name>.html`
 (with `<script src="<name>.js"></script>`), and register it in the `nodecg`
