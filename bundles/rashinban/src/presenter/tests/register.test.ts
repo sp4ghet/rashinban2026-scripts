@@ -9,6 +9,33 @@ import { EMPTY_MEDIA } from '../media.ts';
 import { sample } from './fixtures.ts';
 import type { ConnectionDeps } from '../../extension/presenter/connection.ts';
 
+test('audio mode handoff waits for old mute acknowledgement or expiry, and denies previews and duplicates', () => {
+  const reps = new Map<string, any>(); const listeners = new Map<string, Function>(); let now = 100000;
+  const tasks: { fn: () => void; at: number; active: boolean }[] = [];
+  registerPresenter({ bundleConfig: { presenter: { input: 'invalid' } },
+    Replicant(name: string, opts: any) { const rep = { value: opts.defaultValue }; reps.set(name, rep); return rep; },
+    Router: express.Router, mount() {}, listenFor: (name: string, fn: Function) => listeners.set(name, fn),
+  } as unknown as NodeCG.ServerAPI, { now: () => now, schedule(fn, ms) { const t = { fn, at: now + ms, active: true }; tasks.push(t); return () => { t.active = false; }; } });
+  const message = (name: string, body: unknown) => { let result: any; listeners.get(name)?.(body, (err: unknown, value: unknown) => { result = err ? 'rejected' : value; }); return result; };
+  const report = (clientId: string, role: string) => message('presenter:client', { clientId, role, ready: false, renderer: 'missing-key', clockFresh: true, audio: { state: 'ready', missing: [] } });
+  const audio = () => reps.get('presenterClients').value.audio;
+  report('preview', 'preview'); assert.equal(audio() ?? null, null);
+  report('program', 'program'); report('one', 'audio'); report('two', 'audio');
+  assert.equal(audio()?.clientId, 'one'); const first = { ...audio() };
+  message('presenter:control', { action: 'settings', body: { ...DEFAULT_SETTINGS, audioOutput: 'embedded' } });
+  assert.equal(audio().clientId, 'one'); assert.equal(audio().releasing, true);
+  assert.equal(message('presenter:audio-muted', { clientId: 'two', token: first.token }), false);
+  assert.equal(message('presenter:audio-muted', { clientId: 'one', token: first.token }), true);
+  assert.equal(audio().clientId, 'program', 'missing Google key must not block embedded audio'); assert.equal(audio().mode, 'embedded');
+  assert.notEqual(audio().token, first.token);
+  message('presenter:control', { action: 'settings', body: DEFAULT_SETTINGS });
+  assert.equal(audio().clientId, 'program'); assert.equal(audio().releasing, true);
+  now += 2000; report('two', 'audio');
+  now = 106000; for (const t of tasks.filter(t => t.active && t.at <= now)) { t.active = false; t.fn(); }
+  assert.equal(audio().clientId, 'two'); assert.equal(audio().releasing, false);
+  assert.equal(message('presenter:audio-muted', { clientId: 'one', token: first.token }), false);
+});
+
 test('available celebration holds results with its own deadline; missing double skips without substituting single', () => {
   const reps = new Map<string, any>(); const listeners = new Map<string, Function>();
   const tasks: { fn: () => void; at: number; active: boolean }[] = []; let now = 1900000000000;

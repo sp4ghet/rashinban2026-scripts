@@ -1,5 +1,8 @@
 import type { CueKind, MusicContext } from '../types/presenter.ts';
 export type Stem = { id: string; url: string; loopStartS: number; loopEndS: number; gains: Record<MusicContext, number> };
+export const AUDIO_STATES = ['unreported', 'loading', 'ready', 'silent', 'partial', 'error', 'suspended'] as const;
+export type AudioState = typeof AUDIO_STATES[number];
+export type AudioStatus = { state: AudioState; missing: string[] };
 export type EffectAsset = { url: string; watchdogMs: number; soundtrack: 'embedded' | 'cue' | 'silent' };
 export type MediaManifest = { stems: Stem[]; fadeMs: Record<MusicContext, number>; sounds: Partial<Record<CueKind, string>>; fiveK: { single: EffectAsset | null; double: EffectAsset | null } };
 export const EMPTY_MEDIA: MediaManifest = { stems: [], fadeMs: { idle: 0, round: 0, urgent: 0, results: 0 }, sounds: {}, fiveK: { single: null, double: null } };

@@ -115,12 +115,17 @@ function status() {
   const audience = clients.value;
   const owner = audience?.program?.clientId;
   element('program-status').textContent = owner ? `Program: ${owner.slice(0, 8)}` : 'No active program';
+  const audioOwner = audience?.audio;
+  element('program-status').textContent += audioOwner ? ` · Audio: ${audioOwner.clientId.slice(0, 8)} (${audioOwner.mode}${audioOwner.releasing ? ', waiting for mute' : ''})` : ' · No audio owner';
   const menu = select('program-client'); const selected = menu.value;
   menu.replaceChildren(new Option('Choose program source', ''));
   const list = element('client-list'); list.replaceChildren();
   for (const client of audience?.clients ?? []) {
     const label = `${client.clientId.slice(0, 8)} · ${client.role}${client.clientId === owner ? ' · active' : ''}`;
-    const row = document.createElement('div'); row.textContent = `${label} · ${client.ready ? 'ready' : 'not ready'} · ${labels[client.renderer.status]}`;
+    const readiness = client.role === 'audio' ? (client.clockFresh ? 'clock ready' : 'clock not ready')
+      : `${client.ready ? 'graphics ready' : 'graphics not ready'} · ${labels[client.renderer.status]}`;
+    const row = document.createElement('div'); row.textContent = `${label} · ${readiness}`;
+    row.textContent += ` · Audio: ${client.audio?.state ?? 'unreported'}${client.audio?.missing.length ? ' · unavailable stems: ' + client.audio.missing.join(', ') : ''}`;
     row.title = client.clientId; list.append(row);
     if (client.role === 'program' && client.clientId !== owner) menu.add(new Option(label, client.clientId));
   }

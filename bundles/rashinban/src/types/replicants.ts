@@ -5,7 +5,7 @@ import type { DuelState, SeriesState, Timeline, Views } from './presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
 import type { ConnectionStatus } from '../extension/presenter/connection.ts';
 import type { ClientReady, Lease } from '../presenter/clock.ts';
-import type { MediaManifest } from '../presenter/media.ts';
+import type { MediaManifest, AudioStatus } from '../presenter/media.ts';
 export type PresenterMediaStatus = { generation: string | null; effect: string; status: 'idle' | 'pending' | 'missing' | 'complete' | 'failed' | 'watchdog' };
 
 export type PresenterConnection = ConnectionStatus & {
@@ -14,8 +14,9 @@ export type PresenterConnection = ConnectionStatus & {
 export const RENDERER_STATUSES = ['unreported', 'loading', 'api-ready', 'missing-key', 'api-error', 'view-error', 'pano-error'] as const;
 export type RendererStatus = typeof RENDERER_STATUSES[number];
 export type PresenterRenderer = { status: RendererStatus; updatedAtMs: number | null };
-export type PresenterClient = ClientReady & { lastSeenMs: number; renderer: PresenterRenderer };
-export type PresenterClients = { clients: PresenterClient[]; program: Lease | null };
+export type AudioLease = Lease & { mode: PresenterSettings['audioOutput']; token: number; releasing: boolean };
+export type PresenterClient = ClientReady & { lastSeenMs: number; renderer: PresenterRenderer; audio?: AudioStatus; clockFresh?: boolean };
+export type PresenterClients = { clients: PresenterClient[]; program: Lease | null; audio?: AudioLease | null };
 
 export const REPLICANTS = {
   lowerThirdVisible: "lowerThirdVisible",

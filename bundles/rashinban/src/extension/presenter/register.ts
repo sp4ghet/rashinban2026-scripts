@@ -11,7 +11,7 @@ import { createConnection, createDefaultConnectionDeps, type ConnectionDeps } fr
 import { loadConnectionConfig } from './secrets.ts';
 import { createReplay, loadReplay, REPLAY_FIXTURES, shiftMessageClock } from './replay.ts';
 import { mountPresenterRoutes, PRESENTER_ACTIONS, type PresenterAction } from './routes.ts';
-import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../../presenter/media.ts';
+import { AUDIO_STATES, celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest, type AudioStatus } from '../../presenter/media.ts';
 import type { PresenterMediaStatus } from '../../types/replicants.ts';
 
 type Clock = { now(): number; schedule(fn: () => void, delayMs: number): () => void; connection?: ConnectionDeps };
@@ -45,17 +45,27 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel, { persistent: false, defaultValue: null });
   const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRenderer, { persistent: false, defaultValue: { status: 'unreported', updatedAtMs: null } });
   const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients, { persistent: false, defaultValue: { clients: [], program: null } });
-  let cancelExpiry: (() => void) | null = null;
+  let cancelExpiry: (() => void) | null = null; let audioToken = 0;
   function publishClients(value: PresenterClients): void {
     cancelExpiry?.(); cancelExpiry = null;
     const now = deps.now();
     value.clients = value.clients.filter(client => client.lastSeenMs + 6000 > now);
     if (value.program && (value.program.expiresAtMs <= now || !value.clients.some(client => client.clientId === value.program!.clientId))) value.program = null;
+    const mode = settings.value.audioOutput;
+    const eligible = (client: PresenterClients['clients'][number]) => client.clockFresh && client.audio
+      && ['ready', 'silent', 'partial', 'error'].includes(client.audio.state)
+      && (mode === 'separate' ? client.role === 'audio' : client.role === 'program' && client.clientId === value.program?.clientId);
+    if (value.audio && value.audio.expiresAtMs <= now) value.audio = null;
+    if (value.audio && (value.audio.mode !== mode || !value.clients.some(c => c.clientId === value.audio!.clientId && eligible(c)))) value.audio.releasing = true;
+    if (!value.audio) {
+      const candidate = value.clients.find(eligible);
+      if (candidate) value.audio = { clientId: candidate.clientId, mode, token: ++audioToken, releasing: false, expiresAtMs: candidate.lastSeenMs + 6000 };
+    }
     clients.value = value;
     const owner = value.clients.find(client => client.clientId === value.program?.clientId);
     // Detach the nested object before publishing to another Replicant.
     renderer.value = owner ? { ...owner.renderer } : { status: 'unreported', updatedAtMs: null };
-    const expiry = Math.min(...value.clients.map(client => client.lastSeenMs + 6000), value.program?.expiresAtMs ?? Infinity);
+    const expiry = Math.min(...value.clients.map(client => client.lastSeenMs + 6000), value.program?.expiresAtMs ?? Infinity, value.audio?.expiresAtMs ?? Infinity);
     if (Number.isFinite(expiry)) cancelExpiry = deps.schedule(() => publishClients(copyClients()), expiry - now);
   }
   function copyClients(): PresenterClients { return JSON.parse(JSON.stringify(clients.value)) as PresenterClients; }
@@ -63,21 +73,41 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   nodecg.listenFor('presenter:client', (request: unknown, ack) => {
     try {
       const value = record(request);
-      if (Object.keys(value).some(key => !['clientId', 'role', 'ready', 'renderer'].includes(key))
+      if (Object.keys(value).some(key => !['clientId', 'role', 'ready', 'renderer', 'audio', 'clockFresh'].includes(key))
         || typeof value.clientId !== 'string' || !/^[\w-]{1,80}$/.test(value.clientId)
         || !['program', 'preview', 'audio'].includes(value.role as string) || typeof value.ready !== 'boolean' || !validStatus(value.renderer)) throw new Error();
+      let audio: AudioStatus = { state: 'unreported', missing: [] };
+      if (value.audio !== undefined) {
+        const status = record(value.audio);
+        if (Object.keys(status).some(k => !['state', 'missing'].includes(k)) || !AUDIO_STATES.includes(status.state as AudioStatus['state'])
+          || !Array.isArray(status.missing) || status.missing.length > 32 || status.missing.some(id => typeof id !== 'string' || !/^[\w-]{1,80}$/.test(id))) throw Error();
+        audio = { state: status.state as AudioStatus['state'], missing: [...status.missing] as string[] };
+      }
+      if (value.clockFresh !== undefined && typeof value.clockFresh !== 'boolean') throw Error();
       const now = deps.now(); const next = copyClients();
       next.clients = next.clients.filter(client => client.lastSeenMs + 6000 > now);
       const existing = next.clients.find(client => client.clientId === value.clientId);
       if (existing && existing.role !== value.role) throw new Error();
       const report = { clientId: value.clientId, role: value.role as ClientRole, ready: value.ready,
-        lastSeenMs: now, renderer: { status: value.renderer, updatedAtMs: now } };
+        lastSeenMs: now, renderer: { status: value.renderer, updatedAtMs: now }, audio, clockFresh: value.clockFresh === true };
       if (existing) Object.assign(existing, report); else next.clients.push(report);
       if (next.program && next.program.expiresAtMs <= now) next.program = null;
       if (value.role === 'program' && (!next.program || next.program.clientId === value.clientId)) next.program = { clientId: value.clientId, expiresAtMs: now + 6000 };
+      if (next.audio?.clientId === value.clientId && !next.audio.releasing && next.audio.expiresAtMs > now) next.audio.expiresAtMs = now + 6000;
       publishClients(next);
       if (ack && !ack.handled) ack(null, true);
     } catch { if (ack && !ack.handled) ack(new Error('Invalid presenter client')); }
+  });
+  nodecg.listenFor('presenter:audio-muted', (request: unknown, ack) => {
+    let accepted = false;
+    try {
+      const value = record(request); const next = copyClients();
+      if (Object.keys(value).every(k => ['clientId', 'token'].includes(k)) && next.audio?.releasing
+        && next.audio.clientId === value.clientId && next.audio.token === value.token) {
+        next.audio = null; publishClients(next); accepted = true;
+      }
+    } catch { /* Ignore malformed or obsolete acknowledgements. */ }
+    if (ack && !ack.handled) ack(null, accepted);
   });
   nodecg.listenFor('presenter:renderer', (request: unknown) => {
     try {
@@ -198,7 +228,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   function current() { return { settings: settings.value, series: series.value, connection: connection.value, timeline: timeline.value, clients: clients.value, media: media.value }; }
   function control(action: PresenterAction, body: unknown): unknown {
     if (action === 'series') series.value = parseSeries(body);
-    else if (action === 'settings') { settings.value = parseSettings(body); tick(); }
+    else if (action === 'settings') { settings.value = parseSettings(body); publishClients(copyClients()); tick(); }
     else if (action === 'media') { media.value = parseMedia(body); tick(); }
     else if (action === 'reconnect') reconnect(body);
     else if (action === 'program/transfer') {

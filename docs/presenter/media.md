@@ -18,6 +18,18 @@ The video must expose finite, positive duration metadata. A clip longer than its
 
 Ordinary Chrome can deny audible autoplay without user activation. Browser-source autoplay behavior must be checked in the actual OBS setup. The presenter reports failure instead of silently switching to a muted playback attempt.
 
+## Continuous music and audio output
+
+For separate audio, add `/bundles/rashinban/graphics/presenter-audio.html?role=audio` as an OBS browser source and select **Separate** in the dashboard. The plain URL is a silent preview. Only one audio page holds the lease; duplicate pages remain silent. For embedded fallback, select **Embedded** and use the active `presenter.html?role=program` graphic. Missing Google Maps configuration does not prevent music in either mode. The video soundtrack exception above still plays on the active program only; the music engine never duplicates it.
+
+All selected stems decode before a shared scheduled start. Every layer loops continuously, including layers with zero gain. A reloaded owner joins the phase derived from the shared game music epoch. Changing rounds or music context changes gain with the configured fade; it does not restart sources or alter playback rate or pitch. Abort and finished states fade to silence using the idle fade. A new game replaces the old sources and establishes its new epoch.
+
+The first authored stem defines the common loop length. Each decoded layer must have finite loop bounds within its decoded duration, with the same loop length (within one microsecond). A missing, invalid, or incompatible layer stays silent while valid compatible layers play. Dashboard client rows report loading, ready, partial, decode failure, silent empty configuration, or suspended audio, and list unavailable stem IDs without raw error text. Graphics never wait for audio assets.
+
+For a local browser test requiring activation, append `&audioUnlock=1` to either active URL and click **Enable audio in this browser**. Activation is local to that browser page; a dashboard click cannot unlock another browser source. The button disappears after the AudioContext runs. The dashboard displays audio readiness independently of map readiness.
+
+Audio mode changes keep the old lease in a releasing state until its browser has silenced and stopped its sources, allowed queued output to drain, and acknowledged the lease token. Missing sources fall back to the six-second lease expiry. A separate master gate schedules silence on the audio clock one second plus reported device buffering before the deadline, so a blocked JS thread cannot keep the stems audible until another source activates. Renewals replace this gate deadline without touching music fades. Accepted clock samples have round trips below one second; the conservative margin covers midpoint uncertainty and adds the AudioContext base/output latency. Browser suspension clears the previous graph before local unlock. Browser and OBS output latency still require the final integrated acceptance test; no frame-perfect claim is made.
+
 ## Manifest API
 
 `presenterMedia` persists separately from presentation settings. Submit a complete value with `presenter:control { action: 'media', body: manifest }`, or `POST /rashinban/presenter/media`. Invalid input is rejected without replacing the previous value. Invalid persisted data resets to the silent empty manifest on startup.
@@ -48,6 +60,8 @@ Sound keys are `pin`, `guess`, `countdown`, `results`, `count`, `damage`, and `f
 ## Playback evidence and OBS setup
 
 On 2026-09-11, temporary VP8/Opus WebM clips played through the real presenter in isolated Chrome: single duration 2.024 s, double duration 2.016 s. Natural completion, empty/missing media, invalid container, autoplay rejection, ownership transfer, cancellation, mute, cue-mode silence, and camera coverage/restoration were exercised. Temporary generated assets are not committed.
+
+The same isolated Chrome setup exercised three synthetic 48 kHz PCM WAV music layers: shared scheduled starts, advancing muted layers, partial missing-file playback, separate/embedded handoff, silent duplicate/preview sources, and lease expiry while the owning page's JavaScript was blocked for 7.2 seconds. The audio clock continued and its pre-scheduled gate reached zero before takeover. These are test tones; production assets and integrated OBS audiovisual timing remain separate acceptance work.
 
 The isolated OBS composition check also played these VP8/Opus WebM fixtures full-screen with visible green/magenta patches. That check used a separate synthetic page with muted video. It establishes visual format acceptance for those files, not integrated presenter audio timing or arbitrary WebM codecs. MP4 is uploadable but has not been accepted by an OBS playback test. Other codecs and the actual event files still require testing.
 

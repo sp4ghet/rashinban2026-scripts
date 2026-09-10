@@ -8,6 +8,7 @@ import type { GameRenderer, RenderFrame } from './presenter/renderer.ts';
 import { clientRole, createPresenterClient } from './presenter/client.ts';
 import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
 import { createVideoPlayer } from './presenter/video.ts';
+import { createAudioOutput } from './presenter/audio-output.ts';
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
@@ -24,15 +25,18 @@ const videoPlayer = createVideoPlayer(() => {
 media.on('change', value => {
   try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
   videoPlayer.preload(selectedMedia);
+  void audioOutput.load(selectedMedia);
 });
 const role = clientRole(location.search);
 const clientId = crypto.randomUUID();
 const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
   send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });
+const audioOutput = createAudioOutput(client);
 document.body.dataset.clientId = clientId; document.body.dataset.role = role;
 function reconcileVideo() {
   const options = settings.value ?? DEFAULT_SETTINGS;
   videoPlayer.update(timeline.value?.generation ?? null, client.ownsProgram(), timeline.value?.effect ?? 'none', options.muted, options.effectsGain);
+  audioOutput.sync(timeline.value, options);
 }
 clients.on('change', value => { if (value) client.updateClients(value); reconcileVideo(); });
 timeline.on('change', value => { if (value) client.updateTimeline(value); reconcileVideo(); });
@@ -60,7 +64,7 @@ const apiKey = publicConfig.presenter?.googleMapsApiKey;
 publishRenderer('loading');
 void createGoogleRenderer(document.body, typeof apiKey === 'string' ? apiKey : '', rendererError, () => publishRenderer('api-ready'))
   .then(value => { renderer = value; publishRenderer('api-ready'); }).catch(() => {});
-window.addEventListener('pagehide', () => { clearInterval(mediaGuard); videoPlayer.dispose(); client.dispose(); renderer?.dispose(); });
+window.addEventListener('pagehide', () => { clearInterval(mediaGuard); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {
   document.body.dataset.program = String(client.ownsProgram());

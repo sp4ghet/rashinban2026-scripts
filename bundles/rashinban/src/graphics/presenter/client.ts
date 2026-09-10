@@ -1,6 +1,8 @@
 import { clockOffset, eligibleCompletion, type ClockSample, type ClientRole } from '../../presenter/clock.ts';
 import type { PresenterClients, RendererStatus } from '../../types/replicants.ts';
 import type { Cue, Timeline } from '../../types/presenter.ts';
+import type { AudioStatus } from '../../presenter/media.ts';
+import type { PresenterSettings } from '../../presenter/settings.ts';
 export function clientRole(search: string): ClientRole { return new URLSearchParams(search).get('role') === 'program' ? 'program' : 'preview'; }
 export type ClientDeps = { clientId: string; role: ClientRole; wallNow(): number; monotonicNow(): number;
   send(name: string, body?: unknown): Promise<unknown>; schedule(fn: () => void, ms: number): () => void };
@@ -9,6 +11,7 @@ export function createPresenterClient(deps: ClientDeps) {
   const elapsed = () => epoch + deps.monotonicNow() - startedAt;
   let offset = 0; let lastNow = -Infinity; let lastSync = -Infinity;
   let disposed = false; let started = false; let ready = false; let renderer: RendererStatus = 'unreported';
+  let audio: AudioStatus = { state: 'unreported', missing: [] };
   let clients: PresenterClients = { clients: [], program: null }; let timeline: Timeline | null = null;
   let active = false; let ownership = 0; let adopt = true; const seen = new Set<string>();
   const cancels = new Set<() => void>();
@@ -46,12 +49,24 @@ export function createPresenterClient(deps: ClientDeps) {
   }
   function heartbeat() {
     void deps.send('presenter:client', { clientId: deps.clientId, role: deps.role,
-      ready: ready && deps.monotonicNow() - lastSync < 30000, renderer }).catch(() => {});
+      ready: ready && deps.monotonicNow() - lastSync < 30000, renderer, audio,
+      clockFresh: deps.monotonicNow() - lastSync < 30000 }).catch(() => {});
     schedule(heartbeat, 2000);
   }
   return {
     async start() { if (started || disposed) return; started = true; heartbeat(); await sync(); },
     now, ownsProgram,
+    audioLease(mode: PresenterSettings['audioOutput']) {
+      const lease = clients.audio;
+      return !disposed && deps.monotonicNow() - lastSync < 30000 && lease && !lease.releasing && lease.mode === mode
+        && eligibleCompletion(lease, deps.clientId, now())
+        && (mode === 'separate' ? deps.role === 'audio' : ownsProgram()) ? lease : null;
+    },
+    releasingAudio() { return clients.audio?.clientId === deps.clientId && clients.audio.releasing ? clients.audio : null; },
+    setAudioStatus(value: AudioStatus) { audio = value; },
+    async acknowledgeAudioMute(token: number) {
+      try { return await deps.send('presenter:audio-muted', { clientId: deps.clientId, token }) === true; } catch { return false; }
+    },
     setReady(value: boolean) { ready = value; },
     setRendererStatus(value: RendererStatus) {
       renderer = value;

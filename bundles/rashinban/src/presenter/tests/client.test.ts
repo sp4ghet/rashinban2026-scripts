@@ -64,3 +64,33 @@ test('initial synchronization corrects a fast wall clock before adopting future 
   c.pollCues(); elapsed = 300;
   assert.deepEqual(c.pollCues().map(cue => cue.id), ['active-on-bootstrap', 'five']);
 });
+
+test('clock refresh executes timeouts, ignores late replies, blocks stale ownership and recovers', async () => {
+  let time = 0; let responding = true; let late: ((value: number) => void) | undefined;
+  const tasks: { fn: () => void; at: number; active: boolean }[] = [];
+  const c = createPresenterClient({ clientId: 'one', role: 'program', wallNow: () => 1000, monotonicNow: () => time,
+    send(name) { if (name !== 'presenter:clock') return Promise.resolve(true); return responding ? Promise.resolve(1000 + time) : new Promise<number>(resolve => { late ??= resolve; }); },
+    schedule(fn, ms) { const t = { fn, at: time + ms, active: true }; tasks.push(t); return () => { t.active = false; }; } });
+  await c.start(); c.updateClients({ clients: [], program: { clientId: 'one', expiresAtMs: 100000 } });
+  assert.equal(c.ownsProgram(), true); responding = false;
+  async function advance(to: number) {
+    for (;;) { const next = tasks.filter(t => t.active && t.at <= to).sort((a, b) => a.at - b.at)[0]; if (!next) break;
+      time = next.at; next.active = false; next.fn(); for (let i = 0; i < 10; i++) await Promise.resolve(); }
+    time = to;
+  }
+  await advance(31000); assert.equal(c.ownsProgram(), false); const before = c.now();
+  late?.(999999); for (let i = 0; i < 10; i++) await Promise.resolve(); assert.equal(c.now(), before);
+  responding = true; await advance(45000); assert.equal(c.ownsProgram(), true); assert.equal(c.now(), 46000); c.dispose();
+});
+
+test('audio lease requires selected role, fresh clock and active token, independently of Google readiness', async () => {
+  const c = client(); await c.value.start();
+  const lease = { clients: [], program: { clientId: 'one', expiresAtMs: 100000 }, audio: { clientId: 'one', mode: 'embedded' as const, token: 1, releasing: false, expiresAtMs: 100000 } };
+  c.value.updateClients(lease);
+  assert.equal((c.value as any).audioLease?.('embedded')?.token, 1);
+  assert.equal((c.value as any).audioLease?.('separate') ?? null, null);
+  c.value.updateClients({ ...lease, audio: { ...lease.audio, releasing: true } });
+  assert.equal((c.value as any).audioLease?.('embedded') ?? null, null);
+  c.value.updateClients(lease); c.advance(31000);
+  assert.equal((c.value as any).audioLease?.('embedded') ?? null, null);
+});
