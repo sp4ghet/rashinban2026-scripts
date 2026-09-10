@@ -31,7 +31,9 @@ function loadGoogle(apiKey: string): Promise<typeof google.maps> {
   return apiPromise;
 }
 
-export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onError: (message: string) => void): RendererAdapter {
+export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onError: (message: string) => void, onRecovery: () => void = () => {}): RendererAdapter {
+  const failedPanos = new Set<symbol>();
+  function recovered(id: symbol) { if (failedPanos.delete(id) && failedPanos.size === 0) onRecovery(); }
   function mount(slot: string) {
     const host = root.querySelector<HTMLElement>(`#${slot}`);
     if (!host) throw new Error('Missing map slot');
@@ -46,6 +48,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
   }
   return {
     panorama(slot) {
+      const surfaceId = Symbol(slot);
       const dom = mount(slot);
       const pano = construct(dom, () => new maps.StreetViewPanorama(dom.canvas, {
         visible: false, disableDefaultUI: true, clickToGo: false, linksControl: false, panControl: false,
@@ -56,6 +59,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
       const service = new maps.StreetViewService();
       let latest: Panorama | null = null; let requested: string | null = null; let resolved = ''; let generation = 0; let disposed = false;
       function unavailable() {
+        failedPanos.add(surfaceId);
         pano.setVisible(false); dom.status.hidden = false; dom.status.textContent = 'View unavailable';
         onError('Exact Street View panorama unavailable');
       }
@@ -70,7 +74,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
           latest = value;
           if (!value) {
             generation++; requested = null; resolved = ''; pano.setVisible(false);
-            dom.status.hidden = false; dom.status.textContent = 'View unavailable'; return;
+            dom.status.hidden = false; dom.status.textContent = 'View unavailable'; recovered(surfaceId); return;
           }
           const id = googlePanoId(value.panoId);
           if (id === requested) { applyPov(); return; }
@@ -81,9 +85,10 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
             if (disposed || token !== generation) return;
             if (status !== 'OK' || data?.location?.pano !== id) { unavailable(); return; }
             resolved = id; pano.setPano(id); applyPov(); pano.setVisible(true); dom.status.hidden = true;
+            recovered(surfaceId);
           });
         },
-        dispose() { disposed = true; generation++; pano.setVisible(false); release(pano); dom.clear(); },
+        dispose() { disposed = true; generation++; pano.setVisible(false); release(pano); dom.clear(); recovered(surfaceId); },
       };
     },
     map(slot) {
@@ -122,13 +127,14 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
   };
 }
 
-export async function createGoogleRenderer(root: HTMLElement, apiKey: string, onError: (message: string) => void): Promise<GameRenderer> {
+export async function createGoogleRenderer(root: HTMLElement, apiKey: string, onError: (message: string) => void, onRecovery: () => void = () => {}): Promise<GameRenderer> {
   if (!apiKey.trim()) { const message = 'Google Maps browser key missing'; onError(message); throw new Error(message); }
   let maps: typeof google.maps;
   try { maps = await loadGoogle(apiKey); }
   catch { const message = 'Google Maps API unavailable'; onError(message); throw new Error(message); }
-  const renderer = createRenderer(googleAdapter(root, maps, onError), onError);
-  const failure = () => { renderer.dispose(); onError('Google Maps API unavailable'); };
+  let otherFailure = false;
+  const renderer = createRenderer(googleAdapter(root, maps, onError, () => { if (!otherFailure) onRecovery(); }), message => { otherFailure = true; onError(message); });
+  const failure = () => { otherFailure = true; renderer.dispose(); onError('Google Maps API unavailable'); };
   authFailures.add(failure);
   return { render: frame => renderer.render(frame), dispose() { authFailures.delete(failure); renderer.dispose(); } };
 }

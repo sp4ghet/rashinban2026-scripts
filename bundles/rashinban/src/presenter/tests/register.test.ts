@@ -38,7 +38,7 @@ test('presenter boots isolated replay and validates HTTP edits before publishing
     const task = { fn, at: now + delay, active: true }; tasks.push(task); return () => { task.active = false; };
   } });
   assert.equal(reps.get('presenterRenderer')?.value.status, 'unreported');
-  listeners.get('presenter:renderer')!('missing-key');
+  listeners.get('presenter:client')?.({ clientId: 'program', role: 'program', ready: false, renderer: 'missing-key' });
   assert.deepEqual(reps.get('presenterRenderer')?.value, { status: 'missing-key', updatedAtMs: now });
   listeners.get('presenter:renderer')!({ status: 'api-ready', error: 'private raw error' });
   assert.equal(reps.get('presenterRenderer')?.value.status, 'missing-key');
@@ -112,6 +112,59 @@ test('presenter boots isolated replay and validates HTTP edits before publishing
     assert.deepEqual(reps.get('presenterSeries')?.value, series);
     assert.ok(listeners.has('presenter:control'));
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
+});
+
+test('client leases isolate preview reports, renew uniquely, expire and transfer only to live programs', () => {
+  const reps = new Map<string, { value: any; opts: any }>(); const listeners = new Map<string, Function>();
+  const tasks: { fn: () => void; at: number; active: boolean }[] = []; let now = 100000;
+  registerPresenter({ bundleConfig: { presenter: { input: 'invalid' } },
+    Replicant(name: string, opts: any) { const rep = { value: opts.defaultValue, opts }; reps.set(name, rep); return rep; },
+    Router: express.Router, mount() {}, listenFor: (name: string, fn: Function) => listeners.set(name, fn),
+  } as unknown as NodeCG.ServerAPI, { now: () => now, schedule(fn, delay) {
+    const task = { fn, at: now + delay, active: true }; tasks.push(task); return () => { task.active = false; };
+  } });
+  function message(name: string, body: unknown) { let result: any; listeners.get(name)?.(body, (error: unknown, value: unknown) => { result = error ? 'rejected' : value; }); return result; }
+  const report = (id: string, role: string, renderer = 'api-ready') => message('presenter:client', { clientId: id, role, ready: true, renderer });
+  const clients = () => reps.get('presenterClients')?.value;
+  report('preview', 'preview', 'missing-key');
+  assert.equal(clients()?.program, null);
+  assert.equal(reps.get('presenterClients')?.opts.persistent, false);
+  report('one', 'program'); report('two', 'program', 'pano-error');
+  assert.deepEqual(clients().program, { clientId: 'one', expiresAtMs: 106000 });
+  assert.equal(reps.get('presenterRenderer')?.value.status, 'api-ready');
+  message('presenter:renderer', { clientId: 'preview', status: 'api-error' });
+  assert.equal(reps.get('presenterRenderer')?.value.status, 'api-ready');
+  assert.equal(clients().clients.find((c: any) => c.clientId === 'preview').renderer.status, 'api-error');
+  message('presenter:renderer', { clientId: 'one', status: 'raw private error' });
+  assert.equal(reps.get('presenterRenderer')?.value.status, 'api-ready');
+  assert.equal(report('one', 'preview'), 'rejected', 'same ID cannot change role');
+  now += 2000; report('one', 'program'); report('two', 'program', 'pano-error');
+  assert.equal(clients().clients.length, 3);
+  assert.equal(clients().program.expiresAtMs, 108000);
+  assert.equal(message('presenter:control', { action: 'program/transfer', body: { clientId: 'preview' } }), 'rejected');
+  assert.notEqual(message('presenter:control', { action: 'program/transfer', body: { clientId: 'two' } }), 'rejected');
+  assert.equal(clients().program.clientId, 'two');
+  assert.equal(reps.get('presenterRenderer')?.value.status, 'pano-error');
+  report('one', 'program'); assert.equal(clients().program.clientId, 'two');
+  now = 108000;
+  for (const task of tasks.filter(t => t.active && t.at <= now)) { task.active = false; task.fn(); }
+  assert.equal(clients().program, null); assert.equal(clients().clients.length, 0);
+  assert.equal(reps.get('presenterRenderer')?.value.status, 'unreported');
+  report('one', 'program'); assert.equal(clients().program.clientId, 'one');
+  const timeline = reps.get('presenterTimeline')!;
+  timeline.value = { ...timeline.value, generation: 'g', phase: 'results-transition', effect: 'single-5k', effectDeadlineMs: now + 10000,
+    cues: [{ id: 'effect-1', kind: 'five-k', atMs: now - 1, untilMs: now + 10000, playerId: null }] };
+  const completion = { clientId: 'one', generation: 'g', effect: 'single-5k', cueId: 'effect-1' };
+  timeline.value.phase = 'live';
+  assert.equal(message('presenter:effect-ended', completion), false, 'completion outside results transition is ineffective');
+  timeline.value.phase = 'results-transition';
+  for (const patch of [{ clientId: 'preview' }, { clientId: 'two' }, { generation: 'old' }, { effect: 'double-5k' }, { cueId: 'old' }]) {
+    assert.equal(message('presenter:effect-ended', { ...completion, ...patch }), false);
+    assert.equal(timeline.value.effect, 'single-5k');
+  }
+  assert.equal(message('presenter:effect-ended', completion), true);
+  assert.equal(timeline.value.effect, 'none');
+  assert.equal(message('presenter:effect-ended', completion), false);
 });
 
 test('live reconnect bootstraps duplicate versions and terminal results survive normal close', async () => {

@@ -1,4 +1,4 @@
-import { REPLICANTS, type PresenterConnection, type PresenterRenderer } from '../types/replicants.ts';
+import { REPLICANTS, type PresenterConnection, type PresenterRenderer, type PresenterClients } from '../types/replicants.ts';
 import type { DuelState, SeriesState, Timeline } from '../types/presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
 
@@ -8,6 +8,7 @@ const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const connection = nodecg.Replicant<PresenterConnection>(REPLICANTS.presenterConnection);
 const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
 const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRenderer);
+const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
 const element = (id: string) => document.getElementById(id)!;
 const input = (id: string) => element(id) as HTMLInputElement;
 const select = (id: string) => element(id) as HTMLSelectElement;
@@ -18,10 +19,10 @@ async function control(action: string, body?: unknown) {
   try { await nodecg.sendMessage('presenter:control', { action, body }); }
   catch { element('error').textContent = 'Change rejected. Check the values and NodeCG connection.'; }
 }
-function mappingOptions() {
+function mappingOptions(initialize = false) {
   for (const side of ['left', 'right'] as const) {
     const menu = select(`${side}-player`);
-    const selected = menu.value || seriesDraft?.[side].playerId || '';
+    const selected = initialize ? seriesDraft?.[side].playerId ?? '' : menu.value;
     menu.replaceChildren(new Option('Not mapped', ''));
     for (const player of duel.value?.players ?? []) menu.add(new Option(`${player.teamColor} · ${player.id}`, player.id));
     if (selected && !(duel.value?.players.some(player => player.id === selected))) menu.add(new Option(`Unavailable · ${selected}`, selected));
@@ -31,8 +32,7 @@ function mappingOptions() {
 function showSeries(value: SeriesState) {
   // Browser Replicant values are proxies and cannot be structuredClone'd.
   seriesDraft = { ...value, left: { ...value.left }, right: { ...value.right } };
-  for (const side of ['left', 'right'] as const) select(`${side}-player`).value = '';
-  mappingOptions();
+  mappingOptions(true);
   for (const side of ['left', 'right'] as const) {
     input(`${side}-name`).value = value[side].name;
     input(`${side}-handle`).value = value[side].handle;
@@ -44,6 +44,20 @@ function status() {
   const labels = { unreported: 'No graphic report', loading: 'Loading Google Maps', 'api-ready': 'Google Maps API loaded; check views on graphic',
     'missing-key': 'Google Maps browser key missing', 'api-error': 'Google Maps API unavailable', 'view-error': 'Google Maps view unavailable', 'pano-error': 'Exact Street View panorama unavailable' };
   element('renderer-status').textContent = labels[renderer.value?.status ?? 'unreported'];
+  const audience = clients.value;
+  const owner = audience?.program?.clientId;
+  element('program-status').textContent = owner ? `Program: ${owner.slice(0, 8)}` : 'No active program';
+  const menu = select('program-client'); const selected = menu.value;
+  menu.replaceChildren(new Option('Choose program source', ''));
+  const list = element('client-list'); list.replaceChildren();
+  for (const client of audience?.clients ?? []) {
+    const label = `${client.clientId.slice(0, 8)} · ${client.role}${client.clientId === owner ? ' · active' : ''}`;
+    const row = document.createElement('div'); row.textContent = `${label} · ${client.ready ? 'ready' : 'not ready'} · ${labels[client.renderer.status]}`;
+    row.title = client.clientId; list.append(row);
+    if (client.role === 'program' && client.clientId !== owner) menu.add(new Option(label, client.clientId));
+  }
+  menu.value = [...menu.options].some(option => option.value === selected) ? selected : '';
+  (element('transfer-program') as HTMLButtonElement).disabled = !menu.value;
   const value = connection.value;
   const replay = value?.input === 'replay';
   element('replay-label').hidden = !replay;
@@ -70,6 +84,9 @@ connection.on('change', (value, previous) => {
 });
 timeline.on('change', status);
 renderer.on('change', status);
+clients.on('change', status);
+select('program-client').addEventListener('change', () => { (element('transfer-program') as HTMLButtonElement).disabled = !select('program-client').value; });
+element('transfer-program').addEventListener('click', () => { const clientId = select('program-client').value; if (clientId) void control('program/transfer', { clientId }); });
 function readSeries(): SeriesState | null {
   if (!seriesDraft) return null;
   const value = structuredClone(seriesDraft);

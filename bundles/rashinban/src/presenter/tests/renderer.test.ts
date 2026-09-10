@@ -168,3 +168,20 @@ test('failed Google constructors clear loading slots', () => {
   assert.throws(() => adapter.map('left-map'));
   assert.equal(fake.slots.get('#left-map')?.children.length, 0);
 });
+
+test('panorama recovery clears obsolete errors only after all failed visible surfaces recover or leave', () => {
+  const fake = googleBoundary(); const statuses: string[] = [];
+  const adapter = googleAdapter(fake.root, fake.api, () => statuses.push('pano-error'), () => statuses.push('api-ready'));
+  const left = adapter.panorama('left-view'); const right = adapter.panorama('right-view');
+  const p = { lat: 0, lng: 0, panoId: 'missing', heading: 0, pitch: 0, zoom: 0 };
+  left.render(p); right.render(p);
+  fake.requests[0].callback(null, 'ZERO_RESULTS'); fake.requests[1].callback(null, 'ZERO_RESULTS');
+  left.render({ ...p, panoId: 'good-left' }); fake.requests[2].callback({ location: { pano: 'good-left' } }, 'OK');
+  assert.equal(statuses.at(-1), 'pano-error');
+  right.render({ ...p, panoId: 'good-right' }); fake.requests[3].callback({ location: { pano: 'good-right' } }, 'OK');
+  assert.equal(statuses.at(-1), 'api-ready');
+  left.render(p); fake.requests[4].callback(null, 'ZERO_RESULTS');
+  assert.equal(statuses.at(-1), 'pano-error'); left.render(null); assert.equal(statuses.at(-1), 'api-ready');
+  right.render(p); fake.requests[5].callback(null, 'ZERO_RESULTS');
+  assert.equal(statuses.at(-1), 'pano-error'); right.dispose(); assert.equal(statuses.at(-1), 'api-ready');
+});

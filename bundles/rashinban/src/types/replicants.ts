@@ -4,6 +4,7 @@
 import type { DuelState, SeriesState, Timeline, Views } from './presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
 import type { ConnectionStatus } from '../extension/presenter/connection.ts';
+import type { ClientReady, Lease } from '../presenter/clock.ts';
 
 export type PresenterConnection = ConnectionStatus & {
   input: 'live' | 'replay'; replayFixture: string | null; warnings: string[];
@@ -11,6 +12,8 @@ export type PresenterConnection = ConnectionStatus & {
 export const RENDERER_STATUSES = ['unreported', 'loading', 'api-ready', 'missing-key', 'api-error', 'view-error', 'pano-error'] as const;
 export type RendererStatus = typeof RENDERER_STATUSES[number];
 export type PresenterRenderer = { status: RendererStatus; updatedAtMs: number | null };
+export type PresenterClient = ClientReady & { lastSeenMs: number; renderer: PresenterRenderer };
+export type PresenterClients = { clients: PresenterClient[]; program: Lease | null };
 
 export const REPLICANTS = {
   lowerThirdVisible: "lowerThirdVisible",
@@ -22,6 +25,7 @@ export const REPLICANTS = {
   presenterSettings: 'presenterSettings',
   presenterTimeline: 'presenterTimeline',
   presenterRenderer: 'presenterRenderer',
+  presenterClients: 'presenterClients',
 } as const;
 
 export interface ReplicantMap {
@@ -34,4 +38,5 @@ export interface ReplicantMap {
   [REPLICANTS.presenterSettings]: PresenterSettings;
   [REPLICANTS.presenterTimeline]: Timeline;
   [REPLICANTS.presenterRenderer]: PresenterRenderer;
+  [REPLICANTS.presenterClients]: PresenterClients;
 }

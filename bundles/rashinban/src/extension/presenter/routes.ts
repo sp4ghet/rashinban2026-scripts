@@ -1,8 +1,8 @@
 import type NodeCG from '@nodecg/types';
 import express from 'express';
 
-export type PresenterAction = 'view/chroma' | 'view/rendered' | 'mute' | 'unmute' | 'reconnect' | 'series' | 'settings';
-export const PRESENTER_ACTIONS: PresenterAction[] = ['view/chroma', 'view/rendered', 'mute', 'unmute', 'reconnect', 'series', 'settings'];
+export type PresenterAction = 'view/chroma' | 'view/rendered' | 'mute' | 'unmute' | 'reconnect' | 'series' | 'settings' | 'program/transfer';
+export const PRESENTER_ACTIONS: PresenterAction[] = ['view/chroma', 'view/rendered', 'mute', 'unmute', 'reconnect', 'series', 'settings', 'program/transfer'];
 
 export function mountPresenterRoutes(nodecg: NodeCG.ServerAPI, control: (action: PresenterAction, body: unknown) => unknown): void {
   const router = nodecg.Router();

@@ -1,24 +1,33 @@
-import { REPLICANTS, type RendererStatus } from '../types/replicants.ts';
+import { REPLICANTS, type RendererStatus, type PresenterClients } from '../types/replicants.ts';
 import type { DuelState, SeriesState, Timeline, Views } from '../types/presenter.ts';
 import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
 import { project } from '../presenter/projection.ts';
 import { layoutKind } from './presenter/layout.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
 import type { GameRenderer, RenderFrame } from './presenter/renderer.ts';
+import { clientRole, createPresenterClient } from './presenter/client.ts';
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
 const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings);
 const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
 const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews);
+const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
+const role = clientRole(location.search);
+const clientId = crypto.randomUUID();
+const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
+  send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });
+document.body.dataset.clientId = clientId; document.body.dataset.role = role;
+clients.on('change', value => { if (value) client.updateClients(value); });
+timeline.on('change', value => { if (value) client.updateTimeline(value); });
+void client.start();
 const element = (id: string) => document.getElementById(id)!;
 const write = (id: string, value: string) => { const el = element(id); if (el.textContent !== value) el.textContent = value; };
 let renderer: GameRenderer | null = null;
 let previousFrame: RenderFrame | null = null;
-let rendererStatus: RendererStatus = 'loading';
 function publishRenderer(status: RendererStatus) {
-  rendererStatus = status; document.body.dataset.renderer = status;
-  void nodecg.sendMessage('presenter:renderer', status).catch(() => {});
+  document.body.dataset.renderer = status;
+  client.setRendererStatus(status); client.setReady(status === 'api-ready');
 }
 function rendererError(message: string) {
   publishRenderer(message === 'Google Maps browser key missing' ? 'missing-key' : message === 'Exact Street View panorama unavailable' ? 'pano-error'
@@ -29,21 +38,15 @@ function rendererError(message: string) {
 const publicConfig = nodecg.bundleConfig as { presenter?: { googleMapsApiKey?: unknown } };
 const apiKey = publicConfig.presenter?.googleMapsApiKey;
 publishRenderer('loading');
-void createGoogleRenderer(document.body, typeof apiKey === 'string' ? apiKey : '', rendererError)
+void createGoogleRenderer(document.body, typeof apiKey === 'string' ? apiKey : '', rendererError, () => publishRenderer('api-ready'))
   .then(value => { renderer = value; publishRenderer('api-ready'); }).catch(() => {});
-setInterval(() => publishRenderer(rendererStatus), 10000);
-window.addEventListener('pagehide', () => renderer?.dispose());
-let offsetMs = 0;
-async function syncClock() {
-  const start = Date.now();
-  try {
-    const server: unknown = await nodecg.sendMessage('presenter:clock');
-    if (typeof server === 'number') offsetMs = server - (start + Date.now()) / 2;
-  } catch { /* The retained projection remains usable during a brief disconnect. */ }
-}
-void syncClock(); setInterval(() => void syncClock(), 10000);
+window.addEventListener('pagehide', () => { client.dispose(); renderer?.dispose(); });
 
 function frame() {
+  document.body.dataset.program = String(client.ownsProgram());
+  // Consume current cues even before media is installed, establishing bootstrap
+  // and ownership boundaries for the effect player added in the next milestone.
+  client.pollCues();
   const state = duel.value;
   const timing = timeline.value;
   const match = series.value;
@@ -52,7 +55,7 @@ function frame() {
   document.body.dataset.source = options.viewSource;
   document.body.dataset.layout = layoutKind(state?.mode ?? 'NMPZ', options.viewSource);
   if (timing && match) {
-    const visible = project(state ?? null, timing, Date.now() + offsetMs);
+    const visible = project(state ?? null, timing, client.now());
     document.body.dataset.phase = visible.phase;
     const results = visible.answer !== null;
     element('results-area').hidden = !results;

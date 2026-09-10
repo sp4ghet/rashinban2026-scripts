@@ -1,5 +1,6 @@
 import type NodeCG from '@nodecg/types';
-import { REPLICANTS, RENDERER_STATUSES, type PresenterConnection, type PresenterRenderer, type RendererStatus } from '../../types/replicants.ts';
+import { REPLICANTS, RENDERER_STATUSES, type PresenterConnection, type PresenterRenderer, type RendererStatus, type PresenterClients } from '../../types/replicants.ts';
+import { eligibleCompletion, type ClientRole } from '../../presenter/clock.ts';
 import type { DuelState, SeriesState, Timeline, Views } from '../../types/presenter.ts';
 import { DEFAULT_SETTINGS, parseSettings, type PresenterSettings } from '../../presenter/settings.ts';
 import { parseSeries } from '../../presenter/series.ts';
@@ -37,10 +38,50 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   } });
   const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel, { persistent: false, defaultValue: null });
   const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRenderer, { persistent: false, defaultValue: { status: 'unreported', updatedAtMs: null } });
-  nodecg.listenFor('presenter:renderer', (status: unknown) => {
-    if (typeof status === 'string' && RENDERER_STATUSES.includes(status as RendererStatus)) {
-      renderer.value = { status: status as RendererStatus, updatedAtMs: deps.now() };
-    }
+  const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients, { persistent: false, defaultValue: { clients: [], program: null } });
+  let cancelExpiry: (() => void) | null = null;
+  function publishClients(value: PresenterClients): void {
+    cancelExpiry?.(); cancelExpiry = null;
+    const now = deps.now();
+    value.clients = value.clients.filter(client => client.lastSeenMs + 6000 > now);
+    if (value.program && (value.program.expiresAtMs <= now || !value.clients.some(client => client.clientId === value.program!.clientId))) value.program = null;
+    clients.value = value;
+    const owner = value.clients.find(client => client.clientId === value.program?.clientId);
+    // Detach the nested object before publishing to another Replicant.
+    renderer.value = owner ? { ...owner.renderer } : { status: 'unreported', updatedAtMs: null };
+    const expiry = Math.min(...value.clients.map(client => client.lastSeenMs + 6000), value.program?.expiresAtMs ?? Infinity);
+    if (Number.isFinite(expiry)) cancelExpiry = deps.schedule(() => publishClients(copyClients()), expiry - now);
+  }
+  function copyClients(): PresenterClients { return JSON.parse(JSON.stringify(clients.value)) as PresenterClients; }
+  function validStatus(status: unknown): status is RendererStatus { return typeof status === 'string' && RENDERER_STATUSES.includes(status as RendererStatus); }
+  nodecg.listenFor('presenter:client', (request: unknown, ack) => {
+    try {
+      const value = record(request);
+      if (Object.keys(value).some(key => !['clientId', 'role', 'ready', 'renderer'].includes(key))
+        || typeof value.clientId !== 'string' || !/^[\w-]{1,80}$/.test(value.clientId)
+        || !['program', 'preview', 'audio'].includes(value.role as string) || typeof value.ready !== 'boolean' || !validStatus(value.renderer)) throw new Error();
+      const now = deps.now(); const next = copyClients();
+      next.clients = next.clients.filter(client => client.lastSeenMs + 6000 > now);
+      const existing = next.clients.find(client => client.clientId === value.clientId);
+      if (existing && existing.role !== value.role) throw new Error();
+      const report = { clientId: value.clientId, role: value.role as ClientRole, ready: value.ready,
+        lastSeenMs: now, renderer: { status: value.renderer, updatedAtMs: now } };
+      if (existing) Object.assign(existing, report); else next.clients.push(report);
+      if (next.program && next.program.expiresAtMs <= now) next.program = null;
+      if (value.role === 'program' && (!next.program || next.program.clientId === value.clientId)) next.program = { clientId: value.clientId, expiresAtMs: now + 6000 };
+      publishClients(next);
+      if (ack && !ack.handled) ack(null, true);
+    } catch { if (ack && !ack.handled) ack(new Error('Invalid presenter client')); }
+  });
+  nodecg.listenFor('presenter:renderer', (request: unknown) => {
+    try {
+      const value = record(request);
+      if (Object.keys(value).some(key => !['clientId', 'status'].includes(key)) || !validStatus(value.status)) return;
+      const next = copyClients(); const client = next.clients.find(client => client.clientId === value.clientId);
+      if (!client || client.lastSeenMs + 6000 <= deps.now()) return;
+      client.renderer = { status: value.status, updatedAtMs: deps.now() };
+      publishClients(next);
+    } catch { /* Ignore malformed reports; never publish raw error text. */ }
   });
   const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews, { persistent: false, defaultValue: null });
   const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline, { persistent: false, defaultValue: advanceTimeline(null, null, deps.now(), false, settings.value.timing) });
@@ -67,6 +108,23 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
     if (at !== null) cancelWake = deps.schedule(() => tick(), at - now);
   }
   function reset(): void { duel.value = null; views.value = null; tick(true); }
+  nodecg.listenFor('presenter:effect-ended', (request: unknown, ack) => {
+    let accepted = false;
+    try {
+      const value = record(request); const current = timeline.value; const now = deps.now();
+      const cue = current.cues.find(item => item.kind === 'five-k' && item.id === value.cueId);
+      const owner = clients.value.clients.find(client => client.clientId === value.clientId);
+      if (Object.keys(value).every(key => ['clientId', 'generation', 'effect', 'cueId'].includes(key))
+        && typeof value.clientId === 'string' && owner?.role === 'program'
+        && eligibleCompletion(clients.value.program, value.clientId, now)
+        && value.generation === current.generation && current.phase === 'results-transition' && current.effect !== 'none' && value.effect === current.effect
+        && cue && cue.atMs <= now && now < cue.untilMs) {
+        timeline.value = JSON.parse(JSON.stringify(finishEffect(current, current.generation, now, settings.value.timing))) as Timeline;
+        tick(); accepted = true;
+      }
+    } catch { /* Malformed/stale callbacks have no effect. */ }
+    if (ack && !ack.handled) ack(null, accepted);
+  });
   function ingest(message: unknown, at: number, bootstrap: boolean, offset = 0): void {
     const adjusted = offset === 0 ? message : shiftMessageClock(message, -offset);
     const accepted = applySnapshot(duel.value, adjusted);
@@ -121,11 +179,18 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
       connection.value = { ...connection.value, state: 'auth-error', error: 'Check server-side GeoGuessr connection configuration' };
     }
   }
-  function current() { return { settings: settings.value, series: series.value, connection: connection.value, timeline: timeline.value }; }
+  function current() { return { settings: settings.value, series: series.value, connection: connection.value, timeline: timeline.value, clients: clients.value }; }
   function control(action: PresenterAction, body: unknown): unknown {
     if (action === 'series') series.value = parseSeries(body);
     else if (action === 'settings') { settings.value = parseSettings(body); tick(); }
     else if (action === 'reconnect') reconnect(body);
+    else if (action === 'program/transfer') {
+      const value = record(body); const now = deps.now(); const next = copyClients();
+      const target = next.clients.find(client => client.clientId === value.clientId && client.role === 'program' && client.lastSeenMs + 6000 > now);
+      if (Object.keys(value).length !== 1 || !target) throw new Error('Invalid program target');
+      next.program = { clientId: target.clientId, expiresAtMs: target.lastSeenMs + 6000 };
+      publishClients(next);
+    }
     else {
       if (body !== undefined && Object.keys(record(body)).length) throw new Error('Unexpected body');
       const patch = action === 'mute' ? { muted: true } : action === 'unmute' ? { muted: false }
