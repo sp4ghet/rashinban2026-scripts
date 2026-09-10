@@ -157,6 +157,8 @@ export function createConnection(
   deps: ConnectionDeps,
 ): { start(): void; stop(): void; reconnect(): void } {
   let active = false;
+  let partyHealthy = false;
+  let socketHealthy = false;
   let sessionGeneration = 0;
   let lobbyGeneration = 0;
   let accountPlayerId: string | null = null;
@@ -226,6 +228,7 @@ export function createConnection(
   }
 
   function cancelSocketWork(): void {
+    socketHealthy = false;
     cancelHeartbeat?.();
     cancelHeartbeat = null;
     cancelLobbyRetry?.();
@@ -264,6 +267,7 @@ export function createConnection(
 
   function failAuthentication(): void {
     active = false;
+    partyHealthy = false;
     cancelPartyTimer?.();
     cancelPartyTimer = null;
     cancelPartyRetry?.();
@@ -277,6 +281,7 @@ export function createConnection(
 
   function publishTransient(generation: number, retry: () => void): void {
     if (!sessionIsCurrent(generation)) return;
+    partyHealthy = false;
     publish({ state: 'stale', error: 'GeoGuessr connection interrupted' });
     schedulePartyRetry(retry);
   }
@@ -347,7 +352,11 @@ export function createConnection(
       const value = await requestJson(partyUrl, controller.signal);
       if (!sessionIsCurrent(generation, controller.signal)) return;
       handleParty(value, generation);
+      partyHealthy = true;
       partyRetryAttempt = 0;
+      if (socketHealthy && currentLobbyId !== null) {
+        publish({ state: 'live', gameId: currentLobbyId, error: null });
+      }
       if (sessionIsCurrent(generation, controller.signal)) schedulePartyPoll(generation);
     } catch (error) {
       if (!sessionIsCurrent(generation, controller.signal)) return;
@@ -450,7 +459,8 @@ export function createConnection(
         return;
       }
       lobbyRetryAttempt = 0;
-      publish({ state: 'live', gameId: lobbyId, error: null });
+      socketHealthy = true;
+      if (partyHealthy) publish({ state: 'live', gameId: lobbyId, error: null });
       const heartbeat = (): void => {
         if (socket !== opened || !sessionIsCurrent(session) || !lobbyIsCurrent(lobby)) return;
         try {
@@ -484,6 +494,7 @@ export function createConnection(
     opened.onClose((code) => {
       if (socket !== opened || !sessionIsCurrent(session) || !lobbyIsCurrent(lobby)) return;
       socket = null;
+      socketHealthy = false;
       cancelHeartbeat?.();
       cancelHeartbeat = null;
       if (code === 4100) {
@@ -503,6 +514,7 @@ export function createConnection(
 
   function shutdown(publishStatus: boolean): void {
     active = false;
+    partyHealthy = false;
     sessionGeneration += 1;
     lobbyGeneration += 1;
     authAbort?.abort();

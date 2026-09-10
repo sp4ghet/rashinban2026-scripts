@@ -310,6 +310,60 @@ test('a failed party poll does not cancel a pending socket reconnect', async () 
   active.connection.stop();
 });
 
+test('party polling recovery restores live only while the socket is healthy', async () => {
+  let healthyCall = 0;
+  const healthyResponses = [
+    profile(),
+    party('lobby-one'),
+    phonebook('lobby-one'),
+    spectator('lobby-one'),
+    party('lobby-one'),
+  ];
+  const healthyFetch = (async () => {
+    healthyCall += 1;
+    if (healthyCall === 5) throw new Error('temporary party failure');
+    const response = healthyResponses.shift();
+    assert.ok(response);
+    return response;
+  }) as typeof globalThis.fetch;
+  const healthy = scriptedConnection([], { fetch: healthyFetch });
+  healthy.connection.start();
+  await flush();
+  healthy.sockets[0].open();
+
+  healthy.clock.runDelay(5_000);
+  await flush();
+  assert.equal(healthy.statuses.at(-1)?.state, 'stale');
+  const partyRetry = healthy.clock.activeDelays().find((delay) => delay < 5_000);
+  assert.ok(partyRetry);
+  healthy.clock.runDelay(partyRetry);
+  await flush();
+  healthy.sockets[0].message({ code: 'DuelPinPlaced', gameId: 'lobby-one', duel: { state: {} } });
+
+  assert.equal(healthy.statuses.at(-1)?.state, 'live');
+  assert.equal(healthy.statuses.at(-1)?.error, null);
+  healthy.connection.stop();
+
+  const stale = scriptedConnection([
+    profile(),
+    party('lobby-one'),
+    phonebook('lobby-one'),
+    spectator('lobby-one'),
+    party('lobby-one'),
+  ]);
+  stale.connection.start();
+  await flush();
+  stale.sockets[0].open();
+  stale.sockets[0].closeFromServer(1012);
+
+  stale.clock.runDelay(5_000);
+  await flush();
+
+  assert.equal(stale.statuses.at(-1)?.state, 'stale');
+  assert.equal(stale.statuses.at(-1)?.error, 'GeoGuessr connection interrupted');
+  stale.connection.stop();
+});
+
 test('valid server time uses the request midpoint to estimate clock offset', async () => {
   const harness = scriptedConnection([
     json(
