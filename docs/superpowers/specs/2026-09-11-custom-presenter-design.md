@@ -2,7 +2,7 @@
 
 Date: 2026-09-11
 
-Status: Design for review; implementation has not started.
+Status: Approved by the user on 2026-09-11; implementation has not started.
 
 ## Purpose and scope
 
