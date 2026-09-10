@@ -1,3 +1,4 @@
+import { applyPinCues, samePin } from '../../presenter/cues.ts';
 import type NodeCG from '@nodecg/types';
 import { REPLICANTS, RENDERER_STATUSES, type PresenterConnection, type PresenterRenderer, type RendererStatus, type PresenterClients } from '../../types/replicants.ts';
 import { eligibleCompletion, type ClientRole } from '../../presenter/clock.ts';
@@ -80,7 +81,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
       if (value.audio !== undefined) {
         const status = record(value.audio);
         if (Object.keys(status).some(k => !['state', 'missing'].includes(k)) || !AUDIO_STATES.includes(status.state as AudioStatus['state'])
-          || !Array.isArray(status.missing) || status.missing.length > 32 || status.missing.some(id => typeof id !== 'string' || !/^[\w-]{1,80}$/.test(id))) throw Error();
+          || !Array.isArray(status.missing) || status.missing.length > 39 || status.missing.some(id => typeof id !== 'string' || !/^[\w-]{1,80}$/.test(id))) throw Error();
         audio = { state: status.state as AudioStatus['state'], missing: [...status.missing] as string[] };
       }
       if (value.clockFresh !== undefined && typeof value.clockFresh !== 'boolean') throw Error();
@@ -185,7 +186,11 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
       views.value = seedViews(accepted.state);
       tick(true);
     } else if (duel.value && views.value) {
-      views.value = applyTelemetry(views.value, duel.value, adjusted);
+      const previous = views.value;
+      const next = applyTelemetry(previous, duel.value, adjusted);
+      views.value = next;
+      const pins = Object.fromEntries(Object.entries(next.players).filter(([id, view]) => !samePin(previous.players[id]?.pin, view.pin)).map(([id, view]) => [id, view.pin]));
+      if (Object.keys(pins).length) timeline.value = JSON.parse(JSON.stringify(applyPinCues(timeline.value, pins, deps.now(), settings.value.timing))) as Timeline;
     }
     connection.value = { ...connection.value, lastUpdateMs: at,
       gameId: duel.value?.gameId ?? connection.value.gameId, warnings: accepted.warnings };

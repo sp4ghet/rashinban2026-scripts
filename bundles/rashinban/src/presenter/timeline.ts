@@ -1,3 +1,4 @@
+import { applyPinCues, samePin } from './cues.ts';
 import type { Cue, CueKind, DuelState, EffectKind, Timeline, Timing } from '../types/presenter.ts';
 
 export function effectFor(scores: readonly number[]): EffectKind {
@@ -44,9 +45,9 @@ function scheduleReveal(timeline: Timeline, atMs: number, timing: Timing): Timel
     damageAtMs,
     holdAtMs,
     cues: [
-      cue(timeline, 'results', revealAtMs, revealAtMs + 200),
+      cue(timeline, 'results', revealAtMs, revealAtMs + 250),
       cue(timeline, 'count', revealAtMs, damageAtMs),
-      cue(timeline, 'damage', damageAtMs, holdAtMs),
+      ...(timeline.hasDamage === false ? [] : [cue(timeline, 'damage', damageAtMs, holdAtMs)]),
     ],
   };
 }
@@ -63,19 +64,16 @@ export function finishEffect(timeline: Timeline, generation: string, nowMs: numb
 function liveCues(timeline: Timeline, state: DuelState, nowMs: number, bootstrap: boolean, timing: Timing): Timeline {
   const cues = timeline.cues.filter(item => item.untilMs > nowMs);
   const observed: Timeline['observed'] = {};
+  const changedPins: Record<string, DuelState['players'][number]['pin']> = {};
   for (const player of state.players) {
     const old = timeline.observed[player.id];
     const guessed = player.guesses.some(guess => guess.round === timeline.round);
-    let pinCueAtMs = old?.pinCueAtMs ?? null;
-    if (!bootstrap && timeline.phase === 'live') {
-      const changed = player.pin !== null && (player.pin.lat !== old?.pin?.lat || player.pin.lng !== old?.pin?.lng);
-      if (changed && !guessed && (pinCueAtMs === null || nowMs - pinCueAtMs >= (timing.pinRateLimitMs ?? 250))) {
-        pinCueAtMs = nowMs;
-        cues.push(cue(timeline, 'pin', nowMs + timing.leadMs, nowMs + timing.leadMs + 200, player.id));
-      }
-      if (guessed && !old?.guessed) cues.push(cue(timeline, 'guess', nowMs + timing.leadMs, nowMs + timing.leadMs + 500, player.id));
+    if (!bootstrap && old && timeline.phase === 'live') {
+      if (!samePin(player.pin, old.statePin)) changedPins[player.id] = player.pin;
+      if (guessed && !old.guessed) cues.push({ id: `${state.gameId}/${state.round}/${player.id}/guess`, kind: 'guess',
+        atMs: nowMs + timing.leadMs, untilMs: nowMs + timing.leadMs + 250, playerId: player.id });
     }
-    observed[player.id] = { pin: player.pin, guessed, pinCueAtMs };
+    observed[player.id] = { pin: bootstrap || !old ? player.pin : old.pin, statePin: player.pin, guessed, pinCueAtMs: old?.pinCueAtMs ?? null };
   }
   const round = state.rounds.find(item => item.number === timeline.round);
   const end = round?.endAtMs ?? null;
@@ -84,15 +82,15 @@ function liveCues(timeline: Timeline, state: DuelState, nowMs: number, bootstrap
     // First guess can replace the maximum-round deadline: remove its scheduled ticks.
     for (let i = cues.length - 1; i >= 0; i--) if (cues[i].kind === 'countdown') cues.splice(i, 1);
     if (countdownEndAtMs !== null) {
-      for (let seconds = 15; seconds >= 1; seconds--) {
+      for (let seconds = 3; seconds >= 1; seconds--) {
         const atMs = countdownEndAtMs - seconds * 1000;
         if (atMs >= nowMs + timing.leadMs && atMs >= (round?.startAtMs ?? 0)) {
-          cues.push(cue(timeline, 'countdown', atMs, atMs + 200));
+          cues.push({ ...cue(timeline, 'countdown', atMs, atMs + 250), id: `${timeline.generation}:countdown:${countdownEndAtMs}:${seconds}` });
         }
       }
     }
   }
-  return { ...timeline, cues, observed, countdownEndAtMs };
+  return applyPinCues({ ...timeline, cues, observed, countdownEndAtMs }, changedPins, nowMs, timing);
 }
 
 /** Accept normalized authoritative state; call again on time boundaries even without a new snapshot. */
@@ -111,7 +109,8 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
     } else if (timeline.revealAtMs === null && timeline.effect === 'none') {
       const scores = state.players.map(player => player.results.find(result => result.round === timeline.round)!.score);
       const effect = effectFor(scores);
-      timeline = { ...timeline, phase: 'results-transition', music: 'results', cues: [], effect };
+      timeline = { ...timeline, phase: 'results-transition', music: 'results', cues: [], effect,
+        hasDamage: state.players.some(player => player.results.some(result => result.round === timeline.round && result.healthAfter < result.healthBefore)) };
       if (effect === 'none') timeline = scheduleReveal(timeline, nowMs, timing);
       else {
         const startAtMs = nowMs + timing.leadMs;

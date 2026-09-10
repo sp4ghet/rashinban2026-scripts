@@ -72,7 +72,7 @@ function frame() {
   const timing = timeline.value;
   const match = series.value;
   const options = settings.value ?? DEFAULT_SETTINGS;
-  // This is the single cue consumer. Later cue-audio dispatch joins this loop.
+  // Sole graphic cue consumer; sound scheduling belongs to the audio lease engine.
   for (const cue of client.pollCues()) if (cue.kind === 'five-k' && timing) {
     const complete = client.effectCompletion(timing);
     const asset = celebrationAsset(selectedMedia, timing.effect, videoAssets.value ?? []);

@@ -121,8 +121,9 @@ export type Timeline = {
   damageAtMs: number | null;
   holdAtMs: number | null;
   cues: Cue[];
+  hasDamage?: boolean;
   // Observations suppress replay when snapshots or scheduled ticks repeat.
-  observed: Record<string, { pin: Point | null; guessed: boolean; pinCueAtMs: number | null }>;
+  observed: Record<string, { pin: Point | null; statePin?: Point | null; guessed: boolean; pinCueAtMs: number | null }>;
   countdownEndAtMs: number | null;
 };
 export type Timing = { leadMs: number; countMs: number; damageMs: number; effectWatchdogMs: number; pinRateLimitMs?: number };

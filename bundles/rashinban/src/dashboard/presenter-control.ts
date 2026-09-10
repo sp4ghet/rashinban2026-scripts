@@ -49,7 +49,22 @@ function addStem(stem: Stem) {
   element('media-stems').append(row);
 }
 for (const context of MUSIC_CONTEXTS) field(element('media-fades'), context, context, '0', 120000);
-for (const kind of CUE_KINDS) menuField(element('media-sounds'), kind, 'effects', '').dataset.cue = kind;
+const cuePreview = element('cue-preview-audio') as HTMLAudioElement;
+let stopPreview: ReturnType<typeof setTimeout> | undefined;
+function stopCuePreview() { clearTimeout(stopPreview); cuePreview.pause(); cuePreview.removeAttribute('src'); cuePreview.load(); }
+for (const kind of CUE_KINDS) {
+  const menu = menuField(element('media-sounds'), kind, 'effects', ''); menu.dataset.cue = kind;
+  const preview = document.createElement('button'); preview.type = 'button'; preview.dataset.previewCue = kind; preview.textContent = 'Preview here';
+  preview.onclick = () => {
+    stopCuePreview(); if (!menu.value) return;
+    cuePreview.src = menu.value; cuePreview.loop = kind === 'count'; cuePreview.volume = 0.5;
+    void cuePreview.play().catch(() => { element('error').textContent = 'Preview audio unavailable. Check the selected asset.'; });
+    stopPreview = setTimeout(stopCuePreview, kind === 'count' ? 3000 : 10000);
+  };
+  menu.parentElement!.append(preview);
+}
+element('stop-cue-preview').onclick = stopCuePreview;
+window.addEventListener('pagehide', stopCuePreview);
 element('add-stem').onclick = () => addStem({ id: `stem-${document.querySelectorAll('.media-stem').length + 1}`, url: '', loopStartS: 0, loopEndS: 8, gains: { idle: 0, round: 0, urgent: 0, results: 0 } });
 media.on('change', value => {
   if (!value) return;
@@ -125,7 +140,7 @@ function status() {
     const readiness = client.role === 'audio' ? (client.clockFresh ? 'clock ready' : 'clock not ready')
       : `${client.ready ? 'graphics ready' : 'graphics not ready'} · ${labels[client.renderer.status]}`;
     const row = document.createElement('div'); row.textContent = `${label} · ${readiness}`;
-    row.textContent += ` · Audio: ${client.audio?.state ?? 'unreported'}${client.audio?.missing.length ? ' · unavailable stems: ' + client.audio.missing.join(', ') : ''}`;
+    row.textContent += ` · Audio: ${client.audio?.state ?? 'unreported'}${client.audio?.missing.length ? ' · unavailable audio: ' + client.audio.missing.join(', ') : ''}`;
     row.title = client.clientId; list.append(row);
     if (client.role === 'program' && client.clientId !== owner) menu.add(new Option(label, client.clientId));
   }

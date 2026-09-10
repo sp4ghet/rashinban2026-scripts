@@ -11,7 +11,7 @@ The clip fills the 1920×1080 graphic above all other content, including both ca
 ## Soundtrack and duration
 
 - **Embedded:** the video's original soundtrack plays only on the active program graphic, including when general audio output is set to a separate browser source. Presenter mute and effects gain apply immediately. No rate or pitch adjustment is used.
-- **Cue:** the video is muted. A `five-k` cue sound must be selected. Cue audio dispatch is implemented by the later cue-audio task; this selection does not yet produce that audio.
+- **Cue:** the video is muted. A `five-k` cue sound must be selected. The selected sound plays through the current audio owner at the shared effect timestamp and stops when the video completes or is interrupted, including a program ownership change.
 - **Silent:** the video is muted and no celebration soundtrack should be dispatched.
 
 The video must expose finite, positive duration metadata. A clip longer than its configured maximum wait is rejected. The local watchdog is bounded by both the configured wait and duration plus one second; the server independently enforces the configured wait. Rejection, decoding error, and autoplay denial all complete once and reveal results normally. Configure enough maximum wait for the entire clip and normal startup overhead; the accepted range is 500–120000 ms.
@@ -24,11 +24,19 @@ For separate audio, add `/bundles/rashinban/graphics/presenter-audio.html?role=a
 
 All selected stems decode before a shared scheduled start. Every layer loops continuously, including layers with zero gain. A reloaded owner joins the phase derived from the shared game music epoch. Changing rounds or music context changes gain with the configured fade; it does not restart sources or alter playback rate or pitch. Abort and finished states fade to silence using the idle fade. A new game replaces the old sources and establishes its new epoch.
 
-The first authored stem defines the common loop length. Each decoded layer must have finite loop bounds within its decoded duration, with the same loop length (within one microsecond). A missing, invalid, or incompatible layer stays silent while valid compatible layers play. Dashboard client rows report loading, ready, partial, decode failure, silent empty configuration, or suspended audio, and list unavailable stem IDs without raw error text. Graphics never wait for audio assets.
+The first authored stem defines the common loop length. Each decoded layer must have finite loop bounds within its decoded duration, with the same loop length (within one microsecond). A missing, invalid, or incompatible layer stays silent while valid compatible layers play. Dashboard client rows report loading, ready, partial, decode failure, silent empty configuration, or suspended audio, and list unavailable stem IDs and sound-kind IDs (for example, sound-pin) without raw error text. Graphics never wait for audio assets.
 
 For a local browser test requiring activation, append `&audioUnlock=1` to either active URL and click **Enable audio in this browser**. Activation is local to that browser page; a dashboard click cannot unlock another browser source. The button disappears after the AudioContext runs. The dashboard displays audio readiness independently of map readiness.
 
 Audio mode changes keep the old lease in a releasing state until its browser has silenced and stopped its sources, allowed queued output to drain, and acknowledged the lease token. Missing sources fall back to the six-second lease expiry. A separate master gate schedules silence on the audio clock one second plus reported device buffering before the deadline, so a blocked JS thread cannot keep the stems audible until another source activates. Renewals replace this gate deadline without touching music fades. Accepted clock samples have round trips below one second; the conservative margin covers midpoint uncertainty and adds the AudioContext base/output latency. Browser suspension clears the previous graph before local unlock. Browser and OBS output latency still require the final integrated acceptance test; no frame-perfect claim is made.
+
+## Interaction and result sounds
+
+Pin placement uses shared state/telemetry coordinate history with a 150 ms minimum interval; panning and repeated coordinates stay silent. Submission plays once per game/round/player, including the first guess, and is never inferred from a no-pin timeout. A known deadline schedules only the remaining 3, 2, 1 seconds; shortening it replaces pending ticks. Results/count/damage follow the shared presentation stages. Count loops stop at damage time, and zero health loss has no damage sound.
+
+Cues use the same AudioContext and ownership gate as music. Expired one-shots are ignored after 250 ms; new owners ignore historical one-shots and join only the remaining count interval. Future cues survive refresh when still eligible, without replaying earlier cues. Generation replacement cancels pending sounds. Already started one-shots finish their selected asset unless the sequence or audio ownership is canceled.
+
+**Preview here** next to each sound selection plays that selection only in the dashboard at 50% volume, including unsaved selections. Count preview stops after three seconds; other previews stop after ten seconds. **Stop local preview** stops immediately. Preview does not publish any live control message or change the game/timeline.
 
 ## Manifest API
 

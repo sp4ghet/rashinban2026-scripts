@@ -4,7 +4,7 @@ import type { MediaManifest } from '../../presenter/media.ts';
 import type { PresenterSettings } from '../../presenter/settings.ts';
 import type { Timeline } from '../../types/presenter.ts';
 
-/** Shared browser lifecycle; cue dispatch remains owned by the entry point. */
+/** Shared audio lease lifecycle for stems and timestamped sound cues. */
 export function createAudioOutput(client: ReturnType<typeof createPresenterClient>) {
   const context = new AudioContext();
   const engine = createAudio(context, fetch);
@@ -42,7 +42,7 @@ export function createAudioOutput(client: ReturnType<typeof createPresenterClien
     } else {
       const key = `${lease.token}:${lease.expiresAtMs}`;
       if (key !== lastLease) { engine.lease(lease.expiresAtMs, client.now()); lastLease = key; }
-      engine.sync(timeline, settings, client.now()); document.body.dataset.audioOwner = 'true';
+      engine.sync(timeline, settings, client.now(), client.programOwner()); document.body.dataset.audioOwner = 'true';
     }
     publish();
   }

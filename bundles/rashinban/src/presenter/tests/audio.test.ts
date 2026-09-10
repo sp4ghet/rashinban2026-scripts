@@ -21,7 +21,7 @@ function port() {
   const context = { currentTime: 10, state: 'running', baseLatency: 0, outputLatency: 0, destination: {},
     createGain() { const gain = { gain: new Param(), connect() {}, disconnect() {} }; gains.push(gain); return gain; },
     createBufferSource() { const source = { buffer: null, loop: false, loopStart: 0, loopEnd: 0, playbackRate: { value: 1 }, starts: [] as number[][], stops: 0,
-      connect(to: unknown) { this.output = to; }, output: null as unknown, disconnect() {}, start(...args: number[]) { this.starts.push(args); }, stop() { this.stops++; } }; sources.push(source); return source; },
+      connect(to: unknown) { this.output = to; }, output: null as unknown, disconnect() {}, start(...args: number[]) { this.starts.push(args); }, stopTimes: [] as number[], stop(at?: number) { this.stops++; if (at !== undefined) this.stopTimes.push(at); } }; sources.push(source); return source; },
     async decodeAudioData(bytes: ArrayBuffer) { return { duration: new Uint8Array(bytes)[0], sampleRate: 48000 }; },
   };
   const fetchAsset = async (url: string) => { if (url.endsWith('missing')) throw Error(); return { ok: true, arrayBuffer: async () => new Uint8Array([url.endsWith('short') ? 3 : 12]).buffer }; };
@@ -103,4 +103,86 @@ test('equal-gain context transition applies its authored fade without restarting
   p.context.currentTime = 11; p.audio.sync({ ...timeline, music: 'urgent' }, DEFAULT_SETTINGS, 14500);
   assert.equal(gain.at(11), 0.7, 'urgent zero-duration fade reaches the same target immediately');
   assert.equal(p.sources.length, 1); assert.equal(p.sources[0].stops, 0);
+});
+
+const cueMedia: MediaManifest = { ...EMPTY_MEDIA, sounds: { pin: '/pin', guess: '/guess', countdown: '/tick', results: '/results', count: '/count', damage: '/damage', 'five-k': '/five-k' } };
+function cue(id: string, kind: import('../../types/presenter.ts').CueKind, atMs: number, untilMs = atMs + 250) { return { id, kind, atMs, untilMs, playerId: null }; }
+test('audio schedules future cues against shared clock once and cancels replaced countdowns', async () => {
+  const p = port(); await p.audio.load(cueMedia); p.audio.lease(20000, 1000);
+  const t = { ...timeline, cues: [cue('tick', 'countdown', 3000)] };
+  p.audio.sync(t, DEFAULT_SETTINGS, 1000); p.audio.sync(t, DEFAULT_SETTINGS, 1000);
+  assert.equal(p.sources.length, 1); assert.deepEqual(p.sources[0].starts[0], [12, 0]);
+  assert.equal(p.sources[0].output.gain.at(10), DEFAULT_SETTINGS.effectsGain);
+  p.audio.sync({ ...t, cues: [cue('shorter', 'countdown', 2500)] }, DEFAULT_SETTINGS, 1000);
+  assert.equal(p.sources[0].stops, 1); assert.equal(p.sources.length, 2);
+  assert.equal(p.sources[1].starts[0][0], 11.5);
+  p.audio.sync({ ...t, generation: 'new', cues: [] }, DEFAULT_SETTINGS, 1000);
+  assert.equal(p.sources[1].stops, 1);
+});
+test('new audio owner skips historical one-shots, joins only remaining count and cancels on stop', async () => {
+  const p = port(); await p.audio.load(cueMedia); p.audio.lease(20000, 1100);
+  p.audio.sync({ ...timeline, damageAtMs: 3000, cues: [cue('past', 'guess', 1000), cue('count', 'count', 1000, 3000), cue('expired', 'pin', 0)] }, DEFAULT_SETTINGS, 1100);
+  assert.equal(p.sources.length, 1); assert.equal(p.sources[0].loop, true);
+  assert.deepEqual(p.sources[0].starts[0], [10, 0.1]); assert.deepEqual(p.sources[0].stopTimes, [11.9]);
+  p.audio.stop(); assert.equal(p.sources[0].stops, 2);
+  p.audio.lease(20000, 1600); p.audio.sync({ ...timeline, damageAtMs: 3000, cues: [cue('count', 'count', 1000, 3000)] }, DEFAULT_SETTINGS, 1600);
+  assert.equal(p.sources.length, 2); assert.equal(p.sources[1].starts[0][1], 0.6);
+});
+test('lease is mandatory for cues, future reacquisition remains schedulable and mute affects existing sounds', async () => {
+  const p = port(); await p.audio.load(cueMedia); const t = { ...timeline, cues: [cue('future', 'guess', 3000)] };
+  p.audio.sync(t, DEFAULT_SETTINGS, 1000); assert.equal(p.sources.length, 0);
+  p.audio.lease(20000, 1000); p.audio.sync(t, DEFAULT_SETTINGS, 1000); p.audio.stop();
+  p.audio.lease(20000, 1500); p.audio.sync(t, DEFAULT_SETTINGS, 1500); assert.equal(p.sources.length, 2);
+  p.audio.sync(t, { ...DEFAULT_SETTINGS, muted: true }, 1500); assert.equal(p.sources[1].output.gain.at(10), 0);
+});
+test('five-k uses exactly cue soundtrack and stops when celebration disappears', async () => {
+  for (const soundtrack of ['embedded', 'silent', 'cue'] as const) {
+    const p = port(); await p.audio.load({ ...cueMedia, fiveK: { single: { url: '/video', watchdogMs: 10000, soundtrack }, double: null } });
+    p.audio.lease(20000, 1000); const t = { ...timeline, effect: 'single-5k' as const, cues: [cue('5k', 'five-k', 1200, 11200)] };
+    p.audio.sync(t, DEFAULT_SETTINGS, 1000); assert.equal(p.sources.length, soundtrack === 'cue' ? 1 : 0);
+    p.audio.sync({ ...t, effect: 'none', cues: [] }, DEFAULT_SETTINGS, 1000);
+    if (soundtrack === 'cue') assert.equal(p.sources[0].stops, 2);
+  }
+});
+test('missing cue asset reports sanitized status while other cues remain usable', async () => {
+  const p = port(); await p.audio.load({ ...EMPTY_MEDIA, sounds: { pin: '/missing', guess: '/guess' } });
+  assert.equal(p.audio.status().state, 'partial'); assert.deepEqual(p.audio.status().missing, ['sound-pin']);
+});
+
+
+test('an already sounding one-shot finishes its asset after its scheduling record expires', async () => {
+  const p = port(); await p.audio.load(cueMedia); p.audio.lease(20000, 1000);
+  p.audio.sync({ ...timeline, cues: [cue('pin', 'pin', 1200)] }, DEFAULT_SETTINGS, 1000);
+  p.context.currentTime = 11; p.audio.sync({ ...timeline, cues: [] }, DEFAULT_SETTINGS, 2000);
+  assert.equal(p.sources[0].stops, 0);
+});
+test('far-future cues wait for renewable lease coverage and missed one-shots never burst on resume', async () => {
+  const p = port(); await p.audio.load(cueMedia); p.audio.lease(7000, 1000);
+  const t = { ...timeline, cues: [cue('future', 'countdown', 10000), cue('missed', 'countdown', 8000)] };
+  p.audio.sync(t, DEFAULT_SETTINGS, 1000); assert.equal(p.sources.length, 0);
+  p.context.currentTime = 17.5; p.audio.lease(16000, 8500); p.audio.sync(t, DEFAULT_SETTINGS, 8500);
+  assert.equal(p.sources.length, 1); assert.equal(p.sources[0].starts[0][0], 19);
+});
+
+test('renewal after the audio gate already closed cannot revive tails of previous one-shots', async () => {
+  const p = port(); await p.audio.load(cueMedia); p.audio.lease(7000, 1000);
+  p.audio.sync({ ...timeline, cues: [cue('guess', 'guess', 1200)] }, DEFAULT_SETTINGS, 1000);
+  p.context.currentTime = 17; p.audio.lease(16000, 8000);
+  p.audio.sync({ ...timeline, cues: [] }, DEFAULT_SETTINGS, 8000);
+  assert.equal(p.sources[0].stops, 1);
+});
+
+test('separate celebration soundtrack cancels when the program video owner transfers and cannot replay', async () => {
+  const p = port(); await p.audio.load({ ...cueMedia, fiveK: { single: { url: '/video', watchdogMs: 10000, soundtrack: 'cue' }, double: null } });
+  p.audio.lease(20000, 1000);
+  const t = { ...timeline, effect: 'single-5k' as const, cues: [cue('5k-owner', 'five-k', 1500, 11500)] };
+  p.audio.sync(t, DEFAULT_SETTINGS, 1000, 'program-one');
+  assert.equal(p.sources.length, 1);
+  p.audio.sync(t, DEFAULT_SETTINGS, 1000, 'program-two');
+  assert.equal(p.sources[0].stops, 2);
+  p.audio.sync(t, DEFAULT_SETTINGS, 1000, 'program-two'); assert.equal(p.sources.length, 1);
+  p.audio.sync({ ...t, generation: 'fresh', cues: [cue('new-5k', 'five-k', 1600, 11600)] }, DEFAULT_SETTINGS, 1000, 'program-two');
+  assert.equal(p.sources.length, 2);
+  p.audio.sync({ ...t, generation: 'fresh', cues: [cue('new-5k', 'five-k', 1600, 11600)] }, DEFAULT_SETTINGS, 1000, null);
+  assert.equal(p.sources[1].stops, 2);
 });

@@ -56,6 +56,10 @@ export function createPresenterClient(deps: ClientDeps) {
   return {
     async start() { if (started || disposed) return; started = true; heartbeat(); await sync(); },
     now, ownsProgram,
+    programOwner() {
+      const lease = clients.program;
+      return !disposed && deps.monotonicNow() - lastSync < 30000 && lease && eligibleCompletion(lease, lease.clientId, now()) ? lease.clientId : null;
+    },
     audioLease(mode: PresenterSettings['audioOutput']) {
       const lease = clients.audio;
       return !disposed && deps.monotonicNow() - lastSync < 30000 && lease && !lease.releasing && lease.mode === mode
