@@ -1,15 +1,38 @@
-import { REPLICANTS } from '../types/replicants.ts';
-import type { DuelState, SeriesState, Timeline } from '../types/presenter.ts';
+import { REPLICANTS, type RendererStatus } from '../types/replicants.ts';
+import type { DuelState, SeriesState, Timeline, Views } from '../types/presenter.ts';
 import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
 import { project } from '../presenter/projection.ts';
 import { layoutKind } from './presenter/layout.ts';
+import { createGoogleRenderer } from './presenter/google.ts';
+import type { GameRenderer, RenderFrame } from './presenter/renderer.ts';
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
 const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings);
 const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
+const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews);
 const element = (id: string) => document.getElementById(id)!;
 const write = (id: string, value: string) => { const el = element(id); if (el.textContent !== value) el.textContent = value; };
+let renderer: GameRenderer | null = null;
+let previousFrame: RenderFrame | null = null;
+let rendererStatus: RendererStatus = 'loading';
+function publishRenderer(status: RendererStatus) {
+  rendererStatus = status; document.body.dataset.renderer = status;
+  void nodecg.sendMessage('presenter:renderer', status).catch(() => {});
+}
+function rendererError(message: string) {
+  publishRenderer(message === 'Google Maps browser key missing' ? 'missing-key' : message === 'Exact Street View panorama unavailable' ? 'pano-error'
+    : message === 'Google Maps view unavailable' ? 'view-error' : 'api-error');
+  const placeholder = element('results-map').querySelector('span');
+  if (placeholder) placeholder.textContent = 'Map unavailable';
+}
+const publicConfig = nodecg.bundleConfig as { presenter?: { googleMapsApiKey?: unknown } };
+const apiKey = publicConfig.presenter?.googleMapsApiKey;
+publishRenderer('loading');
+void createGoogleRenderer(document.body, typeof apiKey === 'string' ? apiKey : '', rendererError)
+  .then(value => { renderer = value; publishRenderer('api-ready'); }).catch(() => {});
+setInterval(() => publishRenderer(rendererStatus), 10000);
+window.addEventListener('pagehide', () => renderer?.dispose());
 let offsetMs = 0;
 async function syncClock() {
   const start = Date.now();
@@ -68,6 +91,15 @@ function frame() {
       }
     }
     write('phase-label', label);
+    if (state && views.value) {
+      previousFrame = { state, views: views.value, projection: visible, source: options.viewSource,
+        playerIds: { left: match.left.playerId, right: match.right.playerId } };
+      renderer?.render(previousFrame);
+    }
+  }
+  if ((!state || !views.value || !timing || !match) && previousFrame) {
+    renderer?.render({ ...previousFrame, source: options.viewSource, projection: { phase: 'waiting-game', answer: null, players: [], remainingMs: null } });
+    previousFrame = null;
   }
   requestAnimationFrame(frame);
 }

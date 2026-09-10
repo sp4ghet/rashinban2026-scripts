@@ -1,5 +1,6 @@
 {
   "presenter": {
+    "googleMapsApiKey": "",
     "input": "live",
     "replayFixture": "gs2-ws-full-duel-sequence.json",
     "partyId": null,

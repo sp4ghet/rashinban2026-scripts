@@ -1,4 +1,4 @@
-import { REPLICANTS, type PresenterConnection } from '../types/replicants.ts';
+import { REPLICANTS, type PresenterConnection, type PresenterRenderer } from '../types/replicants.ts';
 import type { DuelState, SeriesState, Timeline } from '../types/presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
 
@@ -7,6 +7,7 @@ const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSetting
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const connection = nodecg.Replicant<PresenterConnection>(REPLICANTS.presenterConnection);
 const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
+const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRenderer);
 const element = (id: string) => document.getElementById(id)!;
 const input = (id: string) => element(id) as HTMLInputElement;
 const select = (id: string) => element(id) as HTMLSelectElement;
@@ -40,6 +41,9 @@ function showSeries(value: SeriesState) {
   }
 }
 function status() {
+  const labels = { unreported: 'No graphic report', loading: 'Loading Google Maps', 'api-ready': 'Google Maps API loaded; check views on graphic',
+    'missing-key': 'Google Maps browser key missing', 'api-error': 'Google Maps API unavailable', 'view-error': 'Google Maps view unavailable', 'pano-error': 'Exact Street View panorama unavailable' };
+  element('renderer-status').textContent = labels[renderer.value?.status ?? 'unreported'];
   const value = connection.value;
   const replay = value?.input === 'replay';
   element('replay-label').hidden = !replay;
@@ -65,6 +69,7 @@ connection.on('change', (value, previous) => {
   status();
 });
 timeline.on('change', status);
+renderer.on('change', status);
 function readSeries(): SeriesState | null {
   if (!seriesDraft) return null;
   const value = structuredClone(seriesDraft);

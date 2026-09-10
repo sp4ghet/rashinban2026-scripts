@@ -8,6 +8,9 @@ import type { ConnectionStatus } from '../extension/presenter/connection.ts';
 export type PresenterConnection = ConnectionStatus & {
   input: 'live' | 'replay'; replayFixture: string | null; warnings: string[];
 };
+export const RENDERER_STATUSES = ['unreported', 'loading', 'api-ready', 'missing-key', 'api-error', 'view-error', 'pano-error'] as const;
+export type RendererStatus = typeof RENDERER_STATUSES[number];
+export type PresenterRenderer = { status: RendererStatus; updatedAtMs: number | null };
 
 export const REPLICANTS = {
   lowerThirdVisible: "lowerThirdVisible",
@@ -18,6 +21,7 @@ export const REPLICANTS = {
   presenterSeries: 'presenterSeries',
   presenterSettings: 'presenterSettings',
   presenterTimeline: 'presenterTimeline',
+  presenterRenderer: 'presenterRenderer',
 } as const;
 
 export interface ReplicantMap {
@@ -29,4 +33,5 @@ export interface ReplicantMap {
   [REPLICANTS.presenterSeries]: SeriesState;
   [REPLICANTS.presenterSettings]: PresenterSettings;
   [REPLICANTS.presenterTimeline]: Timeline;
+  [REPLICANTS.presenterRenderer]: PresenterRenderer;
 }

@@ -1,5 +1,5 @@
 import type NodeCG from '@nodecg/types';
-import { REPLICANTS, type PresenterConnection } from '../../types/replicants.ts';
+import { REPLICANTS, RENDERER_STATUSES, type PresenterConnection, type PresenterRenderer, type RendererStatus } from '../../types/replicants.ts';
 import type { DuelState, SeriesState, Timeline, Views } from '../../types/presenter.ts';
 import { DEFAULT_SETTINGS, parseSettings, type PresenterSettings } from '../../presenter/settings.ts';
 import { parseSeries } from '../../presenter/series.ts';
@@ -36,6 +36,12 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
     input, replayFixture: input === 'replay' && typeof fixture === 'string' ? fixture : null, warnings: [],
   } });
   const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel, { persistent: false, defaultValue: null });
+  const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRenderer, { persistent: false, defaultValue: { status: 'unreported', updatedAtMs: null } });
+  nodecg.listenFor('presenter:renderer', (status: unknown) => {
+    if (typeof status === 'string' && RENDERER_STATUSES.includes(status as RendererStatus)) {
+      renderer.value = { status: status as RendererStatus, updatedAtMs: deps.now() };
+    }
+  });
   const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews, { persistent: false, defaultValue: null });
   const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline, { persistent: false, defaultValue: advanceTimeline(null, null, deps.now(), false, settings.value.timing) });
   let cancelWake: (() => void) | null = null;

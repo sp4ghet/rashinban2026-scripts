@@ -20,6 +20,7 @@
   "devDependencies": {
     "@nodecg/types": "^2.8.0",
     "@types/express": "^5.0.6",
+    "@types/google.maps": "^3.66.2",
     "@types/node": "^22.20.2",
     "@types/ws": "^8.18.1",
     "concurrently": "^10.0.5",

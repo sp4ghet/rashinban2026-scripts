@@ -37,6 +37,11 @@ test('presenter boots isolated replay and validates HTTP edits before publishing
   registerPresenter(fake, { now: () => now, schedule(fn, delay) {
     const task = { fn, at: now + delay, active: true }; tasks.push(task); return () => { task.active = false; };
   } });
+  assert.equal(reps.get('presenterRenderer')?.value.status, 'unreported');
+  listeners.get('presenter:renderer')!('missing-key');
+  assert.deepEqual(reps.get('presenterRenderer')?.value, { status: 'missing-key', updatedAtMs: now });
+  listeners.get('presenter:renderer')!({ status: 'api-ready', error: 'private raw error' });
+  assert.equal(reps.get('presenterRenderer')?.value.status, 'missing-key');
   const server = app.listen(0, '127.0.0.1');
   await new Promise<void>(resolve => server.once('listening', resolve));
   const address = server.address() as { port: number };
