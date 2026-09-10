@@ -1,4 +1,5 @@
 node_modules/
+.worktrees/
 
 # NodeCG runtime state (replicant db, logs, uploaded assets)
 /db/
