@@ -9,7 +9,7 @@
     "start": "nodecg start",
     "dev": "npm run build && concurrently -n build,nodecg -c blue,green \"npm:watch\" \"npm:start\"",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"tampermonkey/src/**/*.test.ts\""
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"tampermonkey/src/**/*.test.ts\" \"bundles/rashinban/src/presenter/tests/**/*.test.ts\""
   },
   "license": "MIT",
   "dependencies": {
