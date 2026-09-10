@@ -17,7 +17,7 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
   const gate = context.createGain(); gate.gain.value = 0; gate.connect(context.destination);
   let media = EMPTY_MEDIA; let version = 0; let loading = false; let missing: string[] = [];
   let buffers: { stem: Stem; buffer: AudioBuffer }[] = [];
-  let nodes: { source: AudioBufferSourceNode; gain: GainNode; stem: Stem; target: number; muted: boolean }[] = [];
+  let nodes: { source: AudioBufferSourceNode; gain: GainNode; stem: Stem; target: number; muted: boolean; music: Timeline['music'] | null }[] = [];
   let session = ''; let cutoff = -Infinity;
   function cleanup() {
     for (const node of nodes) { node.source.stop(); node.source.disconnect(); node.gain.disconnect(); }
@@ -66,15 +66,15 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
           source.buffer = buffer; source.loop = true; source.loopStart = stem.loopStartS; source.loopEnd = stem.loopEndS;
           source.connect(gain); gain.connect(gate);
           source.start(start, stemOffset(timeline.musicEpochMs, now + (start - time) * 1000, stem.loopStartS, stem.loopEndS));
-          return { source, gain, stem, target: NaN, muted: false };
+          return { source, gain, stem, target: NaN, muted: false, music: null };
         });
       }
       const ended = timeline.phase === 'aborted' || timeline.phase === 'finished';
       const music = ended ? 'idle' : timeline.music;
       for (const node of nodes) {
         const target = settings.muted || ended ? 0 : node.stem.gains[music] * settings.musicGain;
-        if (target === node.target && settings.muted === node.muted) continue;
-        node.target = target; node.muted = settings.muted; node.gain.gain.cancelAndHoldAtTime(time);
+        if (target === node.target && settings.muted === node.muted && music === node.music) continue;
+        node.target = target; node.muted = settings.muted; node.music = music; node.gain.gain.cancelAndHoldAtTime(time);
         if (settings.muted) node.gain.gain.setValueAtTime(0, time);
         else node.gain.gain.linearRampToValueAtTime(target, time + media.fadeMs[music] / 1000);
       }

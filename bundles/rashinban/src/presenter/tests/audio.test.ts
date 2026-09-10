@@ -92,3 +92,15 @@ test('operator mute silences immediately while loop sources keep advancing', asy
   p.context.currentTime = 12; p.audio.sync(timeline, DEFAULT_SETTINGS, 15500);
   assert.equal(p.sources.length, 2); assert.equal(p.sources[0].output.gain.at(13), 0.7);
 });
+
+test('equal-gain context transition applies its authored fade without restarting unchanged-context ramps', async () => {
+  const p = port();
+  await p.audio.load({ ...manifest, stems: [manifest.stems[0]], fadeMs: { ...manifest.fadeMs, round: 120000, urgent: 0 } });
+  p.audio.lease(20000, 13500); p.audio.sync(timeline, DEFAULT_SETTINGS, 13500);
+  const gain = p.sources[0].output.gain;
+  p.context.currentTime = 10.5; p.audio.sync(timeline, DEFAULT_SETTINGS, 14000);
+  assert.ok(Math.abs(gain.at(11) - 0.005833333333333333) < 1e-12, 'repeated round sync keeps the original 120-second ramp');
+  p.context.currentTime = 11; p.audio.sync({ ...timeline, music: 'urgent' }, DEFAULT_SETTINGS, 14500);
+  assert.equal(gain.at(11), 0.7, 'urgent zero-duration fade reaches the same target immediately');
+  assert.equal(p.sources.length, 1); assert.equal(p.sources[0].stops, 0);
+});
