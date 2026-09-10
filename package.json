@@ -1,0 +1,24 @@
+{
+  "name": "rashinban2026-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Overlays and control stack for RASHINBAN 2026 (NodeCG)",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "start": "nodecg start",
+    "dev": "npm run build && concurrently -n build,nodecg -c blue,green \"npm:watch\" \"npm:start\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "nodecg": "^2.8.0"
+  },
+  "devDependencies": {
+    "@nodecg/types": "^2.8.0",
+    "@types/node": "^22.20.2",
+    "concurrently": "^10.0.5",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+
+# NodeCG runtime state (replicant db, logs, uploaded assets)
+/db/
+/logs/
+/assets/
+
+# Build output (regenerate with `npm run build`)
+bundles/rashinban/graphics/*.js
+bundles/rashinban/graphics/*.js.map
+bundles/rashinban/dashboard/*.js
+bundles/rashinban/dashboard/*.js.map
+bundles/rashinban/extension/

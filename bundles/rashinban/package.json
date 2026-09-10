@@ -1,0 +1,24 @@
+{
+  "name": "rashinban",
+  "version": "0.1.0",
+  "private": true,
+  "nodecg": {
+    "compatibleRange": "^2.0.0",
+    "graphics": [
+      {
+        "file": "dummy.html",
+        "width": 1920,
+        "height": 1080
+      }
+    ],
+    "dashboardPanels": [
+      {
+        "name": "dummy-control",
+        "title": "Dummy Overlay",
+        "file": "dummy-control.html",
+        "width": 2,
+        "headerColor": "#c2185b"
+      }
+    ]
+  }
+}
