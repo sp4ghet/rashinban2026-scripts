@@ -11,6 +11,7 @@ const manifest = JSON.parse(readFileSync(join(source, 'manifest.json'), 'utf8').
 const aliases = {
   'pre-round-tick': 'EFFECT_COUNT_DOWN_TICK',
   guess: 'INTERACTION_YOU_GUESSED',
+  'opponent-guess': 'EFFECT_OPPONENT_GUESSED',
   countdown: 'EFFECT_TIMER_COUNTDOWN', 'round-start': 'EFFECT_PANO_REVEAL',
   results: 'SCORE_ROWS_SLIDE_IN', count: 'COUNT_DAMAGE', collision: 'DAMAGE_CRASH',
   tie: 'TIE_CRASH', multiplier: 'EFFECT_MULTIPLIER', damage: 'LOST_HEALTH', 'five-k': 'EFFECT_5K',

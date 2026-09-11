@@ -23,10 +23,10 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
   let sounds: Partial<Record<CueKind, AudioBuffer>> = {};
   const played = new Set<string>(); const history = new Map<string, { game: string | null; round: number | null }>();
   let cueGeneration: string | null = null; let adopting = true;
-  const cueNodes = new Map<string, { source: AudioBufferSourceNode; gain: GainNode; cue: Cue; start: number; programOwner?: string | null }>();
+  const cueNodes = new Map<string, { source: AudioBufferSourceNode; gain: GainNode; envelope: GainNode | null; naturalEnd: number; fading: boolean; cue: Cue; start: number; programOwner?: string | null }>();
   function cancelCue(id: string, retry: boolean) {
     const node = cueNodes.get(id); if (!node) return;
-    node.source.stop(); node.source.disconnect(); node.gain.disconnect(); cueNodes.delete(id);
+    node.source.stop(); node.source.disconnect(); node.gain.disconnect(); node.envelope?.disconnect(); cueNodes.delete(id);
     if (retry && (node.start > context.currentTime || node.cue.kind === 'count')) { played.delete(id); history.delete(id); }
   }
   function clearCues() { for (const id of cueNodes.keys()) cancelCue(id, true); adopting = true; }
@@ -35,19 +35,34 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
     if (cueGeneration !== timeline.generation) { clearCues(); cueGeneration = timeline.generation; }
     for (const [id, scope] of history) if (scope.game !== timeline.gameId || scope.round !== timeline.round && scope.round !== (timeline.round ?? 0) - 1) { played.delete(id); history.delete(id); }
     const valid = new Set(timeline.cues.map(c => c.id));
+    const guesses = Object.values(timeline.observed);
+    const bothGuessed = guesses.length >= 2 && guesses.every(player => player.guessed);
     const effect = timeline.effect === 'single-5k' ? media.fiveK.single : timeline.effect === 'double-5k' ? media.fiveK.double : null;
     for (const [id, node] of cueNodes) {
+      if (node.envelope && node.start > time && bothGuessed) { cancelCue(id, false); continue; }
       if (!valid.has(id) && (node.start > time || node.cue.kind === 'count' || node.cue.kind === 'five-k') || timeline.phase === 'aborted' || node.cue.kind === 'five-k' && (effect?.soundtrack !== 'cue' || node.programOwner !== programOwner)) cancelCue(id, false);
-      else node.gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain * (node.cue.kind === 'pre-round-tick' ? 1.3 : 1), time);
+      else {
+        node.gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain * (node.cue.kind === 'pre-round-tick' ? 1.3 : 1), time);
+        const endedEarly = (bothGuessed
+          || ['results-transition', 'results-reveal', 'between-rounds', 'waiting-host', 'finished'].includes(timeline.phase))
+          && now < node.cue.untilMs;
+        if (node.envelope && !node.fading && endedEarly) {
+          const end = Math.min(node.naturalEnd, time + 1);
+          node.envelope.gain.cancelAndHoldAtTime(time);
+          node.envelope.gain.linearRampToValueAtTime(0, end);
+          node.source.stop(end); node.fading = true;
+        }
+      }
     }
     if (timeline.phase === 'aborted') return;
     for (const cue of timeline.cues) {
       const remember = () => { played.add(cue.id); history.set(cue.id, { game: timeline.gameId, round: timeline.round }); };
       const countdown = cue.kind === 'countdown';
+      if (countdown && bothGuessed) continue;
       if (countdown && timeline.phase !== 'live' && timeline.phase !== 'pre-round') continue;
       if (adopting && cue.kind !== 'count' && !countdown && cue.atMs < now) { remember(); continue; }
       if (!canPlayCue(cue, now, played)) continue;
-      const buffer = sounds[cue.kind]; if (!buffer || cue.kind === 'five-k' && (effect?.soundtrack !== 'cue' || programOwner === null)) continue;
+      const buffer = sounds[cue.sound ?? cue.kind]; if (!buffer || cue.kind === 'five-k' && (effect?.soundtrack !== 'cue' || programOwner === null)) continue;
       const offset = countdown ? Math.max(0, cue.offsetS ?? 0) + Math.max(0, (now - cue.atMs) / 1000) : 0;
       if (offset >= buffer.duration) { remember(); continue; }
       const start = time + Math.max(0, (cue.atMs - now) / 1000);
@@ -58,11 +73,21 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       const source = context.createBufferSource(); const gain = context.createGain();
       source.buffer = buffer; source.loop = cue.kind === 'count';
       gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain * (cue.kind === 'pre-round-tick' ? 1.3 : 1), time);
-      source.connect(gain); gain.connect(gate);
+      const envelope = countdown ? context.createGain() : null;
+      const naturalEnd = start + buffer.duration - offset;
+      source.connect(gain);
+      if (envelope) {
+        gain.connect(envelope); envelope.connect(gate);
+        const fadeInEnd = Math.min(start + 0.2, naturalEnd);
+        envelope.gain.setValueAtTime(0, start);
+        envelope.gain.linearRampToValueAtTime(1, fadeInEnd);
+        envelope.gain.setValueAtTime(1, Math.max(fadeInEnd, naturalEnd - 1));
+        envelope.gain.linearRampToValueAtTime(0, naturalEnd);
+      } else gain.connect(gate);
       source.start(start, cue.kind === 'count' ? Math.max(0, (now - cue.atMs) / 1000) % buffer.duration : offset);
       if (cue.kind === 'count' || cue.kind === 'five-k') source.stop(time + Math.max(0, (end - now) / 1000));
-      cueNodes.set(cue.id, { source, gain, cue, start, programOwner }); remember();
-      source.onended = () => { if (cueNodes.get(cue.id)?.source === source) cueNodes.delete(cue.id); source.disconnect(); gain.disconnect(); };
+      cueNodes.set(cue.id, { source, gain, envelope, naturalEnd, fading: false, cue, start, programOwner }); remember();
+      source.onended = () => { if (cueNodes.get(cue.id)?.source === source) cueNodes.delete(cue.id); source.disconnect(); gain.disconnect(); envelope?.disconnect(); };
     }
     adopting = false;
   }

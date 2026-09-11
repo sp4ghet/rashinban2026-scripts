@@ -79,6 +79,7 @@ function liveCues(timeline: Timeline, state: DuelState, nowMs: number, bootstrap
     if (!bootstrap && old && timeline.phase === 'live') {
       if (!samePin(player.pin, old.statePin)) changedPins[player.id] = player.pin;
       if (guessed && !old.guessed) cues.push({ id: `${state.gameId}/${state.round}/${player.id}/guess`, kind: 'guess',
+        ...(player.id === state.players[1].id ? { sound: 'opponent-guess' as const } : {}),
         atMs: nowMs + timing.leadMs, untilMs: nowMs + timing.leadMs + 250, playerId: player.id });
     }
     observed[player.id] = { pin: bootstrap || !old ? player.pin : old.pin, statePin: player.pin, guessed, pinCueAtMs: old?.pinCueAtMs ?? null };

@@ -109,6 +109,15 @@ test('equal-gain context transition applies its authored fade without restarting
 });
 
 const cueMedia: MediaManifest = { ...EMPTY_MEDIA, sounds: { pin: '/pin', guess: '/guess', countdown: '/tick', results: '/results', count: '/count', damage: '/damage', 'five-k': '/five-k' } };
+test('opponent submission uses its own asset regardless of which sound plays first', async () => {
+  for (const opponentFirst of [false,true]) {
+    const p = port(); await p.audio.load({ ...EMPTY_MEDIA, sounds: { guess: '/own-short', 'opponent-guess': '/opponent' } }); p.audio.lease(30000,1000);
+    const own = cue('own','guess',1200); const opponent = { ...cue('opponent','guess',1300), sound:'opponent-guess' as const };
+    const cues = opponentFirst ? [opponent,own] : [own,opponent];
+    p.audio.sync({...timeline,cues},DEFAULT_SETTINGS,1000);
+    assert.deepEqual(p.sources.map(s=>s.buffer.duration),opponentFirst?[12,3]:[3,12]);
+  }
+});
 test('preview tick plays once at researched gain and finishes when live begins', async () => {
   const p = port(); await p.audio.load({ ...EMPTY_MEDIA, sounds: { 'pre-round-tick': '/tick' } }); p.audio.lease(20000,1000);
   const t = { ...timeline, phase: 'pre-round' as const, cues: [cue('one', 'pre-round-tick', 1000)] };
@@ -119,7 +128,7 @@ test('preview tick plays once at researched gain and finishes when live begins',
   p.audio.sync({ ...t, phase: 'live', cues: [] }, { ...DEFAULT_SETTINGS, muted: true }, 2000);
   assert.equal(p.sources[0].output.gain.at(11),0);
 });
-test('continuous countdown seeks on late entry, finishes through results, and skips stale tails', async () => {
+test('continuous countdown seeks on late entry, fades on early results, and skips stale tails', async () => {
   const p = port(); await p.audio.load(cueMedia); p.audio.lease(30000, 8000);
   const t = { ...timeline, cues: [cue('continuous', 'countdown', 1000, 16000)] };
   p.audio.sync(t, DEFAULT_SETTINGS, 8000);
@@ -127,7 +136,8 @@ test('continuous countdown seeks on late entry, finishes through results, and sk
   assert.deepEqual(p.sources[0].starts[0], [10, 7]);
   p.context.currentTime = 11;
   p.audio.sync({ ...t, phase: 'results-transition', cues: [] }, DEFAULT_SETTINGS, 9000);
-  assert.equal(p.sources[0].stops, 0);
+  assert.equal(p.sources[0].stops, 1);
+  assert.deepEqual(p.sources[0].stopTimes, [12]);
   const stale = port(); await stale.audio.load(cueMedia); stale.audio.lease(30000, 17000);
   stale.audio.sync(t, DEFAULT_SETTINGS, 17000); assert.equal(stale.sources.length, 0);
   const short = port(); await short.audio.load(cueMedia); short.audio.lease(30000, 1000);
@@ -138,6 +148,40 @@ test('continuous countdown seeks on late entry, finishes through results, and sk
   pending.audio.sync({ ...t, phase: 'results-transition', cues: [] }, DEFAULT_SETTINGS, 1100);
   assert.equal(pending.sources[0].stops, 1);
 });
+test('countdown fades at its natural end but second lock-in fades it immediately, once', async () => {
+  for (const early of [false,true]) {
+    const p = port(); await p.audio.load(cueMedia); p.audio.lease(40000,1000);
+    const t = { ...timeline, cues: [cue('timer','countdown',1000,10000)] };
+    p.audio.sync(t,DEFAULT_SETTINGS,1000);
+    const envelope = p.gains[2].gain;
+    assert.equal(envelope.at(10),0); assert.equal(envelope.at(10.2),1);
+    if (early) {
+      const observed = { a:{guessed:true,pin:null,pinCueAtMs:null}, b:{guessed:true,pin:null,pinCueAtMs:null} };
+      p.context.currentTime=12; p.audio.sync({...t,observed},DEFAULT_SETTINGS,3000);
+      assert.deepEqual(p.sources[0].stopTimes,[13]);
+      p.context.currentTime=12.5; p.audio.sync({...t,observed},DEFAULT_SETTINGS,3500);
+      assert.equal(envelope.at(12.5),0.5); assert.equal(envelope.at(13),0);
+      assert.deepEqual(p.sources[0].stopTimes,[13],'repeated state must not extend the fade');
+    } else {
+      p.context.currentTime=19; p.audio.sync({...t,phase:'results-transition',cues:[]},DEFAULT_SETTINGS,10000);
+      assert.equal(p.sources[0].stops,0,'timeout preserves the tail');
+      assert.equal(envelope.at(21),1); assert.equal(envelope.at(21.5),0.5); assert.equal(envelope.at(22),0);
+      p.context.currentTime=21.5; p.audio.sync({...t,phase:'results-reveal',cues:[]},{...DEFAULT_SETTINGS,muted:true},12500);
+      assert.equal(p.sources[0].output.gain.at(21.5),0);
+      assert.equal(envelope.at(22),0,'mute must not reset the natural ending');
+    }
+  }
+});
+test('second guess cancels a pending countdown and prevents a new owner starting it', async () => {
+  const p = port(); await p.audio.load(cueMedia); p.audio.lease(30000,1000);
+  const t = {...timeline,cues:[cue('pending','countdown',1500,16500)]};
+  p.audio.sync(t,DEFAULT_SETTINGS,1000);
+  const locked = {...t,observed:{a:{guessed:true,pin:null,pinCueAtMs:null},b:{guessed:true,pin:null,pinCueAtMs:null}}};
+  p.context.currentTime=10.1; p.audio.sync(locked,DEFAULT_SETTINGS,1100);
+  assert.equal(p.sources[0].stops,1); assert.deepEqual(p.sources[0].stopTimes,[],'pending clip cancels immediately');
+  const newcomer=port(); await newcomer.audio.load(cueMedia); newcomer.audio.lease(30000,1100);
+  newcomer.audio.sync(locked,DEFAULT_SETTINGS,1100); assert.equal(newcomer.sources.length,0);
+});
 test('actual second lock-in finishes across results; guesses first seen in timeout results stay silent', async () => {
   for (const perfect of [false, true]) for (const coalesced of [false, true]) {
     const rows = loadReplay('gs2-ws-presenter-showcase.json');
@@ -147,7 +191,7 @@ test('actual second lock-in finishes across results; guesses first seen in timeo
     const live = structuredClone(result);
     live.players.forEach(player => { player.results = []; });
     live.players[1].guesses = [];
-    const p = port(); await p.audio.load({ ...EMPTY_MEDIA, sounds: { guess: '/guess' } }); p.audio.lease(30000, 1000);
+    const p = port(); await p.audio.load({ ...EMPTY_MEDIA, sounds: { guess: '/guess', 'opponent-guess': '/opponent' } }); p.audio.lease(30000, 1000);
     let t = advanceTimeline(null, live, 1000, true, DEFAULT_SETTINGS.timing);
     p.audio.sync(t, DEFAULT_SETTINGS, 1000);
     if (!coalesced) {

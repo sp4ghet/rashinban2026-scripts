@@ -7,7 +7,7 @@ export type EffectAsset = { url: string; watchdogMs: number; soundtrack: 'embedd
 export type MediaManifest = { stems: Stem[]; fadeMs: Record<MusicContext, number>; sounds: Partial<Record<CueKind, string>>; fiveK: { single: EffectAsset | null; double: EffectAsset | null } };
 export const EMPTY_MEDIA: MediaManifest = { stems: [], fadeMs: { idle: 0, round: 0, urgent: 0, results: 0 }, sounds: {}, fiveK: { single: null, double: null } };
 export const MUSIC_CONTEXTS = ['idle', 'round', 'urgent', 'results'] as const;
-export const CUE_KINDS = ['pre-round-tick', 'round-start', 'pin', 'guess', 'countdown', 'results', 'count', 'collision', 'tie', 'multiplier', 'damage', 'five-k'] as const;
+export const CUE_KINDS = ['pre-round-tick', 'round-start', 'pin', 'opponent-guess', 'guess', 'countdown', 'results', 'count', 'collision', 'tie', 'multiplier', 'damage', 'five-k'] as const;
 export type AssetInventory = { url: string; base?: string }[];
 function record(input: unknown, keys: readonly string[]): Record<string, unknown> {
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(key => !keys.includes(key))) throw new Error('Invalid media fields');

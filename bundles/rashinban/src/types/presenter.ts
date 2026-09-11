@@ -108,7 +108,7 @@ export type Phase = 'waiting-game' | 'waiting-host' | 'pre-round' | 'live'
   | 'results-transition' | 'results-reveal' | 'between-rounds' | 'finished' | 'aborted';
 export type MusicContext = 'idle' | 'round' | 'urgent' | 'results';
 export type EffectKind = 'none' | 'single-5k' | 'double-5k';
-export type CueKind = 'pre-round-tick' | 'round-start' | 'pin' | 'guess' | 'countdown' | 'results' | 'count' | 'collision' | 'tie' | 'multiplier' | 'damage' | 'five-k';
+export type CueKind = 'pre-round-tick' | 'round-start' | 'pin' | 'opponent-guess' | 'guess' | 'countdown' | 'results' | 'count' | 'collision' | 'tie' | 'multiplier' | 'damage' | 'five-k';
 export type ScoreCalculation = { tied: boolean; winnerId: string | null; loserId: string | null; difference: number; damage: number; multiplier: number; hasDamage: boolean };
 export type ScoreSequence = ScoreCalculation & {
   countAtMs: number; countEndAtMs: number; subtractAtMs: number; collisionAtMs: number; differenceAtMs: number;
@@ -116,7 +116,7 @@ export type ScoreSequence = ScoreCalculation & {
 };
 export type ScoreStage = 'entry' | 'count' | 'score-hold' | 'subtract' | 'difference' | 'tie' | 'multiplier' | 'flight' | 'impact' | 'complete';
 export type ScoreProjection = ScoreCalculation & { stage: ScoreStage; entryProgress: number; subtractProgress: number; multiplierProgress: number; flightProgress: number; impactProgress: number; tieProgress: number };
-export type Cue = { id: string; kind: CueKind; atMs: number; untilMs: number; playerId: string | null; offsetS?: number };
+export type Cue = { id: string; kind: CueKind; atMs: number; untilMs: number; playerId: string | null; sound?: 'opponent-guess'; offsetS?: number };
 export type Timeline = {
   generation: string;
   revision: number;
