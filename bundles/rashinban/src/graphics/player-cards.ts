@@ -1,22 +1,16 @@
 // Player cards overlay: two cards for the current match, filled from the
 // sheet profiles and the start.gg bracket. Generic placeholder design.
-import { resolveCurrentMatch, type CurrentMatchSelection, type MatchPlayer } from "../match/current";
-import { findProfile, type PlayerProfile } from "../sheet/players";
+import type { ResolvedMatch, ResolvedSide } from '../match/state';
 import type { PlayerCardsState } from "../sheet/types";
-import type { StartggBracket } from "../startgg/types";
 import { REPLICANTS } from "../types/replicants";
 
-const bracketRep = nodecg.Replicant<StartggBracket | null>(REPLICANTS.startggBracket);
-const playersRep = nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players);
-const selectionRep = nodecg.Replicant<CurrentMatchSelection>(REPLICANTS.currentMatch);
+const matchRep = nodecg.Replicant<ResolvedMatch>(REPLICANTS.matchResolved);
 const cardsRep = nodecg.Replicant<PlayerCardsState>(REPLICANTS.playerCards);
 
 // Local copies (scripts/fetch-flags.mjs) so the overlay works offline.
 const FLAG_URL = (code: string) => `assets/images/flags/${code.toLowerCase()}.png`;
 
-let bracket: StartggBracket | null = null;
-let players: PlayerProfile[] = [];
-let selection: CurrentMatchSelection | undefined;
+let match: ResolvedMatch | undefined;
 let cards: PlayerCardsState = { visible: false, page: "profile" };
 
 const root = document.getElementById("cards")!;
@@ -40,13 +34,13 @@ function flag(el: Element, sel: string, code: string) {
   }
 }
 
-function renderCard(card: HTMLElement, mp: MatchPlayer) {
-  const profile = findProfile(players, mp.entrant ?? (mp.tag ? { id: -1, tag: mp.tag, name: mp.tag } : null));
-  const name = profile?.name || mp.entrant?.tag || mp.tag || "TBD";
+function renderCard(card: HTMLElement, mp: ResolvedSide) {
+  const profile = mp.profile;
+  const name = mp.name;
   card.dataset.missing = profile ? "false" : "true";
   card.dataset.empty = name === "TBD" ? "true" : "false";
   text(card, ".name", name);
-  text(card, ".twitter", profile?.twitter ? `@${profile.twitter}` : "");
+  text(card, ".twitter", mp.handle ? `@${mp.handle.replace(/^@/, '')}` : "");
   text(card, ".age", profile?.age ?? "");
   text(card, ".rating", profile?.rating ?? "");
   text(card, ".favorite-mode", profile?.favoriteMode ?? "");
@@ -64,27 +58,19 @@ function renderCard(card: HTMLElement, mp: MatchPlayer) {
 }
 
 function render() {
-  const match = resolveCurrentMatch(bracket, selection);
+  if (!match) return;
   root.classList.toggle("visible", cards.visible);
   root.dataset.page = cards.page;
   root.dataset.source = match.source;
   const p1 = document.getElementById("card-1")!;
   const p2 = document.getElementById("card-2")!;
-  renderCard(p1, match.players[0]);
-  renderCard(p2, match.players[1]);
-  roundEl.textContent = [match.phaseName, match.roundText].filter(Boolean).join(" / ");
+  renderCard(p1, match.left);
+  renderCard(p2, match.right);
+  roundEl.textContent = match.label;
 }
 
-bracketRep.on("change", (v) => {
-  bracket = v ?? null;
-  render();
-});
-playersRep.on("change", (v) => {
-  players = v ?? [];
-  render();
-});
-selectionRep.on("change", (v) => {
-  selection = v;
+matchRep.on("change", (v) => {
+  match = v;
   render();
 });
 cardsRep.on("change", (v) => {

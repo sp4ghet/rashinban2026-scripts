@@ -4,9 +4,10 @@
 // (loaded from .env by ./env.ts) and never leaves the server.
 import type NodeCG from "@nodecg/types";
 
-import { normalizeEvent } from "../startgg/normalize";
+import { normalizeEvent, normalizeEntrant } from "../startgg/normalize";
 import {
   EVENT_QUERY,
+  ENTRANTS_QUERY,
   PHASE_GROUP_QUERY,
   STARTGG_ENDPOINT,
   STREAM_QUEUE_QUERY,
@@ -15,6 +16,7 @@ import {
 } from "../startgg/queries";
 import type {
   RawEvent,
+  RawEntrant,
   RawPhaseGroup,
   RawStreamQueueEntry,
   StartggBracket,
@@ -102,7 +104,14 @@ export function registerStartgg(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
       });
       queue = q.tournament?.streamQueue ?? null;
     }
-    return normalizeEvent(event, groups, queue, Date.now());
+    const normalized = normalizeEvent(event, groups, queue, Date.now());
+    // Include registered players before seeding creates their first set.
+    for (let page = 1, totalPages = 1; page <= totalPages; page++) {
+      const result = await gql<{event: {entrants: {pageInfo: {totalPages: number}; nodes: RawEntrant[]}}}>(ENTRANTS_QUERY, {slug: eventSlug, page});
+      totalPages = Math.min(result.event.entrants.pageInfo.totalPages, 100);
+      for (const entrant of result.event.entrants.nodes) normalized.entrants[entrant.id] = normalizeEntrant(entrant);
+    }
+    return normalized;
   }
 
   let inFlight: Promise<boolean> | null = null;

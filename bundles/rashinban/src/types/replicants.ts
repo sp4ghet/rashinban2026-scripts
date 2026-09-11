@@ -24,10 +24,9 @@ import type { StartggBracket, StartggConfig, StartggStatus } from "../startgg/ty
 import type { PlayerProfile } from "../sheet/players";
 import type { PlayerCardsState, SheetConfig, SheetStatus } from "../sheet/types";
 import type { CurrentMatchSelection } from "../match/current";
+import type { MatchState, ResolvedMatch } from '../match/state.ts';
 
 export const REPLICANTS = {
-  lowerThirdVisible: "lowerThirdVisible",
-  round: "round",
   banPick: "banPick",
   startggConfig: "startggConfig",
   startggBracket: "startggBracket",
@@ -36,6 +35,8 @@ export const REPLICANTS = {
   sheetStatus: "sheetStatus",
   players: "players",
   currentMatch: "currentMatch",
+  matchState: 'matchState',
+  matchResolved: 'matchResolved',
   playerCards: "playerCards",
   presenterConnection: 'presenterConnection',
   presenterDuel: 'presenterDuel',
@@ -50,8 +51,6 @@ export const REPLICANTS = {
 } as const;
 
 export interface ReplicantMap {
-  [REPLICANTS.lowerThirdVisible]: boolean;
-  [REPLICANTS.round]: number;
   [REPLICANTS.banPick]: BanPickState;
   [REPLICANTS.startggConfig]: StartggConfig;
   [REPLICANTS.startggBracket]: StartggBracket | null;
@@ -60,6 +59,8 @@ export interface ReplicantMap {
   [REPLICANTS.sheetStatus]: SheetStatus;
   [REPLICANTS.players]: PlayerProfile[];
   [REPLICANTS.currentMatch]: CurrentMatchSelection;
+  [REPLICANTS.matchState]: MatchState;
+  [REPLICANTS.matchResolved]: ResolvedMatch;
   [REPLICANTS.playerCards]: PlayerCardsState;
   [REPLICANTS.presenterConnection]: PresenterConnection;
   [REPLICANTS.presenterDuel]: DuelState | null;
@@ -79,9 +80,6 @@ export const BANPICK_MESSAGES = {
   act: "banpick:act",
   undo: "banpick:undo",
   reset: "banpick:reset",
-  /** { A?: string; B?: string } */
-  setPlayers: "banpick:setPlayers",
-  swapPlayers: "banpick:swapPlayers",
   /** { visible: boolean } */
   setVisible: "banpick:setVisible",
 } as const;
@@ -101,9 +99,11 @@ export const SHEET_MESSAGES = {
   setConfig: "sheet:setConfig",
 } as const;
 
-/** Current-match selection. Partial<CurrentMatchSelection>. */
+/** Authoritative current match; edits include the last observed revision. */
 export const MATCH_MESSAGES = {
-  setSelection: "match:setSelection",
+  apply: 'match:apply',
+  load: 'match:load',
+  swap: 'match:swap',
 } as const;
 
 /** Player cards presentation. Partial<PlayerCardsState>. */

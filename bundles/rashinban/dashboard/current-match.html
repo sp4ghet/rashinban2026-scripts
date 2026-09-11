@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        margin: 0;
+        padding: 14px;
+        background: #1b232b;
+        color: #eee;
+        font:
+          13px "Segoe UI",
+          sans-serif;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 4px 0 12px;
+      }
+      h3 {
+        font-size: 14px;
+      }
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin-bottom: 9px;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        color: inherit;
+        background: #37474f;
+        border: 1px solid #637781;
+        border-radius: 4px;
+        padding: 8px;
+        min-width: 0;
+      }
+      select {
+        width: 100%;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:hover {
+        background: #456374;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      .primary {
+        background: #256549;
+      }
+      .sides {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      fieldset {
+        min-width: 0;
+        border: 1px solid #52616c;
+        border-radius: 5px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .row label {
+        flex: 1;
+      }
+      .help {
+        color: #b6c7d0;
+        font-size: 12px;
+      }
+      .status {
+        white-space: pre-wrap;
+        padding: 8px;
+        background: #152029;
+        margin: 8px 0;
+      }
+      #error {
+        color: #ffaaa2;
+        min-height: 1.4em;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 12px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 5px;
+        border-bottom: 1px solid #42505b;
+      }
+      th {
+        color: #b5cedd;
+      }
+      .table-scroll {
+        overflow: auto;
+      }
+      details {
+        margin-top: 16px;
+      }
+      summary {
+        cursor: pointer;
+      }
+      input[type="number"] {
+        width: 65px;
+      }
+      #match-summary {
+        font-weight: 600;
+      }
+      small {
+        display: block;
+        color: #b6c7d0;
+      }
+      @media (max-width: 480px) {
+        .sides {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Current match</h2>
+    <div id="match-summary" class="status">Loading…</div>
+    <form id="match-form">
+      <label
+        >Match label<input
+          id="match-label"
+          maxlength="160"
+          placeholder="e.g. Winners final"
+      /></label>
+      <div class="sides">
+        <fieldset>
+          <legend>Left / A</legend>
+          <label>Player<select id="left-select"></select></label
+          ><label
+            >Registration / player name<input
+              id="left-name"
+              maxlength="160" /></label
+          ><label
+            >Personal GeoGuessr UID / profile URL<input
+              id="left-uid"
+              placeholder="65fc3453702bba73b4c0a398" /></label
+          ><label
+            >Display name override<input
+              id="left-override"
+              maxlength="160"
+              placeholder="Use spreadsheet name" /></label
+          ><label
+            >Handle override<input
+              id="left-handle"
+              maxlength="160"
+              placeholder="Use spreadsheet handle" /></label
+          ><label
+            >Series wins<input
+              id="left-wins"
+              type="number"
+              min="0"
+              max="2"
+              value="0" /></label
+          ><small id="left-profile"></small>
+          <label>In-game account<select id="left-account"></select></label>
+          <small id="left-account-status"></small>
+        </fieldset>
+        <fieldset>
+          <legend>Right / B</legend>
+          <label>Player<select id="right-select"></select></label
+          ><label
+            >Registration / player name<input
+              id="right-name"
+              maxlength="160" /></label
+          ><label
+            >Personal GeoGuessr UID / profile URL<input
+              id="right-uid"
+              placeholder="GeoGuessr account ID" /></label
+          ><label
+            >Display name override<input
+              id="right-override"
+              maxlength="160"
+              placeholder="Use spreadsheet name" /></label
+          ><label
+            >Handle override<input
+              id="right-handle"
+              maxlength="160"
+              placeholder="Use spreadsheet handle" /></label
+          ><label
+            >Series wins<input
+              id="right-wins"
+              type="number"
+              min="0"
+              max="2"
+              value="0" /></label
+          ><small id="right-profile"></small>
+          <label>In-game account<select id="right-account"></select></label>
+          <small id="right-account-status"></small>
+        </fieldset>
+      </div>
+      <p class="help">
+        Choose a competitor or use Manual entry. Personal UIDs identify
+        spreadsheet profiles; in-game accounts can be different venue accounts.
+        By default, Left/A follows blue and Right/B follows red in the connected
+        party's duel. Empty overrides use spreadsheet details.
+      </p>
+      <div class="row">
+        <button class="primary" type="submit">Apply current match</button
+        ><button id="swap-match" type="button">Swap sides</button
+        ><button id="reload-match" type="button">Discard edits</button>
+      </div>
+    </form>
+    <p id="error" role="status"></p>
+    <h2>Upcoming start.gg matches</h2>
+    <p class="help">
+      Loading a match copies its players and score into Current Match.
+      Refreshing start.gg never changes the selected matchup.
+    </p>
+    <button id="refresh-startgg">Refresh start.gg</button
+    ><span id="startgg-status"></span>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Round / pool</th>
+            <th>Matchup</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="upcoming"></tbody>
+      </table>
+    </div>
+    <script src="current-match.js"></script>
+  </body>
+</html>

@@ -2,6 +2,12 @@
 // scripts/startgg-fetch.mjs, which records the same shapes as fixtures.
 
 export const STARTGG_ENDPOINT = "https://api.start.gg/gql/alpha";
+export const ENTRANTS_QUERY = `query Entrants($slug: String!, $page: Int!) {
+  event(slug: $slug) { entrants(query: {page: $page, perPage: 50}) {
+    pageInfo { totalPages }
+    nodes { id name initialSeedNum participants { id gamerTag prefix } }
+  } }
+}`;
 
 export const SET_FIELDS = `
   id identifier round fullRoundText state winnerId displayScore totalGames

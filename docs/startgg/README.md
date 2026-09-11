@@ -25,6 +25,9 @@ overlays render from. Nothing is written back to start.gg.
   `POST /rashinban/startgg/refresh` for Companion.
 - Dashboard panel "start.gg": config, status, and every fetched set with
   live ones first.
+- Dashboard panel "Current Match": upcoming sets beneath the player selectors,
+  with explicit Load actions. Registered entrants are fetched separately so
+  player selection works before bracket seeding.
 - `npm run startgg:fetch -- <event|phase-group|stream-queue> <arg> [outfile]`
   records raw responses into `samples/` (fixtures and debugging).
 
@@ -51,6 +54,17 @@ overlays render from. Nothing is written back to start.gg.
 - Rate limit 80 requests per minute, 1000 objects per request. One poll of
   RASHINBAN is about 12 requests (event, ~2 pages per pool, queue), so the
   default 30 s interval stays well inside the limit.
+
+## GeoGuessr registration identity (checked 2026-09-12)
+
+The public GraphQL `Participant` schema exposes `connectedAccounts` and
+`requiredConnections`, but no custom registration-question answers field.
+The first three participants had null `connectedAccounts`; none of the 11
+event entrants had a GeoGuessr URL in `requiredConnections`. This does not prove
+the registration form lacks the URL: it may be a custom answer available only
+through the organizer UI/export. The integration therefore uses the sheet's
+`geoguessr_player_uid`, with entrant IDs linking registration names to rows.
+No unverified UID is synthesized from a username.
 
 ## Samples
 

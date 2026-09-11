@@ -17,11 +17,11 @@ const inventories = { music: nodecg.Replicant<AssetInventory>('assets:music'), e
 const element = (id: string) => document.getElementById(id)!;
 const input = (id: string) => element(id) as HTMLInputElement;
 const select = (id: string) => element(id) as HTMLSelectElement;
-let seriesDraft: SeriesState | null = null;
+
 const googleKey = (nodecg.bundleConfig as { presenter?: { googleMapsApiKey?: unknown } }).presenter?.googleMapsApiKey;
 element('google-setup-status').textContent = typeof googleKey === 'string' && googleKey.trim()
-  ? 'Google browser key configured. Check each graphic report below for API and panorama availability.'
-  : 'Google browser key missing: rendered Street View and maps cannot load, including in replay. Configure the key below to enable imagery.';
+  ? 'Browser key configured.'
+  : 'Browser key missing. Configure below to enable maps and Street View.';
 element('google-referrer').textContent = `${location.origin}/*`;
 function showInputDraft() {
   const replay = select('input-mode').value === 'replay';
@@ -114,29 +114,9 @@ async function control(action: string, body?: unknown, errorTarget = 'error') {
   try { await nodecg.sendMessage('presenter:control', { action, body }); }
   catch { element(errorTarget).textContent = 'Change rejected. Check the values and NodeCG connection.'; }
 }
-function mappingOptions(initialize = false) {
-  for (const side of ['left', 'right'] as const) {
-    const menu = select(`${side}-player`);
-    const selected = initialize ? seriesDraft?.[side].playerId ?? '' : menu.value;
-    menu.replaceChildren(new Option('Not mapped', ''));
-    for (const player of duel.value?.players ?? []) menu.add(new Option(`${player.teamColor} · ${player.id}`, player.id));
-    if (selected && !(duel.value?.players.some(player => player.id === selected))) menu.add(new Option(`Unavailable · ${selected}`, selected));
-    menu.value = selected;
-  }
-}
-function showSeries(value: SeriesState) {
-  // Browser Replicant values are proxies and cannot be structuredClone'd.
-  seriesDraft = { ...value, left: { ...value.left }, right: { ...value.right } };
-  mappingOptions(true);
-  for (const side of ['left', 'right'] as const) {
-    input(`${side}-name`).value = value[side].name;
-    input(`${side}-handle`).value = value[side].handle;
-    input(`${side}-wins`).value = String(value[side].wins);
-    select(`${side}-player`).value = value[side].playerId ?? '';
-  }
-}
+function showSeries(value: SeriesState) { element("current-match-summary").textContent = `${value.left.name} ${value.left.wins} – ${value.right.wins} ${value.right.name}`; }
 function status() {
-  const labels = { unreported: 'No graphic report', loading: 'Loading Google Maps', 'api-ready': 'Google Maps API loaded; check views on graphic',
+  const labels = { unreported: 'No graphic report', loading: 'Loading Google Maps', 'api-ready': 'Google Maps API loaded',
     'missing-key': 'Google Maps browser key missing', 'api-error': 'Google Maps API unavailable', 'view-error': 'Google Maps view unavailable', 'pano-error': 'Exact Street View panorama unavailable' };
   element('renderer-status').textContent = labels[renderer.value?.status ?? 'unreported'];
   const audience = clients.value;
@@ -176,10 +156,10 @@ settings.on('change', value => {
   select('audio-output').value = value.audioOutput; input('muted').checked = value.muted;
   input('music-gain').value = String(value.musicGain); input('effects-gain').value = String(value.effectsGain);
   element('audio-launch-help').textContent = value.audioOutput === 'separate'
-    ? 'Current audio mode: Separate. Open Separate audio for music and cue sounds, and Program graphic for visuals and embedded celebration sound.'
-    : 'Current audio mode: Embedded. Open Program graphic for visuals, music and cue sounds.';
+    ? 'Open Program graphic and Separate audio.'
+    : 'Open Program graphic for video and audio.';
 });
-duel.on('change', () => { mappingOptions(); status(); });
+duel.on('change', status);
 let partyInitialized = false;
 connection.on('change', (value, previous) => {
   if (value && (!previous || value.input !== previous.input)) { select('input-mode').value = value.input; showInputDraft(); }
@@ -192,17 +172,6 @@ renderer.on('change', status);
 clients.on('change', status);
 select('program-client').addEventListener('change', () => { (element('transfer-program') as HTMLButtonElement).disabled = !select('program-client').value; });
 element('transfer-program').addEventListener('click', () => { const clientId = select('program-client').value; if (clientId) void control('program/transfer', { clientId }); });
-function readSeries(): SeriesState | null {
-  if (!seriesDraft) return null;
-  const value = structuredClone(seriesDraft);
-  for (const side of ['left', 'right'] as const) {
-    value[side] = { ...value[side], name: input(`${side}-name`).value, handle: input(`${side}-handle`).value,
-      wins: Number(input(`${side}-wins`).value), playerId: select(`${side}-player`).value || null };
-  }
-  return value;
-}
-element('series-form').addEventListener('submit', event => { event.preventDefault(); const value = readSeries(); if (value) void control('series', value); });
-element('swap').addEventListener('click', () => { const value = readSeries(); if (value) showSeries({ ...value, left: value.right, right: value.left }); });
 element('settings-form').addEventListener('submit', event => {
   event.preventDefault(); if (!settings.value) return;
   void control('settings', { ...settings.value, viewSource: select('view-source').value, keyColor: select('key-color').value,

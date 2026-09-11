@@ -9,7 +9,6 @@ const rep = nodecg.Replicant<BanPickState>(REPLICANTS.banPick);
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const nameA = $<HTMLInputElement>("name-a");
 const nameB = $<HTMLInputElement>("name-b");
-const swapBtn = $<HTMLButtonElement>("swap");
 const visibleBtn = $<HTMLButtonElement>("visible");
 const undoBtn = $<HTMLButtonElement>("undo");
 const resetBtn = $<HTMLButtonElement>("reset");
@@ -64,10 +63,6 @@ function render() {
   if (document.activeElement !== nameB) nameB.value = state.players.B;
 }
 
-const commitNames = () => send(BANPICK_MESSAGES.setPlayers, { A: nameA.value, B: nameB.value });
-nameA.addEventListener("change", commitNames);
-nameB.addEventListener("change", commitNames);
-swapBtn.addEventListener("click", () => send(BANPICK_MESSAGES.swapPlayers));
 visibleBtn.addEventListener("click", () => send(BANPICK_MESSAGES.setVisible, { visible: !state.visible }));
 undoBtn.addEventListener("click", () => send(BANPICK_MESSAGES.undo));
 resetBtn.addEventListener("click", () => {

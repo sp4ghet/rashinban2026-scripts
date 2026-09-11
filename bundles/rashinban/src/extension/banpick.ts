@@ -45,20 +45,6 @@ export function registerBanPick(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
   nodecg.listenFor(BANPICK_MESSAGES.undo, (_data, ack) => mutate(ack, undo));
   nodecg.listenFor(BANPICK_MESSAGES.reset, (_data, ack) => mutate(ack, reset));
 
-  nodecg.listenFor(BANPICK_MESSAGES.setPlayers, (data: { A?: unknown; B?: unknown }, ack) => {
-    mutate(ack, (s) => ({
-      ...s,
-      players: {
-        A: typeof data?.A === "string" ? data.A : s.players.A,
-        B: typeof data?.B === "string" ? data.B : s.players.B,
-      },
-    }));
-  });
-
-  nodecg.listenFor(BANPICK_MESSAGES.swapPlayers, (_data, ack) => {
-    mutate(ack, (s) => ({ ...s, players: { A: s.players.B, B: s.players.A } }));
-  });
-
   nodecg.listenFor(BANPICK_MESSAGES.setVisible, (data: { visible?: unknown }, ack) => {
     mutate(ack, (s) => ({ ...s, visible: Boolean(data?.visible) }));
   });

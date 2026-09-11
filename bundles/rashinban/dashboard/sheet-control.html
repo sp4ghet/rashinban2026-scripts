@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Google Sheets</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 14px; background: #1b232b; color: #eee; font: 13px "Segoe UI", sans-serif; }
+    label { display: grid; gap: 5px; margin-bottom: 10px; }
+    input, button { min-width: 0; padding: 8px; border: 1px solid #637781; border-radius: 4px; background: #37474f; color: inherit; font: inherit; }
+    button { cursor: pointer; } button:hover { background: #456374; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    #sheet-interval { width: 100px; }
+    .status { white-space: pre-wrap; overflow-wrap: anywhere; padding: 8px; margin-top: 10px; background: #152029; }
+    #error { color: #ffaaa2; } #error:empty { display: none; }
+  </style>
+</head>
+<body>
+  <label>Players tab URL<input id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/…/edit#gid=0"></label>
+  <label>Refresh seconds<input id="sheet-interval" type="number" min="5" step="5"></label>
+  <div class="row"><button id="sheet-enabled">Polling OFF</button><button id="sheet-refresh">Refresh players</button></div>
+  <div id="sheet-status" class="status" role="status">Loading…</div>
+  <p id="error" role="status"></p>
+  <script src="sheet-control.js"></script>
+</body>
+</html>

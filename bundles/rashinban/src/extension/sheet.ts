@@ -8,7 +8,7 @@ import { parsePlayers, type PlayerProfile } from "../sheet/players";
 import type { SheetConfig, SheetStatus } from "../sheet/types";
 import { REPLICANTS, SHEET_MESSAGES } from "../types/replicants";
 
-const DEFAULT_CONFIG: SheetConfig = { enabled: false, sheetId: "", playersGid: "0", pollIntervalMs: 15_000 };
+const DEFAULT_CONFIG: SheetConfig = { enabled: false, sheetId: "1xozkRDAEeRLqVPzvpqqDFAcpC3vcbTrd9xekrQ28B50", playersGid: "0", pollIntervalMs: 15_000 };
 const MIN_POLL_MS = 5_000;
 
 /** Google export URL for a sheet id, or the id itself when it is already a full CSV URL (local tests, Apps Script endpoints). */

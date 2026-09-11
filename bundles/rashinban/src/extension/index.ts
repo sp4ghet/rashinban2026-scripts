@@ -1,6 +1,6 @@
 import type NodeCG from "@nodecg/types";
+import { registerMatch } from './match';
 
-import { REPLICANTS } from "../types/replicants";
 import { registerBanPick } from "./banpick";
 import { loadLocalEnv } from "./env";
 import { registerStartgg } from "./startgg";
@@ -13,46 +13,14 @@ export = (nodecg: NodeCG.ServerAPI) => {
   loadLocalEnv(nodecg);
   registerPresenter(nodecg);
 
-  const lowerThirdVisible = nodecg.Replicant<boolean>(
-    REPLICANTS.lowerThirdVisible,
-    { defaultValue: false },
-  );
-  const round = nodecg.Replicant<number>(REPLICANTS.round, {
-    defaultValue: 1,
-  });
-
   // HTTP endpoints for Bitfocus Companion (Generic HTTP module).
   // Mounted at http://<host>:9090/rashinban/...
   const router = nodecg.Router();
 
-  router.post("/lower-third/toggle", (_req, res) => {
-    lowerThirdVisible.value = !lowerThirdVisible.value;
-    res.json({ lowerThirdVisible: lowerThirdVisible.value });
-  });
-
-  router.post("/lower-third/show", (_req, res) => {
-    lowerThirdVisible.value = true;
-    res.json({ lowerThirdVisible: lowerThirdVisible.value });
-  });
-
-  router.post("/lower-third/hide", (_req, res) => {
-    lowerThirdVisible.value = false;
-    res.json({ lowerThirdVisible: lowerThirdVisible.value });
-  });
-
-  router.post("/round/increment", (_req, res) => {
-    round.value = (round.value ?? 1) + 1;
-    res.json({ round: round.value });
-  });
-
-  router.post("/round/decrement", (_req, res) => {
-    round.value = Math.max(1, (round.value ?? 1) - 1);
-    res.json({ round: round.value });
-  });
-
   registerBanPick(nodecg, router);
   registerStartgg(nodecg, router);
   registerSheet(nodecg, router);
+  registerMatch(nodecg);
   registerPlayerCards(nodecg, router);
 
   nodecg.mount("/rashinban", router);

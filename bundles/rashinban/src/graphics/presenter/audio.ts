@@ -15,6 +15,20 @@ export interface PresenterAudio {
   stop(): void;
 }
 export function createAudio(context: AudioContext, fetchAsset: typeof fetch): PresenterAudio {
+  const ramps = new WeakMap<AudioParam, { from: number; target: number; start: number; end: number }>();
+  function fade(param: AudioParam, target: number, start: number, end: number) {
+    const previous = ramps.get(param);
+    // Track our linear envelopes so Firefox can hold an interrupted fade
+    // without cancelAndHoldAtTime (which it does not implement).
+    const progress = previous ? (previous.end <= previous.start ? 1
+      : Math.max(0, Math.min(1, (start - previous.start) / (previous.end - previous.start)))) : 0;
+    const from = previous ? previous.from + (previous.target - previous.from) * progress : param.value;
+    if (typeof param.cancelAndHoldAtTime === 'function') param.cancelAndHoldAtTime(start);
+    else { param.cancelScheduledValues(start); param.setValueAtTime(from, start); }
+    if (end <= start) param.setValueAtTime(target, start);
+    else param.linearRampToValueAtTime(target, end);
+    ramps.set(param, { from, target, start, end });
+  }
   const gate = context.createGain(); gate.gain.value = 0; gate.connect(context.destination);
   let media = EMPTY_MEDIA; let version = 0; let loading = false; let missing: string[] = [];
   let buffers: { stem: Stem; buffer: AudioBuffer }[] = [];
@@ -48,8 +62,7 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
           && now < node.cue.untilMs;
         if (node.envelope && !node.fading && endedEarly) {
           const end = Math.min(node.naturalEnd, time + 1);
-          node.envelope.gain.cancelAndHoldAtTime(time);
-          node.envelope.gain.linearRampToValueAtTime(0, end);
+          fade(node.envelope.gain, 0, time, end);
           node.source.stop(end); node.fading = true;
         }
       }
@@ -79,8 +92,8 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       if (envelope) {
         gain.connect(envelope); envelope.connect(gate);
         const fadeInEnd = Math.min(start + 0.2, naturalEnd);
-        envelope.gain.setValueAtTime(0, start);
-        envelope.gain.linearRampToValueAtTime(1, fadeInEnd);
+        envelope.gain.value = 0;
+        fade(envelope.gain, 1, start, fadeInEnd);
         // Keep the authored ending intact on timeout. Only an early second
         // guess/result schedules a fade-out; the buffer otherwise ends itself.
       } else gain.connect(gate);
@@ -159,9 +172,8 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       for (const node of nodes) {
         const target = settings.muted || ended ? 0 : node.stem.gains[music] * settings.musicGain;
         if (target === node.target && settings.muted === node.muted && music === node.music) continue;
-        node.target = target; node.muted = settings.muted; node.music = music; node.gain.gain.cancelAndHoldAtTime(time);
-        if (settings.muted) node.gain.gain.setValueAtTime(0, time);
-        else node.gain.gain.linearRampToValueAtTime(target, time + media.fadeMs[music] / 1000);
+        node.target = target; node.muted = settings.muted; node.music = music;
+        fade(node.gain.gain, target, time, settings.muted ? time : time + media.fadeMs[music] / 1000);
       }
     },
     status() {

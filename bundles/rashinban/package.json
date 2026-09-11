@@ -5,9 +5,34 @@
   "nodecg": {
     "compatibleRange": "^2.0.0",
     "assetCategories": [
-      { "name": "music", "title": "Presenter music", "allowedTypes": ["wav", "mp3", "ogg", "m4a"] },
-      { "name": "effects", "title": "Presenter cue sounds", "allowedTypes": ["wav", "mp3", "ogg", "m4a"] },
-      { "name": "video", "title": "Presenter celebrations", "allowedTypes": ["webm", "mp4"] }
+      {
+        "name": "music",
+        "title": "Presenter music",
+        "allowedTypes": [
+          "wav",
+          "mp3",
+          "ogg",
+          "m4a"
+        ]
+      },
+      {
+        "name": "effects",
+        "title": "Presenter cue sounds",
+        "allowedTypes": [
+          "wav",
+          "mp3",
+          "ogg",
+          "m4a"
+        ]
+      },
+      {
+        "name": "video",
+        "title": "Presenter celebrations",
+        "allowedTypes": [
+          "webm",
+          "mp4"
+        ]
+      }
     ],
     "graphics": [
       {
@@ -17,11 +42,6 @@
       },
       {
         "file": "presenter.html",
-        "width": 1920,
-        "height": 1080
-      },
-      {
-        "file": "dummy.html",
         "width": 1920,
         "height": 1080
       },
@@ -48,21 +68,24 @@
     ],
     "dashboardPanels": [
       {
+        "name": "current-match",
+        "workspace": "broadcast",
+        "title": "Current Match",
+        "file": "current-match.html",
+        "width": 6,
+        "headerColor": "#256549"
+      },
+      {
         "name": "presenter-control",
+        "workspace": "config",
         "title": "Duels Presenter",
         "file": "presenter-control.html",
         "width": 3,
         "headerColor": "#335f9b"
       },
       {
-        "name": "dummy-control",
-        "title": "Dummy Overlay",
-        "file": "dummy-control.html",
-        "width": 2,
-        "headerColor": "#c2185b"
-      },
-      {
         "name": "banpick-control",
+        "workspace": "broadcast",
         "title": "Ban & Pick",
         "file": "banpick-control.html",
         "width": 4,
@@ -70,13 +93,23 @@
       },
       {
         "name": "startgg-control",
+        "workspace": "config",
         "title": "start.gg",
         "file": "startgg-control.html",
         "width": 4,
         "headerColor": "#37474f"
       },
       {
+        "name": "sheet-control",
+        "workspace": "config",
+        "title": "Google Sheets",
+        "file": "sheet-control.html",
+        "width": 3,
+        "headerColor": "#256549"
+      },
+      {
         "name": "player-cards-control",
+        "workspace": "broadcast",
         "title": "Player Cards",
         "file": "player-cards-control.html",
         "width": 4,

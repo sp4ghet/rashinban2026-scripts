@@ -3,6 +3,7 @@
 // (case-insensitive). See docs/sheet/README.md for the column list.
 
 import type { Entrant } from "../startgg/types";
+import { geoUid } from '../match/identity.ts';
 
 export interface ModeStats {
   all: string;
@@ -12,6 +13,7 @@ export interface ModeStats {
 }
 
 export interface PlayerProfile {
+  geoguessrPlayerUid: string | null;
   /** Join key: the start.gg gamer tag, compared case- and space-insensitively. */
   startggTag: string;
   /** Optional numeric start.gg entrant id for an exact match. */
@@ -38,6 +40,7 @@ export interface PlayerProfile {
 
 /** Sheet column -> profile field. Keys are lower-case header names. */
 export const PLAYER_COLUMNS = {
+  geoguessr_player_uid: "geoguessrPlayerUid",
   startgg_tag: "startggTag",
   startgg_entrant_id: "startggEntrantId",
   name: "name",
@@ -75,6 +78,7 @@ const emptyStats = (): ModeStats => ({ all: "", move: "", nm: "", nmpz: "" });
 
 export function rowToProfile(row: Record<string, string>): PlayerProfile {
   const p: PlayerProfile = {
+    geoguessrPlayerUid: null,
     startggTag: "",
     startggEntrantId: null,
     name: "",
@@ -99,7 +103,9 @@ export function rowToProfile(row: Record<string, string>): PlayerProfile {
       if (value) p.extra[col] = value;
       continue;
     }
-    if (target === "startggEntrantId") {
+    if (target === 'geoguessrPlayerUid') {
+      try { p.geoguessrPlayerUid = geoUid(value); } catch { p.extra.invalid_geoguessr_player_uid = value; }
+    } else if (target === "startggEntrantId") {
       const n = Number(value);
       p.startggEntrantId = value && Number.isInteger(n) ? n : null;
     } else if (target === "bestCountry" || target === "worstCountry") {
@@ -126,12 +132,12 @@ export interface ParsedPlayers {
 
 export function parsePlayers(rows: Record<string, string>[]): ParsedPlayers {
   const header = new Set(Object.keys(rows[0] ?? {}));
-  const missingColumns = rows.length ? REQUIRED_COLUMNS.filter((c) => !header.has(c)) : [...REQUIRED_COLUMNS];
+  const missingColumns = header.has('geoguessr_player_uid') ? [] : rows.length ? REQUIRED_COLUMNS.filter((c) => !header.has(c)) : [...REQUIRED_COLUMNS];
   const players: PlayerProfile[] = [];
   let skippedRows = 0;
   for (const row of rows) {
     const p = rowToProfile(row);
-    if (!p.startggTag) {
+    if (!p.startggTag && !p.geoguessrPlayerUid) {
       skippedRows++;
       continue;
     }

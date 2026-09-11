@@ -18,11 +18,11 @@ class Param {
   cancelAndHoldAtTime(at: number) { const value = this.at(at); this.cancelScheduledValues(at); this.setValueAtTime(value, at); }
   at(time: number) { let value = this.value; let at = 0; for (const e of this.events) { if (e.at > time) return e.ramp ? value + (e.value - value) * (time - at) / (e.at - at) : value; value = e.value; at = e.at; } return value; }
 }
-function port() {
+function port(withHold = true) {
   const gains: { gain: Param; connect(to: unknown): void; disconnect(): void }[] = [];
   const sources: any[] = [];
   const context = { currentTime: 10, state: 'running', baseLatency: 0, outputLatency: 0, destination: {},
-    createGain() { const gain = { gain: new Param(), connect() {}, disconnect() {} }; gains.push(gain); return gain; },
+    createGain() { const gain = { gain: new Param(), connect() {}, disconnect() {} }; if (!withHold) Object.defineProperty(gain.gain, 'cancelAndHoldAtTime', { value: undefined }); gains.push(gain); return gain; },
     createBufferSource() { const source = { buffer: null, loop: false, loopStart: 0, loopEnd: 0, playbackRate: { value: 1 }, starts: [] as number[][], stops: 0,
       connect(to: unknown) { this.output = to; }, output: null as unknown, disconnect() {}, start(...args: number[]) { this.starts.push(args); }, stopTimes: [] as number[], stop(at?: number) { this.stops++; if (at !== undefined) this.stopTimes.push(at); } }; sources.push(source); return source; },
     async decodeAudioData(bytes: ArrayBuffer) { return { duration: new Uint8Array(bytes)[0], sampleRate: 48000 }; },
@@ -109,6 +109,31 @@ test('equal-gain context transition applies its authored fade without restarting
 });
 
 const cueMedia: MediaManifest = { ...EMPTY_MEDIA, sounds: { pin: '/pin', guess: '/guess', countdown: '/tick', results: '/results', count: '/count', damage: '/damage', 'five-k': '/five-k' } };
+test('Firefox music fades preserve the current level when interrupted without cancelAndHoldAtTime', async () => {
+  const p = port(false); await p.audio.load(manifest); p.audio.lease(30000, 1000);
+  p.audio.sync(timeline, DEFAULT_SETTINGS, 1000);
+  const gain = p.sources[0].output.gain;
+  p.context.currentTime = 10.25;
+  p.audio.sync({ ...timeline, music: 'results' }, DEFAULT_SETTINGS, 1250);
+  assert.ok(Math.abs(gain.at(10.25) - 0.35) < 1e-9);
+  assert.ok(Math.abs(gain.at(10.35) - 0.28) < 1e-9);
+  p.context.currentTime = 10.35;
+  p.audio.sync(timeline, { ...DEFAULT_SETTINGS, muted: true }, 1350);
+  assert.equal(gain.at(10.35), 0);
+  assert.equal(p.sources.length, 2, 'fades do not restart the stems');
+});
+test('Firefox countdown can fade out during its fade-in without cancelAndHoldAtTime', async () => {
+  const p = port(false); await p.audio.load(cueMedia); p.audio.lease(30000, 1000);
+  const t = { ...timeline, cues: [cue('firefox-countdown', 'countdown', 1000, 13000)] };
+  p.audio.sync(t, DEFAULT_SETTINGS, 1000);
+  const envelope = p.gains[2].gain;
+  p.context.currentTime = 10.1;
+  p.audio.sync({ ...t, phase: 'results-reveal' }, DEFAULT_SETTINGS, 1100);
+  assert.ok(Math.abs(envelope.at(10.1) - 0.5) < 1e-9);
+  assert.ok(Math.abs(envelope.at(10.6) - 0.25) < 1e-9);
+  assert.equal(envelope.at(11.1), 0);
+  assert.deepEqual(p.sources[0].stopTimes, [11.1]);
+});
 test('opponent submission uses its own asset regardless of which sound plays first', async () => {
   for (const opponentFirst of [false,true]) {
     const p = port(); await p.audio.load({ ...EMPTY_MEDIA, sounds: { guess: '/own-short', 'opponent-guess': '/opponent' } }); p.audio.lease(30000,1000);

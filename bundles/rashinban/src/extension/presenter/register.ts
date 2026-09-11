@@ -258,7 +258,10 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   }
   function current() { return { settings: settings.value, series: series.value, connection: connection.value, timeline: timeline.value, clients: clients.value, media: media.value }; }
   function control(action: PresenterAction, body: unknown): unknown {
-    if (action === 'series') series.value = parseSeries(body);
+    if (action === 'series') {
+      if (nodecg.Replicant(REPLICANTS.matchState, {defaultValue: null}).value) throw new Error('Edit the series in Current Match');
+      series.value = parseSeries(body);
+    }
     else if (action === 'settings') { settings.value = parseSettings(body); publishClients(copyClients()); tick(); }
     else if (action === 'media') { media.value = parseMedia(body); tick(); }
     else if (action === 'reconnect') reconnect(body);

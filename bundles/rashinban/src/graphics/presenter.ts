@@ -112,11 +112,15 @@ function frame() {
     element('transition').hidden = scene.kind !== 'transition' || underlay || timing.effect !== 'none';
     write('round-number', scene.previewRound === null ? timing.round === null ? '—' : String(timing.round) : String(scene.previewRound));
     write('mode', state?.mode ?? '—');
+    // Series wins count completed games; the active game is the next one.
+    write('game-number', String(match.left.wins + match.right.wins + 1));
     const multiplier = scene.kind === 'preview' ? state?.roundTimeMs ? `${state.roundTimeMs / 1000}s` : '—'
       : multiplierLabel(state ?? null, timing, { left: match.left.playerId, right: match.right.playerId });
     write('multiplier-label', scene.kind === 'preview' ? 'ROUND TIME' : 'DAMAGE');
-    write('multiplier', multiplier.replace(' · ', '\n'));
-    element('multiplier').classList.toggle('split', multiplier.startsWith('L '));
+    write('right-multiplier-label', scene.kind === 'preview' ? 'ROUND TIME' : 'DAMAGE');
+    const sideMultipliers = multiplier.startsWith('L ') ? multiplier.slice(2).split(' · R ') : [multiplier, multiplier];
+    write('multiplier', sideMultipliers[0]);
+    write('right-multiplier', sideMultipliers[1]);
     for (const side of ['left', 'right'] as const) {
       const competitor = match[side];
       const player = visible.players.find(item => item.id === competitor.playerId);

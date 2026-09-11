@@ -20,15 +20,16 @@ npm run dev     # esbuild watch + NodeCG together
 ```
 
 - Dashboard: http://localhost:9090/
-- Dummy graphic (OBS browser source, 1920×1080):
-  http://localhost:9090/bundles/rashinban/graphics/dummy.html
+  - **Broadcast**: Current Match, Ban & Pick, and Player Cards for live operation.
+  - **Config**: Duels Presenter, start.gg, and Google Sheets for setup and connection recovery.
+  - Restart NodeCG after changing dashboard workspace assignments.
 - Ban & Pick overlays (1920×1080): `graphics/banpick-stream.html` (stream),
   `graphics/banpick-led.html` (venue LED). Same data, separate CSS.
 - Player cards (1920×1080): `graphics/player-cards.html`. Two cards for the
   current match, filled from the Google Sheet players tab joined to the
-  start.gg entrants. Configure the sheet, pick the match (auto from start.gg,
-  a chosen set, or two players picked from the sheet), and flip profile/stats in the
-  "Player Cards" dashboard panel. Column spec in
+  start.gg entrants. Select players or load an upcoming start.gg match in the
+  "Current Match" panel. Player Cards, Ban & Pick and Presenter share that match.
+  Flip profile/stats in "Player Cards". Column spec in
   [docs/sheet/README.md](docs/sheet/README.md). Flags are local PNGs under
   `graphics/assets/images/flags/` (refresh with `node scripts/fetch-flags.mjs`)
   and Noto Sans JP / Oswald are vendored OFL files under `graphics/assets/fonts/`
@@ -99,13 +100,9 @@ and `.secrets/` are gitignored. Restart NodeCG after editing it.
 The extension mounts plain HTTP endpoints for Bitfocus Companion's
 **Generic HTTP** module (method POST, no body needed):
 
-- `POST /rashinban/lower-third/toggle` (also `/show`, `/hide`)
-- `POST /rashinban/round/increment`
-- `POST /rashinban/round/decrement`
 - `POST /rashinban/banpick/{show,hide,toggle,undo,reset}`
 - `POST /rashinban/startgg/refresh`
 - `POST /rashinban/sheet/refresh`
 - `POST /rashinban/playercards/{show,hide,toggle,profile,stats,flip}`
-- `POST /rashinban/match/auto` (return current-match selection to automatic)
 
 Point Companion at `http://<this-machine>:9090/rashinban/...`.

@@ -1,26 +1,12 @@
-// Current-match selection and player-card presentation state, plus
-// Companion endpoints. The match itself is resolved client-side from the
-// startggBracket replicant (see src/match/current.ts).
+// Player-card presentation controls. Identity comes from the Current Match service.
 import type NodeCG from "@nodecg/types";
 
-import { DEFAULT_SELECTION, type CurrentMatchSelection } from "../match/current";
 import type { PlayerCardsState } from "../sheet/types";
-import { MATCH_MESSAGES, PLAYERCARDS_MESSAGES, REPLICANTS } from "../types/replicants";
+import { PLAYERCARDS_MESSAGES, REPLICANTS } from "../types/replicants";
 
 export function registerPlayerCards(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeCG.ServerAPI["Router"]>) {
-  const selection = nodecg.Replicant<CurrentMatchSelection>(REPLICANTS.currentMatch, { defaultValue: DEFAULT_SELECTION });
   const cards = nodecg.Replicant<PlayerCardsState>(REPLICANTS.playerCards, { defaultValue: { visible: false, page: "profile" } });
 
-  nodecg.listenFor(MATCH_MESSAGES.setSelection, (data: Partial<CurrentMatchSelection>, ack) => {
-    const cur = selection.value ?? DEFAULT_SELECTION;
-    const mode = data?.mode === "auto" || data?.mode === "set" || data?.mode === "tags" ? data.mode : cur.mode;
-    const setId = data?.setId === null ? null : Number.isInteger(data?.setId) ? (data!.setId as number) : cur.setId;
-    const tags: [string, string] = Array.isArray(data?.tags)
-      ? [String(data!.tags[0] ?? ""), String(data!.tags[1] ?? "")]
-      : cur.tags;
-    selection.value = { mode, setId, tags };
-    if (ack && !ack.handled) ack(null, selection.value);
-  });
 
   const setCards = (patch: Partial<PlayerCardsState>) => {
     const cur = cards.value ?? { visible: false, page: "profile" as const };
@@ -42,8 +28,4 @@ export function registerPlayerCards(nodecg: NodeCG.ServerAPI, router: ReturnType
   router.post("/playercards/profile", (_req, res) => res.json(setCards({ page: "profile" })));
   router.post("/playercards/stats", (_req, res) => res.json(setCards({ page: "stats" })));
   router.post("/playercards/flip", (_req, res) => res.json(setCards({ page: cards.value?.page === "stats" ? "profile" : "stats" })));
-  router.post("/match/auto", (_req, res) => {
-    selection.value = { ...(selection.value ?? DEFAULT_SELECTION), mode: "auto" };
-    res.json(selection.value);
-  });
 }

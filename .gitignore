@@ -3,6 +3,8 @@ node_modules/
 /.superpowers/sdd/
 /artifacts/presenter-validation/
 /artifacts/presenter-followup/
+/artifacts/current-match-*
+/artifacts/player-sheet.png
 
 # NodeCG runtime state (replicant db, logs, uploaded assets)
 /db/
