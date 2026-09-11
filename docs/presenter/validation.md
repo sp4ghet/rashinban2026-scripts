@@ -52,6 +52,16 @@ derived from recorded replay fixtures exercised 1920 × 1080 output:
 - Dummy overlay plus existing lower-third show/hide/toggle and round
   increment/decrement actions.
 
+A separate focused check used the captured
+`gs2-ws-DuelStarted-created-not-started.json`, normalized as `Created` with one
+unstarted round and no guesses/results. At 1920 × 1080 it showed round 1,
+MOVE, ×1, both initial health values 6000, zero series wins and both fixed
+camera rectangles. Scores/distances stayed blank and results/answer, timer
+and transition stayed hidden. This supplements the resolved-state phase matrix
+above. The temporary preview used local-only Replicant values, published zero
+operations, restored its descriptors and verified unchanged server settings,
+media, series and connection; the existing replay process remained running.
+
 The browser run completed without uncaught exceptions. Representative
 screenshots and full structured results stay private and uncommitted under
 [`artifacts/presenter-validation/`](../../artifacts/presenter-validation/):
@@ -60,6 +70,9 @@ screenshots and full structured results stay private and uncommitted under
 [live selector](../../artifacts/presenter-validation/dashboard-live-party.png),
 [dummy](../../artifacts/presenter-validation/dummy-companion.png), and
 [browser results](../../artifacts/presenter-validation/browser-results.json).
+The focused Created evidence is its
+[screenshot](../../artifacts/presenter-validation/phase-created.png) and
+[assertion/restoration result](../../artifacts/presenter-validation/created-results.json).
 These files are local evidence and are not included in a fresh clone.
 
 ## OBS composition and timing
@@ -123,7 +136,8 @@ was selected. Embedded output was measured during the same session.
 
 The clean bundle was restored byte-for-byte afterward, original media/settings
 and replay config were restored, and the temporary OBS delay was removed.
-The final browser/OBS composition rerun passed 21 cases with no uncaught errors.
+The full browser/OBS composition rerun passed 21 cases with no uncaught errors;
+the subsequent focused Created-snapshot check also passed without errors.
 
 Private diagnostic evidence includes the
 [failed silent-source result](../../artifacts/presenter-validation/av-smoke-failed.json),
