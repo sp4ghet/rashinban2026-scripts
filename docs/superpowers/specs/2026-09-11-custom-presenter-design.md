@@ -2,7 +2,7 @@
 
 Date: 2026-09-11
 
-Status: Approved by the user on 2026-09-11; implementation has not started.
+Status: Approved by the user on 2026-09-11; implemented locally. See [validation and remaining event checks](../../presenter/validation.md) for the measured scope and limitations.
 
 ## Purpose and scope
 
@@ -83,8 +83,11 @@ GeoGuessr messages or hold authentication credentials.
 
 ## Connection and authoritative state
 
-Store the supplied cookie in local server configuration, outside committed
-files. Never publish it in Replicants, browser payloads, diagnostics, or logs.
+Store the supplied cookie in a separate ignored `.secrets/geoguessr.json`,
+loaded only by the extension. NodeCG's normal bundle configuration is exposed
+to browser graphics, so it must contain only public settings and a secret-file
+reference, never the cookie itself. Never publish the cookie in Replicants,
+browser payloads, diagnostics, or logs.
 Support an explicit party ID, with active-party discovery as a convenience.
 
 Following the captured protocol, the extension polls party state, resolves
