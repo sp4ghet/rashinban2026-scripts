@@ -1,0 +1,23 @@
+﻿{
+    "at":  "2026-09-11T08:34:46.219Z",
+    "maps":  [
+                 {
+                     "mapId":  "61449c20e7fc278b",
+                     "renderingType":  "RASTER",
+                     "mapTypeId":  "roadmap",
+                     "styles":  null
+                 },
+                 {
+                     "mapId":  "61449c20e7fc278b",
+                     "renderingType":  "RASTER",
+                     "mapTypeId":  "roadmap",
+                     "styles":  null
+                 },
+                 {
+                     "mapId":  "61449c20e7fc278b",
+                     "renderingType":  "RASTER",
+                     "mapTypeId":  "roadmap",
+                     "styles":  null
+                 }
+             ]
+}

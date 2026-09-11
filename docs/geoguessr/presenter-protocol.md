@@ -1,5 +1,7 @@
 # GeoGuessr Party Broadcast ("Presenter Mode") protocol notes
 
+For implementation of the visual lifecycle, see [Game-master presentation flow](game-master-flow.md): manual versus automatic starts, results holds, local Continue versus server Start round, screenshots, music and final-summary behavior.
+
 Captured 2026-09-10 against web client `1.7695-a61479c`. Everything here was
 read from the broadcast page's Next.js chunks and confirmed with live traffic
 from a real party (see `samples/`). GeoGuessr ships new client builds often, so
@@ -26,6 +28,8 @@ before relying on any of this at the event.
    spectator view knows the answer location.
 5. When `status === "Finished"` the page keeps showing the result for 6 s,
    then returns to the idle screen and waits for the next `lobbyId`.
+
+That six-second behavior describes the standalone broadcast wrapper captured here. The newer interactive party game-master screen has a winner reveal, Game Summary and Continue flow; see [the full game-end loop](game-master-flow.md#complete-end-to-next-game-loop). Do not apply the broadcast-wrapper timeout to the interactive summary.
 
 Only **Duels / TeamDuels** are rendered. Battle Royale, Live Challenge, Bullseye
 and quiz modes fall through to the idle screen ("waiting for host"). Verify this
@@ -296,6 +300,394 @@ The spectator socket can drop with close code `1006` for no visible reason
 `DuelStarted` snapshot, so no state is lost. On abort or finish the server
 closes with `1000 "Spectator session ended"`; poll the party for the next
 `lobbyId` instead of reconnecting.
+
+## Game-master snapshot (2026-09-11)
+
+User-supplied Firefox Network capture, client `web-1.7709-ed0ee1b`:
+
+```
+GET https://gs2.geoguessr.com/<gameServerNodeId>/<gameId>/game-master
+credentials: include
+```
+
+The response is a bare duel state (no WebSocket `code` / `duel.state`
+envelope). This capture maps:
+
+- Party / broadcast ID: `5bcebcb8-6514-4fff-8dbb-662607ee14e7`, matching
+  `context: { type: "Party", id: ... }`.
+- Game ID: `6aa3ae644f7b00f361d1668f`.
+- Server node ID: `82db719412ba42c8a2d388b968781f0e`.
+- Game master ID: `5ec26de5a789c45a9c13cf3c` (state metadata, not an
+  authentication credential).
+
+At version 22, `status` is `Ongoing`, `currentRoundNumber` is 3, and
+`isPaused` is false. Round 3 has `hasProcessedRoundTimeout: true` and both
+teams have round-3 results. With `ManuallyStartAllRounds` and
+`masterControlAutoStartRounds: false`, this is consistent with waiting for
+the host to start round 4.
+
+Unlike the earlier spectator captures, this snapshot contains **20 rounds,
+including future panoramas**, although `maxNumberOfRounds` is 50. Rounds
+4-20 have null start/timer/end timestamps. Do not infer the active round,
+completed round count, or game length from `rounds.length`. Select the round
+by `roundNumber === currentRoundNumber`, then inspect its timestamps,
+timeout flag and results. The earlier `rounds.length === currentRoundNumber`
+observation applies to those spectator captures, not all state endpoints.
+Whether subsequent game-master WebSocket snapshots include future rounds
+still needs a capture.
+
+The accompanying OPTIONS request is consistent with a browser CORS
+preflight; check `Access-Control-Request-Method` and
+`Access-Control-Request-Headers` to confirm. OPTIONS does not establish a
+game command or its payload. See [MDN on preflight requests](https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request).
+
+### Lobby settings (request captured 2026-09-11)
+
+Changing Duels settings in the lobby produced
+`PUT https://www.geoguessr.com/api/v4/parties/v2/all-settings`, using
+`credentials: "include"`, `Content-Type: application/json`,
+`X-Client: web-1.7709-ed0ee1b`, `X-Locale: en`, and referrer
+`https://www.geoguessr.com/party/lobby`. The captured JSON body was:
+
+```json
+{
+  "gameType": "Duels",
+  "gameSettings": {
+    "forbidMoving": false,
+    "forbidZooming": false,
+    "forbidRotating": false,
+    "guessMapType": "roadmap",
+    "mapSlug": "696fe47c5b07bed052077a95",
+    "timeAfterGuess": 15,
+    "initialHealth": 6000,
+    "maxRoundTime": 60,
+    "maxNumberOfRounds": 50,
+    "multiplierIncrement": 0,
+    "roundWinMultiplierIncrement": 5,
+    "roundsWithoutDamageMultiplier": 1,
+    "disableHealing": true,
+    "countAllGuesses": false,
+    "powerUpSkipRound": false,
+    "powerUpRoadLabels": false,
+    "powerUpUpgradeMovement": false,
+    "powerUpScoreMarker": false,
+    "blinkMode": false,
+    "blinkTimeTeamOne": 1000,
+    "blinkTimeTeamTwo": 1000,
+    "roundTime": 10,
+    "roundCount": 5,
+    "individualInitialHealth": false,
+    "initialHealthTeamOne": 0,
+    "initialHealthTeamTwo": 0
+  },
+  "settings": {
+    "allowedCommunication": "TextMessages",
+    "isolateInGameChat": false,
+    "allowGuests": true,
+    "allowSwitchingTeams": true,
+    "maxPartySize": 100,
+    "masterControl": true,
+    "masterControlAutoStartRounds": false,
+    "hideJoinInfo": true
+  }
+}
+```
+
+This sends game type, game settings, and party settings together; no party ID
+appears in the URL or body. Partial-update semantics and required fields are
+unknown. A future controller should preserve unrelated current settings when
+editing a value rather than assuming a sparse body works or replaying this
+entire historical configuration.
+
+`masterControl` and `masterControlAutoStartRounds` belong to party `settings`
+in this request, not `gameSettings`. The user believes auto-start cannot be
+changed mid-game. Treat this as pre-game configuration; neither live mutation
+of an ongoing duel nor server rejection of such a mutation has been observed.
+
+The payload contains both `timeAfterGuess: 15` and `roundTime: 10`, plus both
+`maxNumberOfRounds: 50` and `roundCount: 5`. Do not conflate these fields. Earlier
+Duels captures associate the after-guess timer with duel `options.roundTime`
+(15 seconds); a resulting game snapshot is needed to verify the mapping for
+this write and determine which shared settings affect Duels. The presence of
+`powerUpSkipRound` is not evidence of a game-master skip command.
+
+The user confirmed **200 OK** with JSON body `{"message":"OK"}`. The
+resulting party state was not supplied, so persistence details remain unverified.
+
+### Party settings / auto-start toggle (request captured 2026-09-11)
+
+Toggling auto-start rounds in the lobby produced
+`PUT https://www.geoguessr.com/api/v4/parties/v2/settings`, using
+`credentials: "include"`, `Content-Type: application/json`,
+`X-Client: web-1.7709-ed0ee1b`, `X-Locale: en`, and referrer
+`https://www.geoguessr.com/party/lobby`.
+
+```json
+{
+  "allowedCommunication": "TextMessages",
+  "isolateInGameChat": false,
+  "allowGuests": true,
+  "allowSwitchingTeams": true,
+  "maxPartySize": 100,
+  "masterControl": true,
+  "masterControlAutoStartRounds": true,
+  "hideJoinInfo": true
+}
+```
+
+Unlike `/all-settings`, this endpoint takes the party settings object
+directly, with no outer `settings` wrapper, `gameType`, or `gameSettings`.
+The captured toggle-on request sends all eight party-setting fields, not
+just `masterControlAutoStartRounds`. Partial-update semantics remain unknown;
+preserve unrelated current party settings when constructing future writes.
+
+This confirms the UI's request for enabling auto-start in the lobby. It
+does not establish an effect on an ongoing game. The user confirmed
+**200 OK** with JSON body `{"message":"OK"}`. The toggle-off request and
+resulting party state were not supplied for this endpoint. Earlier captures
+show `masterControlAutoStartRounds: false` for manual starts.
+
+### Game settings / movement and map (requests captured 2026-09-11)
+
+Toggling NM/Move in the lobby produced
+`PUT https://www.geoguessr.com/api/v4/parties/v2/game-settings`, using
+`credentials: "include"`, `Content-Type: application/json`,
+`X-Client: web-1.7709-ed0ee1b`, `X-Locale: en`, and referrer
+`https://www.geoguessr.com/party/lobby`.
+
+The body is the complete `gameSettings` object shown in the `/all-settings`
+capture above, with exactly one value changed: `forbidMoving` is `true`.
+It has no outer `gameSettings` wrapper and contains neither `gameType` nor
+party `settings`. The movement fields in this request are:
+
+```json
+{
+  "forbidMoving": true,
+  "forbidZooming": false,
+  "forbidRotating": false
+}
+```
+
+This excerpt is not the full captured request body. It represents NM:
+movement forbidden, zooming and rotation allowed. The earlier `/all-settings`
+body represents Move with all three flags false. The reverse toggle request
+to this endpoint and the NMPZ toggle have not been captured.
+
+The three observed settings writes therefore differ in body shape:
+
+| PUT endpoint under `/api/v4/parties/v2` | Captured body shape |
+|---|---|
+| `/all-settings` | `{ gameType, gameSettings, settings }` |
+| `/settings` | Party settings object directly |
+| `/game-settings` | Game settings object directly |
+
+This request sends the other game settings along with movement flags;
+sparse-update semantics remain unknown. Preserve unrelated current values
+when constructing future writes. The user confirmed **200 OK** with JSON
+body `{"message":"OK"}`. The resulting party state was not supplied, and no
+mid-game effect has been established.
+
+A subsequent user capture of changing the map uses the same
+`PUT /api/v4/parties/v2/game-settings` endpoint, headers, credentials and
+unwrapped full game-settings body. Relative to the NM capture, it changes:
+
+| Field | NM capture | Map-change capture |
+|---|---|---|
+| `mapSlug` | `696fe47c5b07bed052077a95` | `62a44b22040f04bd36e8a914` |
+| `forbidMoving` | `true` | `false` |
+
+All other body fields match. This identifies `mapSlug` as the map selection
+field sent by the UI; no map name, bounds or panorama list is supplied.
+The selected map's name was not provided. The map-change capture is in Move
+configuration (all three movement restrictions false), but the captures do
+not establish whether changing the map changed movement or whether the user
+had separately switched back to Move. Do not infer an automatic reset.
+The user also confirmed **200 OK** with JSON body `{"message":"OK"}` for
+the map write. All three settings endpoints therefore share this observed
+success response; none returns the updated settings in that response.
+
+### Start game (request and response captured 2026-09-11)
+
+The user captured the party lobby's start-game action with client
+`web-1.7709-ed0ee1b`:
+
+```http
+POST https://www.geoguessr.com/api/v4/parties/v2/start-game
+Content-Type: application/json
+X-Client: web-1.7709-ed0ee1b
+X-Locale: en
+
+{}
+```
+
+The fetch uses `credentials: "include"`, `mode: "cors"`, and referrer
+`https://www.geoguessr.com/party/lobby`. This is a same-origin website API
+request, rather than a node-specific game-server request. No party ID, game
+ID, server node ID, or game settings are supplied in its URL or body. This
+suggests that the server resolves the caller's party from the authenticated
+session; the capture alone does not establish the server's selection rules.
+
+The confirmed response is **200 OK** with JSON body `{"message":"OK"}`.
+It contains no game/server identifiers or duel state. After success, the
+existing party polling and phonebook lookup described above provide the
+route to the game server; do not reuse a previous game's identifiers.
+
+The user confirmed the manual-start UI sequence: this start-game action
+shows the first round preview in the game-master screen, then the client
+calls `/game-master/start-next-round` to begin round 1. The same next-round
+endpoint therefore starts both the first round and subsequent rounds.
+This matches the earlier manual-round state captures (`Created` before
+round 1, then `Ongoing` when it starts). Specific WebSocket frames have not
+been supplied alongside these HTTP captures; the earlier captures show
+`DuelStarted` for round 1 and `DuelNewRound` for later rounds.
+
+### Start next round (request captured 2026-09-11)
+
+The user captured this request when clicking start next round in the same
+party/game, using client `web-1.7709-ed0ee1b`:
+
+```http
+POST https://gs2.geoguessr.com/82db719412ba42c8a2d388b968781f0e/6aa3ae644f7b00f361d1668f/game-master/start-next-round
+Content-Type: application/json
+X-Client: web-1.7709-ed0ee1b
+X-Locale: en
+
+{}
+```
+
+The browser fetch uses `credentials: "include"`, `mode: "cors"`, and the
+GeoGuessr website as referrer. The general route is
+`POST https://gs2.geoguessr.com/<nodeId>/<gameId>/game-master/start-next-round`.
+The body is the string `"{}"`, not an omitted body; no round number, party ID,
+player ID or state version is supplied in it.
+
+This identifies an **HTTP control request** for starting the next round.
+Earlier captures show `DuelNewRound` state updates after manual round
+starts, consistent with HTTP commands followed by WebSocket state updates.
+The user confirmed that this POST returned **204 No Content**, with no
+response body. Treat that as HTTP success; do not call `response.json()` on
+it or expect a duel state in the response. The corresponding WebSocket frames
+for this specific POST were not supplied, so exact event correlation remains
+unverified. The user separately confirmed that this same endpoint starts
+round 1 from the initial game-master preview, as well as subsequent rounds.
+Do not infer that other controls use the same transport or that this command
+is idempotent; do not automatically retry it on an ambiguous network failure.
+
+### Abort (request and response captured 2026-09-11)
+
+The user captured abort in the same party/game, using client
+`web-1.7709-ed0ee1b`:
+
+```http
+POST https://gs2.geoguessr.com/82db719412ba42c8a2d388b968781f0e/6aa3ae644f7b00f361d1668f/abort
+Content-Type: application/json
+X-Client: web-1.7709-ed0ee1b
+X-Locale: en
+
+{}
+```
+
+The general route is `POST https://gs2.geoguessr.com/<nodeId>/<gameId>/abort`:
+there is **no `/game-master` prefix** for this command. The fetch uses
+`credentials: "include"`, `mode: "cors"`, and the GeoGuessr website as
+referrer. The body is the string `"{}"`. The user confirmed the response is
+**204 No Content**, with no response body; do not call `response.json()`.
+
+Earlier abort captures show `DuelAborted`, a finished duel state, the party
+returning to `NoGame`, and spectator sockets closing with code 1000 and
+reason `"Spectator session ended"` (see the WebSocket table above). Those
+provide the expected state flow, but the WebSocket frames accompanying this
+specific POST have not been supplied. The route alone does not establish
+which roles the server permits to abort, or whether repeated calls are safe.
+
+### Pause, resume and rollback (live-tested 2026-09-11)
+
+Inspected the authenticated Chrome party/spectator client, build
+`web-1.7711-e06e090`, then called its game-master routes against the user's
+ongoing test duel. Evidence: [`samples/gs2-game-master-control-probe.json`](samples/gs2-game-master-control-probe.json)
+contains request/response records, before/after REST states, selected raw
+WebSocket messages, and client-source excerpts. No guessed route was needed.
+
+Source: module `227035` in
+`/_next/static/chunks/26721-1023828851e88f1b.js`; the controls appear in
+`/_next/static/chunks/86824-7ef24f299a82c14c.js`. The inspected controls are
+rendered only for `context.type === "WorldLeague"`, explaining their absence
+in the party UI, but the routes below worked in this `Party` game.
+
+All requests use session cookies (`credentials: "include"`), JSON content
+type, `X-Client: web-1.7711-e06e090`, and `X-Locale: en`:
+
+| POST path after `https://gs2.geoguessr.com/<nodeId>/<gameId>` | Body | Observed response |
+|---|---|---|
+| `/game-master/pause` | `{"roundNumber": <current round>}` | 204, empty |
+| `/game-master/resume-paused-round` | `{"roundNumber": <paused round>}` | 204, empty |
+| `/game-master/rollback` | `{"roundNumber": <target round>}` | 204, empty, including an observed no-op |
+
+Test game: `6aa3b7339e4091f7a0872365`, node
+`8572118768954f1b877ded5bd7c29b1e`, same party as the user captures above.
+It used auto-start rounds, a 60-second max round time, no placed pins or
+guesses during the tested rounds, and both teams at 6000 HP.
+
+**Pause holds round resolution, not the running countdown in this test.**
+Posting round 7 at 08:17:30.965 UTC emitted `DuelPauseRequested` (version 88)
+with `isPaused: false`. The original deadline remained 08:17:45.963 UTC.
+At 08:17:46.543 UTC, `DuelRoundPaused` (version 104) had `isPaused: true`,
+`hasProcessedRoundTimeout: false`, and results only through round 6. A
+second pause on round 8 reproduced this sequence. The client labels this
+control "Pause after round" and shows "Game will be paused when round is
+over" after requesting it. Do not present it as an immediate timer freeze.
+
+**Resume releases the held result.** Posting `resume-paused-round` for
+round 7 emitted `DuelRoundTimedOut` (version 117), cleared `isPaused`, set
+`hasProcessedRoundTimeout: true`, and appended round-7 results. The old
+round timestamps were unchanged; it did not grant more guessing time.
+Auto-start then emitted `DuelNewRound` for round 8 about eight seconds later.
+No distinct resume event was observed on the probe spectator socket.
+
+**Rollback worked from a paused state.** The first rollback to round 6,
+after resuming round 7 and before auto-starting round 8, returned 204 but
+did not roll back: the game proceeded to round 8. After pausing round 8,
+the same rollback body returned 204 and:
+
+- Changed `currentRoundNumber` from 8 to 6 and cleared `isPaused`.
+- Removed round results from round 6 onward (seven results became five).
+- Restored both team multipliers from 4.5 to 3.5. HP stayed 6000, so HP
+  restoration after actual damage and guess removal remain untested.
+- Reused round 6's panorama and restarted it with a fresh 60-second timer,
+  with `startTime` about four seconds after the event.
+- Kept the game/node IDs and emitted **`DuelNewRound`**, version 198.
+  No `DuelRollbackToRound` event was observed on this socket.
+
+Thus a 204 alone is not evidence that a rollback occurred. Confirm the
+target round and reset state in subsequent snapshots. Accept a decreasing
+round number when a newer version arrives. The client enables rollback for
+paused games, finished games, or resolved rounds with a non-default round
+starting behavior; only the paused case was demonstrated to work here.
+Finished-game and manual-round rollback behavior remain untested.
+
+The probe opened an additional spectator socket with `SubscribeToLobby` and
+15-second heartbeats. Many unrelated `DuelStarted` snapshots arrived during
+the experiment; the evidence records their count but omits those repeated
+frames. Their cause was not established. The probe socket was closed after
+testing; the game was left unpaused, replaying round 6 with auto-start enabled.
+
+### Finding remaining control commands
+
+Capture one host UI action at a time (pause / resume if offered), keeping
+both Fetch/XHR requests and WebSocket sent and
+received frames. Record the outbound URL/method/body or socket/frame, the
+HTTP response or acknowledgement, and the resulting state version/event.
+The request's Initiator stack can locate the command builder in the client
+bundle; searching loaded sources for `/game-master` can locate its reader.
+
+The existing capture userscript records fetches and both WebSocket
+directions. Reload with it enabled before recording, retain the initial
+`ws-connect` events to identify sockets, perform one action, then Download.
+It does not capture XMLHttpRequest, request headers, or browser-generated
+OPTIONS, and only records request bodies supplied as string `init.body`
+(not bodies embedded in Request objects). Use Network details to fill those
+gaps. Do not infer outbound command names from inbound event names such as
+`DuelNewRound` or `DuelRollbackToRound`.
 
 ## Open questions
 

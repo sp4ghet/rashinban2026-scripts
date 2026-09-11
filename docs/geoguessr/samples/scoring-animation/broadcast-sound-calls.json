@@ -1,0 +1,162 @@
+﻿[
+    {
+        "call":  ".play(p.Q2.EFFECT_WINNER_TEXT_REVEAL)",
+        "offset":  30179,
+        "excerpt":  "04),c=a(77386),u=a(294626),m=a(967326),p=a(459354),_=a(516937),h=a.n(_);let A=900,g=1500;function y(e){let t,a,l,_,y,v,x,f,b=(0,s.c)(23),{winnerPlayerId:j,winnerName:I,sounds:w,isUnmounting:N,fitsWidth:S,children:C}=e,R=void 0!==N\u0026\u0026N,T=void 0!==S\u0026\u0026S,k=(0,n.useRef)(null),[B,P]=(0,n.useState)(!1),[D,E]=(0,n.useState)(!1),[M,L]=(0,n.useState)(!1);b[0]!==w?(t=()=\u003e{(async()=\u003e{P(!0),await (0,u.yy)(A),w?.play(p.Q2.EFFECT_WINNER_TEXT_REVEAL),E(!0),await (0,u.yy)(g),L(!0)})()},b[0]=w,b[1]=t):t=b[1],(0,m.y)(t),b[2]===Symbol.for(\"react.memo_cache_sentinel\")?(a=()=\u003e{k.current?.play(\"WIN\")},b[2]=a):a=b[2];let G=a;return b[3]!==T||b[4]!==R?(l=o()(h().root,{[h().isUnmounting]:R,[h().isWidthFit]:T}),b[3]=T,b[4]=R,b[5]=l):l=b[5],b[6]!==D||b[7]!==I?(_=D\u0026\u0026(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(\"video\",{c"
+    },
+    {
+        "call":  ".play(\"WIN\")",
+        "offset":  30350,
+        "excerpt":  "nds:w,isUnmounting:N,fitsWidth:S,children:C}=e,R=void 0!==N\u0026\u0026N,T=void 0!==S\u0026\u0026S,k=(0,n.useRef)(null),[B,P]=(0,n.useState)(!1),[D,E]=(0,n.useState)(!1),[M,L]=(0,n.useState)(!1);b[0]!==w?(t=()=\u003e{(async()=\u003e{P(!0),await (0,u.yy)(A),w?.play(p.Q2.EFFECT_WINNER_TEXT_REVEAL),E(!0),await (0,u.yy)(g),L(!0)})()},b[0]=w,b[1]=t):t=b[1],(0,m.y)(t),b[2]===Symbol.for(\"react.memo_cache_sentinel\")?(a=()=\u003e{k.current?.play(\"WIN\")},b[2]=a):a=b[2];let G=a;return b[3]!==T||b[4]!==R?(l=o()(h().root,{[h().isUnmounting]:R,[h().isWidthFit]:T}),b[3]=T,b[4]=R,b[5]=l):l=b[5],b[6]!==D||b[7]!==I?(_=D\u0026\u0026(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(\"video\",{className:h().video,src:\"/_next/static/video/winner-08d6458d11f01196..webm\",autoPlay:!0,muted:!0,playsInline:!0}),(0,r.jsx)(\"div\",{className:h().winnerNick,children:I})]}),"
+    },
+    {
+        "call":  ".play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy,offset:2*(\"left\"===j)",
+        "offset":  45039,
+        "excerpt":  "g,x[52]=y,x[53]=i,x[54]=v):v=x[54],v},en=e=\u003e{let t,a,i,l,o,d,c,u,m,p,_,h,A,g,y,v,x,f,b=(0,s.c)(46),{position:j,player:I,onReady:w,isPlaying:N,messages:T,gameResult:k,visible:P}=e,D=(0,n.useRef)(null),E=(0,n.useRef)(null),M=(0,n.useRef)(null),[L,G]=(0,n.useState)(null),Q=(0,n.useRef)(!1);b[0]!==N||b[1]!==w||b[2]!==j?(t=()=\u003e{let e;E.current\u0026\u0026D.current\u0026\u0026M.current\u0026\u0026(E.current.lookAt(0,.65,0),D.current.play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy,offset:2*(\"left\"===j)}),M.current.children[0].children[0].traverse(function(t){\"RightHand\"===t.name\u0026\u0026(e=t)}),e\u0026\u0026G(e),w())},b[0]=N,b[1]=w,b[2]=j,b[3]=t):t=b[3];let H=t;b[4]!==N?(a=e=\u003e{D.current\u0026\u0026(0,W.AC)(e)\u0026\u0026(Q.current=!0,D.current.play(W.ki[e],{onEnd:()=\u003e{D.current\u0026\u0026(Q.current=!1,D.current.play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy}))}}))},b[4]=N,b[5"
+    },
+    {
+        "call":  ".play(W.ki[e],{onEnd:()",
+        "offset":  45315,
+        "excerpt":  "useRef)(!1);b[0]!==N||b[1]!==w||b[2]!==j?(t=()=\u003e{let e;E.current\u0026\u0026D.current\u0026\u0026M.current\u0026\u0026(E.current.lookAt(0,.65,0),D.current.play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy,offset:2*(\"left\"===j)}),M.current.children[0].children[0].traverse(function(t){\"RightHand\"===t.name\u0026\u0026(e=t)}),e\u0026\u0026G(e),w())},b[0]=N,b[1]=w,b[2]=j,b[3]=t):t=b[3];let H=t;b[4]!==N?(a=e=\u003e{D.current\u0026\u0026(0,W.AC)(e)\u0026\u0026(Q.current=!0,D.current.play(W.ki[e],{onEnd:()=\u003e{D.current\u0026\u0026(Q.current=!1,D.current.play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy}))}}))},b[4]=N,b[5]=a):a=b[5];let V=a;b[6]!==T||b[7]!==V?(i=()=\u003e{if(!T||0===T.length)return;let e=T[0];e.payloadType===U.v_.Emote\u0026\u0026e.sourceId\u0026\u0026V(e.textPayload)},b[6]=T,b[7]=V,b[8]=i):i=b[8];let z=i;b[9]!==T?(l=T??[],b[9]=T,b[10]=l):l=b[10],(0,F.o)(l,\"sentAt\",z),b[11]!==k||b[12]!==N?(o=()=\u003e{D.c"
+    },
+    {
+        "call":  ".play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy})",
+        "offset":  45375,
+        "excerpt":  "rent\u0026\u0026D.current\u0026\u0026M.current\u0026\u0026(E.current.lookAt(0,.65,0),D.current.play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy,offset:2*(\"left\"===j)}),M.current.children[0].children[0].traverse(function(t){\"RightHand\"===t.name\u0026\u0026(e=t)}),e\u0026\u0026G(e),w())},b[0]=N,b[1]=w,b[2]=j,b[3]=t):t=b[3];let H=t;b[4]!==N?(a=e=\u003e{D.current\u0026\u0026(0,W.AC)(e)\u0026\u0026(Q.current=!0,D.current.play(W.ki[e],{onEnd:()=\u003e{D.current\u0026\u0026(Q.current=!1,D.current.play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy}))}}))},b[4]=N,b[5]=a):a=b[5];let V=a;b[6]!==T||b[7]!==V?(i=()=\u003e{if(!T||0===T.length)return;let e=T[0];e.payloadType===U.v_.Emote\u0026\u0026e.sourceId\u0026\u0026V(e.textPayload)},b[6]=T,b[7]=V,b[8]=i):i=b[8];let z=i;b[9]!==T?(l=T??[],b[9]=T,b[10]=l):l=b[10],(0,F.o)(l,\"sentAt\",z),b[11]!==k||b[12]!==N?(o=()=\u003e{D.current\u0026\u0026(!Q.current||\"None\"===k)\u0026\u0026D.current.play(N?\"GAMING\":"
+    },
+    {
+        "call":  ".play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy,fadeDuration:100})",
+        "offset":  45758,
+        "excerpt":  "rent=!1,D.current.play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy}))}}))},b[4]=N,b[5]=a):a=b[5];let V=a;b[6]!==T||b[7]!==V?(i=()=\u003e{if(!T||0===T.length)return;let e=T[0];e.payloadType===U.v_.Emote\u0026\u0026e.sourceId\u0026\u0026V(e.textPayload)},b[6]=T,b[7]=V,b[8]=i):i=b[8];let z=i;b[9]!==T?(l=T??[],b[9]=T,b[10]=l):l=b[10],(0,F.o)(l,\"sentAt\",z),b[11]!==k||b[12]!==N?(o=()=\u003e{D.current\u0026\u0026(!Q.current||\"None\"===k)\u0026\u0026D.current.play(N?\"GAMING\":\"GAMING_WAITING\",{loop:B.aMy,fadeDuration:100})},b[11]=k,b[12]=N,b[13]=o):o=b[13],b[14]!==k||b[15]!==N||b[16]!==j?(d=[N,j,k],b[14]=k,b[15]=N,b[16]=j,b[17]=d):d=b[17],(0,n.useEffect)(o,d);let X=`translateX(${\"left\"===j?\"-10%\":\"10%\"})`;b[18]!==X?(c={transform:X},b[18]=X,b[19]=c):c=b[19],b[20]!==j?(u=\"left\"===j?new B.Q1f(.25,.25,1):new B.Q1f(1,.25,.25),b[20]=j,b[21]=u):u=b[21],b[22]!"
+    },
+    {
+        "call":  ".play(ep.Q2.LOST_HEALTH)",
+        "offset":  53459,
+        "excerpt":  "lth:b,sounds:I,ref:w}=e,N=void 0===x?\"Left\":x,S=n.useRef(null),[C,R]=(0,n.useState)(f),T=f/b*100;v[0]!==T||v[1]!==N?(t=100-T,\"Left\"===N\u0026\u0026(t*=-1),v[0]=T,v[1]=N,v[2]=t):t=v[2],v[3]!==t?(a=()=\u003e({from:{x:`${t}%`}}),v[3]=t,v[4]=a):a=v[4];let[k,B]=(0,ee.zh)(a);v[5]!==f?(i=()=\u003e({from:{health:f}}),v[5]=f,v[6]=i):i=v[6];let[P,D]=(0,ee.zh)(i);v[7]!==D||v[8]!==B||v[9]!==b||v[10]!==I||v[11]!==N?(l=e=\u003e{R(e),I?.play(ep.Q2.LOST_HEALTH),D.start({health:e});let t=100-e/b*100;0===e\u0026\u0026(t+=2),\"Left\"===N\u0026\u0026(t*=-1),B.start({x:`${t}%`,config:ee.$W.stiff})},v[7]=D,v[8]=B,v[9]=b,v[10]=I,v[11]=N,v[12]=l):l=v[12];let E=l;v[13]!==D||v[14]!==B||v[15]!==f||v[16]!==t?(o=()=\u003e{R(f),D.start({health:f}),B.start({x:`${t}%`})},v[13]=D,v[14]=B,v[15]=f,v[16]=t,v[17]=o):o=v[17];let M=o;v[18]!==E||v[19]!==M?(d=()=\u003e({applyDamage:E,l"
+    },
+    {
+        "call":  ".play(ep.Q2.COUNT_DAMAGE)",
+        "offset":  61087,
+        "excerpt":  "(0,n.useState)(),v=(0,eN.dO)(e,t,a),{leftScore:x,rightScore:b,leftTeamWon:I}=(0,n.useMemo)(()=\u003ev,[]),w=(0,ek.P)(),N=(0,n.useMemo)(()=\u003e(0,d.rT)(a.roundNumber,e)?.distance,[]),S=(0,n.useMemo)(()=\u003e(0,d.rT)(a.roundNumber,t)?.distance,[]),[C,R]=(0,ee.zh)(()=\u003e({from:{score:0,x:0,y:50,scale:1,opacity:0}})),[T,k]=(0,ee.zh)(()=\u003e({from:{score:0,x:0,y:50,scale:1,opacity:0}})),B=(0,n.useCallback)(async()=\u003e{s?.play(ep.Q2.COUNT_DAMAGE);let e={opacity:1,y:0};R.start(e),R.start({score:x,config:{duration:750}}),k.start(e),k.start({score:b,config:{duration:750}}),await (0,eB.yy)(750)},[R,k,x,b,s]),P=(0,n.useCallback)(async()=\u003e{let e=I?l:o,t=I?o:l,a=I?R:k,r=I?k:R,n=Math.abs(I?x-b:b-x);A.current=n,I?p(!0):h(!0);let i=(0,d.N2)(e,t);a.start({x:i,config:{duration:400,easing:eG}}),await (0,eB.yy)(250),s?.play(ep."
+    },
+    {
+        "call":  ".play(ep.Q2.DAMAGE_CRASH)",
+        "offset":  61478,
+        "excerpt":  "nc()=\u003e{s?.play(ep.Q2.COUNT_DAMAGE);let e={opacity:1,y:0};R.start(e),R.start({score:x,config:{duration:750}}),k.start(e),k.start({score:b,config:{duration:750}}),await (0,eB.yy)(750)},[R,k,x,b,s]),P=(0,n.useCallback)(async()=\u003e{let e=I?l:o,t=I?o:l,a=I?R:k,r=I?k:R,n=Math.abs(I?x-b:b-x);A.current=n,I?p(!0):h(!0);let i=(0,d.N2)(e,t);a.start({x:i,config:{duration:400,easing:eG}}),await (0,eB.yy)(250),s?.play(ep.Q2.DAMAGE_CRASH),await (0,eB.yy)(100),u(!0),a.start({scale:1.5,opacity:0}),r.start({score:n,immediate:!0}),r.start({x:I?30:-30,config:ee.$W.wobbly}),await (0,eB.yy)(50),r.start({x:0,config:ee.$W.wobbly}),await (0,eB.yy)(100)},[k,R,I,x,b,s]),D=(0,n.useCallback)(()=\u003e{R.start({score:0,x:0,scale:1,opacity:1,immediate:!0}),k.start({score:0,x:0,scale:1,opacity:1,immediate:!0}),y(void 0),u(!1)},"
+    },
+    {
+        "call":  ".play(ep.Q2.TIE_CRASH)",
+        "offset":  62375,
+        "excerpt":  "oundingClientRect(),r=e.current.getBoundingClientRect();if(!a)return;let s=r.top+r.height/2-(a.top+a.height/2),n=I?k:R;I?h(!0):p(!0),n.start({x:0,y:s,config:{duration:400,easing:eG}}),await (0,eB.yy)(350),n.start({scale:1.75,opacity:0})},[k,R,I]),M=(0,n.useCallback)(async()=\u003e{let e=(0,d.N2)(l,o),t={duration:400,easing:eG};R.start({x:e/2,config:t}),k.start({x:-e/2,config:t}),await (0,eB.yy)(350),s?.play(ep.Q2.TIE_CRASH),p(!0),h(!0),R.start({scale:1.5,opacity:0}),k.start({scale:1.5,opacity:0}),await (0,eB.yy)(350)},[k,R,s]),L=(0,n.useCallback)(e=\u003e{let t=I?k:R;t.start({score:A.current*e,immediate:!0}),y(e),s?.play(ep.Q2.EFFECT_MULTIPLIER,.9),t.start({scale:1.3,config:ee.$W.wobbly})},[I,k,R,s]);return(0,n.useImperativeHandle)(i,()=\u003e({countScore:B,showScoreDifference:P,showScoreDraw:M,shootDama"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_MULTIPLIER,.9)",
+        "offset":  62588,
+        "excerpt":  "{scale:1.75,opacity:0})},[k,R,I]),M=(0,n.useCallback)(async()=\u003e{let e=(0,d.N2)(l,o),t={duration:400,easing:eG};R.start({x:e/2,config:t}),k.start({x:-e/2,config:t}),await (0,eB.yy)(350),s?.play(ep.Q2.TIE_CRASH),p(!0),h(!0),R.start({scale:1.5,opacity:0}),k.start({scale:1.5,opacity:0}),await (0,eB.yy)(350)},[k,R,s]),L=(0,n.useCallback)(e=\u003e{let t=I?k:R;t.start({score:A.current*e,immediate:!0}),y(e),s?.play(ep.Q2.EFFECT_MULTIPLIER,.9),t.start({scale:1.3,config:ee.$W.wobbly})},[I,k,R,s]);return(0,n.useImperativeHandle)(i,()=\u003e({countScore:B,showScoreDifference:P,showScoreDraw:M,shootDamage:E,applyMultiplier:L,reset:D}),[B,D,P,M,E,L]),(0,r.jsxs)(\"div\",{className:eT().root,children:[(0,r.jsxs)(\"div\",{className:eT().distanceContainer,children:[void 0!==N\u0026\u0026(0,r.jsxs)(\"div\",{className:eT().distance,ch"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_PANO_REVEAL)",
+        "offset":  105057,
+        "excerpt":  "}function tY(e){return e.setMap(null)}function tJ(e){return!e}function tZ(e){e.stopPropagation()}function tK(e){return!e}var t$=a(205507),t0=a.n(t$);function t1(e){let t,a,i,l,d,c,u,m,p=(0,s.c)(37),{isUnmounting:_}=e,{game:h,playerBlue:A,playerRed:g,addPano:y,sounds:v,isGracePeriod:x,isTeamDuels:f,teamLockedInPosition:b,soloLockedInPosition:j,match:I,hideGuessesMap:w}=(0,o.A)();p[0]!==v?(t=()=\u003e{v?.play(ep.Q2.EFFECT_PANO_REVEAL)},a=[v],p[0]=v,p[1]=t,p[2]=a):(t=p[1],a=p[2]),(0,n.useEffect)(t,a),h.mapBounds?.min,h.mapBounds?.max;e:{let e;if(!h.mapBounds?.min||!h.mapBounds?.max){i=void 0;break e}let t=h.mapBounds?.min,a=h.mapBounds?.max;p[3]!==t||p[4]!==a?(e={min:t,max:a},p[3]=t,p[4]=a,p[5]=e):e=p[5],i=e}let N=i,S=h.rounds[h.currentRoundNumber-1].panorama,C=f?b:j,R=!!h.options.blinkMode;return"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_MAP_ENTER,1.4)",
+        "offset":  108330,
+        "excerpt":  "A?(i=()=\u003e{let e=p.current;e\u0026\u0026(e.onmouseenter=A,e.onmouseup=A,e.onmouseleave=g)},l=[A,g],d[5]=A,d[6]=i,d[7]=l):(i=d[6],l=d[7]),(0,n.useEffect)(i,l),d[8]!==u?(o={isActive:u,mapContainerRef:p},d[8]=u,d[9]=o):o=d[9],o}(),T=(0,ai.l)(),k=v.rounds[w-1],B=\"Ongoing\"===v.status,P=(0,at.__)(I),D=B\u0026\u0026(I.startTime\u003e(0,tv.c_)()||P),[E,M]=(0,n.useState)(!1),[L,G]=(0,n.useState)(!1);g[1]!==b||g[2]!==f?(a=()=\u003e{b\u0026\u0026f?.play(ep.Q2.EFFECT_MAP_ENTER,1.4)},g[1]=b,g[2]=f,g[3]=a):a=g[3],(0,eQ.y)(a),(0,an.q)(aa.A.src),(0,an.q)(ar.A.src),(0,an.q)(as.A.src);let Q=k.panorama.heading??0,U=k.panorama.pitch??0,F=k.panorama.zoom?k.panorama.zoom:0;g[4]!==k.panorama.lat||g[5]!==k.panorama.lng||g[6]!==k.panorama.panoId||g[7]!==Q||g[8]!==U||g[9]!==F?(i={panoId:k.panorama.panoId,lat:k.panorama.lat,lng:k.panorama.lng,heading:Q,pit"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_COUNT_DOWN_TICK)",
+        "offset":  108994,
+        "excerpt":  "|g[6]!==k.panorama.panoId||g[7]!==Q||g[8]!==U||g[9]!==F?(i={panoId:k.panorama.panoId,lat:k.panorama.lat,lng:k.panorama.lng,heading:Q,pitch:U,zoom:F},g[4]=k.panorama.lat,g[5]=k.panorama.lng,g[6]=k.panorama.panoId,g[7]=Q,g[8]=U,g[9]=F,g[10]=i):i=g[10];let W=i;e:{if(D){l=!1;break e}if(1===k.roundNumber\u0026\u0026\"Created\"===v.status){l=!0;break e}l=!k.hasProcessedRoundTimeout}let O=l;g[11]!==f?(d=e=\u003e{e\u003c=2\u0026\u0026f?.play(ep.Q2.EFFECT_COUNT_DOWN_TICK)},g[11]=f,g[12]=d):d=g[12];let H=(0,eJ.B)(k.startTime,void 0,d);g[13]!==y||g[14]!==f?(u=()=\u003e{y\u0026\u0026f?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)},g[13]=y,g[14]=f,g[15]=u):u=g[15],(0,c.C)(y,u),g[16]!==v.gameId||g[17]!==v.gameServerNodeId||g[18]!==k.panorama.panoId||g[19]!==f?(m=async()=\u003e{f?.play(ep.Q2.EFFECT_CLICK),await (0,eB.yy)(150),f?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)",
+        "offset":  109127,
+        "excerpt":  "pitch:U,zoom:F},g[4]=k.panorama.lat,g[5]=k.panorama.lng,g[6]=k.panorama.panoId,g[7]=Q,g[8]=U,g[9]=F,g[10]=i):i=g[10];let W=i;e:{if(D){l=!1;break e}if(1===k.roundNumber\u0026\u0026\"Created\"===v.status){l=!0;break e}l=!k.hasProcessedRoundTimeout}let O=l;g[11]!==f?(d=e=\u003e{e\u003c=2\u0026\u0026f?.play(ep.Q2.EFFECT_COUNT_DOWN_TICK)},g[11]=f,g[12]=d):d=g[12];let H=(0,eJ.B)(k.startTime,void 0,d);g[13]!==y||g[14]!==f?(u=()=\u003e{y\u0026\u0026f?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)},g[13]=y,g[14]=f,g[15]=u):u=g[15],(0,c.C)(y,u),g[16]!==v.gameId||g[17]!==v.gameServerNodeId||g[18]!==k.panorama.panoId||g[19]!==f?(m=async()=\u003e{f?.play(ep.Q2.EFFECT_CLICK),await (0,eB.yy)(150),f?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9),M(!0),await (0,eB.yy)(750),G(!0),await (0,eB.yy)(850),k.panorama.panoId\u0026\u0026((0,tp.A_)(1).instance?.setPano(k.panorama.panoId),(0,tp.A_"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_CLICK)",
+        "offset":  109309,
+        "excerpt":  ".status){l=!0;break e}l=!k.hasProcessedRoundTimeout}let O=l;g[11]!==f?(d=e=\u003e{e\u003c=2\u0026\u0026f?.play(ep.Q2.EFFECT_COUNT_DOWN_TICK)},g[11]=f,g[12]=d):d=g[12];let H=(0,eJ.B)(k.startTime,void 0,d);g[13]!==y||g[14]!==f?(u=()=\u003e{y\u0026\u0026f?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)},g[13]=y,g[14]=f,g[15]=u):u=g[15],(0,c.C)(y,u),g[16]!==v.gameId||g[17]!==v.gameServerNodeId||g[18]!==k.panorama.panoId||g[19]!==f?(m=async()=\u003e{f?.play(ep.Q2.EFFECT_CLICK),await (0,eB.yy)(150),f?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9),M(!0),await (0,eB.yy)(750),G(!0),await (0,eB.yy)(850),k.panorama.panoId\u0026\u0026((0,tp.A_)(1).instance?.setPano(k.panorama.panoId),(0,tp.A_)(2).instance?.setPano(k.panorama.panoId)),v.gameServerNodeId\u0026\u0026await (0,t7.Oh)(v.gameId,v.gameServerNodeId)},g[16]=v.gameId,g[17]=v.gameServerNodeId,g[18]=k.panorama.panoId,g[19]=f,g"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)",
+        "offset":  109358,
+        "excerpt":  "ut}let O=l;g[11]!==f?(d=e=\u003e{e\u003c=2\u0026\u0026f?.play(ep.Q2.EFFECT_COUNT_DOWN_TICK)},g[11]=f,g[12]=d):d=g[12];let H=(0,eJ.B)(k.startTime,void 0,d);g[13]!==y||g[14]!==f?(u=()=\u003e{y\u0026\u0026f?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)},g[13]=y,g[14]=f,g[15]=u):u=g[15],(0,c.C)(y,u),g[16]!==v.gameId||g[17]!==v.gameServerNodeId||g[18]!==k.panorama.panoId||g[19]!==f?(m=async()=\u003e{f?.play(ep.Q2.EFFECT_CLICK),await (0,eB.yy)(150),f?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9),M(!0),await (0,eB.yy)(750),G(!0),await (0,eB.yy)(850),k.panorama.panoId\u0026\u0026((0,tp.A_)(1).instance?.setPano(k.panorama.panoId),(0,tp.A_)(2).instance?.setPano(k.panorama.panoId)),v.gameServerNodeId\u0026\u0026await (0,t7.Oh)(v.gameId,v.gameServerNodeId)},g[16]=v.gameId,g[17]=v.gameServerNodeId,g[18]=k.panorama.panoId,g[19]=f,g[20]=m):m=g[20];let V=m;g[21]!==y||g[22]!==H?(p=v"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_HOVER)",
+        "offset":  111141,
+        "excerpt":  "2]!==T||g[33]!==O||g[34]!==v.movementOptions||g[35]!==v.options||g[36]!==S||g[37]!==V||g[38]!==R||g[39]!==L||g[40]!==E||g[41]!==C||g[42]!==W||g[43]!==f?(h=!L\u0026\u0026(0,r.jsxs)(\"div\",{className:j()(t3().inner,{[t3().isUnmounting]:E}),children:[O\u0026\u0026(0,r.jsx)(\"div\",{className:t3().startRoundButton,children:(0,r.jsxs)(q.s,{direction:\"column\",gap:\"8\",align:\"center\",children:[(0,r.jsx)(t6.$,{onMouseOver:()=\u003ef?.play(ep.Q2.EFFECT_HOVER),innerRef:T,loading:E,disabled:E,onClick:V,children:(0,r.jsx)(t9.wD,{id:\"duels.start-round\"})}),(0,r.jsx)(\"span\",{className:t3().hotkey,children:(0,r.jsx)(t8.W,{keyValue:\"Space\"})})]})}),(0,r.jsx)(\"div\",{className:t3().guessMapContainer,children:(0,r.jsx)(\"div\",{ref:C,className:j()(t3().guessMap,{[t3().active]:R}),children:(0,r.jsx)(\"div\",{className:t3().canvasContainer,ch"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_PIN_REVEAL,2)",
+        "offset":  113688,
+        "excerpt":  "on:a})=\u003e{await y.current;let r=v.current,s=x.current;if(!r||!s)return;let n=e.find(e=\u003ee.isTeamsBestGuessOnRound),i=t.find(e=\u003ee.isTeamsBestGuessOnRound),o=[...e,...t],d=new s.LatLngBounds;o.forEach(e=\u003ed.extend(e));let c=d.getCenter(),u=ab(s,r,[...e,...t,a]),m=(i?.distance??1/0)\u003c(n?.distance??1/0);A.current?.animateTo({center:{lat:c.lat(),lng:c.lng()},zoom:m?.95*u:.9*u,duration:0}),setTimeout(()=\u003el?.play(ep.Q2.EFFECT_PIN_REVEAL,2),300)},[l]),D=(0,n.useCallback)(async({playerTeamGuesses:e,opponentTeamGuesses:t,correctLocation:a})=\u003e{if(!k||!_)return;let r=e.find(e=\u003ee.isTeamsBestGuessOnRound),s=t.find(e=\u003ee.isTeamsBestGuessOnRound);if(t.length\u003c1)return;let n=(s?.distance??1/0)\u003c(r?.distance??1/0),i=new _.LatLngBounds;t.forEach(e=\u003ei.extend(e)),!n\u0026\u0026r\u0026\u0026i.extend(r);let o=i.getCenter(),d=ab(_,k,[...e,"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_MAP_SWOOSH)",
+        "offset":  114099,
+        "excerpt":  ".EFFECT_PIN_REVEAL,2),300)},[l]),D=(0,n.useCallback)(async({playerTeamGuesses:e,opponentTeamGuesses:t,correctLocation:a})=\u003e{if(!k||!_)return;let r=e.find(e=\u003ee.isTeamsBestGuessOnRound),s=t.find(e=\u003ee.isTeamsBestGuessOnRound);if(t.length\u003c1)return;let n=(s?.distance??1/0)\u003c(r?.distance??1/0),i=new _.LatLngBounds;t.forEach(e=\u003ei.extend(e)),!n\u0026\u0026r\u0026\u0026i.extend(r);let o=i.getCenter(),d=ab(_,k,[...e,...t,a]);l?.play(ep.Q2.EFFECT_MAP_SWOOSH),A.current?.animateTo({center:{lat:o.lat(),lng:o.lng()},zoom:n?.95*d:.9*d,duration:750}),setTimeout(()=\u003el?.play(ep.Q2.EFFECT_PIN_REVEAL,1.8),300)},[k,_,l]),E=(0,n.useCallback)(async({playerTeamGuesses:e,opponentTeamGuesses:t,correctLocation:a})=\u003e{if(!k||!_)return;let r=e.find(e=\u003ee.isTeamsBestGuessOnRound),s=t.find(e=\u003ee.isTeamsBestGuessOnRound),n=new google.maps.LatLng"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_PIN_REVEAL,1.8)",
+        "offset":  114235,
+        "excerpt":  "turn;let r=e.find(e=\u003ee.isTeamsBestGuessOnRound),s=t.find(e=\u003ee.isTeamsBestGuessOnRound);if(t.length\u003c1)return;let n=(s?.distance??1/0)\u003c(r?.distance??1/0),i=new _.LatLngBounds;t.forEach(e=\u003ei.extend(e)),!n\u0026\u0026r\u0026\u0026i.extend(r);let o=i.getCenter(),d=ab(_,k,[...e,...t,a]);l?.play(ep.Q2.EFFECT_MAP_SWOOSH),A.current?.animateTo({center:{lat:o.lat(),lng:o.lng()},zoom:n?.95*d:.9*d,duration:750}),setTimeout(()=\u003el?.play(ep.Q2.EFFECT_PIN_REVEAL,1.8),300)},[k,_,l]),E=(0,n.useCallback)(async({playerTeamGuesses:e,opponentTeamGuesses:t,correctLocation:a})=\u003e{if(!k||!_)return;let r=e.find(e=\u003ee.isTeamsBestGuessOnRound),s=t.find(e=\u003ee.isTeamsBestGuessOnRound),n=new google.maps.LatLngBounds,i=(r?.distance??1/0)\u003c(s?.distance??1/0)?r:s;i\u0026\u0026n.extend(i),n.extend(a);let o=ab(_,k,[...e,...t,a]);p(!0);let d=Math.max(o-1.2,Mat"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_MAP_SWOOSH,1.25)",
+        "offset":  114978,
+        "excerpt":  "et o=ab(_,k,[...e,...t,a]);p(!0);let d=Math.max(o-1.2,Math.min(o+1.2,af(k,n)));if(i){let e=k.getDiv(),t=e.clientWidth,r=e.clientHeight,s=k.getProjection();if(s){let e=s.fromLatLngToPoint(new _.LatLng(a.lat,a.lng)),n=s.fromLatLngToPoint(new _.LatLng(i.lat,i.lng));e\u0026\u0026n\u0026\u0026(d=Math.max(o-1.2,Math.min(o+1.2,Math.floor(Math.min(Math.log2(t/(2*Math.abs(e.x-n.x))),Math.log2(r/(2*Math.abs(e.y-n.y))))))))}}l?.play(ep.Q2.EFFECT_MAP_SWOOSH,1.25),A.current?.animateTo({center:{lat:a.lat,lng:a.lng},zoom:.98*d,duration:d\u003e3?800:500}),setTimeout(()=\u003el?.play(ep.Q2.EFFECT_PIN_REVEAL,2.5),300),setTimeout(()=\u003e{let r=[...e,...t,a],s=new _.LatLngBounds;r.forEach(e=\u003es.extend(e));let n=s.getCenter(),i=ab(_,k,[...e,...t,a]);A.current?.animateTo({center:{lat:n.lat(),lng:n.lng()},zoom:i-1,duration:2e3}),setTimeout(()=\u003e{"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_PIN_REVEAL,2.5)",
+        "offset":  115116,
+        "excerpt":  ".getProjection();if(s){let e=s.fromLatLngToPoint(new _.LatLng(a.lat,a.lng)),n=s.fromLatLngToPoint(new _.LatLng(i.lat,i.lng));e\u0026\u0026n\u0026\u0026(d=Math.max(o-1.2,Math.min(o+1.2,Math.floor(Math.min(Math.log2(t/(2*Math.abs(e.x-n.x))),Math.log2(r/(2*Math.abs(e.y-n.y))))))))}}l?.play(ep.Q2.EFFECT_MAP_SWOOSH,1.25),A.current?.animateTo({center:{lat:a.lat,lng:a.lng},zoom:.98*d,duration:d\u003e3?800:500}),setTimeout(()=\u003el?.play(ep.Q2.EFFECT_PIN_REVEAL,2.5),300),setTimeout(()=\u003e{let r=[...e,...t,a],s=new _.LatLngBounds;r.forEach(e=\u003es.extend(e));let n=s.getCenter(),i=ab(_,k,[...e,...t,a]);A.current?.animateTo({center:{lat:n.lat(),lng:n.lng()},zoom:i-1,duration:2e3}),setTimeout(()=\u003e{l?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)},350)},4e3)},[k,_,p,l]),M=(0,n.useCallback)(async({playerTeamGuesses:e,opponentTeamGuesses:t,correc"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)",
+        "offset":  115380,
+        "excerpt":  "lay(ep.Q2.EFFECT_MAP_SWOOSH,1.25),A.current?.animateTo({center:{lat:a.lat,lng:a.lng},zoom:.98*d,duration:d\u003e3?800:500}),setTimeout(()=\u003el?.play(ep.Q2.EFFECT_PIN_REVEAL,2.5),300),setTimeout(()=\u003e{let r=[...e,...t,a],s=new _.LatLngBounds;r.forEach(e=\u003es.extend(e));let n=s.getCenter(),i=ab(_,k,[...e,...t,a]);A.current?.animateTo({center:{lat:n.lat(),lng:n.lng()},zoom:i-1,duration:2e3}),setTimeout(()=\u003e{l?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)},350)},4e3)},[k,_,p,l]),M=(0,n.useCallback)(async({playerTeamGuesses:e,opponentTeamGuesses:t,correctLocation:a})=\u003e{if(await y.current,p(!0),!_||!k)return;let r=[...e,...t,a],s=new _.LatLngBounds;r.filter(e=\u003e!!e).forEach(e=\u003es.extend(e));let n=af(k,s),i=s.getCenter();A.current?.animateTo({center:{lat:i.lat(),lng:i.lng()},zoom:.95*n,duration:0})},[_,k]);return(0,n"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_MAP_ENTER,1.4)",
+        "offset":  118353,
+        "excerpt":  "(e)},[y,d?.id,_,f]);let S=async()=\u003e{if(!N)return;let e={playerTeamGuesses:N.leftTeamGuesses,opponentTeamGuesses:N.rightTeamGuesses,correctLocation:t.panorama};await (0,eB.yy)(10),await g.current?.revealGuesses(e),await (0,eB.yy)(1200),await g.current?.revealLocation(e),await h.current?.revealWinner(),await Promise.all([h.current?.countDistance(),A.current?.countScore()])};(0,eQ.F)(async()=\u003e{S(),m?.play(ep.Q2.EFFECT_MAP_ENTER,1.4)});let C=async()=\u003e{m?.play(ep.Q2.EFFECT_CLICK),i()};(0,c.C)(e,async()=\u003e{e\u0026\u0026(await (0,eB.yy)(150),m?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9))});let R=(0,n.useMemo)(()=\u003e({guesses:N?[...N.leftTeamGuesses,...N.rightTeamGuesses]:[],round:t,teams:[a,s],countAllGuesses:!1}),[]);return(0,r.jsx)(r.Fragment,{children:(0,r.jsxs)(\"div\",{className:j()(am().root,{[am().isAnimated]:!"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_CLICK)",
+        "offset":  118407,
+        "excerpt":  "={playerTeamGuesses:N.leftTeamGuesses,opponentTeamGuesses:N.rightTeamGuesses,correctLocation:t.panorama};await (0,eB.yy)(10),await g.current?.revealGuesses(e),await (0,eB.yy)(1200),await g.current?.revealLocation(e),await h.current?.revealWinner(),await Promise.all([h.current?.countDistance(),A.current?.countScore()])};(0,eQ.F)(async()=\u003e{S(),m?.play(ep.Q2.EFFECT_MAP_ENTER,1.4)});let C=async()=\u003e{m?.play(ep.Q2.EFFECT_CLICK),i()};(0,c.C)(e,async()=\u003e{e\u0026\u0026(await (0,eB.yy)(150),m?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9))});let R=(0,n.useMemo)(()=\u003e({guesses:N?[...N.leftTeamGuesses,...N.rightTeamGuesses]:[],round:t,teams:[a,s],countAllGuesses:!1}),[]);return(0,r.jsx)(r.Fragment,{children:(0,r.jsxs)(\"div\",{className:j()(am().root,{[am().isAnimated]:!0,[am().isUnmounting]:e}),children:[(0,r.jsx)(\"div\",{c"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)",
+        "offset":  118485,
+        "excerpt":  "orrectLocation:t.panorama};await (0,eB.yy)(10),await g.current?.revealGuesses(e),await (0,eB.yy)(1200),await g.current?.revealLocation(e),await h.current?.revealWinner(),await Promise.all([h.current?.countDistance(),A.current?.countScore()])};(0,eQ.F)(async()=\u003e{S(),m?.play(ep.Q2.EFFECT_MAP_ENTER,1.4)});let C=async()=\u003e{m?.play(ep.Q2.EFFECT_CLICK),i()};(0,c.C)(e,async()=\u003e{e\u0026\u0026(await (0,eB.yy)(150),m?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9))});let R=(0,n.useMemo)(()=\u003e({guesses:N?[...N.leftTeamGuesses,...N.rightTeamGuesses]:[],round:t,teams:[a,s],countAllGuesses:!1}),[]);return(0,r.jsx)(r.Fragment,{children:(0,r.jsxs)(\"div\",{className:j()(am().root,{[am().isAnimated]:!0,[am().isUnmounting]:e}),children:[(0,r.jsx)(\"div\",{className:am().mapDrawer,children:(0,r.jsx)(ax,{ref:g,...R})}),!l\u0026\u0026!(I||w)\u0026\u0026(p?"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_HOVER)",
+        "offset":  119007,
+        "excerpt":  "],round:t,teams:[a,s],countAllGuesses:!1}),[]);return(0,r.jsx)(r.Fragment,{children:(0,r.jsxs)(\"div\",{className:j()(am().root,{[am().isAnimated]:!0,[am().isUnmounting]:e}),children:[(0,r.jsx)(\"div\",{className:am().mapDrawer,children:(0,r.jsx)(ax,{ref:g,...R})}),!l\u0026\u0026!(I||w)\u0026\u0026(p?(0,r.jsx)(\"div\",{className:am().continueButtonContainer,children:(0,r.jsx)(t6.$,{size:\"Large\",onClick:C,onMouseOver:()=\u003em?.play(ep.Q2.EFFECT_HOVER),children:\"Continue\"})}):(0,r.jsx)(\"div\",{className:am().waitingForGameMaster,children:(0,r.jsx)(t9.wD,{id:\"duels.waiting-for-game-master\"})}))]})})}var aS=a(679429),aC=a.n(aS);function aR(e){let t,a,n,i,l=(0,s.c)(10),{isUnmounting:d}=e,{game:u,clientCurrentRoundNumber:m,sounds:p}=(0,o.A)(),_=u.rounds[m-1];(0,an.q)(aa.A.src),(0,an.q)(ar.A.src),(0,an.q)(as.A.src),l[0]!==p?("
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_COUNT_DOWN_TICK)",
+        "offset":  119421,
+        "excerpt":  "FECT_HOVER),children:\"Continue\"})}):(0,r.jsx)(\"div\",{className:am().waitingForGameMaster,children:(0,r.jsx)(t9.wD,{id:\"duels.waiting-for-game-master\"})}))]})})}var aS=a(679429),aC=a.n(aS);function aR(e){let t,a,n,i,l=(0,s.c)(10),{isUnmounting:d}=e,{game:u,clientCurrentRoundNumber:m,sounds:p}=(0,o.A)(),_=u.rounds[m-1];(0,an.q)(aa.A.src),(0,an.q)(ar.A.src),(0,an.q)(as.A.src),l[0]!==p?(t=e=\u003e{e\u003c=2\u0026\u0026p?.play(ep.Q2.EFFECT_COUNT_DOWN_TICK)},l[0]=p,l[1]=t):t=l[1];let h=(0,eJ.B)(_.startTime,void 0,t);return l[2]!==d||l[3]!==p?(a=()=\u003e{d\u0026\u0026p?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)},l[2]=d,l[3]=p,l[4]=a):a=l[4],(0,c.C)(d,a),l[5]!==d||l[6]!==h?(n=void 0!==h\u0026\u0026(0,r.jsxs)(r.Fragment,{children:[2===h\u0026\u0026(0,r.jsx)(\"img\",{className:aC().countDownNumber,src:aa.A.src,alt:\"3\"}),1===h\u0026\u0026(0,r.jsx)(\"img\",{className:aC().c"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)",
+        "offset":  119556,
+        "excerpt":  "r-game-master\"})}))]})})}var aS=a(679429),aC=a.n(aS);function aR(e){let t,a,n,i,l=(0,s.c)(10),{isUnmounting:d}=e,{game:u,clientCurrentRoundNumber:m,sounds:p}=(0,o.A)(),_=u.rounds[m-1];(0,an.q)(aa.A.src),(0,an.q)(ar.A.src),(0,an.q)(as.A.src),l[0]!==p?(t=e=\u003e{e\u003c=2\u0026\u0026p?.play(ep.Q2.EFFECT_COUNT_DOWN_TICK)},l[0]=p,l[1]=t):t=l[1];let h=(0,eJ.B)(_.startTime,void 0,t);return l[2]!==d||l[3]!==p?(a=()=\u003e{d\u0026\u0026p?.play(ep.Q2.EFFECT_GENTLE_SWOOSH,.9)},l[2]=d,l[3]=p,l[4]=a):a=l[4],(0,c.C)(d,a),l[5]!==d||l[6]!==h?(n=void 0!==h\u0026\u0026(0,r.jsxs)(r.Fragment,{children:[2===h\u0026\u0026(0,r.jsx)(\"img\",{className:aC().countDownNumber,src:aa.A.src,alt:\"3\"}),1===h\u0026\u0026(0,r.jsx)(\"img\",{className:aC().countDownNumber,src:ar.A.src,alt:\"2\"}),0===h\u0026\u0026(0,r.jsx)(\"img\",{className:j()(aC().countDownNumber,{[aC().isUnmounting]:d}),src:as.A.src,"
+    },
+    {
+        "call":  ".play()",
+        "offset":  122611,
+        "excerpt":  "=a):(t=m[1],a=m[2]),(0,n.useEffect)(t,a),m[3]!==A?(i=()=\u003e{if(!A)return;let e=setTimeout(aG,1400);return()=\u003eclearTimeout(e)},l=[A],m[3]=A,m[4]=i,m[5]=l):(i=m[4],l=m[5]),(0,n.useEffect)(i,l),!A)return null;let y=void 0!==_\u0026\u0026_?aE:aD;return m[6]!==y?(o=(0,r.jsx)(r.Fragment,{children:(0,r.jsx)(\"video\",{autoPlay:!0,className:aB().video,src:y})}),m[6]=y,m[7]=o):o=m[7],o}function aG(){return new Audio(aM).play()}var aQ=a(468370);function aU(){let e,t,a=(0,s.c)(8),{currentRound:n,leftTeam:i,rightTeam:l,sounds:d,isWorldLeague:c}=(0,o.A)(),{is5K:u,is10K:m}=(0,eN.dO)(i,l,n);if(a[0]!==m||a[1]!==u||a[2]!==d?(e=async()=\u003e{(u||m)\u0026\u0026(await (0,eB.yy)(1100),d?.play(ep.Q2.EFFECT_5K,1))},a[0]=m,a[1]=u,a[2]=d,a[3]=e):e=a[3],(0,eQ.y)(e),!u\u0026\u0026!m)return null;if(c){let e;return a[4]!==m?(e=(0,r.jsx)(r.Fragment,{childr"
+    },
+    {
+        "call":  ".play(ep.Q2.EFFECT_5K,1)",
+        "offset":  122858,
+        "excerpt":  "o=(0,r.jsx)(r.Fragment,{children:(0,r.jsx)(\"video\",{autoPlay:!0,className:aB().video,src:y})}),m[6]=y,m[7]=o):o=m[7],o}function aG(){return new Audio(aM).play()}var aQ=a(468370);function aU(){let e,t,a=(0,s.c)(8),{currentRound:n,leftTeam:i,rightTeam:l,sounds:d,isWorldLeague:c}=(0,o.A)(),{is5K:u,is10K:m}=(0,eN.dO)(i,l,n);if(a[0]!==m||a[1]!==u||a[2]!==d?(e=async()=\u003e{(u||m)\u0026\u0026(await (0,eB.yy)(1100),d?.play(ep.Q2.EFFECT_5K,1))},a[0]=m,a[1]=u,a[2]=d,a[3]=e):e=a[3],(0,eQ.y)(e),!u\u0026\u0026!m)return null;if(c){let e;return a[4]!==m?(e=(0,r.jsx)(r.Fragment,{children:(0,r.jsx)(aL,{delay:2250,is10K:m})}),a[4]=m,a[5]=e):e=a[5],e}return a[6]!==m?(t=(0,r.jsx)(r.Fragment,{children:(0,r.jsx)(aQ.s,{delay:2450,is10K:m})}),a[6]=m,a[7]=t):t=a[7],t}var aF=a(1137),aW=a(399446),aO=a(155367);let aH={src:\"/_next/static/me"
+    }
+]

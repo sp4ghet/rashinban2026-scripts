@@ -1,0 +1,139 @@
+﻿{
+    "capturedAt":  "2026-09-11T10:19:20.280Z",
+    "text":  "EXPLORE THE WORLD\n\nPRESENTER BOT BLUE\nPresenter Bot Bl...\n0\n0\n0\n0\n2\n6000\n6000\nPRESENTER BOT RED\nPresenter Bot Re...\nKeyboard shortcuts\nMap data ©2026 Google\nTerms\nReport a map error\nCONTINUE",
+    "state":  {
+                  "gameId":  "6aa3d51a9a602edfd13a70d8",
+                  "status":  "Ongoing",
+                  "serverRound":  1,
+                  "clientRound":  1,
+                  "view":  "RoundScore",
+                  "isAutoStarting":  false,
+                  "behavior":  "ManuallyStartAllRounds",
+                  "rounds":  [
+                                 {
+                                     "n":  1,
+                                     "start":  1789121863100,
+                                     "end":  1789121923100,
+                                     "processed":  true
+                                 },
+                                 {
+                                     "n":  2,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  3,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  4,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  5,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  6,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  7,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  8,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  9,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  10,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  11,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  12,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  13,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  14,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  15,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  16,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  17,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  18,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  19,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 },
+                                 {
+                                     "n":  20,
+                                     "start":  0,
+                                     "end":  null,
+                                     "processed":  false
+                                 }
+                             ],
+                  "health":  [
+                                 6000,
+                                 6000
+                             ]
+              }
+}

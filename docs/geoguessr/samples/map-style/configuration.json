@@ -1,0 +1,786 @@
+﻿{
+    "capturedAt":  "2026-09-11T08:25:39.457Z",
+    "client":  "web-1.7711-e06e090",
+    "page":  "https://www.geoguessr.com/party/lobby (spectator view)",
+    "maps":  [
+                 {
+                     "mapId":  "8b406a8de121b3e6",
+                     "mapTypeId":  "roadmap",
+                     "renderingType":  "VECTOR",
+                     "styles":  null,
+                     "stylesWasUndefined":  true,
+                     "restriction":  {
+                                         "latLngBounds":  {
+                                                              "south":  -85,
+                                                              "west":  -180,
+                                                              "north":  85,
+                                                              "east":  180
+                                                          },
+                                         "strictBounds":  true
+                                     },
+                     "zoom":  2,
+                     "options":  {
+                                     "backgroundColor":  "none",
+                                     "disableDefaultUI":  true,
+                                     "disableDoubleClickZoom":  false,
+                                     "draggableCursor":  "",
+                                     "draggable":  true,
+                                     "mapTypeControl":  false,
+                                     "gestureHandling":  "greedy",
+                                     "clickableIcons":  false,
+                                     "noClear":  true,
+                                     "zoomControl":  false,
+                                     "scaleControl":  false,
+                                     "isFractionalZoomEnabled":  false
+                                 }
+                 },
+                 {
+                     "mapId":  "8b406a8de121b3e6",
+                     "mapTypeId":  "roadmap",
+                     "renderingType":  "VECTOR",
+                     "styles":  null,
+                     "stylesWasUndefined":  true,
+                     "restriction":  {
+                                         "latLngBounds":  {
+                                                              "south":  -85,
+                                                              "west":  -180,
+                                                              "north":  85,
+                                                              "east":  180
+                                                          },
+                                         "strictBounds":  true
+                                     },
+                     "zoom":  1,
+                     "options":  {
+                                     "backgroundColor":  "none",
+                                     "disableDefaultUI":  true,
+                                     "disableDoubleClickZoom":  false,
+                                     "draggableCursor":  "",
+                                     "draggable":  true,
+                                     "mapTypeControl":  false,
+                                     "gestureHandling":  "greedy",
+                                     "clickableIcons":  false,
+                                     "noClear":  true,
+                                     "zoomControl":  false,
+                                     "scaleControl":  false,
+                                     "isFractionalZoomEnabled":  false
+                                 }
+                 },
+                 {
+                     "mapId":  "8b406a8de121b3e6",
+                     "mapTypeId":  "roadmap",
+                     "renderingType":  "VECTOR",
+                     "styles":  null,
+                     "stylesWasUndefined":  true,
+                     "restriction":  {
+                                         "latLngBounds":  {
+                                                              "south":  -85,
+                                                              "west":  -180,
+                                                              "north":  85,
+                                                              "east":  180
+                                                          },
+                                         "strictBounds":  true
+                                     },
+                     "zoom":  1,
+                     "options":  {
+                                     "backgroundColor":  "none",
+                                     "disableDefaultUI":  true,
+                                     "disableDoubleClickZoom":  false,
+                                     "draggableCursor":  "",
+                                     "draggable":  true,
+                                     "mapTypeControl":  false,
+                                     "gestureHandling":  "greedy",
+                                     "clickableIcons":  false,
+                                     "noClear":  true,
+                                     "zoomControl":  false,
+                                     "scaleControl":  false,
+                                     "isFractionalZoomEnabled":  false
+                                 }
+                 }
+             ],
+    "mapFactory":  {
+                       "source":  "https://www.geoguessr.com/_next/static/chunks/26721-1023828851e88f1b.js",
+                       "code":  "83391:(e,t,a)=\u003e{a.d(t,{It:()=\u003em,bq:()=\u003eg});var r=a(130742),n=a(377766),i=a(860587),s=a(385114),o=a(119080),u=a(866760);let l=\"8b406a8de121b3e6\",c=\"61449c20e7fc278b\",d=new Map;function p(e,t){let a,r=(a=`${e.instance??0}-`,\"VECTOR\"===t?a+=e.mapId?.vector??l:a+=e.mapId?.raster??c,a);return d.has(r)||d.set(r,{instance:void 0,container:void 0}),d.get(r)}let y={disableDefaultUI:!0,disableDoubleClickZoom:!1,draggableCursor:\"\",draggable:!0,mapTypeControl:!1,gestureHandling:\"greedy\",clickableIcons:!1,noClear:!0,backgroundColor:\"none\",mapTypeId:\"roadmap\",zoom:1,zoomControl:!1,scaleControl:!1};function m(e={},t=()=\u003e{},a={instance:0}){let{mapRenderingType:r}=(0,o.qH)(),d=(0,n.useRef)(p(a,r)),g=(0,n.useRef)(e),b=(0,n.useCallback)(t,[]),f=(0,s._)(),v=(0,n.useContext)(i.UP),[h,w]=(0,n.useState)(0),[D,k]=(0,n.useState)(0),[P,T]=(0,n.useState)(null),C=(0,n.useCallback)(e=\u003e{null!==e\u0026\u0026T(e)},[]);return(0,n.useEffect)(()=\u003e{if(!f||d.current.instance)return;d.current.container||(d.current.container=document.createElement(\"div\"));let t={};\"VECTOR\"===r?(t.mapId=a.mapId?.vector??l,t.renderingType=google.maps.RenderingType.VECTOR,t.isFractionalZoomEnabled=e.isFractionalZoomEnabled??!1):(t.mapId=a.mapId?.raster??c,t.renderingType=google.maps.RenderingType.RASTER),v?.send({name:\"map_init\",rendering_type:t.renderingType===google.maps.RenderingType.VECTOR?\"VECTOR\":t.renderingType===google.maps.RenderingType.RASTER?\"RASTER\":void 0}),d.current.instance=new f.Map(d.current.container,t),w(e=\u003ee+1)},[f,v,r,e.isFractionalZoomEnabled,a.mapId]),(0,n.useEffect)(()=\u003e{d.current.instance\u0026\u0026P\u0026\u0026d.current.container\u0026\u0026(P.appendChild(d.current.container),google.maps.event.trigger(d.current.instance,\"resize\"),k(e=\u003ee+1))},[h,P]),(0,n.useEffect)(()=\u003e{if(d.current.instance\u0026\u0026f\u0026\u0026D\u003e0){let e=Object.assign({},y,g.current);e.mapTypeId=(0,u.J)(e.mapTypeId),d.current.instance.setOptions(e)}},[f,g,D]),(0,n.useEffect)(()=\u003e{d.current.instance\u0026\u0026f\u0026\u0026D\u003e0\u0026\u0026b(d.current.instance,f)},[f,b,D]),[C,d.current.instance,f]}function g(e){let t,a,n=(0,r.c)(5);n[0]!==e?(t=void 0===e?{instance:0}:e,n[0]=e,n[1]=t):t=n[1];let i=t,{mapRenderingType:s}=(0,o.qH)();return n[2]!==i||n[3]!==s?(a=p(i,s),n[2]=i,n[3]=s,n[4]=a):a=n[4],a}},"
+                   },
+    "mapTypeConversion":  {
+                              "source":  "https://www.geoguessr.com/_next/static/chunks/26721-1023828851e88f1b.js",
+                              "code":  "866760:(e,t,a)=\u003e{a.d(t,{J:()=\u003en,m:()=\u003er});let r=[\"roadmap\",\"terrain\",\"hybrid\"];function n(e){return e\u0026\u0026r.includes(e)?e:\"roadmap\"}}"
+                          },
+    "cssRules":  [
+                     {
+                         "source":  null,
+                         "css":  ".gm-style .gm-compass-icon { background-image: url(\"https://maps.gstatic.com/mapfiles/api-3/images/sv9.png\"); background-size: 164px 175px; }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style .gm-compass-icon { background-image: url(\"https://maps.gstatic.com/mapfiles/api-3/images/sv9_hdpi.png\"); }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style.gm-china .gm-compass-icon { background-image: url(\"http://maps.gstatic.cn/mapfiles/api-3/images/sv9_hdpi.png\"); }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style .gm-style-cc a, .gm-style .gm-style-cc button, .gm-style .gm-style-cc span, .gm-style .gm-style-mtc div { font-size: 10px; box-sizing: border-box; }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style .gm-style-cc a, .gm-style .gm-style-cc button, .gm-style .gm-style-cc span { outline-offset: 3px; }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style .gmnoprint, .gmnoprint { display: none; }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style .gmnoscreen, .gmnoscreen { display: none; }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style-moc { background-color: rgba(0, 0, 0, 0.59); pointer-events: none; text-align: center; transition: opacity ease-in-out; }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style-mot { color: white; font-family: Roboto, Arial, sans-serif; font-size: 22px; margin: 0px; position: relative; top: 50%; transform: translateY(-50%); }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style img { max-width: none; }"
+                     },
+                     {
+                         "source":  null,
+                         "css":  ".gm-style { font: 400 11px Roboto, Arial, sans-serif; text-decoration: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessMap__IP8n_ { --smooth-animation: cubic-bezier(0.05,0.75,0.49,1.04); --aspect-ratio: 1.25; --inactive-width: 16vw; --active-width: 30vw; --active-height: calc(var(--active-width) / var(--aspect-ratio)); --inactive-height: calc(var(--inactive-width) / var(--aspect-ratio)); --height: var(--inactive-height); --width: var(--inactive-width); --button-height: 2rem; --button-gutter: 0.75rem; --control-height: 2rem; --mobile-map-height: 60%; --min-width: 13rem; --min-height: calc(var(--min-width) / var(--aspect-ratio)); position: relative; width: max(var(--min-width),var(--width)); height: max(var(--min-height),var(--height)); max-width: 100%; max-height: 100%; opacity: 0.5; transition: opacity 0.1s, width 0.1s, height 0.1s, visibility 0.1s; display: flex; flex-direction: column; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_hidden__l5G0E { visibility: hidden; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_canvas__cvpqv { position: absolute; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_canvas__cvpqv, .guess-map_canvas__cvpqv \u003e *, .guess-map_canvas__cvpqv \u003e * \u003e * { width: 100%; height: 100%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_canvasContainer__s7oJp { position: relative; border-radius: 0.25rem; overflow: hidden; flex: 1 1 auto; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_controls__f3T9n { flex: 0 0 auto; width: 5.75rem; height: var(--control-height); margin-top: calc(-1*var(--control-height)); display: none; background: rgba(0, 0, 0, 0.5); border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_active__MH5FE { --width: var(--active-width); --height: var(--active-height); opacity: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_active__MH5FE .guess-map_controls__f3T9n { display: inline-block; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_active__MH5FE .guess-map_canvasContainer__s7oJp { border-top-left-radius: 0px; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_size4__5iAq0 { --active-width: 65vw; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_size3__CGWRU { --active-width: 45vw; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_size1__nnfpv { --active-width: 16vw; --inactive-width: 8vw; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_zoomControls__kF2_G { width: 3rem; position: absolute; top: 0.25rem; left: 0.25rem; z-index: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_control__ZPt8d, .guess-map_zoomControl___E_vn { width: 1.25rem; height: 1.25rem; display: inline-block; margin: 0.25rem; padding: 0px; border: 0px; outline: none; background: rgb(255, 255, 255); border-radius: 100%; cursor: pointer; user-select: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_controlDisabled__9gQeZ, .guess-map_zoomControlDisabled__C3mbo { opacity: 0.5; cursor: default; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_zoomControl___E_vn { box-shadow: var(--shadow-1); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_zoomControl___E_vn:first-child { margin-bottom: 0.1rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_zoomControl___E_vn:last-child { margin-top: 0.1rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_zoomControl___E_vn img { width: 90%; margin: 5%; height: 90%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_control__ZPt8d:first-child { margin-left: 0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_control__ZPt8d:last-child { margin-right: 0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_control__ZPt8d img { width: 70%; height: 70%; margin: 15%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_controlIncreaseSize__BPECj img { transform: rotate(-135deg); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_controlDecreaseSize__FgaUw img { transform: rotate(45deg); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_controlSticky__tfJiM img { transform: rotate(90deg); transition: transform 0.1s; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_controlStickyActive__0Sauu img { transform: rotate(0deg); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessButton__iZNh5 { flex: 0 0 auto; margin-top: var(--button-gutter); position: relative; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessButton__iZNh5 button { --button-font-size: var(--font-size-16); line-height: var(--font-size-16); width: 100%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessButton__iZNh5 button:not(:disabled):hover { transform: scale(1.02); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessButton__iZNh5 button:disabled { --button-font-size: var(--font-size-12); line-height: var(--font-size-16); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_toggle__XK_gX { display: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_close__S8DSv { position: absolute; width: 2rem; height: 2rem; top: 0.5rem; right: 0.5rem; z-index: 10; background: rgba(0, 0, 0, 0.9); border-radius: 100%; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; outline: none; padding: 0.25rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_close__S8DSv img { width: 100%; height: 100%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_wrongGuess__dOJ0g { position: absolute; left: 0px; z-index: 1; max-width: 100%; bottom: 3.5rem; overflow: hidden; padding: 1rem; pointer-events: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_wrongGuessText__TcUNb { color: var(--ds-color-white-100); padding: 1rem 2rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 4.25rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_wrongGuessFlagWrapper__TKmhO { width: 4rem; position: absolute; left: 1.5rem; margin-top: -0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_wrongGuessFlag__XoIL3 { width: 100%; height: 100%; display: flex; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_wrongGuessFlag__XoIL3 img { width: 50%; margin: auto; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_selectedRegion__K0deL { position: absolute; bottom: 3.75rem; left: 1rem; text-align: center; opacity: 0; transform: scale(0) translateX(-6.25rem); transition: transform 0.2s 0.1s, opacity 0.2s; pointer-events: none; display: flex; align-items: center; background: rgba(0, 0, 0, 0.7); border-radius: 0.25rem; padding: 0.25rem 0.5rem; max-width: calc(100% - 3rem); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_selectedRegionVisible__V1tm9 { opacity: 1; transform: translateX(0px); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_selectedRegionIcon__npuKU img { width: 1rem; display: block; margin-right: 0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_selectedRegionLabel__7ANHd { line-height: var(--line-height-14); font-size: var(--font-size-14); font-weight: 700; color: var(--ds-color-white-100); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessMap__IP8n_ { --width: var(--active-width); --height: var(--active-height); opacity: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessMap__IP8n_ .guess-map_controls__f3T9n { display: inline-block; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessMap__IP8n_ .guess-map_canvasContainer__s7oJp { border-top-left-radius: 0px; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessMap__IP8n_ { position: fixed; bottom: 0px; right: 0px; left: 0px; height: var(--mobile-map-height); width: 100%; box-shadow: 0 -2px 16px var(--ds-color-black-40); transition: opacity .4s var(--smooth-animation),bottom .4s var(--smooth-animation); opacity: 0; animation: 0.1s linear 0.4s 1 normal forwards running guess-map_hideOnPageLoadHack__W50SL; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_hidden__l5G0E { bottom: -60%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_active__MH5FE .guess-map_controls__f3T9n, .guess-map_active__MH5FE .guess-map_zoomControls__kF2_G { display: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_active__MH5FE .guess-map_canvasContainer__s7oJp { border-radius: 0px; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_toggle__XK_gX { display: block; position: absolute; bottom: 1rem; right: 0px; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_toggle__XK_gX button { height: 4rem; width: 4rem; display: flex; align-items: center; justify-content: center; background: var(--ds-color-green-80); border-radius: 50%; border: 0px; box-shadow: inset 0 0 0 2px var(--ds-color-white-20),inset 0 0 0 6px var(--ds-color-green-80),inset 0 0 0 8px var(--ds-color-white-20),0 0 0 4px var(--ds-color-white-20); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_toggle__XK_gX button img { height: 1.75rem; width: 1.75rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_selectedRegion__K0deL { --flag-size: 3rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessButton__iZNh5 { position: absolute; bottom: 1rem; right: 1rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessButton__iZNh5 button { height: 3rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/52ed77948c100762.css",
+                         "css":  ".guess-map_guessCountry__r_uFK { min-height: 3.2rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_buttonWrapper__seGNr { width: 100%; height: auto; position: absolute; left: 0px; bottom: -4.5%; z-index: 20; display: flex; align-items: center; justify-content: center; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_toggle__4u4XN { transform: scale(1); transition: transform 0.1s ease-in-out, filter 0.1s ease-in-out, opacity 0.1s ease-in-out; opacity: 0.25; filter: saturate(0); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_toggle__4u4XN:hover { transform: scale(1.1); filter: saturate(1); opacity: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_toggle__4u4XN button { cursor: pointer; height: 2rem; width: 2rem; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 0px; outline: 0px; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_toggle__4u4XN button img { height: 2svh; width: 2svh; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_mapWrapper__PDl2c { position: fixed; width: 100%; height: 100%; top: 0px; left: 0px; display: flex; align-items: center; justify-content: center; z-index: 5; transition: backdrop-filter 0.25s ease-in-out, -webkit-backdrop-filter 0.25s ease-in-out; backdrop-filter: blur(0px) brightness(1); overflow: hidden; pointer-events: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_mapWrapper__PDl2c.spectate-map_mapVisible__KTRt1 { backdrop-filter: blur(0.25rem) brightness(0.8); pointer-events: all; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_map__S4rx2 { --aggressiveEaseOut: cubic-bezier(0.05,0.75,0.49,1); --easeOutBack: cubic-bezier(0.34,1.56,0.64,1); position: relative; width: 75svw; height: 75svh; transition: opacity .3s var(--easeOutBack),transform .3s var(--easeOutBack); opacity: 0; filter: drop-shadow(.5rem -.5rem 1rem var(--ds-color-black-50)); transform: scale(0.7); border-radius: 5svh; box-shadow: 0 0 0 .75svh var(--ds-color-white-40); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_map__S4rx2.spectate-map_mapVisible__KTRt1 { opacity: 1; transform: scale(1); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_mapInner__On15f { width: 100%; height: 100%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_mapInner__On15f \u003e *, .spectate-map_mapInner__On15f \u003e * \u003e * { width: 100%; height: 100%; z-index: 1; border-radius: 5svh; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_pinMarker__6qEl9 { --frame-color: var(--ds-color-blue-50); position: relative; opacity: 0.7; transform: scale(0.8); transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_pinMarker__6qEl9 * { --border-size-factor: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_pinMarker__6qEl9.spectate-map_right__XPHqX { --frame-color: var(--ds-color-red-50); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_pinMarker__6qEl9.spectate-map_locked__AWdcr { opacity: 1; transform: scale(1); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_timerContainer__L2RYj { width: 23svh; position: absolute; top: -7%; left: 50%; transform: translateX(-50%); z-index: 10; pointer-events: none; border-radius: 100svh; background: var(--ds-color-black-100); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_drawControls__z_g_D { position: absolute; top: 10%; right: 102%; gap: 1svh; z-index: 10; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_drawButtonContainer__WSY0u, .spectate-map_drawControls__z_g_D { display: flex; flex-direction: column; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_drawButton__8SY18 { cursor: pointer; border: 0px; border-radius: 50%; width: 6svh; height: 6svh; display: flex; align-items: center; justify-content: center; background: var(--ds-color-black-40); backdrop-filter: blur(0.25rem); color: var(--ds-color-black-100); font-size: var(--font-size-14); box-shadow: 0 0 0 .5svh var(--ds-color-white-40); outline: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_drawButton__8SY18 img { width: 80%; height: 80%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-map_drawButton__8SY18.spectate-map_active__XZUoE { background: var(--ds-color-white-40); color: rgb(255, 255, 255); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-player-povs_root__hlcOP { --gap: calc(100svh / 45); width: 100%; height: 100%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".spectate-player-povs_playerViews__5dRd2 { width: 100%; height: 100%; display: flex; position: relative; overflow: visible; padding-top: var(--gap); gap: var(--gap); container-type: size; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/55cd96165e85f30a.css",
+                         "css":  ".guess-map_ghostMarker__FWzVG { opacity: 0.5; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/8aa503f0fd1b2614.css",
+                         "css":  ".duels-guess-map_container__k6LUq { --edge-spacing: 2rem; position: absolute; bottom: 1rem; right: var(--edge-spacing); z-index: 22; height: 100%; padding-top: 10rem; display: flex; pointer-events: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/8aa503f0fd1b2614.css",
+                         "css":  ".duels-guess-map_container__k6LUq \u003e * { pointer-events: all; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/8aa503f0fd1b2614.css",
+                         "css":  ".duels-guess-map_container__k6LUq \u003e :first-child { margin-top: auto; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/8aa503f0fd1b2614.css",
+                         "css":  ".duels-guess-map_container__k6LUq { width: calc(100% - 2rem); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/8aa503f0fd1b2614.css",
+                         "css":  ".duels-guess-map_container__k6LUq { --edge-spacing: 1rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/8aa503f0fd1b2614.css",
+                         "css":  ".duels-guess-map_otherTeamMemberGuessPin__glsP0 { transform: scale(0.7); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/8aa503f0fd1b2614.css",
+                         "css":  ".duels-guess-map_ghostMarker____Qtd { opacity: 0.5; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/8aa503f0fd1b2614.css",
+                         "css":  ".duels-guess-map_marginBottom__4MJgZ { margin-bottom: 0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessMap__IP8n_ { --smooth-animation: cubic-bezier(0.05,0.75,0.49,1.04); --aspect-ratio: 1.25; --inactive-width: 16vw; --active-width: 30vw; --active-height: calc(var(--active-width) / var(--aspect-ratio)); --inactive-height: calc(var(--inactive-width) / var(--aspect-ratio)); --height: var(--inactive-height); --width: var(--inactive-width); --button-height: 2rem; --button-gutter: 0.75rem; --control-height: 2rem; --mobile-map-height: 60%; --min-width: 13rem; --min-height: calc(var(--min-width) / var(--aspect-ratio)); position: relative; width: max(var(--min-width),var(--width)); height: max(var(--min-height),var(--height)); max-width: 100%; max-height: 100%; opacity: 0.5; transition: opacity 0.1s, width 0.1s, height 0.1s, visibility 0.1s; display: flex; flex-direction: column; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_hidden__l5G0E { visibility: hidden; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_canvas__cvpqv { position: absolute; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_canvas__cvpqv, .guess-map_canvas__cvpqv \u003e *, .guess-map_canvas__cvpqv \u003e * \u003e * { width: 100%; height: 100%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_canvasContainer__s7oJp { position: relative; border-radius: 0.25rem; overflow: hidden; flex: 1 1 auto; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_controls__f3T9n { flex: 0 0 auto; width: 5.75rem; height: var(--control-height); margin-top: calc(-1*var(--control-height)); display: none; background: rgba(0, 0, 0, 0.5); border-top-left-radius: 0.25rem; border-top-right-radius: 0.25rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_active__MH5FE { --width: var(--active-width); --height: var(--active-height); opacity: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_active__MH5FE .guess-map_controls__f3T9n { display: inline-block; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_active__MH5FE .guess-map_canvasContainer__s7oJp { border-top-left-radius: 0px; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_size4__5iAq0 { --active-width: 65vw; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_size3__CGWRU { --active-width: 45vw; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_size1__nnfpv { --active-width: 16vw; --inactive-width: 8vw; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_zoomControls__kF2_G { width: 3rem; position: absolute; top: 0.25rem; left: 0.25rem; z-index: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_control__ZPt8d, .guess-map_zoomControl___E_vn { width: 1.25rem; height: 1.25rem; display: inline-block; margin: 0.25rem; padding: 0px; border: 0px; outline: none; background: rgb(255, 255, 255); border-radius: 100%; cursor: pointer; user-select: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_controlDisabled__9gQeZ, .guess-map_zoomControlDisabled__C3mbo { opacity: 0.5; cursor: default; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_zoomControl___E_vn { box-shadow: var(--shadow-1); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_zoomControl___E_vn:first-child { margin-bottom: 0.1rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_zoomControl___E_vn:last-child { margin-top: 0.1rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_zoomControl___E_vn img { width: 90%; margin: 5%; height: 90%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_control__ZPt8d:first-child { margin-left: 0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_control__ZPt8d:last-child { margin-right: 0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_control__ZPt8d img { width: 70%; height: 70%; margin: 15%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_controlIncreaseSize__BPECj img { transform: rotate(-135deg); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_controlDecreaseSize__FgaUw img { transform: rotate(45deg); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_controlSticky__tfJiM img { transform: rotate(90deg); transition: transform 0.1s; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_controlStickyActive__0Sauu img { transform: rotate(0deg); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessButton__iZNh5 { flex: 0 0 auto; margin-top: var(--button-gutter); position: relative; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessButton__iZNh5 button { --button-font-size: var(--font-size-16); line-height: var(--font-size-16); width: 100%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessButton__iZNh5 button:not(:disabled):hover { transform: scale(1.02); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessButton__iZNh5 button:disabled { --button-font-size: var(--font-size-12); line-height: var(--font-size-16); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_toggle__XK_gX { display: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_close__S8DSv { position: absolute; width: 2rem; height: 2rem; top: 0.5rem; right: 0.5rem; z-index: 10; background: rgba(0, 0, 0, 0.9); border-radius: 100%; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; outline: none; padding: 0.25rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_close__S8DSv img { width: 100%; height: 100%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_wrongGuess__dOJ0g { position: absolute; left: 0px; z-index: 1; max-width: 100%; bottom: 3.5rem; overflow: hidden; padding: 1rem; pointer-events: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_wrongGuessText__TcUNb { color: var(--ds-color-white-100); padding: 1rem 2rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 4.25rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_wrongGuessFlagWrapper__TKmhO { width: 4rem; position: absolute; left: 1.5rem; margin-top: -0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_wrongGuessFlag__XoIL3 { width: 100%; height: 100%; display: flex; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_wrongGuessFlag__XoIL3 img { width: 50%; margin: auto; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_selectedRegion__K0deL { position: absolute; bottom: 3.75rem; left: 1rem; text-align: center; opacity: 0; transform: scale(0) translateX(-6.25rem); transition: transform 0.2s 0.1s, opacity 0.2s; pointer-events: none; display: flex; align-items: center; background: rgba(0, 0, 0, 0.7); border-radius: 0.25rem; padding: 0.25rem 0.5rem; max-width: calc(100% - 3rem); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_selectedRegionVisible__V1tm9 { opacity: 1; transform: translateX(0px); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_selectedRegionIcon__npuKU img { width: 1rem; display: block; margin-right: 0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_selectedRegionLabel__7ANHd { line-height: var(--line-height-14); font-size: var(--font-size-14); font-weight: 700; color: var(--ds-color-white-100); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessMap__IP8n_ { --width: var(--active-width); --height: var(--active-height); opacity: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessMap__IP8n_ .guess-map_controls__f3T9n { display: inline-block; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessMap__IP8n_ .guess-map_canvasContainer__s7oJp { border-top-left-radius: 0px; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessMap__IP8n_ { position: fixed; bottom: 0px; right: 0px; left: 0px; height: var(--mobile-map-height); width: 100%; box-shadow: 0 -2px 16px var(--ds-color-black-40); transition: opacity .4s var(--smooth-animation),bottom .4s var(--smooth-animation); opacity: 0; animation: 0.1s linear 0.4s 1 normal forwards running guess-map_hideOnPageLoadHack__W50SL; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_hidden__l5G0E { bottom: -60%; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_active__MH5FE .guess-map_controls__f3T9n, .guess-map_active__MH5FE .guess-map_zoomControls__kF2_G { display: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_active__MH5FE .guess-map_canvasContainer__s7oJp { border-radius: 0px; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_toggle__XK_gX { display: block; position: absolute; bottom: 1rem; right: 0px; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_toggle__XK_gX button { height: 4rem; width: 4rem; display: flex; align-items: center; justify-content: center; background: var(--ds-color-green-80); border-radius: 50%; border: 0px; box-shadow: inset 0 0 0 2px var(--ds-color-white-20),inset 0 0 0 6px var(--ds-color-green-80),inset 0 0 0 8px var(--ds-color-white-20),0 0 0 4px var(--ds-color-white-20); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_toggle__XK_gX button img { height: 1.75rem; width: 1.75rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_selectedRegion__K0deL { --flag-size: 3rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessButton__iZNh5 { position: absolute; bottom: 1rem; right: 1rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessButton__iZNh5 button { height: 3rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".guess-map_guessCountry__r_uFK { min-height: 3.2rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".duels-guess-map_container__k6LUq { --edge-spacing: 2rem; position: absolute; bottom: 1rem; right: var(--edge-spacing); z-index: 22; height: 100%; padding-top: 10rem; display: flex; pointer-events: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".duels-guess-map_container__k6LUq \u003e * { pointer-events: all; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".duels-guess-map_container__k6LUq \u003e :first-child { margin-top: auto; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".duels-guess-map_container__k6LUq { width: calc(100% - 2rem); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".duels-guess-map_container__k6LUq { --edge-spacing: 1rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".duels-guess-map_otherTeamMemberGuessPin__glsP0 { transform: scale(0.7); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".duels-guess-map_ghostMarker____Qtd { opacity: 0.5; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/c0785830671cf07e.css",
+                         "css":  ".duels-guess-map_marginBottom__4MJgZ { margin-bottom: 0.5rem; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".player-pov_root__06q31.player-pov_variantRight___b7dC .player-pov_guessMap__ZIMKc.player-pov_hasLockedIn__20dmw { right: 0px; left: unset; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".player-pov_guessMap__ZIMKc { --easeOutBack: cubic-bezier(0.34,1.4,0.64,1); --width: 15cqw; --aspect-ratio: 1.38; --margin: 1.5cqw; position: absolute; display: flex; flex-direction: column; opacity: 0.8; z-index: 1; pointer-events: none; right: var(--margin); bottom: var(--margin); width: var(--width); aspect-ratio: 4 / 3; filter: brightness(0.7); transition: filter .35s var(--easeOutBack),opacity .35s var(--easeOutBack),width .35s var(--easeOutBack); }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".player-pov_guessMap__ZIMKc.player-pov_active___7M0S { --width: 27.5cqw; filter: brightness(1); opacity: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".player-pov_guessMap__ZIMKc.player-pov_hasLockedIn__20dmw { width: 100cqh; height: 100cqh; opacity: 1; z-index: 1; left: 0px; right: unset; bottom: 0px; transition: none; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".player-pov_guessMap__ZIMKc \u003e *, .player-pov_guessMap__ZIMKc \u003e * \u003e * { border-radius: 1.5cqw; width: 100%; height: 100%; z-index: 1; }"
+                     },
+                     {
+                         "source":  "https://www.geoguessr.com/_next/static/css/e430878111c11ace.css",
+                         "css":  ".player-pov_guessMap__ZIMKc [class=\"gmnoprint gm-style-cc\"], .player-pov_guessMap__ZIMKc [class=\"gmnoprint\"] { display: none !important; }"
+                     }
+                 ]
+}

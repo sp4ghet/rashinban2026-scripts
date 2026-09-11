@@ -1,0 +1,404 @@
+﻿{
+    "fibers":  3629,
+    "maps":  [
+                 {
+                     "mapId":  "8b406a8de121b3e6",
+                     "mapTypeId":  "roadmap",
+                     "renderingType":  "VECTOR",
+                     "zoom":  2,
+                     "options":  {
+                                     "backgroundColor":  "none",
+                                     "disableDefaultUI":  true,
+                                     "isFractionalZoomEnabled":  false,
+                                     "restriction":  {
+                                                         "latLngBounds":  {
+                                                                              "cj":  {
+                                                                                         "lo":  -85,
+                                                                                         "hi":  85
+                                                                                     },
+                                                                              "yi":  {
+                                                                                         "lo":  -180,
+                                                                                         "hi":  180
+                                                                                     }
+                                                                          },
+                                                         "strictBounds":  true
+                                                     },
+                                     "gestureHandling":  "greedy",
+                                     "clickableIcons":  false
+                                 },
+                     "ancestors":  [
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "",
+                                           "css":  {
+                                                       "width":  "1438.5px",
+                                                       "height":  "726px",
+                                                       "position":  "relative",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "48.4px",
+                                                       "overflow":  "hidden"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-map_mapInner__On15f",
+                                           "css":  {
+                                                       "width":  "1438.5px",
+                                                       "height":  "726px",
+                                                       "position":  "static",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-map_map__S4rx2",
+                                           "css":  {
+                                                       "width":  "1438.5px",
+                                                       "height":  "726px",
+                                                       "position":  "relative",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "drop-shadow(oklch(0.179498 0.0245427 283.672 / 0.5) 8px -8px 16px)",
+                                                       "opacity":  "0",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "48.4px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-map_mapWrapper__PDl2c",
+                                           "css":  {
+                                                       "width":  "1918px",
+                                                       "height":  "968px",
+                                                       "position":  "fixed",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "hidden"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "overlay-portal_destination__oLAd_",
+                                           "css":  {
+                                                       "width":  "1918px",
+                                                       "height":  "0px",
+                                                       "position":  "static",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "version4_fullOverlay__viqbk",
+                                           "css":  {
+                                                       "width":  "1918px",
+                                                       "height":  "968px",
+                                                       "position":  "static",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "version4_layout__XumXk",
+                                           "css":  {
+                                                       "width":  "1918px",
+                                                       "height":  "968px",
+                                                       "position":  "static",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "clip visible"
+                                                   }
+                                       }
+                                   ]
+                 },
+                 {
+                     "mapId":  "8b406a8de121b3e6",
+                     "mapTypeId":  "roadmap",
+                     "renderingType":  "VECTOR",
+                     "zoom":  1,
+                     "options":  {
+                                     "backgroundColor":  "none",
+                                     "disableDefaultUI":  true,
+                                     "isFractionalZoomEnabled":  false,
+                                     "restriction":  {
+                                                         "latLngBounds":  {
+                                                                              "cj":  {
+                                                                                         "lo":  -85,
+                                                                                         "hi":  85
+                                                                                     },
+                                                                              "yi":  {
+                                                                                         "lo":  -180,
+                                                                                         "hi":  180
+                                                                                     }
+                                                                          },
+                                                         "strictBounds":  true
+                                                     },
+                                     "gestureHandling":  "greedy",
+                                     "clickableIcons":  false
+                                 },
+                     "ancestors":  [
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "",
+                                           "css":  {
+                                                       "width":  "263.719px",
+                                                       "height":  "197.781px",
+                                                       "position":  "relative",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "26.3728px",
+                                                       "overflow":  "hidden"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "player-pov_guessMap__ZIMKc",
+                                           "css":  {
+                                                       "width":  "263.719px",
+                                                       "height":  "197.781px",
+                                                       "position":  "absolute",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "brightness(0.7)",
+                                                       "opacity":  "0.8",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "player-pov_root__06q31",
+                                           "css":  {
+                                                       "width":  "868.328px",
+                                                       "height":  "543.797px",
+                                                       "position":  "absolute",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "4px solid oklch(0.688523 0.173838 245.157)",
+                                                       "borderRadius":  "40px",
+                                                       "overflow":  "hidden"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-player-povs_playerViews__5dRd2",
+                                           "css":  {
+                                                       "width":  "1758.19px",
+                                                       "height":  "565.297px",
+                                                       "position":  "relative",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-player-povs_root__hlcOP",
+                                           "css":  {
+                                                       "width":  "1758.19px",
+                                                       "height":  "565.297px",
+                                                       "position":  "static",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-content_content__yHAV6",
+                                           "css":  {
+                                                       "width":  "1758.19px",
+                                                       "height":  "565.297px",
+                                                       "position":  "static",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-content_root__D5Mhp",
+                                           "css":  {
+                                                       "width":  "1758.19px",
+                                                       "height":  "565.297px",
+                                                       "position":  "relative",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       }
+                                   ]
+                 },
+                 {
+                     "mapId":  "8b406a8de121b3e6",
+                     "mapTypeId":  "roadmap",
+                     "renderingType":  "VECTOR",
+                     "zoom":  1,
+                     "options":  {
+                                     "backgroundColor":  "none",
+                                     "disableDefaultUI":  true,
+                                     "isFractionalZoomEnabled":  false,
+                                     "restriction":  {
+                                                         "latLngBounds":  {
+                                                                              "cj":  {
+                                                                                         "lo":  -85,
+                                                                                         "hi":  85
+                                                                                     },
+                                                                              "yi":  {
+                                                                                         "lo":  -180,
+                                                                                         "hi":  180
+                                                                                     }
+                                                                          },
+                                                         "strictBounds":  true
+                                                     },
+                                     "gestureHandling":  "greedy",
+                                     "clickableIcons":  false
+                                 },
+                     "ancestors":  [
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "",
+                                           "css":  {
+                                                       "width":  "263.719px",
+                                                       "height":  "197.781px",
+                                                       "position":  "relative",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "26.3728px",
+                                                       "overflow":  "hidden"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "player-pov_guessMap__ZIMKc",
+                                           "css":  {
+                                                       "width":  "263.719px",
+                                                       "height":  "197.781px",
+                                                       "position":  "absolute",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "brightness(0.7)",
+                                                       "opacity":  "0.8",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "player-pov_root__06q31 player-pov_variantRight___b7dC",
+                                           "css":  {
+                                                       "width":  "868.328px",
+                                                       "height":  "543.797px",
+                                                       "position":  "absolute",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "4px solid oklch(0.630499 0.199632 19.7693)",
+                                                       "borderRadius":  "40px",
+                                                       "overflow":  "hidden"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-player-povs_playerViews__5dRd2",
+                                           "css":  {
+                                                       "width":  "1758.19px",
+                                                       "height":  "565.297px",
+                                                       "position":  "relative",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-player-povs_root__hlcOP",
+                                           "css":  {
+                                                       "width":  "1758.19px",
+                                                       "height":  "565.297px",
+                                                       "position":  "static",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-content_content__yHAV6",
+                                           "css":  {
+                                                       "width":  "1758.19px",
+                                                       "height":  "565.297px",
+                                                       "position":  "static",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       },
+                                       {
+                                           "tag":  "DIV",
+                                           "class":  "spectate-content_root__D5Mhp",
+                                           "css":  {
+                                                       "width":  "1758.19px",
+                                                       "height":  "565.297px",
+                                                       "position":  "relative",
+                                                       "background":  "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+                                                       "filter":  "none",
+                                                       "opacity":  "1",
+                                                       "border":  "0px none oklch(0.999994 0.0000497986 23.7884)",
+                                                       "borderRadius":  "0px",
+                                                       "overflow":  "visible"
+                                                   }
+                                       }
+                                   ]
+                 }
+             ]
+}

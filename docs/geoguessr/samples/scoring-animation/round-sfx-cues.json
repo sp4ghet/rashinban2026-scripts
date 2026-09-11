@@ -1,0 +1,94 @@
+{
+    "client":  "web-1.7711-e06e090",
+    "verification":  "Source-traced triggers; all referenced local effect files SHA256-verified",
+    "cues":  [
+                 {
+                     "key":  "INTERACTION_YOU_GUESSED",
+                     "file":  "new-interaction-guess-8cec809908704ac3.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/new-interaction-guess-8cec809908704ac3..mp3",
+                     "definition":  "INTERACTION_YOU_GUESSED:{src:\"/_next/static/audio/new-interaction-guess-8cec809908704ac3..mp3\",priority:\"SECOND\",type:\"Effect\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "EFFECT_OPPONENT_GUESSED",
+                     "file":  "new-effect-opponent-guessed-2fbbb4fd1c36d3df.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/new-effect-opponent-guessed-2fbbb4fd1c36d3df..mp3",
+                     "definition":  "EFFECT_OPPONENT_GUESSED:{src:\"/_next/static/audio/new-effect-opponent-guessed-2fbbb4fd1c36d3df..mp3\",priority:\"SECOND\",type:\"Effect\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "EFFECT_TIMER_COUNTDOWN",
+                     "file":  "new-effect-timer-countdown-0d655922bc0f0721.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/new-effect-timer-countdown-0d655922bc0f0721..mp3",
+                     "definition":  "EFFECT_TIMER_COUNTDOWN:{src:\"/_next/static/audio/new-effect-timer-countdown-0d655922bc0f0721..mp3\",priority:\"SECOND\",type:\"Effect\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "EFFECT_COUNT_DOWN_TICK",
+                     "file":  "new-effect-count-down-tick-f9be693554415c60.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/new-effect-count-down-tick-f9be693554415c60..mp3",
+                     "definition":  "EFFECT_COUNT_DOWN_TICK:{src:\"/_next/static/audio/new-effect-count-down-tick-f9be693554415c60..mp3\",type:\"Effect\",volumeMultiplier:1.3,priority:\"SECOND\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "EFFECT_PANO_REVEAL",
+                     "file":  "effect-pano-reveal-5dbdddcbc604456d.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/effect-pano-reveal-5dbdddcbc604456d..mp3",
+                     "definition":  "EFFECT_PANO_REVEAL:{src:\"/_next/static/audio/effect-pano-reveal-5dbdddcbc604456d..mp3\",type:\"Effect\",priority:\"SECOND\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "EFFECT_GENTLE_SWOOSH",
+                     "file":  "effect-gentle-swoosh-f910b143cf61d0ab.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/effect-gentle-swoosh-f910b143cf61d0ab..mp3",
+                     "definition":  "EFFECT_GENTLE_SWOOSH:{src:\"/_next/static/audio/effect-gentle-swoosh-f910b143cf61d0ab..mp3\",priority:\"SECOND\",type:\"Effect\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "EFFECT_MAP_ENTER",
+                     "file":  "effect-map-enter-8427cfdec52b3da5.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/effect-map-enter-8427cfdec52b3da5..mp3",
+                     "definition":  "EFFECT_MAP_ENTER:{src:\"/_next/static/audio/effect-map-enter-8427cfdec52b3da5..mp3\",type:\"Effect\",priority:\"SECOND\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "EFFECT_CLICK",
+                     "file":  "effect-click-d9d96b53fd0662cf.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/effect-click-d9d96b53fd0662cf..mp3",
+                     "definition":  "EFFECT_CLICK:{src:\"/_next/static/audio/effect-click-d9d96b53fd0662cf..mp3\",priority:\"SECOND\",type:\"Effect\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "EFFECT_HOVER",
+                     "file":  "effect-hover-cc789d936a74eb9f.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/effect-hover-cc789d936a74eb9f..mp3",
+                     "definition":  "EFFECT_HOVER:{src:\"/_next/static/audio/effect-hover-cc789d936a74eb9f..mp3\",priority:\"SECOND\",type:\"Effect\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "DOORS_CLOSING",
+                     "file":  "doors-closing-188aaf61ba7a39e1.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/doors-closing-188aaf61ba7a39e1..mp3",
+                     "definition":  "DOORS_CLOSING:{src:\"/_next/static/audio/doors-closing-188aaf61ba7a39e1..mp3\",type:\"Effect\",priority:\"SECOND\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 },
+                 {
+                     "key":  "DOORS_BOOM",
+                     "file":  "doors-boom-d3f9ab6aae1bd894.mp3",
+                     "url":  "https://www.geoguessr.com/_next/static/audio/doors-boom-d3f9ab6aae1bd894..mp3",
+                     "definition":  "DOORS_BOOM:{src:\"/_next/static/audio/doors-boom-d3f9ab6aae1bd894..mp3\",type:\"Effect\",priority:\"SECOND\"}",
+                     "timingReference":  "../../round-sfx-timing.md",
+                     "evidence":  "round-sfx-source.json; round-sfx-hook-source.json"
+                 }
+             ]
+}

@@ -1,0 +1,105 @@
+﻿{
+    "matches":  [
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/63ae7186-4eea598f3f0e2a20.js",
+                        "text":  ":()=\u003enb,WebGPUCoordinateSystem:()=\u003er.i7u,WebXRController:()=\u003er.R3r,WireframeGeometry:()=\u003er.XJ7,WrapAroundEnding:()=\u003er.dhZ,ZeroCurvatureEnding:()=\u003er.rQf,ZeroFactor:()=\u003er.ojh,ZeroSlopeEnding:()=\u003er.h2z,ZeroStencilOp:()=\u003er.kqe,createCanvasElement:()=\u003er.lPF,error:()=\u003er.z3S,getConsoleFunction:()=\u003er.A76,log:()=\u003er.Rm2,setConsoleFuncti"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/26721-1023828851e88f1b.js",
+                        "text":  "{id:\"party.kick-out\"}),continueVariant:\"Danger\",cancelLabel:(0,r.jsx)(o.wD,{id:\"components.bullseye-end-round-dialog-cancel-button\"}),onContinue:e}),b=({onContinue:e,numOfInactivePlayers:t})=\u003e({title:(0,r.jsx)(o.wD,{id:\"party.remove-inactive-players\"}),content:(0,r.jsx)(o.wD,{id:\"party.kick-inactive-confirmation\",children:t.toS"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/26721-1023828851e88f1b.js",
+                        "text":  "{id:\"party.kick-out\"}),continueVariant:\"Danger\",cancelLabel:(0,r.jsx)(o.wD,{id:\"components.bullseye-end-round-dialog-cancel-button\"}),onContinue:e}),f=({onContinue:e})=\u003e({title:(0,r.jsx)(o.wD,{id:\"game.abort-game-confirm-heading\"}),content:(0,r.jsx)(o.wD,{id:\"game.abort-game-confirm-body\"}),continueLabel:(0,r.jsx)(o.wD,{id:\"gam"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/77742-e108557da45b8716.js",
+                        "text":  "r t,r,i;let m,h,p,f,g,v,E,y,_,T,b,S,I,R,N,M,C,w,P,O,x,D,F,A,L,U,k=(0,n.c)(42),{roundPanoId:G,currentRoundEndTime:H,pings:z,guesses:B,isEnabled:W}=e,Y=void 0===W||W;k[0]===Symbol.for(\"react.memo_cache_sentinel\")?(E=[],k[0]=E):E=k[0];let Z=(0,s.useRef)(E),{account:V,guest:j}=(0,d.F)(),X=V?.user.userId??j?.id;k[1]===Symbol.for(\"r"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/77742-e108557da45b8716.js",
+                        "text":  "ayChange:te,samplesRef:tt}=(0,p.XL)({pings:eV,isEnabled:e5,roundPanoId:eD.currentRoundPanoId,currentRoundEndTime:eD.currentRound?.endTime??void 0,guesses:eD.guesses}),{sendSamplesImmediately:tr}=(ei=eR?.gameId??\"\",en=eR?.currentRoundNumber??0,es=!eY\u0026\u0026eR?.status===\"Ongoing\",(eh=(0,s.c)(16))[0]!==tt||eh[1]!==ew?(ec=(e,t)=\u003e{if(0="
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/59878-520f06f6ca5e0304.js",
+                        "text":  "}},async endRound(e){try{let{payload:t,serverTimestamp:a}=await r.MB.post(`/api/live-challenge/${e}/end-round`);return(0,s.kS)(t,a)}catch{}},async removePlayer(e,t){try{let{payload:a,serverTimestamp:n}=await r.MB.put(`/api/live-challenge/${e}/${t}/remove`);return(0,s.kS)(a,n)}catch{}},async getLeaderboardYouEntry(e,t){try{let{p"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/12730-0a8596c332641741.js",
+                        "text":  "A,x,v,f,b=(0,o.c)(55),{orderingAnswer:y}=e,{guess:C,hasGuessed:w,isGuessing:j,unsubmittedGuessRef:N,roundEndsAt:I}=(0,S.S)();b[0]===Symbol.for(\"react.memo_cache_sentinel\")?(t=[],b[0]=t):t=b[0];let[E,P]=(0,n.useState)(t),[M,T]=(0,n.useState)(!1),[k,z]=(0,n.useState)(!w),[R,L]=(0,n.useState)(void 0),D=y.shuffledItems,q=D[0];b[1]"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/86239-a152fa8a08cda6a6.js",
+                        "text":  "E:()=\u003ec});var s=r(130742),n=r(377766),a=r(537363),i=r(65226),o=r(816173);let l=\"/_next/static/audio/round-end-e08bdc3b4a4c7409..mp3\";var d=r(847196),u=r(975490);function c(e){var t,r,c,m,g,_,p,h;let y,x,v,f,b,j,w,S,C,N,I,T,k,P,E,A,R,D,L,G,F,q,O,M,z,B,W,U,H,Z,V,Y,$,Q,J,{game:K,lobby:X,isDisabled:ee}=e,et=void 0!==ee\u0026\u0026ee;t=K,r=et"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/86239-a152fa8a08cda6a6.js",
+                        "text":  "et,U=(0,s.c)(15),H=void 0!==p\u0026\u0026p,Z=void 0!==h\u0026\u0026h,U[0]===Symbol.for(\"react.memo_cache_sentinel\")?(M={roundEnded:{src:l,priority:\"SECOND\",type:\"Effect\"}},U[0]=M):M=U[0],V=M,Y=(0,i.W)(V),U[1]!==_?(z=_\u0026\u0026(0,a.aq)(_),U[1]=_,U[2]=z):z=U[2],$=z,Q=$?.state,U[3]!==$||U[4]!==Q||U[5]!==Z||U[6]!==H||U[7]!==Y?(B=()=\u003e{!Q||Z||H||\"Ended\"===Q\u0026\u0026"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/86239-a152fa8a08cda6a6.js",
+                        "text":  "\"StaticContent\"!==$.question.type\u0026\u0026Y?.play(\"roundEnded\")},U[3]=$,U[4]=Q,U[5]=Z,U[6]=H,U[7]=Y,U[8]=B):B=U[8],J=$?.question.type,U[9]!==Q||U[10]!==Z||U[11]!==H||U[12]!==Y||U[13]!==J?(W=[Q,J,H,Y,Z],U[9]=Q,U[10]=Z,U[11]=H,U[12]=Y,U[13]=J,U[14]=W):W=U[14],(0,n.useEffect)(B,W)}"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/86239-a152fa8a08cda6a6.js",
+                        "text":  "ound:eh,isUserAllowedToProgressRound:eE,isGameFinished:\"Finished\"===U.status,unsubmittedGuessRef:ei,roundEndsAt:ex.endTime??void 0,isPanoramaHudVisible:!eu},ex.roundNumber),ex.endTime\u0026\u0026!eS\u0026\u0026(0,s.jsx)(eD,{currentRound:ex,isVisible:!eC})]})}),W[73]=ex,W[74]=U.status,W[75]=eg,W[76]=eh,W[77]=eN,W[78]=eE,W[79]=eC,W[80]=ek,W[81]=eu,"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/31142-a293104cfa698e46.js",
+                        "text":  "ndNumber:t}),!0}catch{}return!1},async endRound(e,t){try{return await u.MB.post(`/api/bullseye/${e}/end-round`,{roundNumber:t}),!0}catch{}return!1}};var g=a(18878),y=a.n(g),_=a(625584),f=a(121080),x=a(65226),h=a(875348),b=a(524949),A=a(189648),I=a(113387),j=a(804844);let v={src:\"/_next/static/media/wrong-guess-icon.9d6d9015.png"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/31142-a293104cfa698e46.js",
+                        "text":  "]=_,T[68]=w):w=T[68],w}let J=({onContinue:e},{closeDialog:t})=\u003e({title:(0,s.jsx)(o.wD,{id:\"bullseye.end-round-dialog-title\"}),continueLabel:(0,s.jsx)(o.wD,{id:\"bullseye.end-round-dialog-continue-button\"}),cancelLabel:(0,s.jsx)(o.wD,{id:\"components.bullseye-end-round-dialog-cancel-button\"}),continueVariant:\"Danger\",content:(0,s."
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/31142-a293104cfa698e46.js",
+                        "text":  "jsx)(o.wD,{id:\"bullseye.end-round-dialog-text\"}),onContinue:()=\u003e{e(),t()}});function q(e){let t,a,r,i,l,c=(0,n.c)(15),{gameState:u,currentPlayerId:m}=e,{openDialog:g}=(0,$.sp)(J);c[0]!==m||c[1]!==u?(t=(0,d.O6)(u,m),c[0]=m,c[1]=u,c[2]=t):t=c[2];let y=t,_"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/31142-a293104cfa698e46.js",
+                        "text":  "[9];let A=!y;return c[10]===Symbol.for(\"react.memo_cache_sentinel\")?(i=(0,s.jsx)(o.wD,{id:\"bullseye.end-round-button-label\"}),c[10]=i):i=c[10],c[11]!==x||c[12]!==r||c[13]!==A?(l=(0,s.jsx)(\"li\",{className:V().footer,children:(0,s.jsx)(F.$,{size:\"Small\",variant:\"Secondary\",onClick:r,loading:x,disabled:A,children:i})}),c[11]=x,c[1"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/pages/party/%5B%5B...slug%5D%5D-873330b7e130cc24.js",
+                        "text":  "A.wD,{id:\"party.ban\"}),continueVariant:\"Danger\",cancelLabel:(0,n.jsx)(A.wD,{id:\"components.bullseye-end-round-dialog-cancel-button\"}),onContinue:e}),j=({onContinue:e})=\u003e({title:(0,n.jsx)(A.wD,{id:\"party.kick-player-modal-header\"}),content:(0,n.jsx)(A.wD,{id:\"party.kick-player-confirm-body\"}),showCancelButton:!0,continueLabel:(0"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/pages/party/%5B%5B...slug%5D%5D-873330b7e130cc24.js",
+                        "text":  ".wD,{id:\"party.kick\"}),continueVariant:\"Danger\",cancelLabel:(0,n.jsx)(A.wD,{id:\"components.bullseye-end-round-dialog-cancel-button\"}),onContinue:e}),w=({onContinue:e})=\u003e({title:(0,n.jsx)(A.wD,{id:\"party.make-host-confirm-heading\"}),content:(0,n.jsx)(A.wD,{id:\"party.make-host-confirm-body\"}),showCancelButton:!0,continueLabel:(0,"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/pages/party/%5B%5B...slug%5D%5D-873330b7e130cc24.js",
+                        "text":  "n.jsx)(A.wD,{id:\"party.make-host-label\"}),cancelLabel:(0,n.jsx)(A.wD,{id:\"components.bullseye-end-round-dialog-cancel-button\"}),onContinue:e}),S=({onContinue:e,numOfInactivePlayers:t})=\u003e({title:(0,n.jsx)(A.wD,{id:\"party.remove-inactive-players\"}),content:(0,n.jsx)(A.wD,{id:\"party.kick-inactive-confirmation\",children:t.toS"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/pages/party/%5B%5B...slug%5D%5D-873330b7e130cc24.js",
+                        "text":  "{id:\"party.kick-out\"}),continueVariant:\"Danger\",cancelLabel:(0,n.jsx)(A.wD,{id:\"components.bullseye-end-round-dialog-cancel-button\"}),onContinue:e}),C=({onContinue:e})=\u003e({title:(0,n.jsx)(A.wD,{id:\"party.reset-win-counters-confirm-heading\"}),content:(0,n.jsx)(A.wD,{id:\"party.reset-win-counters-confirm-body\"}),showCancelButton:!0"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/pages/party/%5B%5B...slug%5D%5D-873330b7e130cc24.js",
+                        "text":  "d:\"components.reset\"}),continueVariant:\"Danger\",cancelLabel:(0,n.jsx)(A.wD,{id:\"components.bullseye-end-round-dialog-cancel-button\"}),onContinue:e}),I=({onContinue:e})=\u003e({title:\"Leave the party page?\",content:\"Your party stays active — you can come back to it later.\",showCancelButton:!0,continueLabel:(0,n.jsx)(A.wD,{id:\"party.l"
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/pages/party/%5B%5B...slug%5D%5D-873330b7e130cc24.js",
+                        "text":  "ctionOpened\"===e.code){let e=await h();e\u0026\u0026a(e)}(\"LiveChallengeRoundStarted\"===e.code||\"LiveChallengeRoundEnded\"===e.code||\"LiveChallengeRoundStarting\"===e.code)\u0026\u0026a(t=\u003e({...t,liveChallengeState:{currentRoundNumber:e.liveChallenge.state.currentStepNumber??e.liveChallenge.state.currentRoundNumber,rounds:(0,en.ZE)(e.liveChallenge."
+                    },
+                    {
+                        "url":  "https://www.geoguessr.com/_next/static/chunks/pages/party/%5B%5B...slug%5D%5D-873330b7e130cc24.js",
+                        "text":  "umber,players:e.battleRoyaleGameState.players,progress:t?.battleRoyaleState?.progress}})),(\"BullseyeRoundEnded\"===e.code||\"BullseyeRoundStarted\"===e.code)\u0026\u0026a(t=\u003e({...t,bullseyeState:{currentRoundNumber:e.bullseye.state.currentRoundNumber,rounds:e.bullseye.state.rounds}}))}},d[6]=h,d[7]=t,d[8]=a,d[9]=i):i=d[9];let g=(0,l.useEff"
+                    }
+                ],
+    "clips":  [
+                  {
+                      "file":  "new-effect-timer-countdown-0d655922bc0f0721..mp3",
+                      "duration":  18,
+                      "sampleRate":  48000
+                  },
+                  {
+                      "file":  "new-effect-count-down-tick-f9be693554415c60..mp3",
+                      "duration":  1.044,
+                      "sampleRate":  48000
+                  }
+              ],
+    "lifecycleHeader":  "function p(e){var t,r;let i,s,a,o,m,h,p,g,v,E,y,_,T,b,S,I,R,N,M=(0,n.c)(48),{lobby:C,gameState:w,currentPlayerId:P,sounds:O,handsOverMusic:x}=e,D=void 0!==x\u0026\u0026x;M[0]!==w?(i=w?w.rounds.find(e=\u003ee.roundNumber===w.currentRoundNumber):void 0,M[0]=w,M[1]=i):i=M[1];let F=i,A=(0,u.__)(F),L=w?.status===\"Ongoing\",U=w?.status===\"Created\",k=w?.status===\"Finished\",G=(0,c.useRef)(void 0);M[2]!==F||M[3]!==L||M[4]!==w?(s=L\u0026\u0026(t=w.teams,!!(r=F)\u0026\u0026t.every(e=\u003ee.roundResults.some(e=\u003ee.roundNumber===r.roundNumber))),M[2]=F,M[3]=L,M[4]=w,M[5]=s):s=M[5];let H=s,z=F\u0026\u0026L\u0026\u0026(F.startTime\u003e(0,d.c_)()||A),B=\"Created\"===C.status||\"Ready\"===C.status||\"Discarded\"===C.status,W=U||H||z||k,{opponentTeamGuesses:Y,playerTeamGuesses:Z}=(0,u.HL)(P,w),V=F?.endTime,j=w?.teams;M[6]!==V||M[7]!==Y||M[8]!==Z||M[9]!==O||M[10]!==j?(a=(e,t)=\u003e{if(\"added\"!==e||V\u0026\u0026V\u003c(0,d.c_)())return;let r=[...Y,...Z].length,i=r===j?.flatMap(f).length;(1===r||i)\u0026\u0026O?.play(t)},M[6]=V,M[7]=Y,M[8]=Z,M[9]=O,M[10]=j,M[11]=a):a=M[11];let X=a;M[12]!==X?(o=e=\u003eX(e,\"EFFECT_OPPONENT_GUESSED\"),M[12]=X,M[13]=o):o=M[13],(0,l.o)(Y,\"created\",o),M[14]!==X?(m=e=\u003eX(e,\"INTERACTION_YOU_GUESSED\"),M[14]=X,M[15]=m):m=M[15],(0,l.o)(Z,\"created\",m);let q=\"Closed\"===C.status\u0026\u0026!w||B||U||z||H;e:{if(!F){h=void 0;break e}if(F.isHealingRound)h=\"MUSIC_HEALING_ROUND\";else if(F.multiplier"
+}

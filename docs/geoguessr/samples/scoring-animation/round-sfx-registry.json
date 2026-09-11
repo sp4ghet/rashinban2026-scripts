@@ -1,0 +1,76 @@
+﻿{
+    "registry":  [
+                     {
+                         "key":  "INTERACTION_YOU_GUESSED",
+                         "definition":  "INTERACTION_YOU_GUESSED:{src:\"/_next/static/audio/new-interaction-guess-8cec809908704ac3..mp3\",priority:\"SECOND\",type:\"Effect\"}"
+                     },
+                     {
+                         "key":  "EFFECT_OPPONENT_GUESSED",
+                         "definition":  "EFFECT_OPPONENT_GUESSED:{src:\"/_next/static/audio/new-effect-opponent-guessed-2fbbb4fd1c36d3df..mp3\",priority:\"SECOND\",type:\"Effect\"}"
+                     },
+                     {
+                         "key":  "EFFECT_TIMER_COUNTDOWN",
+                         "definition":  "EFFECT_TIMER_COUNTDOWN:{src:\"/_next/static/audio/new-effect-timer-countdown-0d655922bc0f0721..mp3\",priority:\"SECOND\",type:\"Effect\"}"
+                     },
+                     {
+                         "key":  "EFFECT_COUNT_DOWN_TICK",
+                         "definition":  "EFFECT_COUNT_DOWN_TICK:{src:\"/_next/static/audio/new-effect-count-down-tick-f9be693554415c60..mp3\",type:\"Effect\",volumeMultiplier:1.3,priority:\"SECOND\"}"
+                     },
+                     {
+                         "key":  "EFFECT_PANO_REVEAL",
+                         "definition":  "EFFECT_PANO_REVEAL:{src:\"/_next/static/audio/effect-pano-reveal-5dbdddcbc604456d..mp3\",type:\"Effect\",priority:\"SECOND\"}"
+                     },
+                     {
+                         "key":  "EFFECT_GENTLE_SWOOSH",
+                         "definition":  "EFFECT_GENTLE_SWOOSH:{src:\"/_next/static/audio/effect-gentle-swoosh-f910b143cf61d0ab..mp3\",priority:\"SECOND\",type:\"Effect\"}"
+                     },
+                     {
+                         "key":  "EFFECT_MAP_ENTER",
+                         "definition":  "EFFECT_MAP_ENTER:{src:\"/_next/static/audio/effect-map-enter-8427cfdec52b3da5..mp3\",type:\"Effect\",priority:\"SECOND\"}"
+                     },
+                     {
+                         "key":  "EFFECT_CLICK",
+                         "definition":  "EFFECT_CLICK:{src:\"/_next/static/audio/effect-click-d9d96b53fd0662cf..mp3\",priority:\"SECOND\",type:\"Effect\"}"
+                     },
+                     {
+                         "key":  "EFFECT_HOVER",
+                         "definition":  "EFFECT_HOVER:{src:\"/_next/static/audio/effect-hover-cc789d936a74eb9f..mp3\",priority:\"SECOND\",type:\"Effect\"}"
+                     },
+                     {
+                         "key":  "DOORS_CLOSING",
+                         "definition":  "DOORS_CLOSING:{src:\"/_next/static/audio/doors-closing-188aaf61ba7a39e1..mp3\",type:\"Effect\",priority:\"SECOND\"}"
+                     },
+                     {
+                         "key":  "DOORS_BOOM",
+                         "definition":  "DOORS_BOOM:{src:\"/_next/static/audio/doors-boom-d3f9ab6aae1bd894..mp3\",type:\"Effect\",priority:\"SECOND\"}"
+                     },
+                     {
+                         "key":  "MUSIC_ROUND_ONE",
+                         "definition":  "MUSIC_ROUND_ONE:{src:s,type:\"Music\",loop:!0,priority:\"FIRST\"}"
+                     },
+                     {
+                         "key":  "MUSIC_ROUND_TWO",
+                         "definition":  "MUSIC_ROUND_TWO:{src:\"/_next/static/audio/new-music-round-2-7c3efa8317e6b19d..mp3\",type:\"Music\",loop:!0,priority:\"SECOND\"}"
+                     },
+                     {
+                         "key":  "MUSIC_ROUND_THREE",
+                         "definition":  "MUSIC_ROUND_THREE:{src:\"/_next/static/audio/new-music-round-3-b0358e003eb4c963..mp3\",type:\"Music\",loop:!0,priority:\"FOURTH\"}"
+                     },
+                     {
+                         "key":  "MUSIC_ROUND_FOUR",
+                         "definition":  "MUSIC_ROUND_FOUR:{src:\"/_next/static/audio/new-music-round-4-1d779860f57d4dd7..mp3\",type:\"Music\",loop:!0,priority:\"FOURTH\"}"
+                     },
+                     {
+                         "key":  "MUSIC_HEALING_ROUND",
+                         "definition":  "MUSIC_HEALING_ROUND:{src:s,type:\"Music\",loop:!0,priority:\"FOURTH\"}"
+                     },
+                     {
+                         "key":  "MUSIC_DUELS_LOBBY",
+                         "definition":  "MUSIC_DUELS_LOBBY:{src:\"/_next/static/audio/new-music-lobby-8a0cf0fa0d4bd650..mp3\",type:\"Music\",priority:\"FIRST\",loop:!0}"
+                     }
+                 ],
+    "registrySource":  "https://www.geoguessr.com/_next/static/chunks/77742-e108557da45b8716.js",
+    "guessGrouping":  "function L(e,t){let r,n=(0,i.c)(7);if(n[0]!==e||n[1]!==t){e:{let i,s=t?t.rounds.find(e=\u003ee.roundNumber===t.currentRoundNumber):void 0,a=t?.teams.find(t=\u003et.players.some(t=\u003et.playerId===e)),o=t?.teams.find(e=\u003ee.id!==a?.id);if(!s?.roundNumber||!a||!o){let e;n[3]===Symbol.for(\"react.memo_cache_sentinel\")?(e={opponentTeamGuesses:[],playerTeamGuesses:[]},n[3]=e):e=n[3],r=e;break e}let c=(0,l._X)(a,s.roundNumber),u=(0,l._X)(o,s.roundNumber);n[4]!==u||n[5]!==c?(i={opponentTeamGuesses:u,playerTeamGuesses:c},n[4]=u,n[5]=c,n[6]=i):i=n[6],r=i}n[0]=e,n[1]=t,n[2]=r}else r=n[2];return r}function U(e){let t,r,n,s=(0,i.c)(12),[a,c]=(0,o.useState)(!0),[u,l]=(0,o.useState)(void 0),{onPanoramaLocationChange:d,hasPreviousLocation:m,getPreviousLocation:h,onReturnToPreviousLocation:p}=(0,_.h)(a);s[0]===Symbol.for(\"react.memo_cache_sentinel\")?(t=e=\u003ec(e),s[0]=t):t=s[0];let f=t;s[1]!==e?(r=t=\u003ee.current=t,s[1]=e,s[2]=r):r=s[2];let g=r;return s[3]!==h||s[4]!==m||s[5]!==a||s[6]!==d||s[7]!==g||s[8]!==p||s[9]!==u||s[10]!==e?(n={panoramaRef:e,onPanoramaMounted:g,isLoadingPanorama:a,onLoadingPanorama:f,onPanoramaLocationChange:d,hasPreviousLocation:m,getPreviousLocation:h,onReturnToPreviousLocation:p,setPanoramaError:l,panoramaError:u},s[3]=h,s[4]=m,s[5]=a,s[6]=d,s[7]=g,s[8]=p,s[9]=u,s[10]=e,s[11]=n):n=s[11],n}function k(){let e,t,r=(0,i.c)(3),[n,s]=(0,o.useState)(!1);r[0]===Symbol.for(\"react.memo_cache_sentinel\")?(e=()=\u003es(G),r[0]=e):e=r[0];let a=e;return r[1]!==n?(t={showGameMenu:n,toggleGameMenu:a},r[1]=n,r[2]=t):t=r[2],t}function G(e){return!e}function H(e){let t,r,n,s,a,u,l=(0,i.c)(12),{gameId:d,playerTeam:m,roundNumber:h,addListener:p}=e;l[0]===Symbol.for(\"react.memo_cache_sentinel\")?(t=[],l[0]=t):t=l[0];let[f,g]=(0,o.useState)(t);l[1]===Symbol.for(\"react.memo_cache_sentinel\")?(r=()=\u003e{g([])},l[1]=r):r=l[1],(0,b.C)(h,r),l[2]!==d||l[3]!==m?(n=e=\u003e{if(\"DuelPing\"!==e.code||e.gameId!==d)return;let{playerId:t,location:r}=e.duel,i=m.players.find(e=\u003ee.playerId===t);i\u0026\u0026r\u0026\u0026r.lng\u0026\u0026r.lat\u0026\u0026g(e=\u003e[...e.filter(e=\u003ee.player.playerId!==i.playerId),{player:i,location:{lng:r.lng,lat:r.lat}}])},l[2]=d,l[3]=m,l[4]=n):n=l[4];let v=(0,o.useEffectEvent)(n);return l[5]!==p||l[6]!==v?(s=()=\u003ep(\"message\",v),l[5]=p,l[6]=v,l[7]=s):s=l[7],l[8]!==p?(a=[p],l[8]=p,l[9]=a):a=l[9],(0,o.useEffect)(s,a),l[10]!==f?(u={pingLocatio",
+    "partyDoorSource":  "https://www.geoguessr.com/_next/static/chunks/pages/party/%5B%5B...slug%5D%5D-873330b7e130cc24.js",
+    "partyDoorContext":  "={scale:2,opacity:0},W={scale:1,opacity:1},G={scale:0,opacity:0},Q=[[0,0],[.006,.013],[.012,.05],[.025,.2],[.067,.949],[.084,1.2],[.092,1.286],[.1,1.35],[.108,1.392],[.116,1.411],[.122,1.411],[.128,1.401],[.142,1.343],[.155,1.258],[.187,1.016],[.204,.914],[.219,.856],[.235,.831],[.247,.834],[.261,.858],[.307,.996],[.324,1.037],[.339,1.06],[.354,1.07],[.377,1.061],[.438,.989],[.472,.971],[.591,1.012],[.708,.995],[1,1]],O={duration:850,easing:function(e){for(let t=1;t\u003cQ.length;t++){let[a,n]=Q[t];if(e\u003c=a){let[r,i]=Q[t-1];return i+(e-r)/(a-r)*(n-i)}}return 1}},z={duration:400,easing:s.le.easeInBack};function V(e){let t,a,i,s,l=(0,r.c)(11),{text:o,isAnimated:c}=e;if(!c){let e;return l[0]!==o?(e=(0,n.jsx)(u.D,{children:o}),l[0]=o,l[1]=e):e=l[1],e}l[2]!==o?(t=[...o],l[2]=o,l[3]=t):t=l[3];let d=t;l[4]!==d.length?(a={\"--letterCount\":d.length},l[4]=d.length,l[5]=a):a=l[5];let m=a;return l[6]!==d?(i=d.map(H),l[6]=d,l[7]=i):i=l[7],l[8]!==m||l[9]!==i?(s=(0,n.jsx)(\"span\",{className:E().letters,style:m,children:i}),l[8]=m,l[9]=i,l[10]=s):s=l[10],s}function H(e,t){return(0,n.jsx)(\"span\",{className:E().letter,style:{\"--letterIndex\":t},children:(0,n.jsx)(u.D,{children:e})},t)}function J(e){let t,a,i,s,l=(0,r.c)(9),{text:o,isAnimated:c}=e;return l[0]!==c?(t=g()(E().coverLabel,{[E().isAnimated]:c}),l[0]=c,l[1]=t):t=l[1],l[2]===Symbol.for(\"react.memo_cache_sentinel\")?(a={\"--hopDelay\":\"1000ms\"},l[2]=a):a=l[2],l[3]!==c||l[4]!==o?(i=c?[...o].map(X):(0,n.jsx)(\"span\",{className:E().coverLetter,children:o}),l[3]=c,l[4]=o,l[5]=i):i=l[5],l[6]!==t||l[7]!==i?(s=(0,n.jsx)(\"span\",{className:t,style:a,children:i}),l[6]=t,l[7]=i,l[8]=s):s=l[8],s}function X(e,t){return(0,n.jsx)(\"span\",{className:E().coverLetter,style:{\"--letterIndex\":t},children:e},t)}function Y(e){let t,a,u,h,p,A,_,f,y,x,v,j,w,S,C,N,T,R,D,M,L,Q=(0,r.c)(69),{startTime:H,gameType:X,hasIntro:Y,isInstant:Z,openOnReady:$,opensInstantly:ee,coverLabel:et,title:ea,eyebrow:en,sounds:er,onClosed:ei,onOpened:es}=e,el=void 0!==Z\u0026\u0026Z,eo=void 0!==$\u0026\u0026$,ec=void 0!==ee\u0026\u0026ee,ed=(0,c.M)()\u0026\u0026!el,[em,eu]=(0,i.useState)(!1),[eh,eg]=(0,i.useState)(!1),ep=(0,i.useRef)(!1),eA=(void 0===Y||Y)\u0026\u0026!eo,e_=ed\u0026\u0026eA,[eb,ef]=(0,s.zh)(K);Q[0]!==ef||Q[1]!==e_?(t=()=\u003e{e_\u0026\u0026ef.start({opacity:1,scale:1,rotate:0,config:s.$W.wobbly,delay:150})},a=[e_,ef],Q[0]=ef,Q[1]=e_,Q[2]=t,Q[3]=a):(t=Q[2],a=Q[3]),(0,i.useEffect)(t,a);let ey=(0,d.B)(),ex=(0,m.SX)(X),ev=eA?ea??(X?ex:void 0):void 0;Q[4]!==ed||Q[5]!==ei?(u=()=\u003e{let e=setTimeout(()=\u003e{eu(!0),ei()},300*!!ed);return()=\u003eclearTimeout(e)},h=[ei,ed],Q[4]=ed,Q[5]=ei,Q[6]=u,Q[7]=h):(u=Q[6],h=Q[7]),(0,i.useEffect)(u,h);let ej=(0,i.useRef)(!1);Q[8]!==ed||Q[9]!==el||Q[10]!==er?(A=()=\u003e{if(el||!er||ej.current)return;ej.current=!0,er.play(B.Q2.DOORS_CLOSING);let e=setTimeout(()=\u003eer.play(B.Q2.DOORS_BOOM),300*!!ed);return()=\u003eclearTimeout(e)},p=[er,el,ed],Q[8]=ed,Q[9]=el,Q[10]=er,Q[11]=p,Q[12]=A):(p=Q[11],A=Q[12]),(0,i.useEffect)("
+}

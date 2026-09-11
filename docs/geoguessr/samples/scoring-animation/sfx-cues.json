@@ -1,0 +1,62 @@
+﻿{
+    "client":  "web-1.7711-e06e090",
+    "timeOrigin":  "damage/scoring component mount",
+    "timingKind":  "source-derived programmed call offsets, not measured audio onset",
+    "cues":  [
+                 {
+                     "key":  "COUNT_DAMAGE",
+                     "file":  "new-round-score-count-damage-781eb9ae0a004172.mp3",
+                     "atMs":  {
+                                  "multiplierGreaterThanOne":  1210,
+                                  "x1":  1210,
+                                  "tie":  1210
+                              },
+                     "playbackRate":  1,
+                     "loop":  false
+                 },
+                 {
+                     "key":  "DAMAGE_CRASH",
+                     "file":  "new-round-score-damage-crash-e35d67887afdaf00.mp3",
+                     "atMs":  {
+                                  "multiplierGreaterThanOne":  3210,
+                                  "x1":  3210,
+                                  "tie":  null
+                              },
+                     "playbackRate":  1,
+                     "loop":  false
+                 },
+                 {
+                     "key":  "EFFECT_MULTIPLIER",
+                     "file":  "effect-multiplier-1b820c69eccad745.mp3",
+                     "atMs":  {
+                                  "multiplierGreaterThanOne":  3960,
+                                  "x1":  null,
+                                  "tie":  null
+                              },
+                     "playbackRate":  0.9,
+                     "loop":  false
+                 },
+                 {
+                     "key":  "LOST_HEALTH",
+                     "file":  "round-score-damage-up-69626c55b4d11c2f.mp3",
+                     "atMs":  {
+                                  "multiplierGreaterThanOne":  5310,
+                                  "x1":  4810,
+                                  "tie":  null
+                              },
+                     "playbackRate":  1,
+                     "loop":  false
+                 },
+                 {
+                     "key":  "TIE_CRASH",
+                     "file":  "round-score-tie-up-ea2aadf42e20ed4f.mp3",
+                     "atMs":  {
+                                  "multiplierGreaterThanOne":  null,
+                                  "x1":  null,
+                                  "tie":  3310
+                              },
+                     "playbackRate":  1,
+                     "loop":  false
+                 }
+             ]
+}

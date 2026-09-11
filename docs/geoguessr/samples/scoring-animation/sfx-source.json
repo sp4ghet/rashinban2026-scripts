@@ -1,0 +1,33 @@
+﻿{
+    "registrySource":  "https://www.geoguessr.com/_next/static/chunks/77742-e108557da45b8716.js",
+    "registry":  [
+                     {
+                         "key":  "COUNT_DAMAGE",
+                         "excerpt":  "COUNT_DAMAGE:{src:a,type:\"Effect\",priority:\"SECOND\"},DAMAGE_CRASH:{src:o,type:\"Effect\",priority:\"SECOND\"},EFFECT_COUNT_DOWN_TICK:{src:\"/_next/static/audio/new-effect-count-down-tick-f9be693554415c60..mp3\",type:\"Effect\",volumeMultiplier:1.3,priority:\"SECOND\"},MUSIC_DUELS_LOBBY:{src:\"/_next/static/audio/new-music-lobby-8a0cf0fa0d4bd650..mp3\",type:\"Mu"
+                     },
+                     {
+                         "key":  "DAMAGE_CRASH",
+                         "excerpt":  "DAMAGE_CRASH:{src:o,type:\"Effect\",priority:\"SECOND\"},EFFECT_COUNT_DOWN_TICK:{src:\"/_next/static/audio/new-effect-count-down-tick-f9be693554415c60..mp3\",type:\"Effect\",volumeMultiplier:1.3,priority:\"SECOND\"},MUSIC_DUELS_LOBBY:{src:\"/_next/static/audio/new-music-lobby-8a0cf0fa0d4bd650..mp3\",type:\"Music\",priority:\"FIRST\",loop:!0},EFFECT_PANO_REVEAL:{sr"
+                     },
+                     {
+                         "key":  "LOST_HEALTH",
+                         "excerpt":  "LOST_HEALTH:{src:\"/_next/static/audio/round-score-damage-up-69626c55b4d11c2f..mp3\",type:\"Effect\",priority:\"SECOND\"},TIE_CRASH:{src:\"/_next/static/audio/round-score-tie-up-ea2aadf42e20ed4f..mp3\",type:\"Effect\",priority:\"SECOND\"},GAINED_HEALTH:{src:\"/_next/static/audio/round-score-healing-up-77602d4b095e2f23..mp3\",type:\"Effect\",priority:\"THIRD\"},NEW_G"
+                     },
+                     {
+                         "key":  "TIE_CRASH",
+                         "excerpt":  "TIE_CRASH:{src:\"/_next/static/audio/round-score-tie-up-ea2aadf42e20ed4f..mp3\",type:\"Effect\",priority:\"SECOND\"},GAINED_HEALTH:{src:\"/_next/static/audio/round-score-healing-up-77602d4b095e2f23..mp3\",type:\"Effect\",priority:\"THIRD\"},NEW_GAME:{src:\"/_next/static/audio/new-game-8a4145d2950970fb..mp3\",type:\"Effect\",priority:\"FIRST\"},LOADING_ROUND:{src:\"/_"
+                     },
+                     {
+                         "key":  "EFFECT_MULTIPLIER",
+                         "excerpt":  "EFFECT_MULTIPLIER:{src:\"/_next/static/audio/effect-multiplier-1b820c69eccad745..mp3\",priority:\"SECOND\",type:\"Effect\"},EFFECT_GENTLE_SWOOSH:{src:\"/_next/static/audio/effect-gentle-swoosh-f910b143cf61d0ab..mp3\",priority:\"SECOND\",type:\"Effect\"},EFFECT_5K:{src:\"/_next/static/audio/effect-5k-1a7bdf50be20c3ba..mp3\",priority:\"SECOND\",type:\"Effect\",volumeM"
+                     },
+                     {
+                         "key":  "EFFECT_5K",
+                         "excerpt":  "EFFECT_5K:{src:\"/_next/static/audio/effect-5k-1a7bdf50be20c3ba..mp3\",priority:\"SECOND\",type:\"Effect\",volumeMultiplier:1.25},EFFECT_CLICK:{src:\"/_next/static/audio/effect-click-d9d96b53fd0662cf..mp3\",priority:\"SECOND\",type:\"Effect\"},EFFECT_HOVER:{src:\"/_next/static/audio/effect-hover-cc789d936a74eb9f..mp3\",priority:\"SECOND\",type:\"Effect\"},EFFECT_WIN"
+                     }
+                 ],
+    "managerSource":  "https://www.geoguessr.com/_next/static/chunks/pages/_app-195f523bb85e67ff.js",
+    "managerExcerpt":  "async play(e,t=1,r=!1){let n=this.getSoundByKey(e);if(n)if(n.hasLoaded||await n.load(),\"Music\"===n.type){if(this.musicChannel===n){n.isPlaying||n.fadeIn(250);return}this.musicChannel?(this.musicChannel.fadeOut(750),n.fadeIn(750)):n.fadeIn(250),this.musicChannel=n}else n.rate(t),n.play(r)}async fadeIn(e,t=750){let r=this.getSoundByKey(e);r\u0026\u0026(r.hasLoaded||await r.load(),r?.fadeIn(t))}async fadeOut(e,t=750){let r=this.getSoundByKey(e);r?.type===\"Music\"\u0026\u0026(this.musicChannel=void 0),r?.fadeOut(t)}asyn",
+    "fiveKSource":  "https://www.geoguessr.com/_next/static/chunks/86824-7ef24f299a82c14c.js",
+    "fiveKExcerpt":  "=l):(i=m[4],l=m[5]),(0,n.useEffect)(i,l),!A)return null;let y=void 0!==_\u0026\u0026_?aE:aD;return m[6]!==y?(o=(0,r.jsx)(r.Fragment,{children:(0,r.jsx)(\"video\",{autoPlay:!0,className:aB().video,src:y})}),m[6]=y,m[7]=o):o=m[7],o}function aG(){return new Audio(aM).play()}var aQ=a(468370);function aU(){let e,t,a=(0,s.c)(8),{currentRound:n,leftTeam:i,rightTeam:l,sounds:d,isWorldLeague:c}=(0,o.A)(),{is5K:u,is10K:m}=(0,eN.dO)(i,l,n);if(a[0]!==m||a[1]!==u||a[2]!==d?(e=async()=\u003e{(u||m)\u0026\u0026(await (0,eB.yy)(1100),d?.play(ep.Q2.EFFECT_5K,1))},a[0]=m,a[1]=u,a[2]=d,a[3]=e):e=a[3],(0,eQ.y)(e),!u\u0026\u0026!m)return null;if(c){let e;return a[4]!==m?(e=(0,r.jsx)(r.Fragment,{children:(0,r.jsx)(aL,{delay:2250,is10K:m})}),a[4]=m,a[5]=e):e=a[5],e}return a[6]!==m?(t=(0,r.jsx)(r.Fragment,{children:(0,r.jsx)(aQ.s,{delay:2450,is10K:m})}),a[6]=m,a[7]=t):t=a[7],t}var aF=a(1137),aW=a(3"
+}
