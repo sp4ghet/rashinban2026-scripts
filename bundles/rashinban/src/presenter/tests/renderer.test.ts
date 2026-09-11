@@ -167,9 +167,9 @@ function googleBoundary() {
   const root = { querySelector(id: string) { if (!slots.has(id)) slots.set(id, new Element()); return slots.get(id); } } as unknown as HTMLElement;
   const panos: any[] = []; const maps: any[] = []; const overlays: any[] = []; const requests: any[] = []; const cleared: any[] = []; const resized: any[] = [];
   class Pano {
-    options: any; pano = ''; pov: any; zoom = 0; visible = false; listeners = new Map();
+    options: any; pano = ''; pov: any; zoom = 0; visible = false; listeners = new Map(); povWrites = 0; zoomWrites = 0;
     constructor(_el: any, options: any) { this.options = options; panos.push(this); }
-    setPano(value: string) { this.pano = value; } setPov(value: any) { this.pov = value; } setZoom(value: number) { this.zoom = value; }
+    setPano(value: string) { this.pano = value; } setPov(value: any) { this.pov = value; this.povWrites++; } setZoom(value: number) { this.zoom = value; this.zoomWrites++; }
     setVisible(value: boolean) { this.visible = value; } getStatus() { return 'OK'; }
     addListener(name: string, fn: Function) { this.listeners.set(name, fn); return { remove: () => this.listeners.delete(name) }; } unbindAll() {}
   }
@@ -202,6 +202,95 @@ test('Google panorama adapter resolves exact IDs, applies latest POV and ignores
   surface.render({ ...p, panoId: 'later' }); surface.dispose(); fake.requests[2].callback({ location: { pano: 'later' } }, 'OK');
   assert.equal(fake.panos[0].visible, false); assert.ok(fake.cleared.includes(fake.panos[0]));
 });
+test('POV interpolation takes the short heading arc and reaches pitch/zoom targets without settled writes', () => {
+  const fake = googleBoundary(); let now = 0;
+  const surface = googleAdapter(fake.root, fake.api, assert.fail, () => {}, () => now).panorama('left-view');
+  const p = { lat: 1, lng: 2, panoId: 'same', heading: 350, pitch: 20, zoom: 1 };
+  surface.render(p); fake.requests[0].callback({ location: { pano: 'same' } }, 'OK');
+  const target = { ...p, heading: 10, pitch: 40, zoom: 3 };
+  surface.render(target);
+  assert.equal(fake.panos[0].pov.heading, 350);
+  now = 100; surface.render(target);
+  assert.deepEqual(fake.panos[0].pov, { heading: 0, pitch: 30 }); assert.equal(fake.panos[0].zoom, 2);
+  now = 200; surface.render(target);
+  assert.deepEqual(fake.panos[0].pov, { heading: 10, pitch: 40 }); assert.equal(fake.panos[0].zoom, 3);
+  const writes = [fake.panos[0].povWrites, fake.panos[0].zoomWrites];
+  now = 300; surface.render(target); now = 400; surface.render(target);
+  assert.deepEqual([fake.panos[0].povWrites, fake.panos[0].zoomWrites], writes);
+});
+
+test('a fixed initial POV stays exact without writes even when heading uses a signed representation', () => {
+  const fake = googleBoundary(); let now = 0;
+  const surface = googleAdapter(fake.root, fake.api, assert.fail, () => {}, () => now).panorama('shared-panorama');
+  const p = { lat: 1, lng: 2, panoId: 'same', heading: -10, pitch: 20, zoom: 1 };
+  surface.render(p); fake.requests[0].callback({ location: { pano: 'same' } }, 'OK');
+  now = 100; surface.render(p);
+  assert.deepEqual(fake.panos[0].pov, { heading: -10, pitch: 20 });
+  assert.equal(fake.panos[0].povWrites, 1); assert.equal(fake.panos[0].zoomWrites, 1);
+});
+
+for (const fps of [30, 60]) test(`POV interpolation uses elapsed time at ${fps} fps and repeated targets do not restart it`, () => {
+  const fake = googleBoundary(); let now = 0;
+  const surface = googleAdapter(fake.root, fake.api, assert.fail, () => {}, () => now).panorama('left-view');
+  const p = { lat: 1, lng: 2, panoId: 'same', heading: 0, pitch: 0, zoom: 1 };
+  surface.render(p); fake.requests[0].callback({ location: { pano: 'same' } }, 'OK');
+  const target = { ...p, heading: 120, pitch: -40, zoom: 3 }; surface.render(target);
+  for (let i = 1; i <= fps / 5; i++) {
+    now = i * 1000 / fps; surface.render(target);
+    assert.ok(Math.abs(fake.panos[0].pov.heading - now / 200 * 120) < 1e-9);
+    assert.ok(Math.abs(fake.panos[0].pov.pitch - now / 200 * -40) < 1e-9);
+    assert.ok(Math.abs(fake.panos[0].zoom - (1 + now / 200 * 2)) < 1e-9);
+  }
+  assert.equal(fake.panos[0].pov.heading, 120);
+  assert.equal(fake.panos[0].zoom, 3);
+});
+
+test('mid-flight telemetry retargets from the interpolated current pose, including between drawn frames', () => {
+  const fake = googleBoundary(); let now = 0;
+  const surface = googleAdapter(fake.root, fake.api, assert.fail, () => {}, () => now).panorama('left-view');
+  const p = { lat: 1, lng: 2, panoId: 'same', heading: 0, pitch: 0, zoom: 1 };
+  surface.render(p); fake.requests[0].callback({ location: { pano: 'same' } }, 'OK');
+  surface.render({ ...p, heading: 100 });
+  now = 50; surface.render({ ...p, heading: 100 }); assert.equal(fake.panos[0].pov.heading, 25);
+  now = 80; surface.render({ ...p, heading: 200 }); assert.equal(fake.panos[0].pov.heading, 40);
+  now = 180; surface.render({ ...p, heading: 200 }); assert.equal(fake.panos[0].pov.heading, 120);
+  now = 280; surface.render({ ...p, heading: 200 }); assert.equal(fake.panos[0].pov.heading, 200);
+  assert.equal(fake.panos[0].zoomWrites, 1, 'heading-only movement must not rewrite zoom');
+});
+
+test('hidden preparation, reentry, frame gaps and identity changes snap instead of replaying stale interpolation', () => {
+  const fake = googleBoundary(); let now = 0;
+  const surface = googleAdapter(fake.root, fake.api, assert.fail, () => {}, () => now).panorama('left-view');
+  const p = { lat: 1, lng: 2, panoId: 'same', heading: 0, pitch: 0, zoom: 1 };
+  const options = { visible: true, identity: 'game:round:player' };
+  surface.render(p, options); fake.requests[0].callback({ location: { pano: 'same' } }, 'OK');
+  surface.render({ ...p, heading: 100 }, options);
+  now = 50; surface.render({ ...p, heading: 100 }, options); assert.equal(fake.panos[0].pov.heading, 25);
+  surface.render({ ...p, heading: 160 }, { ...options, visible: false }); assert.equal(fake.panos[0].pov.heading, 160);
+  surface.render({ ...p, heading: 240 }, options); assert.equal(fake.panos[0].pov.heading, 240);
+  now = 100; surface.render({ ...p, heading: 300 }, options);
+  now = 800; surface.render({ ...p, heading: 320 }, options); assert.equal(fake.panos[0].pov.heading, 320);
+  surface.render({ ...p, heading: 90 }, { ...options, identity: 'other-round' });
+  fake.requests[1].callback({ location: { pano: 'same' } }, 'OK'); assert.equal(fake.panos[0].pov.heading, 90);
+  surface.render(null);
+  surface.render({ ...p, heading: 180 }, options); fake.requests[2].callback({ location: { pano: 'same' } }, 'OK');
+  assert.equal(fake.panos[0].pov.heading, 180);
+});
+
+test('new panorama resolution snaps its latest pose and pending targets never interpolate onto the old scene', () => {
+  const fake = googleBoundary(); let now = 0;
+  const surface = googleAdapter(fake.root, fake.api, assert.fail, () => {}, () => now).panorama('left-view');
+  const p = { lat: 1, lng: 2, panoId: 'first', heading: 0, pitch: 0, zoom: 1 };
+  surface.render(p); fake.requests[0].callback({ location: { pano: 'first' } }, 'OK');
+  surface.render({ ...p, heading: 100 }); now = 50; surface.render({ ...p, heading: 100 });
+  const old = { ...fake.panos[0].pov };
+  surface.render({ ...p, panoId: 'second', heading: 250, zoom: 3 });
+  now = 100; surface.render({ ...p, panoId: 'second', heading: 280, zoom: 4 });
+  assert.deepEqual(fake.panos[0].pov, old); assert.equal(fake.panos[0].zoom, 1);
+  fake.requests[1].callback({ location: { pano: 'second' } }, 'OK');
+  assert.deepEqual(fake.panos[0].pov, { heading: 280, pitch: 0 }); assert.equal(fake.panos[0].zoom, 4);
+});
+
 test('pending panorama movement keeps the prior scene and POV until the newest exact lookup succeeds', () => {
   const fake = googleBoundary(); const errors: string[] = [];
   const surface = googleAdapter(fake.root, fake.api, value => errors.push(value)).panorama('left-view');

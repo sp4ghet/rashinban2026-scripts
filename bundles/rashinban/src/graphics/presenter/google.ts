@@ -1,6 +1,7 @@
 /// <reference types="google.maps" />
 import { createRenderer, type GameRenderer, type RendererAdapter } from './renderer.ts';
 import type { Panorama } from '../../types/presenter.ts';
+import { createPovSmoother, type Pov } from './pov.ts';
 
 // Round snapshots encode ASCII panorama IDs as hex; movement samples are plain.
 // This is format conversion only. The service must still resolve the exact ID.
@@ -31,7 +32,7 @@ function loadGoogle(apiKey: string): Promise<typeof google.maps> {
   return apiPromise;
 }
 
-export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onError: (message: string) => void, onRecovery: () => void = () => {}): RendererAdapter {
+export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onError: (message: string) => void, onRecovery: () => void = () => {}, now: () => number = () => performance.now()): RendererAdapter {
   const failedPanos = new Set<symbol>();
   function recovered(id: symbol) { if (failedPanos.delete(id) && failedPanos.size === 0) onRecovery(); }
   function mount(slot: string) {
@@ -59,6 +60,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
       const service = new maps.StreetViewService();
       let latest: Panorama | null = null; let requested: string | null = null; let resolved = ''; let generation = 0; let disposed = false;
       let identity: string | undefined; let visible = true; let canvasVisible = false; let sdkVisible = false;
+      const smoothing = createPovSmoother(); let writtenPov: Pov | null = null; let snapPov = true;
       function show() {
         const ready = !!resolved;
         if (ready !== sdkVisible) { sdkVisible = ready; pano.setVisible(ready); }
@@ -68,6 +70,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
         canvasVisible = next;
       }
       function reset() {
+        smoothing.reset(); writtenPov = null; snapPov = true;
         generation++; requested = null; resolved = ''; latest = null; show(); recovered(surfaceId);
       }
       function unavailable() {
@@ -78,13 +81,18 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
       }
       function applyPov() {
         if (!latest || !resolved || googlePanoId(latest.panoId) !== resolved) return;
-        pano.setPov({ heading: latest.heading, pitch: latest.pitch }); pano.setZoom(latest.zoom);
+        const next = smoothing.sample(latest, now(), snapPov || !visible); snapPov = false;
+        if (!writtenPov || next.heading !== writtenPov.heading || next.pitch !== writtenPov.pitch) pano.setPov({ heading: next.heading, pitch: next.pitch });
+        if (!writtenPov || next.zoom !== writtenPov.zoom) pano.setZoom(next.zoom);
+        writtenPov = next;
       }
       pano.addListener('status_changed', () => { if (!disposed && resolved && requested === resolved && pano.getStatus() !== 'OK') unavailable(); });
       return {
         render(value, options) {
           if (disposed) return;
-          visible = options?.visible ?? true;
+          const nextVisible = options?.visible ?? true;
+          if (visible !== nextVisible) snapPov = true;
+          visible = nextVisible;
           if (identity !== options?.identity) { identity = options?.identity; reset(); }
           if (!value) {
             if (latest || requested || resolved) reset();
@@ -99,7 +107,8 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
           service.getPanorama({ pano: id }, (data, status) => {
             if (disposed || token !== generation) return;
             if (status !== 'OK' || data?.location?.pano !== id) { unavailable(); return; }
-            resolved = id; pano.setPano(id); applyPov(); show();
+            resolved = id; smoothing.reset(); writtenPov = null; snapPov = true;
+            pano.setPano(id); applyPov(); show();
             recovered(surfaceId);
           });
         },
