@@ -158,7 +158,11 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
           if (content === previous) return;
           previous = content; clearOverlays();
           for (const pin of frame.pins) overlays.push(new maps.Marker({ map, position: pin.point, title: pin.label,
-            clickable: false, icon: { path: maps.SymbolPath.CIRCLE, scale: 8, fillColor: pin.color, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 } }));
+            clickable: false, zIndex: pin.kind === 'answer' ? 1000 : 1,
+            icon: pin.kind === 'answer'
+              // Authentic circular summary flag: center anchor, unlike the newer teardrop pin.
+              ? { url: 'assets/geoguessr-correct-location-flag.png', scaledSize: new maps.Size(40, 40), anchor: new maps.Point(20, 20) }
+              : { path: maps.SymbolPath.CIRCLE, scale: 8, fillColor: pin.color, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 } }));
           for (const line of frame.lines) overlays.push(new maps.Polyline({ map, path: [line.from, line.to], geodesic: true,
             clickable: false, strokeColor: line.color, strokeOpacity: 0.9, strokeWeight: 3 }));
         },

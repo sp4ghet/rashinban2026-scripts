@@ -131,6 +131,7 @@ test('reveal gates answer and actual best guesses; no-pin player gets no invente
   f.projection.phase = 'results-reveal'; renderer.render(f); assert.equal(fake.maps.length, 0);
   f.projection.answer = answer; renderer.render(f); assert.equal(fake.maps.length, 1);
   const visible = fake.maps[0].frames.at(-1)!;
+  assert.equal(visible.pins[0].kind, 'answer');
   assert.equal(visible.pins.length, 2); assert.equal(visible.lines.length, 1);
   assert.deepEqual(visible.pins.map(pin => pin.point), [{ lat: 0, lng: 179 }, { lat: 1, lng: -179 }]);
   assert.deepEqual(visible.bounds, { north: 1, south: 0, west: 179, east: -179 });
@@ -243,10 +244,29 @@ function googleBoundary() {
     setMap(map: any) { this.map = map; } unbindAll() {}
   }
   const api = { Map: GMap, StreetViewPanorama: Pano, Marker: Overlay, Polyline: Overlay, SymbolPath: { CIRCLE: 0 },
+    Size: class { width: number; height: number; constructor(width: number, height: number) { this.width = width; this.height = height; } },
+    Point: class { x: number; y: number; constructor(x: number, y: number) { this.x = x; this.y = y; } },
     StreetViewService: class { getPanorama(request: any, callback: Function) { requests.push({ request, callback }); } },
     event: { clearInstanceListeners: (value: any) => cleared.push(value), trigger(value: any, name: string) { if (name === 'resize') resized.push(value); } } } as unknown as typeof google.maps;
   return { root, api, panos, maps, overlays, requests, cleared, resized, slots };
 }
+test('answer markers use the authentic centered flag above guesses, selected by role rather than label', () => {
+  const fake = googleBoundary();
+  const surface = googleAdapter(fake.root, fake.api, assert.fail).map('results-map');
+  surface.render({ visible: true, bounds: null, lines: [], pins: [
+    { kind: 'answer', point: { lat: 1, lng: 2 }, color: '#ffd55a', label: 'Correct location' },
+    { point: { lat: 1, lng: 2 }, color: '#458af2', label: 'Answer' },
+  ] });
+  const [answer, guess] = fake.overlays.map(overlay => overlay.options);
+  assert.equal(answer.icon.url, 'assets/geoguessr-correct-location-flag.png');
+  assert.deepEqual({ ...answer.icon.scaledSize }, { width: 40, height: 40 });
+  assert.deepEqual({ ...answer.icon.anchor }, { x: 20, y: 20 });
+  assert.ok(answer.zIndex > guess.zIndex);
+  assert.equal(guess.icon.path, fake.api.SymbolPath.CIRCLE);
+  assert.equal(guess.icon.fillColor, '#458af2');
+  assert.equal(guess.icon.url, undefined);
+  surface.dispose(); assert.ok(fake.overlays.every(overlay => overlay.map === null));
+});
 test('Google panorama adapter resolves exact IDs, applies latest POV and ignores disposed lookups', () => {
   const fake = googleBoundary(); const errors: string[] = [];
   const surface = googleAdapter(fake.root, fake.api, value => errors.push(value)).panorama('left-view');

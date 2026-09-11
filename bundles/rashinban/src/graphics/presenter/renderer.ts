@@ -4,7 +4,7 @@ import { lockLayout } from './layout.ts';
 export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
-export type MapFrame = { visible: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string }[]; lines: { from: Point; to: Point; color: string }[] };
+export type MapFrame = { visible: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[] };
 export interface MapSurface { render(frame: MapFrame): void; dispose(): void }
 export type PanoramaOptions = { visible: boolean; identity: string; frozen?: boolean };
 export interface PanoramaSurface { render(panorama: Panorama | null, options?: PanoramaOptions): void; dispose(): void }
@@ -97,7 +97,7 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
         if (plan.resultsMap && projection.answer) {
           if (!maps.has('results-map')) maps.set('results-map', adapter.map('results-map'));
           const answer = { lat: projection.answer.lat, lng: projection.answer.lng };
-          const pins: MapFrame['pins'] = [{ point: answer, color: '#ffd55a', label: 'Answer' }];
+          const pins: MapFrame['pins'] = [{ point: answer, color: '#ffd55a', label: 'Answer', kind: 'answer' }];
           const lines: MapFrame['lines'] = [];
           for (const side of sides) {
             const player = state.players.find(player => player.id === frame.playerIds?.[side]);
