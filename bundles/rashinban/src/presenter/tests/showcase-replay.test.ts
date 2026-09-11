@@ -10,6 +10,19 @@ import { project } from '../projection.ts';
 
 const fixture = 'gs2-ws-presenter-showcase.json';
 
+test('showcase supplies an unstarted, distinct next panorama without advancing the current round', () => {
+  const rows = loadReplay(fixture);
+  const state = applySnapshot(null, rows[0].message).state!;
+  assert.equal(state.round, 1);
+  const current = state.rounds.find(round => round.number === 1)!;
+  const future = state.rounds.find(round => round.number === 2)!;
+  assert.notEqual(future.panorama.panoId, current.panorama.panoId);
+  assert.equal(future.startAtMs, null);
+  assert.equal(future.endAtMs, null);
+  assert.equal(future.timerStartAtMs, null);
+  assert.ok(state.players.every(player => player.results.length === 0));
+});
+
 test('showcase is reproducible and loads through the dashboard fixture allowlist', () => {
   const rows = loadReplay(fixture);
   assert.ok(rows.at(-1)!.receivedAt - rows[0].receivedAt >= 90000);

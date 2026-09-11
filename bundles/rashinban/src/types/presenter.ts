@@ -54,6 +54,9 @@ export type DuelState = {
   status: 'Created' | 'Ongoing' | 'Finished';
   paused: boolean;
   manualRoundStart: boolean;
+  roundStartingBehavior?: 'Default' | 'ManuallyStartFirstRound' | 'ManuallyStartAllRounds';
+  maxRounds?: number | null;
+  roundTimeMs?: number | null;
   initialHealth: number;
   players: [DuelPlayer, DuelPlayer];
   rounds: Round[];

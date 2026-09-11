@@ -54,3 +54,20 @@ body[data-lock="both"] .lock { top: 12px; left: 50%; transform: translateX(-50%)
 body[data-layout="shared"][data-lock="left"] .shared-view { left: 660px; width: 1220px; }
 body[data-layout="shared"][data-lock="right"] .shared-view { left: 40px; width: 1220px; }
 body[data-layout="shared"][data-lock="both"] .shared-view { display: none; }
+
+#preview-area, #waiting-area, #summary-area { position: absolute; left: 40px; top: 270px; width: 1840px; height: 512px; border: 3px solid #67778f; border-radius: 10px; overflow: hidden; background: #171e2f; }
+#preview-panorama { position: absolute; inset: 0; z-index: 0; }
+body[data-source="rendered"] #preview-panorama { background: #171e2f; }
+#preview-map { position: absolute; right: 18px; bottom: 18px; width: 290px; height: 180px; border: 2px solid #8096ba; z-index: 1; }
+body[data-source="chroma"] #preview-map { display: none; }
+#preview-label { position: absolute; left: 24px; top: 20px; padding: 10px 18px; background: #10131fcc; font-size: 24px; letter-spacing: .08em; z-index: 2; }
+#preview-countdown { position: absolute; inset: 0; display: grid; place-items: center; font-size: 150px; text-shadow: 0 5px 25px #000; z-index: 2; }
+#waiting-area { display: grid; place-items: center; font-size: 44px; letter-spacing: .15em; }
+#review-banner { position: absolute; top: 218px; left: 700px; width: 520px; text-align: center; background: #a96c16; padding: 8px 12px; font-size: 23px; font-weight: 800; z-index: 20; }
+#summary-area { padding: 18px 75px; background: #111827ed; }
+#summary-title { margin: 0; text-align: center; font-size: 48px; line-height: 1.15; }
+#summary-title[data-winner="left"] { color: #78adff; } #summary-title[data-winner="right"] { color: #ff8290; }
+#summary-page { margin: 8px 0 10px; text-align: center; color: #acb6ca; font-size: 17px; letter-spacing: .12em; }
+#summary-table { width: 100%; border-collapse: collapse; font-size: 20px; font-variant-numeric: tabular-nums; }
+#summary-table th { color: #acb6ca; font-size: 15px; padding: 6px; } #summary-table td { padding: 4px 6px; border-top: 1px solid #ffffff20; text-align: center; }
+#summary-table th:first-child { width: 100px; } #summary-table td:nth-child(2) { color: #9ac3ff; } #summary-table td:nth-child(3) { color: #ffacb6; }

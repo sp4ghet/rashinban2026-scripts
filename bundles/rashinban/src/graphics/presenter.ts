@@ -1,7 +1,7 @@
 import { REPLICANTS, type RendererStatus, type PresenterClients } from '../types/replicants.ts';
 import type { DuelState, SeriesState, Timeline, Views } from '../types/presenter.ts';
 import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
-import { project } from '../presenter/projection.ts';
+import { projectScene, paintScene, type PresenterScene } from './presenter/scene.ts';
 import { layoutKind, multiplierLabel, distanceLabel, lockLayout } from './presenter/layout.ts';
 import { paintScoring } from './presenter/scoring.ts';
 import { createCelebrationUnderlay } from './presenter/celebration.ts';
@@ -52,6 +52,7 @@ const write = (id: string, value: string) => { const el = element(id); if (el.te
 let renderer: GameRenderer | null = null;
 let previousFrame: RenderFrame | null = null;
 const celebrationUnderlay = createCelebrationUnderlay();
+let previousScene: PresenterScene | null = null;
 function publishRenderer(status: RendererStatus) {
   document.body.dataset.renderer = status;
   client.setRendererStatus(status); client.setReady(status === 'api-ready');
@@ -87,22 +88,28 @@ function frame() {
   document.body.dataset.source = options.viewSource;
   document.body.dataset.layout = layoutKind(state?.mode ?? 'NMPZ', options.viewSource);
   document.body.dataset.celebrationUnderlay = 'false';
-  if (!state || !views.value || !timing || !match) celebrationUnderlay.reset();
+  if (!state || !views.value || !timing || !match) { celebrationUnderlay.reset(); previousScene = null; }
   if (timing && match) {
-    const visible = project(state ?? null, timing, client.now());
+    const scene = projectScene(state ?? null, timing, client.now(), previousScene);
+    previousScene = scene;
+    const visible = scene.projection;
+    paintScene(document.body, scene, match);
     const gameFrame = state && views.value ? celebrationUnderlay.render({ state, views: views.value,
       projection: visible, source: options.viewSource, displayedRound: timing.round,
+      previewRound: scene.previewRound, prewarmRound: scene.prewarmRound,
       playerIds: { left: match.left.playerId, right: match.right.playerId } }, timing.effect !== 'none') : null;
     const underlay = gameFrame?.frozen === true;
     document.body.dataset.celebrationUnderlay = String(underlay);
     document.body.dataset.phase = visible.phase;
-    const results = visible.answer !== null;
+    const results = scene.kind === 'results';
     element('results-area').hidden = !results;
-    element('live-area').hidden = results || (visible.phase === 'results-transition' && !underlay);
-    element('transition').hidden = visible.phase !== 'results-transition' || underlay;
-    write('round-number', timing.round === null ? '—' : String(timing.round));
+    element('live-area').hidden = scene.kind !== 'live' && !underlay;
+    element('transition').hidden = scene.kind !== 'transition' || underlay;
+    write('round-number', scene.previewRound === null ? timing.round === null ? '—' : String(timing.round) : String(scene.previewRound));
     write('mode', state?.mode ?? '—');
-    const multiplier = multiplierLabel(state ?? null, timing, { left: match.left.playerId, right: match.right.playerId });
+    const multiplier = scene.kind === 'preview' ? state?.roundTimeMs ? `${state.roundTimeMs / 1000}s` : '—'
+      : multiplierLabel(state ?? null, timing, { left: match.left.playerId, right: match.right.playerId });
+    write('multiplier-label', scene.kind === 'preview' ? 'ROUND TIME' : 'DAMAGE');
     write('multiplier', multiplier.replace(' · ', '\n'));
     element('multiplier').classList.toggle('split', multiplier.startsWith('L '));
     for (const side of ['left', 'right'] as const) {
@@ -122,7 +129,7 @@ function frame() {
       write(`${side}-distance`, distanceLabel(distance, player?.score));
     }
     paintScoring(document.body, visible, match);
-    element('timer').hidden = visible.remainingMs === null;
+    element('timer').hidden = visible.remainingMs === null || scene.kind !== 'live';
     element('timer').classList.toggle('urgent', timing.music === 'urgent');
     const seconds = Math.ceil((visible.remainingMs ?? 0) / 1000);
     write('timer', `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`);
@@ -137,11 +144,18 @@ function frame() {
       }
     }
     write('phase-label', label);
+    if (scene.kind === 'preview') write('phase-label', scene.paused ? 'GAME IS UNDER REVIEW' : visible.phase === 'pre-round' ? 'ROUND STARTING' : 'WAITING FOR GAME MASTER');
+    if (scene.kind === 'summary') write('phase-label', 'MATCH SUMMARY');
+    if (scene.kind === 'aborted') write('phase-label', 'GAME CANCELLED');
     if (gameFrame) {
       previousFrame = gameFrame;
       document.body.dataset.lock = lockLayout(previousFrame);
       renderer?.render(previousFrame);
     }
+  }
+  if (!timing || !match) {
+    for (const id of ['preview-area', 'summary-area', 'results-area', 'live-area', 'transition', 'timer', 'scoring-layer', 'review-banner']) element(id).hidden = true;
+    element('waiting-area').hidden = false;
   }
   if ((!state || !views.value || !timing || !match) && previousFrame) {
     document.body.dataset.lock = 'none';

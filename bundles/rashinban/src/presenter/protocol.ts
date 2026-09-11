@@ -23,6 +23,7 @@ const SNAPSHOT_CODES = new Set([
   'DuelNewRound',
   'DuelFinished',
   'DuelAborted',
+  'DuelMasterSnapshot',
 ]);
 
 class DecodeError extends Error {
@@ -198,6 +199,14 @@ function decodeState(message: RecordValue, code: string): DuelState {
   const currentRound = integer(source.currentRoundNumber);
   const rounds = array(source.rounds).map(round);
   if (!rounds.some(candidate => candidate.number === currentRound)) invalid();
+  const behavior = options.roundStartingBehavior;
+  if (behavior != null && !['Default', 'ManuallyStartFirstRound', 'ManuallyStartAllRounds'].includes(String(behavior))) invalid();
+  const roundStartingBehavior = behavior == null
+    ? options.masterControlAutoStartRounds === false ? 'ManuallyStartAllRounds' : undefined
+    : behavior as DuelState['roundStartingBehavior'];
+  const maxRounds = options.maxNumberOfRounds == null ? null : integer(options.maxNumberOfRounds);
+  const roundTime = options.maxRoundTime == null ? null : number(options.maxRoundTime);
+  if ((maxRounds !== null && maxRounds < 0) || (roundTime !== null && roundTime < 0)) invalid();
 
   return {
     gameId: string(source.gameId),
@@ -206,8 +215,10 @@ function decodeState(message: RecordValue, code: string): DuelState {
     mode: mode(options.movementOptions),
     status: status(source.status),
     paused: boolean(source.isPaused),
-    manualRoundStart: options.roundStartingBehavior === 'ManuallyStartAllRounds'
-      || options.masterControlAutoStartRounds === false,
+    manualRoundStart: roundStartingBehavior === 'ManuallyStartAllRounds',
+    ...(roundStartingBehavior === undefined ? {} : { roundStartingBehavior }),
+    ...(options.maxNumberOfRounds === undefined ? {} : { maxRounds: maxRounds === 0 ? null : maxRounds }),
+    ...(options.maxRoundTime === undefined ? {} : { roundTimeMs: roundTime === null || roundTime === 0 ? null : roundTime * 1000 }),
     initialHealth: number(options.initialHealth),
     players,
     rounds,

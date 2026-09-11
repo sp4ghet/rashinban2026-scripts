@@ -26,7 +26,11 @@ const teams = captured.teams.map((team, side) => ({
 }));
 const state = {
   gameId: '6aa2a12c864d352115ae0001', status: 'Ongoing', version: 0,
-  currentRoundNumber: 1, teams, rounds: [], isPaused: false, result: null,
+  currentRoundNumber: 1, teams, rounds: [1, 2].map(number => ({
+    roundNumber: number, panorama: { ...positions[number === 1 ? 0 : 2], countryCode: 'ca', heading: 117.13894, pitch: -5.503892, zoom: 0 },
+    startTime: null, endTime: null, timerStartTime: null,
+    hasProcessedRoundTimeout: false, isHealingRound: false, multiplier: 1, damageMultiplier: 1, skippedByPlayerId: null,
+  })), isPaused: false, result: null,
   created: iso(0), initialHealth: 6000, maxNumberOfRounds: 2,
   movementOptions: structuredClone(captured.movementOptions),
   options: {
@@ -59,7 +63,7 @@ function guess(seconds, side, score, point, distance) {
   player.pin = point;
   player.guesses.push({ roundNumber: state.currentRoundNumber, ...point, distance,
     created: iso(seconds), isTeamsBestGuessOnRound: true, score });
-  state.rounds.at(-1).timerStartTime ??= iso(seconds);
+  state.rounds.find(round => round.roundNumber === state.currentRoundNumber).timerStartTime ??= iso(seconds);
   telemetry(seconds, side, [['GuessWithLatLng', point]]);
   snapshot(seconds, 'DuelPlayerGuessed', player.playerId);
 }
@@ -74,14 +78,14 @@ function results(seconds) {
       healthBefore, healthAfter: team.health, bestGuess: structuredClone(team.players[0].guesses.at(-1)),
       damageDealt: scores[side] > scores[1 - side] ? damage : 0, multiplier: 1 });
   }
-  Object.assign(state.rounds.at(-1), { endTime: iso(seconds), hasProcessedRoundTimeout: true });
+  Object.assign(state.rounds.find(round => round.roundNumber === state.currentRoundNumber), { endTime: iso(seconds), hasProcessedRoundTimeout: true });
   snapshot(seconds, 'DuelRoundTimedOut');
 }
 function playRound(number, offset) {
   state.currentRoundNumber = number;
   teams.forEach(team => { team.players[0].pin = null; });
-  state.rounds.push({
-    roundNumber: number, panorama: { ...positions[0], countryCode: 'ca', heading: 117.13894, pitch: -5.503892, zoom: 0 },
+  const currentRound = state.rounds.find(round => round.roundNumber === number);
+  Object.assign(currentRound, {
     startTime: iso(offset + 3), endTime: iso(offset + 30), timerStartTime: null,
     hasProcessedRoundTimeout: false, isHealingRound: false, multiplier: 1, damageMultiplier: 1, skippedByPlayerId: null,
   });
@@ -105,7 +109,7 @@ function playRound(number, offset) {
       ['MapBoundingBox', { north: 49.6, east: -120.05, south: 49.2, west: -120.5 }],
     ]);
   }
-  const answer = { lat: positions[0].lat, lng: positions[0].lng };
+  const answer = { lat: currentRound.panorama.lat, lng: currentRound.panorama.lng };
   const miss = { lat: 49.1, lng: -120.6 };
   const first = number === 1 ? 0 : 1;
   const pointFor = side => number === 2 || side === 0 ? answer : miss;

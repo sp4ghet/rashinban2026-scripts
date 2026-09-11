@@ -16,6 +16,64 @@ function record(value: unknown): Record<string, unknown> {
 function cloneSample(name: string): Record<string, unknown> {
   return record(structuredClone(sample(name)));
 }
+function masterFixture() {
+  const message = structuredClone(sample('gs2-ws-DuelStarted.json')) as any;
+  message.code = 'DuelMasterSnapshot';
+  const raw = message.duel.state;
+  raw.rounds.push({ ...structuredClone(raw.rounds[0]), roundNumber: raw.currentRoundNumber + 1, startTime: null, timerStartTime: null, endTime: null });
+  raw.options.maxNumberOfRounds = 50; raw.options.maxRoundTime = 60;
+  return { message, raw };
+}
+test('master snapshot adds future panoramas without advancing authoritative round, version, HP or results', () => {
+  const previous = applySnapshot(null, sample('gs2-ws-DuelStarted.json')).state!;
+  const { message, raw } = masterFixture(); raw.version += 2; raw.teams[0].health = 100;
+  const enriched = applySnapshot(previous, message);
+  assert.equal(enriched.accepted, true); assert.equal(enriched.state!.round, previous.round);
+  assert.equal(enriched.state!.version, previous.version); assert.deepEqual(enriched.state!.players, previous.players);
+  assert.equal(enriched.state!.rounds.length, 2); assert.equal(enriched.state!.maxRounds, 50); assert.equal(enriched.state!.roundTimeMs, 60000);
+  assert.equal(applySnapshot(enriched.state, message).accepted, false);
+  const spectator = structuredClone(sample('gs2-ws-DuelStarted.json')) as any; spectator.duel.state.version++;
+  assert.equal(applySnapshot(enriched.state, spectator).state!.rounds.length, 2);
+});
+test('equal-version master enrichment works; stale, other-round, other-game and aborted master data is rejected', () => {
+  const previous = applySnapshot(null, sample('gs2-ws-DuelStarted.json')).state!;
+  const { message, raw } = masterFixture(); assert.equal(applySnapshot(previous, message).accepted, true);
+  raw.version--; assert.equal(applySnapshot(previous, message).accepted, false); raw.version++;
+  raw.currentRoundNumber++; assert.equal(applySnapshot(previous, message).accepted, false); raw.currentRoundNumber--;
+  raw.gameId = 'other'; assert.equal(applySnapshot(previous, message).accepted, false); raw.gameId = previous.gameId;
+  assert.equal(applySnapshot({ ...previous, aborted: true }, message).accepted, false);
+  assert.equal(applySnapshot(null, message).accepted, false);
+});
+test('rollback drops retained future knowledge and later snapshots preserve abort reason', () => {
+  const { message, raw } = masterFixture();
+  let previous = applySnapshot(null, sample('gs2-ws-DuelStarted.json')).state!;
+  previous = applySnapshot(previous, message).state!;
+  const rollback = structuredClone(sample('gs2-ws-DuelStarted.json')) as any; rollback.duel.state.version++;
+  const withHistory = { ...previous, players: structuredClone(previous.players) };
+  withHistory.players[0].guesses.push({ round: previous.round, score: 1, lat: 0, lng: 0, distanceM: 1, createdAtMs: 1 });
+  assert.equal(applySnapshot(withHistory, rollback).state!.rounds.length, 1);
+  const restarted = structuredClone(rollback); restarted.code = 'DuelNewRound'; restarted.duel.state.rounds[0].startTime = null;
+  assert.equal(applySnapshot(previous, restarted).state!.rounds.length, 1);
+  rollback.code = 'DuelAborted'; const aborted = applySnapshot(previous, rollback).state!;
+  rollback.code = 'DuelStarted'; rollback.duel.state.version++;
+  rollback.duel.state.teams[0].health = 1;
+  assert.deepEqual(applySnapshot(aborted, rollback).state, aborted);
+  raw.gameId = 'new-game'; raw.version = 1; message.code = 'DuelStarted'; raw.rounds.pop();
+  assert.equal(applySnapshot(previous, message).state!.rounds.length, 1);
+});
+test('game round-start behavior overrides lobby preference and first-only does not hold later results', () => {
+  const { message, raw } = masterFixture(); message.code = 'DuelStarted';
+  raw.options.masterControlAutoStartRounds = false;
+  for (const behavior of ['Default', 'ManuallyStartFirstRound', 'ManuallyStartAllRounds']) {
+    raw.options.roundStartingBehavior = behavior;
+    const state = applySnapshot(null, message).state!;
+    assert.equal(state.roundStartingBehavior, behavior); assert.equal(state.manualRoundStart, behavior === 'ManuallyStartAllRounds');
+  }
+  delete raw.options.roundStartingBehavior;
+  assert.equal(applySnapshot(null, message).state!.manualRoundStart, true);
+  raw.options.maxRoundTime = 0;
+  assert.equal(applySnapshot(null, message).state!.roundTimeMs, null);
+});
 
 test('repeated snapshot does not become another accepted transition', () => {
   const input = sample('gs2-ws-DuelStarted.json');

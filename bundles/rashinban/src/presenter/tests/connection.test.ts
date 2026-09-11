@@ -122,6 +122,7 @@ function scriptedConnection(
   const messages: Array<{ value: unknown; receivedAtMs: number; bootstrap: boolean }> = [];
   const fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     calls.push({ url: String(input), init });
+    if (String(input).endsWith('/game-master')) return new Response('', { status: 403 });
     const response = responses.shift();
     assert.ok(response, `unexpected fetch ${String(input)}`);
     return response;
@@ -157,6 +158,63 @@ async function flush(): Promise<void> {
   await waitForImmediate();
   await waitForImmediate();
 }
+for (const denial of [403, 404]) test(`optional master ${denial} leaves spectator live and never sends game commands`, async () => {
+  const calls: FetchCall[] = [];
+  const responses = [profile(), party('lobby-one'), phonebook('lobby-one'), spectator('lobby-one')];
+  const harness = scriptedConnection([], { fetch: async (input, init) => {
+    calls.push({ url: String(input), init });
+    return String(input).endsWith('/game-master') ? new Response('', { status: denial }) : responses.shift()!;
+  } });
+  harness.connection.start(); await flush(); harness.sockets[0].open();
+  assert.equal(harness.statuses.at(-1)!.state, 'live'); assert.equal(harness.messages.length, 1);
+  assert.ok(calls.some(call => call.url === 'https://gs2.geoguessr.com/node-lobby-one/lobby-one/game-master'));
+  assert.ok(calls.every(call => call.init?.method === undefined || call.init.method === 'GET'));
+  assert.ok(!JSON.stringify(harness.statuses).includes('test-only-secret'));
+  harness.connection.stop(); assert.deepEqual(harness.clock.activeDelays(), []);
+});
+test('master enrichment fetches bootstrap/new-round/results and rejects superseded or stopped responses', async () => {
+  const pending: { resolve: (value: Response) => void; signal: AbortSignal }[] = [];
+  const responses = [profile(), party('lobby-one'), phonebook('lobby-one'), spectator('lobby-one')];
+  const harness = scriptedConnection([], { fetch: async (input, init) => {
+    if (!String(input).endsWith('/game-master')) return responses.shift()!;
+    return new Promise<Response>(resolve => pending.push({ resolve, signal: init!.signal! }));
+  } });
+  harness.connection.start(); await flush(); harness.sockets[0].open(); assert.equal(pending.length, 1);
+  const state = { gameId: 'lobby-one', version: 4, currentRoundNumber: 2, teams: [{ roundResults: [] }, { roundResults: [] }] };
+  harness.sockets[0].message({ code: 'DuelNewRound', duel: { state } }); await flush();
+  assert.equal(pending.length, 2); assert.equal(pending[0].signal.aborted, true);
+  pending[0].resolve(json({ gameId: 'lobby-one', version: 3 }));
+  pending[1].resolve(json({ ...state, future: 'known' })); await flush();
+  const masters = () => harness.messages.filter(message => (message.value as any).code === 'DuelMasterSnapshot');
+  assert.equal(masters().length, 1); assert.equal(masters()[0].bootstrap, false);
+  harness.sockets[0].message({ code: 'DuelNewRound', duel: { state } }); await flush(); assert.equal(pending.length, 2);
+  const result = { ...state, version: 5, teams: [{ roundResults: [{}] }, { roundResults: [{}] }] };
+  harness.sockets[0].message({ code: 'DuelRoundTimedOut', duel: { state: result } }); await flush(); assert.equal(pending.length, 3);
+  harness.connection.stop(); assert.equal(pending[2].signal.aborted, true); assert.deepEqual(harness.clock.activeDelays(), []);
+  pending[2].resolve(json(result)); await flush(); assert.equal(masters().length, 1);
+});
+test('repeated reconnect retries master enrichment after the previous same-boundary request was cancelled', async () => {
+  const pending: { resolve: (value: Response) => void; signal: AbortSignal }[] = [];
+  const responses = [profile(), party('lobby-one'), phonebook('lobby-one'), spectator('lobby-one')];
+  const harness = scriptedConnection([], { fetch: async (input, init) => {
+    if (!String(input).endsWith('/game-master')) return responses.shift()!;
+    return new Promise<Response>(resolve => pending.push({ resolve, signal: init!.signal! }));
+  } });
+  const state = { gameId: 'lobby-one', version: 4, currentRoundNumber: 2, teams: [] };
+  harness.connection.start(); await flush(); harness.sockets[0].open();
+  pending[0].resolve(json(state)); await flush();
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    harness.sockets[attempt - 1].closeFromServer(1006);
+    const retry = harness.clock.activeDelays().find(delay => delay < 5000)!;
+    harness.clock.runDelay(retry); await flush(); harness.sockets[attempt].open();
+    harness.sockets[attempt].message({ code: 'DuelStarted', duel: { state } }); await flush();
+    assert.equal(pending.length, attempt + 1);
+  }
+  assert.equal(pending[1].signal.aborted, true);
+  pending[1].resolve(json(state)); pending[2].resolve(json(state)); await flush();
+  assert.equal(harness.messages.filter(message => (message.value as any).code === 'DuelMasterSnapshot').length, 2);
+  harness.connection.stop();
+});
 
 test('204 active-party discovery waits normally, discovers a future lobby, and clears a departed party', async () => {
   const harness = scriptedConnection([
@@ -388,7 +446,8 @@ test('party polling recovery restores live only while the socket is healthy', as
     spectator('lobby-one'),
     party('lobby-one'),
   ];
-  const healthyFetch = (async () => {
+  const healthyFetch = (async (input: RequestInfo | URL) => {
+    if (String(input).endsWith('/game-master')) return new Response('', { status: 403 });
     healthyCall += 1;
     if (healthyCall === 5) throw new Error('temporary party failure');
     const response = healthyResponses.shift();

@@ -61,6 +61,26 @@
               "multiplier": 1,
               "damageMultiplier": 1,
               "skippedByPlayerId": null
+            },
+            {
+              "roundNumber": 2,
+              "panorama": {
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
+                "countryCode": "ca",
+                "heading": 117.13894,
+                "pitch": -5.503892,
+                "zoom": 0
+              },
+              "startTime": null,
+              "endTime": null,
+              "timerStartTime": null,
+              "hasProcessedRoundTimeout": false,
+              "isHealingRound": false,
+              "multiplier": 1,
+              "damageMultiplier": 1,
+              "skippedByPlayerId": null
             }
           ],
           "isPaused": false,
@@ -1198,6 +1218,26 @@
               "multiplier": 1,
               "damageMultiplier": 1,
               "skippedByPlayerId": null
+            },
+            {
+              "roundNumber": 2,
+              "panorama": {
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
+                "countryCode": "ca",
+                "heading": 117.13894,
+                "pitch": -5.503892,
+                "zoom": 0
+              },
+              "startTime": null,
+              "endTime": null,
+              "timerStartTime": null,
+              "hasProcessedRoundTimeout": false,
+              "isHealingRound": false,
+              "multiplier": 1,
+              "damageMultiplier": 1,
+              "skippedByPlayerId": null
             }
           ],
           "isPaused": false,
@@ -1511,6 +1551,26 @@
               },
               "startTime": "2026-09-11T00:00:03.000Z",
               "endTime": "2026-09-11T00:00:30.000Z",
+              "timerStartTime": null,
+              "hasProcessedRoundTimeout": false,
+              "isHealingRound": false,
+              "multiplier": 1,
+              "damageMultiplier": 1,
+              "skippedByPlayerId": null
+            },
+            {
+              "roundNumber": 2,
+              "panorama": {
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
+                "countryCode": "ca",
+                "heading": 117.13894,
+                "pitch": -5.503892,
+                "zoom": 0
+              },
+              "startTime": null,
+              "endTime": null,
               "timerStartTime": null,
               "hasProcessedRoundTimeout": false,
               "isHealingRound": false,
@@ -2206,6 +2266,26 @@
               "multiplier": 1,
               "damageMultiplier": 1,
               "skippedByPlayerId": null
+            },
+            {
+              "roundNumber": 2,
+              "panorama": {
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
+                "countryCode": "ca",
+                "heading": 117.13894,
+                "pitch": -5.503892,
+                "zoom": 0
+              },
+              "startTime": null,
+              "endTime": null,
+              "timerStartTime": null,
+              "hasProcessedRoundTimeout": false,
+              "isHealingRound": false,
+              "multiplier": 1,
+              "damageMultiplier": 1,
+              "skippedByPlayerId": null
             }
           ],
           "isPaused": false,
@@ -2549,6 +2629,26 @@
               "startTime": "2026-09-11T00:00:03.000Z",
               "endTime": "2026-09-11T00:00:30.000Z",
               "timerStartTime": "2026-09-11T00:00:15.000Z",
+              "hasProcessedRoundTimeout": false,
+              "isHealingRound": false,
+              "multiplier": 1,
+              "damageMultiplier": 1,
+              "skippedByPlayerId": null
+            },
+            {
+              "roundNumber": 2,
+              "panorama": {
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
+                "countryCode": "ca",
+                "heading": 117.13894,
+                "pitch": -5.503892,
+                "zoom": 0
+              },
+              "startTime": null,
+              "endTime": null,
+              "timerStartTime": null,
               "hasProcessedRoundTimeout": false,
               "isHealingRound": false,
               "multiplier": 1,
@@ -3808,6 +3908,26 @@
               "multiplier": 1,
               "damageMultiplier": 1,
               "skippedByPlayerId": null
+            },
+            {
+              "roundNumber": 2,
+              "panorama": {
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
+                "countryCode": "ca",
+                "heading": 117.13894,
+                "pitch": -5.503892,
+                "zoom": 0
+              },
+              "startTime": null,
+              "endTime": null,
+              "timerStartTime": null,
+              "hasProcessedRoundTimeout": false,
+              "isHealingRound": false,
+              "multiplier": 1,
+              "damageMultiplier": 1,
+              "skippedByPlayerId": null
             }
           ],
           "isPaused": false,
@@ -4078,6 +4198,26 @@
               "multiplier": 1,
               "damageMultiplier": 1,
               "skippedByPlayerId": null
+            },
+            {
+              "roundNumber": 2,
+              "panorama": {
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
+                "countryCode": "ca",
+                "heading": 117.13894,
+                "pitch": -5.503892,
+                "zoom": 0
+              },
+              "startTime": null,
+              "endTime": null,
+              "timerStartTime": null,
+              "hasProcessedRoundTimeout": false,
+              "isHealingRound": false,
+              "multiplier": 1,
+              "damageMultiplier": 1,
+              "skippedByPlayerId": null
             }
           ],
           "isPaused": false,
@@ -4273,6 +4413,26 @@
               "endTime": "2026-09-11T00:00:30.000Z",
               "timerStartTime": "2026-09-11T00:00:15.000Z",
               "hasProcessedRoundTimeout": true,
+              "isHealingRound": false,
+              "multiplier": 1,
+              "damageMultiplier": 1,
+              "skippedByPlayerId": null
+            },
+            {
+              "roundNumber": 2,
+              "panorama": {
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
+                "countryCode": "ca",
+                "heading": 117.13894,
+                "pitch": -5.503892,
+                "zoom": 0
+              },
+              "startTime": null,
+              "endTime": null,
+              "timerStartTime": null,
+              "hasProcessedRoundTimeout": false,
               "isHealingRound": false,
               "multiplier": 1,
               "damageMultiplier": 1,
@@ -4474,9 +4634,9 @@
             {
               "roundNumber": 2,
               "panorama": {
-                "lat": 49.415105420161225,
-                "lng": -120.26104446693604,
-                "panoId": "U2ccr5lQej7rGiGxpmLdew",
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
                 "countryCode": "ca",
                 "heading": 117.13894,
                 "pitch": -5.503892,
@@ -5687,9 +5847,9 @@
             {
               "roundNumber": 2,
               "panorama": {
-                "lat": 49.415105420161225,
-                "lng": -120.26104446693604,
-                "panoId": "U2ccr5lQej7rGiGxpmLdew",
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
                 "countryCode": "ca",
                 "heading": 117.13894,
                 "pitch": -5.503892,
@@ -6082,9 +6242,9 @@
             {
               "roundNumber": 2,
               "panorama": {
-                "lat": 49.415105420161225,
-                "lng": -120.26104446693604,
-                "panoId": "U2ccr5lQej7rGiGxpmLdew",
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
                 "countryCode": "ca",
                 "heading": 117.13894,
                 "pitch": -5.503892,
@@ -6712,8 +6872,8 @@
           "time": 1789084873960,
           "type": "PinPosition",
           "payload": {
-            "lat": 49.415105420161225,
-            "lng": -120.26104446693604
+            "lat": 49.41416336761251,
+            "lng": -120.2614622901268
           }
         }
       ]
@@ -6786,8 +6946,8 @@
                 {
                   "playerId": "65701c932c6e4a0a9881791e",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -6847,9 +7007,9 @@
             {
               "roundNumber": 2,
               "panorama": {
-                "lat": 49.415105420161225,
-                "lng": -120.26104446693604,
-                "panoId": "U2ccr5lQej7rGiGxpmLdew",
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
                 "countryCode": "ca",
                 "heading": 117.13894,
                 "pitch": -5.503892,
@@ -7126,8 +7286,8 @@
           "time": 1789084874960,
           "type": "GuessWithLatLng",
           "payload": {
-            "lat": 49.415105420161225,
-            "lng": -120.26104446693604
+            "lat": 49.41416336761251,
+            "lng": -120.2614622901268
           }
         }
       ]
@@ -7200,8 +7360,8 @@
                 {
                   "playerId": "65701c932c6e4a0a9881791e",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -7215,8 +7375,8 @@
                     },
                     {
                       "roundNumber": 2,
-                      "lat": 49.415105420161225,
-                      "lng": -120.26104446693604,
+                      "lat": 49.41416336761251,
+                      "lng": -120.2614622901268,
                       "distance": 0,
                       "created": "2026-09-11T00:01:15.000Z",
                       "isTeamsBestGuessOnRound": true,
@@ -7270,9 +7430,9 @@
             {
               "roundNumber": 2,
               "panorama": {
-                "lat": 49.415105420161225,
-                "lng": -120.26104446693604,
-                "panoId": "U2ccr5lQej7rGiGxpmLdew",
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
                 "countryCode": "ca",
                 "heading": 117.13894,
                 "pitch": -5.503892,
@@ -8455,8 +8615,8 @@
           "time": 1789084880960,
           "type": "PinPosition",
           "payload": {
-            "lat": 49.415105420161225,
-            "lng": -120.26104446693604
+            "lat": 49.41416336761251,
+            "lng": -120.2614622901268
           }
         }
       ]
@@ -8484,8 +8644,8 @@
                 {
                   "playerId": "6aa29a4e4752c83aa99d7655",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -8529,8 +8689,8 @@
                 {
                   "playerId": "65701c932c6e4a0a9881791e",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -8544,8 +8704,8 @@
                     },
                     {
                       "roundNumber": 2,
-                      "lat": 49.415105420161225,
-                      "lng": -120.26104446693604,
+                      "lat": 49.41416336761251,
+                      "lng": -120.2614622901268,
                       "distance": 0,
                       "created": "2026-09-11T00:01:15.000Z",
                       "isTeamsBestGuessOnRound": true,
@@ -8599,9 +8759,9 @@
             {
               "roundNumber": 2,
               "panorama": {
-                "lat": 49.415105420161225,
-                "lng": -120.26104446693604,
-                "panoId": "U2ccr5lQej7rGiGxpmLdew",
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
                 "countryCode": "ca",
                 "heading": 117.13894,
                 "pitch": -5.503892,
@@ -8790,8 +8950,8 @@
           "time": 1789084887960,
           "type": "GuessWithLatLng",
           "payload": {
-            "lat": 49.415105420161225,
-            "lng": -120.26104446693604
+            "lat": 49.41416336761251,
+            "lng": -120.2614622901268
           }
         }
       ]
@@ -8819,8 +8979,8 @@
                 {
                   "playerId": "6aa29a4e4752c83aa99d7655",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -8834,8 +8994,8 @@
                     },
                     {
                       "roundNumber": 2,
-                      "lat": 49.415105420161225,
-                      "lng": -120.26104446693604,
+                      "lat": 49.41416336761251,
+                      "lng": -120.2614622901268,
                       "distance": 0,
                       "created": "2026-09-11T00:01:28.000Z",
                       "isTeamsBestGuessOnRound": true,
@@ -8873,8 +9033,8 @@
                 {
                   "playerId": "65701c932c6e4a0a9881791e",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -8888,8 +9048,8 @@
                     },
                     {
                       "roundNumber": 2,
-                      "lat": 49.415105420161225,
-                      "lng": -120.26104446693604,
+                      "lat": 49.41416336761251,
+                      "lng": -120.2614622901268,
                       "distance": 0,
                       "created": "2026-09-11T00:01:15.000Z",
                       "isTeamsBestGuessOnRound": true,
@@ -8943,9 +9103,9 @@
             {
               "roundNumber": 2,
               "panorama": {
-                "lat": 49.415105420161225,
-                "lng": -120.26104446693604,
-                "panoId": "U2ccr5lQej7rGiGxpmLdew",
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
                 "countryCode": "ca",
                 "heading": 117.13894,
                 "pitch": -5.503892,
@@ -9056,8 +9216,8 @@
                 {
                   "playerId": "6aa29a4e4752c83aa99d7655",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -9071,8 +9231,8 @@
                     },
                     {
                       "roundNumber": 2,
-                      "lat": 49.415105420161225,
-                      "lng": -120.26104446693604,
+                      "lat": 49.41416336761251,
+                      "lng": -120.2614622901268,
                       "distance": 0,
                       "created": "2026-09-11T00:01:28.000Z",
                       "isTeamsBestGuessOnRound": true,
@@ -9106,8 +9266,8 @@
                   "healthAfter": 6000,
                   "bestGuess": {
                     "roundNumber": 2,
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604,
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268,
                     "distance": 0,
                     "created": "2026-09-11T00:01:28.000Z",
                     "isTeamsBestGuessOnRound": true,
@@ -9127,8 +9287,8 @@
                 {
                   "playerId": "65701c932c6e4a0a9881791e",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -9142,8 +9302,8 @@
                     },
                     {
                       "roundNumber": 2,
-                      "lat": 49.415105420161225,
-                      "lng": -120.26104446693604,
+                      "lat": 49.41416336761251,
+                      "lng": -120.2614622901268,
                       "distance": 0,
                       "created": "2026-09-11T00:01:15.000Z",
                       "isTeamsBestGuessOnRound": true,
@@ -9177,8 +9337,8 @@
                   "healthAfter": 5700,
                   "bestGuess": {
                     "roundNumber": 2,
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604,
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268,
                     "distance": 0,
                     "created": "2026-09-11T00:01:15.000Z",
                     "isTeamsBestGuessOnRound": true,
@@ -9214,9 +9374,9 @@
             {
               "roundNumber": 2,
               "panorama": {
-                "lat": 49.415105420161225,
-                "lng": -120.26104446693604,
-                "panoId": "U2ccr5lQej7rGiGxpmLdew",
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
                 "countryCode": "ca",
                 "heading": 117.13894,
                 "pitch": -5.503892,
@@ -9327,8 +9487,8 @@
                 {
                   "playerId": "6aa29a4e4752c83aa99d7655",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -9342,8 +9502,8 @@
                     },
                     {
                       "roundNumber": 2,
-                      "lat": 49.415105420161225,
-                      "lng": -120.26104446693604,
+                      "lat": 49.41416336761251,
+                      "lng": -120.2614622901268,
                       "distance": 0,
                       "created": "2026-09-11T00:01:28.000Z",
                       "isTeamsBestGuessOnRound": true,
@@ -9377,8 +9537,8 @@
                   "healthAfter": 6000,
                   "bestGuess": {
                     "roundNumber": 2,
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604,
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268,
                     "distance": 0,
                     "created": "2026-09-11T00:01:28.000Z",
                     "isTeamsBestGuessOnRound": true,
@@ -9398,8 +9558,8 @@
                 {
                   "playerId": "65701c932c6e4a0a9881791e",
                   "pin": {
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268
                   },
                   "guesses": [
                     {
@@ -9413,8 +9573,8 @@
                     },
                     {
                       "roundNumber": 2,
-                      "lat": 49.415105420161225,
-                      "lng": -120.26104446693604,
+                      "lat": 49.41416336761251,
+                      "lng": -120.2614622901268,
                       "distance": 0,
                       "created": "2026-09-11T00:01:15.000Z",
                       "isTeamsBestGuessOnRound": true,
@@ -9448,8 +9608,8 @@
                   "healthAfter": 5700,
                   "bestGuess": {
                     "roundNumber": 2,
-                    "lat": 49.415105420161225,
-                    "lng": -120.26104446693604,
+                    "lat": 49.41416336761251,
+                    "lng": -120.2614622901268,
                     "distance": 0,
                     "created": "2026-09-11T00:01:15.000Z",
                     "isTeamsBestGuessOnRound": true,
@@ -9485,9 +9645,9 @@
             {
               "roundNumber": 2,
               "panorama": {
-                "lat": 49.415105420161225,
-                "lng": -120.26104446693604,
-                "panoId": "U2ccr5lQej7rGiGxpmLdew",
+                "lat": 49.41416336761251,
+                "lng": -120.2614622901268,
+                "panoId": "hf8Q0ZxJE-uRDeAUkKoG9Q",
                 "countryCode": "ca",
                 "heading": 117.13894,
                 "pitch": -5.503892,

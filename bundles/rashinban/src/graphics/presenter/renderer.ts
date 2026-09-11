@@ -1,7 +1,7 @@
 import type { Bounds, DuelState, Mode, Panorama, Phase, Point, Projection, Views } from '../../types/presenter.ts';
 import { lockLayout } from './layout.ts';
 
-export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean };
+export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean; previewRound?: number | null; prewarmRound?: number | null };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
 export type MapFrame = { visible: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[] };
@@ -36,6 +36,12 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
       if (disposed) return;
       const { state, views, projection, source } = frame;
       const plan = rendererPlan(state.mode, source, projection.phase);
+      const previewPhase = ['waiting-host', 'pre-round', 'between-rounds', 'results-reveal'].includes(projection.phase);
+      const warmNumber = frame.previewRound ?? frame.prewarmRound;
+      const preview = state.status !== 'Finished' && !state.aborted && warmNumber != null
+        && warmNumber >= state.round && warmNumber <= state.round + 1
+        && warmNumber <= (state.maxRounds ?? Infinity) ? state.rounds.find(round => round.number === warmNumber) : undefined;
+      const showPreview = !!preview && frame.previewRound === preview.number && previewPhase && projection.answer === null;
       plan.resultsMap &&= projection.answer !== null;
       // Replicants arrive independently; result geometry follows the same round
       // as the projection. Older callers without a displayed round use state.
@@ -61,10 +67,16 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
         const lock = lockLayout(frame);
         const locked = sides.map(side => lock === side || lock === 'both');
         const slots = state.mode === 'NMPZ' ? ['shared-panorama'] : ['left-view', 'right-view'];
+        if (preview && source === 'rendered' && !panos.has('preview-panorama')) panos.set('preview-panorama', adapter.panorama('preview-panorama'));
         for (const slot of slots) {
           if (prepare && source === 'rendered' && !panos.has(slot)) panos.set(slot, adapter.panorama(slot));
         }
         panos.forEach((pano, slot) => {
+          if (slot === 'preview-panorama') {
+            pano.render(preview?.panorama ?? null, { visible: showPreview && source === 'rendered',
+              identity: `${state.gameId}:${preview?.number ?? ''}:preview:${ids.join(':')}` });
+            return;
+          }
           const index = slot === 'right-view' ? 1 : 0;
           const shared = slot === 'shared-panorama';
           const value = prepare && slots.includes(slot)
@@ -108,6 +120,8 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
           }
           maps.get('results-map')!.render({ visible: true, bounds: resultBounds(pins.map(pin => pin.point)), pins, lines });
         } else maps.get('results-map')?.render({ visible: false, bounds: null, pins: [], lines: [] });
+        if (showPreview && source === 'rendered' && !maps.has('preview-map')) maps.set('preview-map', adapter.map('preview-map'));
+        maps.get('preview-map')?.render({ visible: showPreview && source === 'rendered', bounds: null, pins: [], lines: [] });
       } catch { clear(); failed = true; onError('Google Maps view unavailable'); }
     },
     dispose() { clear(); disposed = true; },

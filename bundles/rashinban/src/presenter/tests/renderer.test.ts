@@ -30,6 +30,26 @@ function lockPlayer(f: RenderFrame, index: number) {
   player.guesses.push({ lat: 1 + index, lng: 179 - index, round: f.state.round, score: 4000, distanceM: 100, createdAtMs: 1 });
   f.projection.players.push({ id: player.id, locked: true, health: 6000, score: null, distanceM: null });
 }
+test('known preview round uses its own persistent panorama and empty world map without changing the server round', () => {
+  const f = frame(); const next = structuredClone(f.state.rounds[0]); next.number = f.state.round + 1;
+  next.panorama.panoId = 'upcoming-pano'; f.state.rounds.push(next);
+  const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  f.projection.phase = 'results-transition'; f.prewarmRound = next.number; renderer.render(f);
+  const preview = fake.panos.find(p => p.slot === 'preview-panorama')!;
+  assert.equal(preview.frames.at(-1)?.panoId, 'upcoming-pano'); assert.equal(preview.options.at(-1).visible, false);
+  f.projection.phase = 'between-rounds'; f.previewRound = next.number; renderer.render(f);
+  assert.equal(preview.options.at(-1).visible, true);
+  const map = fake.maps.find(map => map.slot === 'preview-map')!.frames.at(-1)!;
+  assert.equal(map.visible, true); assert.equal(map.bounds, null); assert.deepEqual(map.pins, []);
+  assert.ok(fake.panos.filter(p => p !== preview).every(p => !p.options.at(-1).visible));
+  const identity = preview.options.at(-1).identity;
+  f.playerIds!.left = null; renderer.render(f); assert.notEqual(preview.options.at(-1).identity, identity);
+  f.source = 'chroma'; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
+  assert.ok(fake.maps.every(map => !map.frames.at(-1)!.visible));
+  f.source = 'rendered'; f.projection.phase = 'live'; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
+  f.projection.phase = 'between-rounds'; f.state.status = 'Finished'; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
+  assert.equal(f.state.round, 1); assert.equal(fake.panos.filter(p => p.slot === 'preview-panorama').length, 1);
+});
 test('frozen celebration frame retains visible active imagery and locked maps without revealing an answer', () => {
   const f = frame(); f.state.mode = 'MOVE'; const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
   lockPlayer(f, 0); renderer.render(f);

@@ -6,6 +6,12 @@ recording of a real match. It uses the already mapped captured players:
 left/blue `6aa29a4e4752c83aa99d7655`, right/red `65701c932c6e4a0a9881791e`.
 Existing custom player mappings still apply; the fixture does not rewrite them.
 
+The initial snapshot also contains the unstarted second round, matching the
+privileged game-master API. Once round 1 scoring finishes, the presenter previews
+that distinct next panorama while keeping round 1's settled HP. This happens in
+both automatic and manual start modes. At the two-round limit, it retains the
+final results until Finished arrives, then holds the winner and round summary.
+
 | Elapsed | What to watch |
 | --- | --- |
 | 0–3s | Round 1 pre-round countdown and exact-pano prewarm |

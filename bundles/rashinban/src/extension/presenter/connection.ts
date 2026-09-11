@@ -170,6 +170,8 @@ export function createConnection(
   let authAbort: AbortController | null = null;
   let partyAbort: AbortController | null = null;
   let lobbyAbort: AbortController | null = null;
+  let masterAbort: AbortController | null = null;
+  let masterBoundary = '';
   let cancelPartyTimer: (() => void) | null = null;
   let cancelHeartbeat: (() => void) | null = null;
   let cancelPartyRetry: (() => void) | null = null;
@@ -233,6 +235,8 @@ export function createConnection(
   }
 
   function cancelSocketWork(): void {
+    masterAbort?.abort(); masterAbort = null;
+    masterBoundary = '';
     socketHealthy = false;
     cancelHeartbeat?.();
     cancelHeartbeat = null;
@@ -318,6 +322,7 @@ export function createConnection(
     lobbyAbort = null;
     cancelSocketWork();
     currentLobbyId = lobbyId;
+    masterBoundary = '';
     socketAttempt = 0;
     lobbyRetryAttempt = 0;
     return lobbyGeneration;
@@ -414,6 +419,7 @@ export function createConnection(
       status.lastUpdateMs = receivedAtMs;
       lobbyRetryAttempt = 0;
       openLobbySocket(session, lobby, lobbyId, nodeId, false);
+      void enrichFromMaster(session, lobby, nodeId, gameId, 'bootstrap');
     } catch (error) {
       if (!sessionIsCurrent(session) || !lobbyIsCurrent(lobby, controller.signal)) return;
       if (error instanceof AuthenticationError) {
@@ -422,6 +428,28 @@ export function createConnection(
       }
       publish({ state: 'stale', error: 'GeoGuessr connection interrupted' });
       scheduleLobbyRetry(() => void bootstrapLobby(session, lobby, lobbyId));
+    }
+  }
+
+  async function enrichFromMaster(session: number, lobby: number, nodeId: string, gameId: string, boundary: string): Promise<void> {
+    if (!sessionIsCurrent(session) || !lobbyIsCurrent(lobby) || boundary === masterBoundary) return;
+    masterBoundary = boundary;
+    masterAbort?.abort();
+    const controller = new AbortController(); masterAbort = controller;
+    const cancelTimeout = deps.schedule(() => controller.abort(), 5000);
+    controller.signal.addEventListener('abort', cancelTimeout, { once: true });
+    try {
+      const snapshot = await requestJson(`https://gs2.geoguessr.com/${encodeURIComponent(nodeId)}/${encodeURIComponent(gameId)}/game-master`, controller.signal);
+      if (!sessionIsCurrent(session) || !lobbyIsCurrent(lobby, controller.signal) || masterAbort !== controller) return;
+      if (!isRecord(snapshot) || snapshot.gameId !== gameId) return;
+      sink.onMessage({ code: 'DuelMasterSnapshot', gameId, duel: { state: snapshot } }, deps.now(), false, status.serverOffsetMs);
+    } catch {
+      // Privileged knowledge is optional: denied/missing master access must not
+      // stop the healthy spectator connection or expose response details.
+    } finally {
+      cancelTimeout();
+      controller.signal.removeEventListener('abort', cancelTimeout);
+      if (masterAbort === controller) masterAbort = null;
     }
   }
 
@@ -494,12 +522,23 @@ export function createConnection(
         reconnectSnapshotPending && isRecord(message) && message.code === 'DuelStarted';
       if (isReconnectSnapshot) reconnectSnapshotPending = false;
       sink.onMessage(message, receivedAtMs, isReconnectSnapshot, status.serverOffsetMs);
+      if (isRecord(message) && isRecord(message.duel) && isRecord(message.duel.state)) {
+        const state = message.duel.state;
+        if (typeof state.gameId === 'string' && ['DuelStarted', 'DuelNewRound', 'DuelRoundTimedOut', 'DuelFinished'].includes(String(message.code))) {
+          const resolved = Array.isArray(state.teams) ? state.teams.reduce((count, team) =>
+            count + (isRecord(team) && Array.isArray(team.roundResults) ? team.roundResults.length : 0), 0) : 0;
+          void enrichFromMaster(session, lobby, nodeId, state.gameId, `${state.gameId}:${state.currentRoundNumber}:${resolved}:${message.code === 'DuelNewRound' ? state.version : ''}:${isReconnectSnapshot ? 'reconnect' : ''}`);
+        }
+        if (message.code === 'DuelAborted') { masterAbort?.abort(); masterAbort = null; }
+      }
       publish({ lastUpdateMs: receivedAtMs });
     });
 
     opened.onClose((code) => {
       if (socket !== opened || !sessionIsCurrent(session) || !lobbyIsCurrent(lobby)) return;
       socket = null;
+      masterAbort?.abort(); masterAbort = null;
+      masterBoundary = '';
       socketHealthy = false;
       cancelHeartbeat?.();
       cancelHeartbeat = null;
@@ -523,6 +562,7 @@ export function createConnection(
     partyHealthy = false;
     sessionGeneration += 1;
     lobbyGeneration += 1;
+    masterBoundary = '';
     authAbort?.abort();
     partyAbort?.abort();
     lobbyAbort?.abort();
