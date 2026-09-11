@@ -1,10 +1,11 @@
 import type { Bounds, DuelState, Mode, Panorama, Phase, Point, Projection, Views } from '../../types/presenter.ts';
+import { tieRangeMapGeometry, type TieRangeMapGeometry } from '../../presenter/tie-range-geometry.ts';
 import { lockLayout } from './layout.ts';
 
 export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean; previewRound?: number | null; prewarmRound?: number | null; preparedResults?: MapFrame };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
-export type MapFrame = { visible: boolean; prepare?: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[] };
+export type MapFrame = { visible: boolean; prepare?: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[]; tieRange?: TieRangeMapGeometry };
 export interface MapSurface { render(frame: MapFrame): void; dispose(): void }
 export type PanoramaOptions = { visible: boolean; identity: string; frozen?: boolean };
 export interface PanoramaSurface { render(panorama: Panorama | null, options?: PanoramaOptions): void; dispose(): void }
@@ -25,6 +26,13 @@ export function resultBounds(points: Point[]): Bounds | null {
   return { north: Math.max(...points.map(p => p.lat)), south: Math.min(...points.map(p => p.lat)),
     west: lngs[(start + 1) % lngs.length], east: lngs[start] };
 }
+export function paintResultMapLabel(root: ParentNode, frame: MapFrame | null, revealed: boolean): void {
+  const label = root.querySelector<HTMLElement>('#tie-range-label');
+  if (!label) return;
+  const text = revealed ? frame?.tieRange?.label ?? '' : '';
+  label.textContent = text;
+  label.hidden = !text;
+}
 const sides = ['left', 'right'] as const;
 const colors = { left: '#458af2', right: '#f05060' };
 /** Geometry may be prepared while hidden; only the gated projection makes it visible. */
@@ -41,7 +49,10 @@ export function resultMapFrame(state: DuelState, round: number | null, playerIds
     const point = { lat: guess.lat, lng: guess.lng };
     pins.push({ point, color: colors[side], label: side }); lines.push({ from: answer, to: point, color: colors[side] });
   }
-  return { visible: false, prepare: true, bounds: resultBounds(pins.map(pin => pin.point)), pins, lines };
+  const tieRange = tieRangeMapGeometry(state, round!, playerIds, answer) ?? undefined;
+  const bounds = tieRange?.world ? null : resultBounds([...pins.map(pin => pin.point), ...(tieRange?.framePoints ?? [])]);
+  if (bounds && tieRange?.fullLongitude) { bounds.west = -180; bounds.east = 180; }
+  return { visible: false, prepare: true, padding: tieRange ? 64 : undefined, bounds, pins, lines, tieRange };
 }
 export function createRenderer(adapter: RendererAdapter, onError: (message: string) => void): GameRenderer {
   let key = ''; let failed = false; let disposed = false;
