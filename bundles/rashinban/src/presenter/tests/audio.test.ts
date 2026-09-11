@@ -148,7 +148,7 @@ test('continuous countdown seeks on late entry, fades on early results, and skip
   pending.audio.sync({ ...t, phase: 'results-transition', cues: [] }, DEFAULT_SETTINGS, 1100);
   assert.equal(pending.sources[0].stops, 1);
 });
-test('countdown fades at its natural end but second lock-in fades it immediately, once', async () => {
+test('timeout plays the unmodified countdown ending; early second lock-in fades once', async () => {
   for (const early of [false,true]) {
     const p = port(); await p.audio.load(cueMedia); p.audio.lease(40000,1000);
     const t = { ...timeline, cues: [cue('timer','countdown',1000,10000)] };
@@ -165,10 +165,10 @@ test('countdown fades at its natural end but second lock-in fades it immediately
     } else {
       p.context.currentTime=19; p.audio.sync({...t,phase:'results-transition',cues:[]},DEFAULT_SETTINGS,10000);
       assert.equal(p.sources[0].stops,0,'timeout preserves the tail');
-      assert.equal(envelope.at(21),1); assert.equal(envelope.at(21.5),0.5); assert.equal(envelope.at(22),0);
+      assert.equal(envelope.at(21),1); assert.equal(envelope.at(21.5),1); assert.equal(envelope.at(21.999),1);
       p.context.currentTime=21.5; p.audio.sync({...t,phase:'results-reveal',cues:[]},{...DEFAULT_SETTINGS,muted:true},12500);
       assert.equal(p.sources[0].output.gain.at(21.5),0);
-      assert.equal(envelope.at(22),0,'mute must not reset the natural ending');
+      assert.equal(envelope.at(21.999),1,'mute uses the volume gate, without modifying the authored ending');
     }
   }
 });

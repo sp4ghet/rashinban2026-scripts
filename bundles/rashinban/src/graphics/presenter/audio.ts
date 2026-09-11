@@ -81,8 +81,8 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
         const fadeInEnd = Math.min(start + 0.2, naturalEnd);
         envelope.gain.setValueAtTime(0, start);
         envelope.gain.linearRampToValueAtTime(1, fadeInEnd);
-        envelope.gain.setValueAtTime(1, Math.max(fadeInEnd, naturalEnd - 1));
-        envelope.gain.linearRampToValueAtTime(0, naturalEnd);
+        // Keep the authored ending intact on timeout. Only an early second
+        // guess/result schedules a fade-out; the buffer otherwise ends itself.
       } else gain.connect(gate);
       source.start(start, cue.kind === 'count' ? Math.max(0, (now - cue.atMs) / 1000) % buffer.duration : offset);
       if (cue.kind === 'count' || cue.kind === 'five-k') source.stop(time + Math.max(0, (end - now) / 1000));

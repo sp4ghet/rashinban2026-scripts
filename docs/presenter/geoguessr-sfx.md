@@ -33,10 +33,10 @@ while connections after the deadline do not start a stale tail. Repeated
 snapshots and second guesses do not restart it. A same-number round restart
 with a new start timestamp creates a fresh countdown run.
 
-If the timer expires, the clip keeps its three-second tail with a fade over
-its final second. If both guesses or results arrive before the deadline,
+If the timer expires, the clip keeps its complete, unmodified three-second tail
+and ends naturally, with no scheduled fade or stop. If both guesses or results arrive before the deadline,
 an active clip fades out over one second; a pending clip is canceled. A 200ms
-fade-in follows the research. The final-second fade is a custom soft ending.
+fade-in follows the research.
 Pause/review alone leaves the clip running; explicit mute, lease loss, abort,
 new game/round, rollback, or source disposal still take precedence.
 See the main checkout's
