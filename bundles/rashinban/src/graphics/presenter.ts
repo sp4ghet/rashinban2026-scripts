@@ -127,7 +127,7 @@ function frame() {
     write('phase-label', label);
     if (state && views.value) {
       previousFrame = { state, views: views.value, projection: visible, source: options.viewSource,
-        playerIds: { left: match.left.playerId, right: match.right.playerId } };
+        displayedRound: timing.round, playerIds: { left: match.left.playerId, right: match.right.playerId } };
       renderer?.render(previousFrame);
     }
   }

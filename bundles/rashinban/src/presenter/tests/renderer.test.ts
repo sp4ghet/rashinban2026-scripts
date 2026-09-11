@@ -4,6 +4,8 @@ import { createRenderer, rendererPlan, resultBounds, type MapFrame, type Rendere
 import type { Panorama } from '../../types/presenter.ts';
 import { applySnapshot } from '../normalize.ts';
 import { seedViews } from '../telemetry.ts';
+import { advanceTimeline, DEFAULT_TIMING } from '../timeline.ts';
+import { project } from '../projection.ts';
 import { sample } from './fixtures.ts';
 import { createGoogleRenderer, googleAdapter, googlePanoId } from '../../graphics/presenter/google.ts';
 
@@ -76,6 +78,27 @@ test('map construction failure is sanitized, disposes partial resources and does
   const renderer = createRenderer(fake.adapter, value => errors.push(value));
   renderer.render(f); renderer.render(f);
   assert.deepEqual(errors, ['Google Maps view unavailable']); assert.ok(fake.panos.every(p => p.disposed));
+});
+test('result map uses displayed round when a newer duel arrives before its timeline', () => {
+  const rows = sample('gs2-ws-full-duel-sequence.json') as Array<{ message: any }>;
+  const resolved = (number: number) => applySnapshot(null, rows.find(row => row.message.duel?.state.currentRoundNumber === number
+    && row.message.duel.state.teams.every((team: any) => team.roundResults.some((result: any) => result.roundNumber === number)))!.message).state!;
+  const older = resolved(1); const state = resolved(2); const now = 1900000000000;
+  const timeline = advanceTimeline(null, older, now, true, DEFAULT_TIMING);
+  const projection = project(state, timeline, now);
+  assert.equal(state.round, 2); assert.equal(timeline.round, 1);
+  assert.deepEqual(projection.players.map(player => player.score), [4240, 4164]);
+  assert.deepEqual(projection.players.map(player => player.distanceM), [247202.9444761016, 274587.2846388461]);
+  const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  renderer.render({ state, views: seedViews(state), projection, source: 'chroma', displayedRound: timeline.round,
+    playerIds: { left: state.players[0].id, right: state.players[1].id } });
+  const visible = fake.maps.at(-1)!.frames.at(-1)!;
+  const answer = { lat: 14.91906512738777, lng: 104.72329554263634 };
+  const left = { lat: 15.421321155170894, lng: 102.4794131119633 };
+  const right = { lat: 15.287361559113538, lng: 102.19410991386636 };
+  assert.deepEqual(visible.pins.map(pin => pin.point), [answer, left, right]);
+  assert.deepEqual(visible.lines.map(line => [line.from, line.to]), [[answer, left], [answer, right]]);
+  assert.ok(visible.bounds!.west > 100 && visible.bounds!.east < 110);
 });
 test('results bounds choose shortest longitude arc and handle empty or coincident points', () => {
   assert.equal(resultBounds([]), null);

@@ -1,6 +1,6 @@
 import type { Bounds, DuelState, Mode, Panorama, Phase, Point, Projection, Views } from '../../types/presenter.ts';
 
-export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; playerIds?: { left: string | null; right: string | null } };
+export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null } };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
 export type MapFrame = { visible: boolean; inactive?: boolean; bounds: Bounds | null; pins: { point: Point; color: string; label: string }[]; lines: { from: Point; to: Point; color: string }[] };
@@ -35,7 +35,10 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
       const { state, views, projection, source } = frame;
       const plan = rendererPlan(state.mode, source, projection.phase);
       plan.resultsMap &&= projection.answer !== null;
-      const nextKey = `${state.gameId}:${state.round}:${state.mode}:${source}:${JSON.stringify(plan)}`;
+      // Replicants arrive independently; result geometry follows the same round
+      // as the projection. Older callers without a displayed round use state.
+      const displayedRound = frame.displayedRound === undefined ? state.round : frame.displayedRound;
+      const nextKey = `${state.gameId}:${plan.resultsMap ? displayedRound : state.round}:${state.mode}:${source}:${JSON.stringify(plan)}`;
       if (key !== nextKey) { clear(); key = nextKey; failed = false; }
       if (failed) return;
       try {
@@ -63,7 +66,7 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
           const lines: MapFrame['lines'] = [];
           for (const side of sides) {
             const player = state.players.find(player => player.id === frame.playerIds?.[side]);
-            const guess = player?.results.find(result => result.round === state.round)?.bestGuess;
+            const guess = player?.results.find(result => result.round === displayedRound)?.bestGuess;
             if (!guess) continue;
             const point = { lat: guess.lat, lng: guess.lng };
             pins.push({ point, color: colors[side], label: side }); lines.push({ from: answer, to: point, color: colors[side] });

@@ -179,9 +179,11 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
     const adjusted = offset === 0 ? message : shiftMessageClock(message, -offset);
     const accepted = applySnapshot(duel.value, adjusted);
     if (accepted.accepted && accepted.state) {
-      duel.value = accepted.state;
       const state = accepted.state;
-      if (bootstrap || !views.value || views.value.gameId !== state.gameId || views.value.round !== state.round) views.value = seedViews(state);
+      const nextViews = bootstrap || !views.value || views.value.gameId !== state.gameId || views.value.round !== state.round
+        ? seedViews(state) : views.value;
+      duel.value = state;
+      views.value = nextViews;
       tick(bootstrap);
     } else if (bootstrap && accepted.state && accepted.warnings.length === 0) {
       // Reconnect can return the same version. Restore its current presentation

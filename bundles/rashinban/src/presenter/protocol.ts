@@ -195,11 +195,14 @@ function decodeState(message: RecordValue, code: string): DuelState {
 
   const options = record(source.options);
   const result = source.result === null ? null : record(source.result);
+  const currentRound = integer(source.currentRoundNumber);
+  const rounds = array(source.rounds).map(round);
+  if (!rounds.some(candidate => candidate.number === currentRound)) invalid();
 
   return {
     gameId: string(source.gameId),
     version: integer(source.version),
-    round: integer(source.currentRoundNumber),
+    round: currentRound,
     mode: mode(options.movementOptions),
     status: status(source.status),
     paused: boolean(source.isPaused),
@@ -207,7 +210,7 @@ function decodeState(message: RecordValue, code: string): DuelState {
       || options.masterControlAutoStartRounds === false,
     initialHealth: number(options.initialHealth),
     players,
-    rounds: array(source.rounds).map(round),
+    rounds,
     aborted: code === 'DuelAborted',
     winnerTeamId: result === null ? null : nullableString(result.winningTeamId),
     isDraw: result === null ? false : boolean(result.isDraw),

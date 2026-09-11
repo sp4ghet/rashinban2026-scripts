@@ -9,6 +9,55 @@ import { EMPTY_MEDIA } from '../media.ts';
 import { sample } from './fixtures.ts';
 import type { ConnectionDeps } from '../../extension/presenter/connection.ts';
 
+for (const malformed of ['empty rounds', 'missing current round']) test(`live ingestion rejects ${malformed} without replacing accepted presentation`, async () => {
+  const first = sample('gs2-ws-DuelStarted-created-not-started.json') as any;
+  const reps = new Map<string, { value: any }>();
+  const previousSecret = process.env.GEOGUESSR_NCFA;
+  process.env.GEOGUESSR_NCFA = 'test-only-in-memory';
+  let onMessage: (text: string) => void = () => assert.fail('Socket not connected');
+  const responses = [
+    { user: { id: 'spectator' } },
+    { partyId: 'party', lobbyId: first.gameId, gameState: 'Ongoing', gameType: 'Duels' },
+    { gameId: first.gameId, gameServerNodeId: 'node', status: 'Active' },
+    first.duel.state,
+  ];
+  const transport: ConnectionDeps = {
+    fetch: async () => new Response(JSON.stringify(responses.shift()), { status: 200 }),
+    now: () => 1900000000000, schedule: () => () => {},
+    openSocket: () => ({ send() {}, close() {}, onOpen() {}, onMessage(fn) { onMessage = fn; }, onClose() {} }),
+  };
+  try {
+    registerPresenter({
+      bundleConfig: { presenter: { input: 'live', partyId: 'party', clientVersion: 'fixture' } },
+      Replicant(name: string, opts: any) { const rep = { value: opts.defaultValue }; reps.set(name, rep); return rep; },
+      Router: express.Router, mount() {}, listenFor() {}, log: { info() {}, warn() {} },
+    } as unknown as NodeCG.ServerAPI, { now: transport.now, schedule: transport.schedule, connection: transport });
+    await new Promise(resolve => setImmediate(resolve));
+    await new Promise(resolve => setImmediate(resolve));
+    const names = ['presenterDuel', 'presenterViews', 'presenterTimeline'];
+    const before = names.map(name => reps.get(name)!.value);
+    const contents = structuredClone(before);
+    assert.equal(before[0].status, 'Created');
+    assert.equal(before[1].round, 1);
+    assert.equal(before[2].phase, 'waiting-host');
+    const invalid = structuredClone(first);
+    invalid.duel.state.version++;
+    if (malformed === 'empty rounds') invalid.duel.state.rounds = [];
+    else invalid.duel.state.currentRoundNumber++;
+    assert.doesNotThrow(() => onMessage(JSON.stringify(invalid)));
+    names.forEach((name, index) => assert.equal(reps.get(name)!.value, before[index], name));
+    assert.deepEqual(names.map(name => reps.get(name)!.value), contents);
+    assert.ok(reps.get('presenterConnection')!.value.warnings.length > 0);
+    const valid = structuredClone(first); valid.duel.state.version++;
+    onMessage(JSON.stringify(valid));
+    assert.equal(reps.get('presenterDuel')!.value.version, valid.duel.state.version);
+    assert.deepEqual(reps.get('presenterConnection')!.value.warnings, []);
+  } finally {
+    if (previousSecret === undefined) delete process.env.GEOGUESSR_NCFA;
+    else process.env.GEOGUESSR_NCFA = previousSecret;
+  }
+});
+
 test('audio mode handoff waits for old mute acknowledgement or expiry, and denies previews and duplicates', () => {
   const reps = new Map<string, any>(); const listeners = new Map<string, Function>(); let now = 100000;
   const tasks: { fn: () => void; at: number; active: boolean }[] = [];

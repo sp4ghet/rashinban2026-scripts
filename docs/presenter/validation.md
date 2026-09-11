@@ -10,7 +10,7 @@ From the repository root with Node 22.17.0:
 
 | Command | Result |
 | --- | --- |
-| `npm test` | 130 tests passed, zero failures. |
+| `npm test` | 133 tests passed, zero failures. |
 | `npm run typecheck` | Exit 0. |
 | `npm run build` | Exit 0, build complete. |
 
@@ -151,6 +151,29 @@ Final evidence: [measurement JSON](../../artifacts/presenter-validation/av-align
 [magenta composition](../../artifacts/presenter-validation/obs-live-ff00ff.png),
 [unfiltered results](../../artifacts/presenter-validation/obs-results.png) and
 [double 5K](../../artifacts/presenter-validation/obs-double-5k.png).
+
+Final review fixes were verified after the AV recording: malformed snapshots
+with empty rounds or no current round now preserve the accepted duel, views
+and timeline; result-map guesses follow the displayed timeline round when a
+newer duel Replicant arrives first. Both have observed RED/GREEN regressions.
+The final built graphic passed a focused Chrome check with captured round-2
+state and round-1 timeline: all three markers, both lines, bounds, scores and
+distances belonged to round 1. This used a fake Google boundary and establishes
+geometry selection, not Google imagery fidelity. A separate captured Created
+check passed with the normal missing-key fallback. Both published zero game
+state operations and verified unchanged server settings, media and series.
+Evidence is in [final-fix-browser.json](../../artifacts/presenter-validation/final-fix-browser.json)
+and [final-fix-created.json](../../artifacts/presenter-validation/final-fix-created.json).
+
+The 30-minute measurement above applies to the pre-fix production code recorded
+in `dcd89c4` (also present at fix base `131d77a`). It was not repeated for these
+ingestion/renderer changes. Audio, clock, cue and timeline scheduling code is
+unchanged; the built audio entry retains SHA-256
+`329a5a5b8a17f7e7a1bbcb23fa820644abe58e107ad598d6bd9caa230691eb13`.
+The program bundle changed, so the previous recording does not measure this
+exact final program bundle. Its continuous-bed and 90 ms video-delay limits
+still apply. The isolated hidden preview was restarted with the fixed extension;
+port 9090 and the OBS setup were untouched.
 
 ## External checks still required
 
