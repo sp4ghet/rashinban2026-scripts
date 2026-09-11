@@ -2,6 +2,8 @@ import type { TieRangeBandMode, TieRangeRoundOutput } from '../../bundles/rashin
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
 import {
   derivePlayerTieRangeDisplay,
+  playerDisclosureMustReset,
+  playerRoundIdentity,
   type PlayerTieRangeDisplay,
 } from './tie-range-player-view-model.ts';
 
@@ -158,7 +160,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     </style>
     <section class="hud" data-rb="hud" aria-live="polite" hidden>
       <div class="mode" data-rb="mode" data-rb-mode-note></div>
-      <div class="teams">
+      <div class="teams" data-rb="teams">
         <article class="team" data-rb="team-0"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div></article>
         <article class="team" data-rb="team-1"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div></article>
       </div>
@@ -188,8 +190,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   const summaryReplacements = new Map<HTMLElement, HTMLElement>();
   let desiredStyles: Map<HTMLElement, Set<StyleProperty>> | null = null;
   let lastView: PlayerTieRangeView | null = null;
-  let disclosureGameId: string | null = null;
-  let revealedThroughRound = 0;
+  let revealedRoundIdentity: string | null = null;
   let focusBeforeSettings: HTMLElement | null = null;
   let disposed = false;
   let reconcileQueued = false;
@@ -246,7 +247,9 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   }
 
   function renderDisplay(display: PlayerTieRangeDisplay, layoutDiagnostic: string | null): void {
-    hud.hidden = !display.showHud;
+    hud.hidden = !display.showHud && !display.showDiagnostic && layoutDiagnostic === null;
+    byRb<HTMLElement>('mode').hidden = !display.showHud;
+    byRb<HTMLElement>('teams').hidden = !display.showHud;
     byRb<HTMLElement>('mode').textContent = display.appliesToNextDuel
       ? `${display.modeLabel} · setting applies next duel`
       : display.modeLabel;
@@ -279,7 +282,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       byRb<HTMLElement>('terminal-detail').textContent = display.terminal.detail;
     }
     const message = [display.diagnostic, layoutDiagnostic].filter(Boolean).join(' · ');
-    diagnostic.hidden = message.length === 0;
+    diagnostic.hidden = message.length === 0 || (!display.showDiagnostic && layoutDiagnostic === null);
     diagnostic.textContent = message;
   }
 
@@ -346,11 +349,15 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     const expectedRound = lastView.output?.rounds.at(-1)?.round ?? null;
     const matchingResultRoots = visibleResultRoots(document, roots, expectedRound);
     const disclosed = matchingResultRoots.length > 0;
-    if (disclosed && expectedRound !== null) revealedThroughRound = Math.max(revealedThroughRound, expectedRound);
-    if (summaryDisclosesTerminal(document, roots, lastView) && lastView.output?.terminal) {
-      revealedThroughRound = Math.max(revealedThroughRound, lastView.output.terminal.round);
+    if (disclosed && expectedRound !== null && lastView.context) {
+      revealedRoundIdentity = playerRoundIdentity(lastView.context, expectedRound);
     }
-    const display = derivePlayerTieRangeDisplay(lastView, disclosed, revealedThroughRound);
+    if (summaryDisclosesTerminal(document, roots, lastView) && lastView.output?.terminal) {
+      revealedRoundIdentity = lastView.context
+        ? playerRoundIdentity(lastView.context, lastView.output.terminal.round)
+        : null;
+    }
+    const display = derivePlayerTieRangeDisplay(lastView, disclosed, revealedRoundIdentity);
     let layoutDiagnostic: string | null = null;
     if (display.suppressNative) {
       let healthBarsFound = false;
@@ -435,14 +442,10 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   return {
     update(view): void {
       if (disposed) return;
-      if (lastView?.gameId !== view.gameId) {
-        disclosureGameId = view.gameId;
-        revealedThroughRound = 0;
-        restoreNative();
+      if (lastView === null || playerDisclosureMustReset(lastView, view)) {
+        revealedRoundIdentity = null;
       }
-      if (disclosureGameId !== view.gameId || view.status === 'inactive' || view.status === 'off') {
-        disclosureGameId = view.gameId;
-        revealedThroughRound = 0;
+      if (lastView?.gameId !== view.gameId || view.status === 'inactive' || view.status === 'off') {
         restoreNative();
       }
       lastView = view;

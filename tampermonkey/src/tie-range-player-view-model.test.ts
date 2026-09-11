@@ -3,7 +3,11 @@ import test from 'node:test';
 import type { TieRangeOutput } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
 import type { PlayerGameContext } from './tie-range-player-state.ts';
-import { derivePlayerTieRangeDisplay } from './tie-range-player-view-model.ts';
+import {
+  derivePlayerTieRangeDisplay,
+  playerDisclosureMustReset,
+  playerRoundIdentity,
+} from './tie-range-player-view-model.ts';
 
 const context: PlayerGameContext = {
   schemaVersion: 1,
@@ -15,7 +19,10 @@ const context: PlayerGameContext = {
   teamIds: ['blue-team', 'red-team'],
   teamLabels: ['blue', 'red'],
   playerIds: ['blue-player', 'red-player'],
-  roundStarts: [],
+  roundStarts: [
+    { round: 1, startTime: '2026-09-12T10:00:00Z' },
+    { round: 2, startTime: '2026-09-12T10:01:00Z' },
+  ],
   input: {
     initialHealth: 6000,
     individual: 5,
@@ -151,10 +158,67 @@ test('keeps terminal HP disclosed after its matching result portal unmounts', ()
     ...output,
     terminal: { round: 2, winnerTeamId: 'blue-team', isDraw: false },
   };
-  const display = derivePlayerTieRangeDisplay(view({ output: terminalOutput }), false, 2);
+  const display = derivePlayerTieRangeDisplay(
+    view({ output: terminalOutput }),
+    false,
+    playerRoundIdentity(context, 2),
+  );
   assert.equal(display.terminal?.headline, 'Blue wins');
   assert.deepEqual(display.teams!.map(team => team.health), [6000, 2295]);
   assert.equal(display.result, null);
+});
+
+test('does not carry disclosure into a restarted round with the same number', () => {
+  const oldIdentity = playerRoundIdentity(context, 2);
+  const restartedContext: PlayerGameContext = {
+    ...context,
+    sourceVersion: 9,
+    roundStarts: [
+      context.roundStarts[0],
+      { round: 2, startTime: '2026-09-12T10:05:00Z' },
+    ],
+  };
+  const restartedOutput: TieRangeOutput = {
+    ...output,
+    currentHealth: [4000, 6000],
+    rounds: [output.rounds[0], {
+      ...output.rounds[1],
+      scores: [0, 2000],
+      damageDealt: [0, 2000],
+      healthAfter: [4000, 6000],
+    }],
+    terminal: { round: 2, winnerTeamId: 'red-team', isDraw: false },
+  };
+  const display = derivePlayerTieRangeDisplay(view({
+    context: restartedContext,
+    output: restartedOutput,
+  }), false, oldIdentity);
+
+  assert.deepEqual(display.teams!.map(team => team.health), [6000, 6000]);
+  assert.equal(display.terminal, null);
+  assert.equal(playerDisclosureMustReset(view(), view({
+    context: restartedContext,
+    output: restartedOutput,
+  })), true);
+});
+
+test('detects a higher-version rollback to an earlier round but not normal progress', () => {
+  const previous = view({ context: { ...context, currentRoundNumber: 3 } });
+  const rolledBack = view({
+    context: {
+      ...context,
+      sourceVersion: 9,
+      currentRoundNumber: 1,
+      input: { ...context.input, rounds: [] },
+    },
+    output: { ...output, currentHealth: [6000, 6000], rounds: [] },
+  });
+  const progressed = view({
+    context: { ...context, sourceVersion: 9, currentRoundNumber: 3 },
+  });
+
+  assert.equal(playerDisclosureMustReset(previous, rolledBack), true);
+  assert.equal(playerDisclosureMustReset(view(), progressed), false);
 });
 
 test('uses neutral terminal labels and represents a round-limit draw', () => {
@@ -190,11 +254,13 @@ test('keeps verified numbers with a diagnostic while stale and restores native U
     message: 'HP may be out of date',
   }), false);
   assert.equal(stale.showHud, true);
+  assert.equal(stale.showDiagnostic, true);
   assert.equal(stale.suppressNative, true);
   assert.equal(stale.diagnostic, 'HP may be out of date');
 
   const off = derivePlayerTieRangeDisplay(view({ status: 'off', capturedMode: 'off' }), true);
   assert.equal(off.showHud, false);
+  assert.equal(off.showDiagnostic, false);
   assert.equal(off.suppressNative, false);
 });
 
@@ -205,6 +271,55 @@ test('leaves native UI intact when the current account is not one of the players
     message: 'Current account is not a player in this duel',
   }), true);
   assert.equal(display.showHud, false);
+  assert.equal(display.showDiagnostic, true);
   assert.equal(display.suppressNative, false);
   assert.equal(display.diagnostic, 'Current account is not a player in this duel');
+});
+
+test('shows an unavailable reason without rendering empty HP bars while enabled', () => {
+  const unavailable = derivePlayerTieRangeDisplay(view({
+    status: 'unavailable',
+    context: null,
+    output: null,
+    diagnostic: { code: 'incompatible-rules', message: 'This duel uses unsupported scoring rules' },
+    message: 'Custom HP unavailable',
+  }), false);
+  assert.equal(unavailable.showHud, false);
+  assert.equal(unavailable.showDiagnostic, true);
+  assert.equal(unavailable.suppressNative, false);
+  assert.equal(unavailable.diagnostic, 'This duel uses unsupported scoring rules');
+
+  for (const unavailableView of [
+    view({
+      status: 'auth-error',
+      context: null,
+      output: null,
+      message: 'Sign in to GeoGuessr to refresh custom HP',
+    }),
+    view({
+      status: 'unavailable',
+      context: null,
+      output: null,
+      diagnostic: { code: 'partial-results', message: 'Earlier round history is missing' },
+    }),
+    view({
+      status: 'unavailable',
+      context: null,
+      output: null,
+      diagnostic: { code: 'schema-mismatch', message: 'Saved player context is from another schema' },
+    }),
+  ]) {
+    const display = derivePlayerTieRangeDisplay(unavailableView, false);
+    assert.equal(display.showHud, false);
+    assert.equal(display.showDiagnostic, true);
+    assert.ok(display.diagnostic);
+  }
+
+  const inactive = derivePlayerTieRangeDisplay(view({
+    status: 'inactive',
+    context: null,
+    output: null,
+    diagnostic: { code: 'schema-mismatch', message: 'Old saved schema' },
+  }), false);
+  assert.equal(inactive.showDiagnostic, false);
 });

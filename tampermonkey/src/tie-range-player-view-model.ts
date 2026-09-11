@@ -3,6 +3,7 @@ import type {
   TieRangeRoundOutput,
 } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
+import type { PlayerGameContext } from './tie-range-player-state.ts';
 
 export type PlayerTieRangeDisplayTeam = {
   teamId: string;
@@ -31,6 +32,7 @@ export type PlayerTieRangeDisplayTerminal = {
 
 export type PlayerTieRangeDisplay = {
   showHud: boolean;
+  showDiagnostic: boolean;
   suppressNative: boolean;
   mode: TieRangeBandMode;
   modeLabel: string;
@@ -63,13 +65,34 @@ function terminalLabel(view: PlayerTieRangeView, order: [number, number]): strin
 }
 
 function diagnosticText(view: PlayerTieRangeView): string | null {
-  if (view.message) return view.message;
   if (view.diagnostic && view.diagnostic.code !== 'source-ended') return view.diagnostic.message;
+  if (view.message) return view.message;
   if (view.status === 'reconnecting') return 'Reconnecting';
   if (view.status === 'stale') return 'HP may be out of date';
   if (view.status === 'auth-error') return 'Sign in to refresh custom HP';
   if (view.status === 'unavailable') return 'Custom HP unavailable';
   return null;
+}
+
+export function playerRoundIdentity(context: PlayerGameContext, round: number): string | null {
+  const startTime = context.roundStarts.find(start => start.round === round)?.startTime;
+  return startTime === undefined ? null : JSON.stringify([context.gameId, round, startTime]);
+}
+
+export function playerDisclosureMustReset(
+  previous: PlayerTieRangeView,
+  next: PlayerTieRangeView,
+): boolean {
+  if (previous.gameId !== next.gameId || next.status === 'inactive' || next.status === 'off') return true;
+  if (previous.context === null) return false;
+  if (next.context === null) return true;
+  if (next.context.currentRoundNumber < previous.context.currentRoundNumber
+    || next.context.input.rounds.length < previous.context.input.rounds.length
+    || next.context.roundStarts.length < previous.context.roundStarts.length) return true;
+  return previous.context.roundStarts.some(previousStart => {
+    const nextStart = next.context?.roundStarts.find(start => start.round === previousStart.round);
+    return nextStart !== undefined && nextStart.startTime !== previousStart.startTime;
+  });
 }
 
 function modeLabel(mode: TieRangeBandMode): string {
@@ -81,14 +104,17 @@ function modeLabel(mode: TieRangeBandMode): string {
 export function derivePlayerTieRangeDisplay(
   view: PlayerTieRangeView,
   nativeResultVisible: boolean,
-  revealedThroughRound = 0,
+  revealedRoundIdentity: string | null = null,
 ): PlayerTieRangeDisplay {
   const mode = view.capturedMode ?? view.configuredMode;
   const accountIsNotAPlayer = view.status === 'unavailable'
     && view.message === 'Current account is not a player in this duel';
   if (mode === 'off' || view.context === null || view.output === null || accountIsNotAPlayer) {
+    const diagnostic = diagnosticText(view);
     return {
       showHud: false,
+      showDiagnostic: mode !== 'off' && view.status !== 'inactive' && view.status !== 'waiting'
+        && view.status !== 'loading' && diagnostic !== null,
       suppressNative: false,
       mode,
       modeLabel: modeLabel(view.configuredMode),
@@ -96,7 +122,7 @@ export function derivePlayerTieRangeDisplay(
       teams: null,
       result: null,
       terminal: null,
-      diagnostic: diagnosticText(view),
+      diagnostic,
     };
   }
 
@@ -104,7 +130,9 @@ export function derivePlayerTieRangeDisplay(
   const localIndex = view.localTeamId === null ? -1 : output.teamIds.indexOf(view.localTeamId);
   const order: [number, number] = localIndex === 1 ? [1, 0] : [0, 1];
   const latest = output.rounds.at(-1) ?? null;
-  const disclosed = latest === null || view.status === 'ended' || latest.round <= revealedThroughRound
+  const latestIdentity = latest ? playerRoundIdentity(context, latest.round) : null;
+  const retainedDisclosure = latestIdentity !== null && latestIdentity === revealedRoundIdentity;
+  const disclosed = latest === null || view.status === 'ended' || retainedDisclosure
     || resultIsDisclosed(latest, context.currentRoundNumber, nativeResultVisible);
   const health = latest && !disclosed ? latest.healthBefore : output.currentHealth;
   const multipliers = latest && !disclosed ? latest.multiplierTenths : output.currentMultiplierTenths;
@@ -132,7 +160,11 @@ export function derivePlayerTieRangeDisplay(
   } : null;
 
   let terminal: PlayerTieRangeDisplayTerminal | null = null;
-  if (output.terminal && (view.status === 'ended' || output.terminal.round <= revealedThroughRound
+  const terminalIdentity = output.terminal
+    ? playerRoundIdentity(context, output.terminal.round)
+    : null;
+  if (output.terminal && (view.status === 'ended'
+    || (terminalIdentity !== null && terminalIdentity === revealedRoundIdentity)
     || context.currentRoundNumber > output.terminal.round
     || (nativeResultVisible && latest?.round === output.terminal.round))) {
     terminal = {
@@ -148,8 +180,10 @@ export function derivePlayerTieRangeDisplay(
     };
   }
 
+  const diagnostic = diagnosticText(view);
   return {
     showHud: true,
+    showDiagnostic: diagnostic !== null,
     suppressNative: true,
     mode,
     modeLabel: modeLabel(mode),
@@ -157,6 +191,6 @@ export function derivePlayerTieRangeDisplay(
     teams,
     result,
     terminal,
-    diagnostic: diagnosticText(view),
+    diagnostic,
   };
 }
