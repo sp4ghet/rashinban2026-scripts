@@ -8,6 +8,22 @@ import { advanceTimeline, DEFAULT_TIMING, effectFor, finishEffect, nextTimelineW
 import { sample } from './fixtures.ts';
 
 const timing = DEFAULT_TIMING;
+test('preview ticks follow server 3-2-1, skip elapsed ticks, and reset on changed start', () => {
+  const s = structuredClone(full[0].state); const round = s.rounds.find(r => r.number === s.round)!;
+  s.status = 'Ongoing'; s.players.forEach(p => { p.guesses = []; p.results = []; });
+  round.startAtMs = 10000; round.timerStartAtMs = null; round.endAtMs = null;
+  let t = advance(null, s, 6000, true);
+  assert.deepEqual(t.cues.filter(c => c.kind === 'pre-round-tick').map(c => c.atMs), [7000,8000,9000]);
+  assert.deepEqual(advance(t,s,6001).cues, t.cues);
+  const late = advance(null,s,8500,true);
+  assert.deepEqual(late.cues.filter(c => c.kind === 'pre-round-tick').map(c => c.atMs), [9000]);
+  assert.equal(advance(null,s,10001,true).cues.some(c => c.kind === 'pre-round-tick'), false);
+  round.startAtMs = 15000; t = advance(t,s,6500);
+  assert.deepEqual(t.cues.filter(c => c.kind === 'pre-round-tick').map(c => c.atMs), [12000,13000,14000]);
+  s.aborted = true; assert.equal(advance(t,s,6600).cues.length,0);
+  s.aborted = false; s.status = 'Created'; round.startAtMs = null;
+  assert.equal(advance(null,s,1000,true).cues.length,0);
+});
 test('continuous countdown aligns to final fifteen seconds and does not restart after a second guess', () => {
   const s = structuredClone(full[0].state); const round = s.rounds.find(r => r.number === s.round)!;
   s.status = 'Ongoing'; s.players.forEach(p => { p.guesses = []; p.results = []; });

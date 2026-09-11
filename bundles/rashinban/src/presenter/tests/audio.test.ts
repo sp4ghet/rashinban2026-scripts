@@ -109,6 +109,16 @@ test('equal-gain context transition applies its authored fade without restarting
 });
 
 const cueMedia: MediaManifest = { ...EMPTY_MEDIA, sounds: { pin: '/pin', guess: '/guess', countdown: '/tick', results: '/results', count: '/count', damage: '/damage', 'five-k': '/five-k' } };
+test('preview tick plays once at researched gain and finishes when live begins', async () => {
+  const p = port(); await p.audio.load({ ...EMPTY_MEDIA, sounds: { 'pre-round-tick': '/tick' } }); p.audio.lease(20000,1000);
+  const t = { ...timeline, phase: 'pre-round' as const, cues: [cue('one', 'pre-round-tick', 1000)] };
+  p.audio.sync(t, DEFAULT_SETTINGS, 1000); p.audio.sync(t, DEFAULT_SETTINGS, 1000);
+  assert.equal(p.sources.length,1); assert.equal(p.sources[0].output.gain.at(10), DEFAULT_SETTINGS.effectsGain * 1.3);
+  p.context.currentTime = 11; p.audio.sync({ ...t, phase: 'live', cues: [] }, DEFAULT_SETTINGS, 2000);
+  assert.equal(p.sources[0].stops,0);
+  p.audio.sync({ ...t, phase: 'live', cues: [] }, { ...DEFAULT_SETTINGS, muted: true }, 2000);
+  assert.equal(p.sources[0].output.gain.at(11),0);
+});
 test('continuous countdown seeks on late entry, finishes through results, and skips stale tails', async () => {
   const p = port(); await p.audio.load(cueMedia); p.audio.lease(30000, 8000);
   const t = { ...timeline, cues: [cue('continuous', 'countdown', 1000, 16000)] };

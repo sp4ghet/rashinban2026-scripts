@@ -9,6 +9,7 @@ const source = resolve(process.argv[2] ?? 'assets/sfx/geoguessr');
 const target = resolve('assets/rashinban/effects');
 const manifest = JSON.parse(readFileSync(join(source, 'manifest.json'), 'utf8').replace(/^\uFEFF/, ''));
 const aliases = {
+  'pre-round-tick': 'EFFECT_COUNT_DOWN_TICK',
   guess: 'INTERACTION_YOU_GUESSED',
   countdown: 'EFFECT_TIMER_COUNTDOWN', 'round-start': 'EFFECT_PANO_REVEAL',
   results: 'SCORE_ROWS_SLIDE_IN', count: 'COUNT_DAMAGE', collision: 'DAMAGE_CRASH',

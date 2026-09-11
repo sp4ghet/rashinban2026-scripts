@@ -6,6 +6,7 @@ to presenter events using aliases from that directory's `manifest.json`.
 | Presenter event | Captured alias |
 | --- | --- |
 | Guess submitted | `INTERACTION_YOU_GUESSED` |
+| Pre-round 3, 2, 1 | `EFFECT_COUNT_DOWN_TICK` |
 | Final 15-second countdown | `EFFECT_TIMER_COUNTDOWN` |
 | Round Street View reveal | `EFFECT_PANO_REVEAL` |
 | Results entry | `SCORE_ROWS_SLIDE_IN` |
@@ -17,7 +18,7 @@ to presenter events using aliases from that directory's `manifest.json`.
 | Optional 5K cue soundtrack | `EFFECT_5K` |
 
 Run `node scripts/install-geoguessr-sfx.mjs <source-directory>` from the NodeCG
-working directory to verify the source hashes and copy these ten files into
+working directory to verify the source hashes and copy these eleven files into
 `assets/rashinban/effects`. The script prints the `sounds` mapping; select those
 assets in the presenter dashboard or merge that mapping into the current media
 manifest through the presenter media control. It does not change music stems,
@@ -40,6 +41,14 @@ See the main checkout's
 `docs/geoguessr/samples/scoring-animation/timer-countdown-notes.md` for the
 research agent's source audit and wrapper caveats. No browser pitch/tempo
 adjustments are applied to the custom music.
+
+The `pre-round-tick` cue uses `new-effect-count-down-tick-f9be693554415c60.mp3`
+once at start minus 3, 2 and 1 seconds, at the registry's 1.3 effect gain.
+It follows the server start in manual and automatic games, remains silent on
+an unscheduled preview, and skips elapsed ticks when joining late. A changed
+start cancels/replaces pending ticks. It is separate from the continuous
+final-15-second countdown. Research: the main checkout's
+`docs/geoguessr/samples/scoring-animation/round-sfx-timing.md`.
 
 The `round-start`
 event follows the authoritative round start, with no historical replay on join.

@@ -86,10 +86,14 @@ function liveCues(timeline: Timeline, state: DuelState, nowMs: number, bootstrap
   const round = state.rounds.find(item => item.number === timeline.round);
   const roundStartAtMs = round?.startAtMs ?? null;
   if (roundStartAtMs !== (timeline.roundStartAtMs ?? null)) {
-    for (let i = cues.length - 1; i >= 0; i--) if (cues[i].kind === 'round-start') cues.splice(i, 1);
+    for (let i = cues.length - 1; i >= 0; i--) if (cues[i].kind === 'round-start' || cues[i].kind === 'pre-round-tick') cues.splice(i, 1);
     // Schedule the future panorama reveal, including a bootstrap during its
     // countdown. Joining an already-live round must not replay its start.
     if (timeline.phase === 'pre-round' && roundStartAtMs !== null && roundStartAtMs > nowMs) {
+      for (const seconds of [3, 2, 1]) {
+        const atMs = roundStartAtMs - seconds * 1000;
+        if (atMs >= nowMs) cues.push(cue(timeline, 'pre-round-tick', atMs, atMs + 250));
+      }
       cues.push(cue(timeline, 'round-start', roundStartAtMs, roundStartAtMs + 250));
     }
   }

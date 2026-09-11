@@ -38,7 +38,7 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
     const effect = timeline.effect === 'single-5k' ? media.fiveK.single : timeline.effect === 'double-5k' ? media.fiveK.double : null;
     for (const [id, node] of cueNodes) {
       if (!valid.has(id) && (node.start > time || node.cue.kind === 'count' || node.cue.kind === 'five-k') || timeline.phase === 'aborted' || node.cue.kind === 'five-k' && (effect?.soundtrack !== 'cue' || node.programOwner !== programOwner)) cancelCue(id, false);
-      else node.gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain, time);
+      else node.gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain * (node.cue.kind === 'pre-round-tick' ? 1.3 : 1), time);
     }
     if (timeline.phase === 'aborted') return;
     for (const cue of timeline.cues) {
@@ -57,7 +57,7 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       if (cue.kind === 'count' && end <= now) continue;
       const source = context.createBufferSource(); const gain = context.createGain();
       source.buffer = buffer; source.loop = cue.kind === 'count';
-      gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain, time);
+      gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain * (cue.kind === 'pre-round-tick' ? 1.3 : 1), time);
       source.connect(gain); gain.connect(gate);
       source.start(start, cue.kind === 'count' ? Math.max(0, (now - cue.atMs) / 1000) % buffer.duration : offset);
       if (cue.kind === 'count' || cue.kind === 'five-k') source.stop(time + Math.max(0, (end - now) / 1000));
