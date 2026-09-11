@@ -109,10 +109,10 @@ test('available celebration holds results with its own deadline; missing double 
   const t = reps.get('presenterTimeline').value; assert.equal(t.effect, 'single-5k');
   const start = t.cues[0].atMs; assert.equal(t.effectDeadlineMs, start + 5000);
   now = start; listeners.get('presenter:control')!({ action: 'settings', body: DEFAULT_SETTINGS });
-  assert.equal(reps.get('presenterTimeline').value.effect, 'single-5k'); assert.equal(reps.get('presenterTimeline').value.revealAtMs, null);
+  assert.equal(reps.get('presenterTimeline').value.effect, 'single-5k'); assert.equal(reps.get('presenterTimeline').value.revealAtMs, start + 1800);
   reps.get('presenterTimeline').value.effect = 'double-5k';
   listeners.get('presenter:control')!({ action: 'settings', body: DEFAULT_SETTINGS });
-  assert.equal(reps.get('presenterTimeline').value.effect, 'none'); assert.equal(reps.get('presenterTimeline').value.revealAtMs, start + 200);
+  assert.equal(reps.get('presenterTimeline').value.effect, 'none'); assert.equal(reps.get('presenterTimeline').value.revealAtMs, start + 1800);
   assert.equal(reps.get('presenterMediaStatus').value.status, 'missing');
   assert.equal(reps.get('presenterMediaStatus').value.effect, 'double-5k');
   const before = reps.get('presenterMedia').value;
@@ -278,6 +278,7 @@ test('client leases isolate preview reports, renew uniquely, expire and transfer
     assert.equal(message('presenter:effect-ended', { ...completion, ...patch }), false);
     assert.equal(timeline.value.effect, 'single-5k');
   }
+  timeline.value.phase = 'results-reveal';
   assert.equal(message('presenter:effect-ended', completion), true);
   assert.equal(timeline.value.effect, 'none');
   assert.equal(message('presenter:effect-ended', completion), false);

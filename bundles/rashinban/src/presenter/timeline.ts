@@ -8,6 +8,8 @@ export function effectFor(scores: readonly number[]): EffectKind {
 }
 
 export const DEFAULT_TIMING: Timing = { leadMs: 200, countMs: 750, damageMs: 800, effectWatchdogMs: 10000 };
+// Supplied 5K.webm is fully opaque at 1.8 s and opens again around 3.2 s.
+export const FIVE_K_REVEAL_DELAY_MS = 1800;
 
 function fresh(previous: Timeline | null, state: DuelState | null, nowMs: number): Timeline {
   const revision = (previous?.revision ?? 0) + 1;
@@ -43,14 +45,12 @@ function scheduleReveal(timeline: Timeline, atMs: number, timing: Timing): Timel
   const holdAtMs = scoring.completeAtMs;
   return {
     ...timeline,
-    effect: 'none',
-    effectDeadlineMs: null,
     revealAtMs,
     damageAtMs,
     holdAtMs,
     scoring,
     cues: [
-      ...timeline.cues.filter(item => item.kind === 'guess'),
+      ...timeline.cues.filter(item => item.kind === 'guess' || item.kind === 'five-k'),
       cue(timeline, 'results', revealAtMs, revealAtMs + 250),
       cue(timeline, 'count', scoring.countAtMs, scoring.countEndAtMs),
       cue(timeline, scoring.tied ? 'tie' : 'collision', scoring.collisionAtMs, scoring.collisionAtMs + 250),
@@ -64,9 +64,11 @@ function scheduleReveal(timeline: Timeline, atMs: number, timing: Timing): Timel
 export function finishEffect(timeline: Timeline, generation: string, nowMs: number, timing: Timing): Timeline {
   const effectStart = timeline.cues.find(item => item.kind === 'five-k')?.atMs;
   if (timeline.generation !== generation || timeline.effect === 'none'
-    || timeline.phase !== 'results-transition' || effectStart === undefined || nowMs < effectStart) return timeline;
-  // A late callback must use the same boundary as the watchdog tick.
-  return scheduleReveal(timeline, Math.min(nowMs, timeline.effectDeadlineMs ?? nowMs), timing);
+    || !['results-transition', 'results-reveal', 'between-rounds', 'waiting-host', 'finished'].includes(timeline.phase)
+    || effectStart === undefined || nowMs < effectStart) return timeline;
+  // Video completion and errors release only the video; scoring already has
+  // its own shared-clock schedule underneath it.
+  return { ...timeline, effect: 'none', effectDeadlineMs: null, cues: timeline.cues.filter(item => item.kind !== 'five-k') };
 }
 
 function liveCues(timeline: Timeline, state: DuelState, nowMs: number, bootstrap: boolean, timing: Timing): Timeline {
@@ -126,8 +128,14 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
   const roundStart = state?.rounds.find(round => round.number === state.round)?.startAtMs;
   const restarted = previous?.gameId === state?.gameId && previous?.round === state?.round
     && previous?.roundStartAtMs != null && roundStart !== undefined && roundStart !== previous.roundStartAtMs;
+  const rolledBackResults = previous != null && state != null && previous.gameId === state.gameId && previous.round === state.round
+    && previous.revealAtMs !== null && !state.players.every(player => player.results.some(result => result.round === previous.round));
+  const retainResults = !bootstrap && !state?.aborted && previous?.gameId === state?.gameId
+    && previous?.round != null && state != null && state.round > previous.round
+    && previous.holdAtMs !== null && nowMs < previous.holdAtMs
+    && state.players.every(player => player.results.some(result => result.round === previous.round));
   const replace = bootstrap || previous === null || previous.gameId !== (state?.gameId ?? null)
-    || previous.round !== (state?.round ?? null) || restarted || (state?.aborted && previous.phase !== 'aborted');
+    || (previous.round !== (state?.round ?? null) && !retainResults) || restarted || rolledBackResults || (state?.aborted && previous.phase !== 'aborted');
   let timeline = replace ? fresh(previous, state, nowMs) : { ...previous! };
   if (state === null) return timeline;
   if (state.aborted) return { ...timeline, phase: 'aborted', music: 'idle' };
@@ -153,6 +161,7 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
           effectDeadlineMs: startAtMs + watchdogMs,
           cues: [...timeline.cues, cue(timeline, 'five-k', startAtMs, startAtMs + watchdogMs)],
         };
+        timeline = scheduleReveal(timeline, nowMs + FIVE_K_REVEAL_DELAY_MS, timing);
       }
     }
     if (timeline.effectDeadlineMs !== null && nowMs >= timeline.effectDeadlineMs) {

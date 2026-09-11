@@ -66,9 +66,10 @@ test('tie preserves original scores, collides centrally and never schedules flig
 test('5K gate shifts the complete sequence and reconnect restores final state without old stages or sounds', () => {
   const state = result(); state.players[0].results[0].score = 5000;
   const pending = advanceTimeline(null, state, 10000, false, DEFAULT_TIMING);
-  assert.equal(pending.scoring, null); assert.equal(project(state, pending, 11000).scoring, undefined);
+  assert.ok(pending.scoring); assert.equal(project(state, pending, 11000).scoring, undefined);
   const done = finishEffect(pending, pending.generation, 12000, DEFAULT_TIMING);
-  assert.equal(done.revealAtMs, 12200); assert.equal(done.damageAtMs, 17010);
+  assert.equal(done.revealAtMs, 12000); assert.equal(done.damageAtMs, 16810);
+  assert.deepEqual(done.scoring, pending.scoring);
   const restored = advanceTimeline(done, state, 14000, true, DEFAULT_TIMING);
   assert.equal(restored.scoring, null); assert.deepEqual(restored.cues, []);
   assert.equal(project(state, restored, 14000).players[0].score, 5000);

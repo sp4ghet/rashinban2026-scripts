@@ -6,7 +6,7 @@ import { layoutKind, multiplierLabel, distanceLabel, lockLayout } from './presen
 import { paintScoring } from './presenter/scoring.ts';
 import { createCelebrationUnderlay } from './presenter/celebration.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
-import type { GameRenderer, RenderFrame } from './presenter/renderer.ts';
+import { resultMapFrame, type GameRenderer, type RenderFrame } from './presenter/renderer.ts';
 import { clientRole, createPresenterClient } from './presenter/client.ts';
 import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
 import { createVideoPlayer } from './presenter/video.ts';
@@ -94,17 +94,22 @@ function frame() {
     previousScene = scene;
     const visible = scene.projection;
     paintScene(document.body, scene, match);
+    const preparedResults = state?.gameId === timing.gameId && scene.kind === 'transition'
+      ? resultMapFrame(state, timing.round, { left: match.left.playerId, right: match.right.playerId }) ?? undefined : undefined;
     const gameFrame = state && views.value ? celebrationUnderlay.render({ state, views: views.value,
       projection: visible, source: options.viewSource, displayedRound: timing.round,
+      preparedResults,
       previewRound: scene.previewRound, prewarmRound: scene.prewarmRound,
       playerIds: { left: match.left.playerId, right: match.right.playerId } }, timing.effect !== 'none') : null;
     const underlay = gameFrame?.frozen === true;
     document.body.dataset.celebrationUnderlay = String(underlay);
     document.body.dataset.phase = visible.phase;
     const results = scene.kind === 'results';
-    element('results-area').hidden = !results;
+    element('results-area').hidden = !results && !preparedResults;
+    element('results-area').style.visibility = results ? 'visible' : 'hidden';
+    element('results-area').style.opacity = results ? '1' : '0';
     element('live-area').hidden = scene.kind !== 'live' && !underlay;
-    element('transition').hidden = scene.kind !== 'transition' || underlay;
+    element('transition').hidden = scene.kind !== 'transition' || underlay || timing.effect !== 'none';
     write('round-number', scene.previewRound === null ? timing.round === null ? '—' : String(timing.round) : String(scene.previewRound));
     write('mode', state?.mode ?? '—');
     const multiplier = scene.kind === 'preview' ? state?.roundTimeMs ? `${state.roundTimeMs / 1000}s` : '—'

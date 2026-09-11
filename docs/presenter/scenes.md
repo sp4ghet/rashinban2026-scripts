@@ -19,8 +19,13 @@ world map. A scheduled server start shows 3, 2, 1 against its actual timestamp,
 then ordinary live play. Chroma mode uses a full-width key rectangle and hides
 Google imagery. Camera windows remain visible in every scene.
 
-After a round resolves, the existing 5K effect and all scoring/HP stages finish
-before another scene appears. At `holdAtMs`, a known next-round panorama becomes
+After a round resolves, the 5K video first covers the frozen game view. Its shared
+reveal boundary switches the background to the results map while the video is
+still playing, so its transparent opening shows the score animation. The results
+map is prepared invisibly beforehand; answers remain hidden until that boundary.
+The displayed timeline round stays on the outgoing result through scoring/HP
+completion even when a newer server round arrives. At `holdAtMs`, after the
+celebration has cleared, a known next-round panorama becomes
 the preview in **both automatic and manual games**. This is the requested custom
 presentation policy: it differs from GeoGuessr's manual Continue button. It sends
 no control request and waits for the host/server start. If privileged future

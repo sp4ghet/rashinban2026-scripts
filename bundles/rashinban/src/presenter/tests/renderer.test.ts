@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRenderer, rendererPlan, resultBounds, type MapFrame, type RendererAdapter, type RenderFrame } from '../../graphics/presenter/renderer.ts';
+import { createRenderer, rendererPlan, resultBounds, resultMapFrame, type MapFrame, type RendererAdapter, type RenderFrame } from '../../graphics/presenter/renderer.ts';
 import type { Panorama } from '../../types/presenter.ts';
 import { applySnapshot } from '../normalize.ts';
 import { seedViews } from '../telemetry.ts';
@@ -30,6 +30,22 @@ function lockPlayer(f: RenderFrame, index: number) {
   player.guesses.push({ lat: 1 + index, lng: 179 - index, round: f.state.round, score: 4000, distanceM: 100, createdAtMs: 1 });
   f.projection.players.push({ id: player.id, locked: true, health: 6000, score: null, distanceM: null });
 }
+test('outgoing result geometry prepares invisibly, then reveals without using newer round pins', () => {
+  const f = frame(); const round = f.state.round;
+  f.state.players.forEach((player, i) => { player.results = [{ round, score: 4500,
+    bestGuess: { lat: i, lng: i, round, score: 4500, distanceM: 1, createdAtMs: 1 },
+    healthBefore: 6000, healthAfter: 6000, damageDealt: 0, multiplier: 1 }]; });
+  f.state.round++; f.views = seedViews({ ...f.state, round }); f.views.round = f.state.round;
+  f.displayedRound = round; f.projection.phase = 'results-transition';
+  f.preparedResults = resultMapFrame(f.state, round, f.playerIds)!;
+  const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail); renderer.render(f);
+  const resultMap = fake.maps.find(map => map.slot === 'results-map')!;
+  assert.equal(resultMap.frames.at(-1)!.visible, false); assert.equal(resultMap.frames.at(-1)!.prepare, true);
+  const points = resultMap.frames.at(-1)!.pins;
+  f.projection.phase = 'results-reveal'; f.projection.answer = f.state.rounds[0].panorama;
+  renderer.render(f); assert.equal(resultMap.frames.at(-1)!.visible, true);
+  assert.deepEqual(resultMap.frames.at(-1)!.pins, points); assert.equal(fake.maps.filter(map => map.slot === 'results-map').length, 1);
+});
 test('known preview round uses its own persistent panorama and empty world map without changing the server round', () => {
   const f = frame(); const next = structuredClone(f.state.rounds[0]); next.number = f.state.round + 1;
   next.panorama.panoId = 'upcoming-pano'; f.state.rounds.push(next);
@@ -286,6 +302,15 @@ test('answer markers use the authentic centered flag above guesses, selected by 
   assert.equal(guess.icon.fillColor, '#458af2');
   assert.equal(guess.icon.url, undefined);
   surface.dispose(); assert.ok(fake.overlays.every(overlay => overlay.map === null));
+});
+test('hidden prepared result maps fit their geometry without showing answer markers', () => {
+  const fake = googleBoundary(); const surface = googleAdapter(fake.root, fake.api, assert.fail).map('results-map');
+  surface.render({ visible: false, prepare: true, bounds: { north: 10, south: -10, east: 10, west: -10 }, pins: [], lines: [] });
+  assert.equal(fake.maps[0].fits.length, 1);
+  surface.render({ visible: false, prepare: true, bounds: { north: 10, south: -10, east: 10, west: -10 }, pins: [], lines: [] });
+  assert.equal(fake.maps[0].fits.length, 1, 'preparing hidden tiles does not repeatedly refit on every frame');
+  assert.equal(fake.slots.get('#results-map')!.style.visibility, 'hidden');
+  assert.equal(fake.slots.get('#results-map')!.style.opacity, '0');
 });
 test('Google panorama adapter resolves exact IDs, applies latest POV and ignores disposed lookups', () => {
   const fake = googleBoundary(); const errors: string[] = [];

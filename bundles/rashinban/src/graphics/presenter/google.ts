@@ -134,18 +134,19 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
         disableDefaultUI: true, clickableIcons: false, gestureHandling: 'none', keyboardShortcuts: false,
         streetViewControl: false, mapTypeControl: false, fullscreenControl: false, tilt: 0 }));
       dom.status.hidden = true;
-      let previous = ''; let fit = ''; let visible = false; let inactive = false; let disposed = false; let size = ''; let padding = -1;
+      let previous = ''; let fit = ''; let visible = false; let prepared = false; let inactive = false; let disposed = false; let size = ''; let padding = -1;
       const overlays: (google.maps.Marker | google.maps.Polyline)[] = [];
       function clearOverlays() { overlays.splice(0).forEach(item => { item.setMap(null); release(item); }); }
       return {
         render(frame) {
           if (disposed) return;
           dom.host.style.visibility = frame.visible ? 'visible' : 'hidden';
+          dom.host.style.opacity = frame.visible ? '1' : '0';
           dom.host.dataset.inactive = String(frame.inactive ?? false);
           const bounds = JSON.stringify(frame.bounds);
           const nextSize = `${dom.host.clientWidth}:${dom.host.clientHeight}`;
           const nextPadding = frame.padding ?? (slot === 'results-map' ? 45 : 0);
-          if (frame.visible && (!visible || bounds !== fit || inactive !== !!frame.inactive || size !== nextSize || padding !== nextPadding)) {
+          if ((frame.visible || frame.prepare) && ((!visible && frame.visible) || !prepared || bounds !== fit || inactive !== !!frame.inactive || size !== nextSize || padding !== nextPadding)) {
             maps.event.trigger(map, 'resize');
             if (frame.bounds) map.fitBounds(frame.bounds, nextPadding);
             else { map.setCenter({ lat: 0, lng: 0 }); map.setZoom(1); }
@@ -153,6 +154,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
             size = nextSize; padding = nextPadding;
           }
           visible = frame.visible;
+          prepared = frame.visible || frame.prepare === true;
           inactive = !!frame.inactive;
           const content = JSON.stringify([frame.pins, frame.lines]);
           if (content === previous) return;

@@ -176,7 +176,8 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
         && (value.failed === undefined || typeof value.failed === 'boolean')
         && typeof value.clientId === 'string' && owner?.role === 'program'
         && eligibleCompletion(clients.value.program, value.clientId, now)
-        && value.generation === current.generation && current.phase === 'results-transition' && current.effect !== 'none' && value.effect === current.effect
+        && value.generation === current.generation && ['results-transition', 'results-reveal', 'between-rounds', 'waiting-host', 'finished'].includes(current.phase)
+        && current.effect !== 'none' && value.effect === current.effect
         && cue && cue.atMs <= now && now < cue.untilMs) {
         mediaStatus.value = { generation: current.generation, effect: current.effect, status: value.failed ? 'failed' : 'complete' };
         timeline.value = JSON.parse(JSON.stringify(finishEffect(current, current.generation, now, settings.value.timing))) as Timeline;

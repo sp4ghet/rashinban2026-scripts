@@ -30,7 +30,7 @@ test('celebration retains an immutable last live frame without exposing result d
 test('celebration cannot restore another game, round, mode, mapping, source or disconnected frame', () => {
   for (const change of [
     (f: RenderFrame) => { f.state.gameId = 'new-game'; },
-    (f: RenderFrame) => { f.state.round++; },
+    (f: RenderFrame) => { f.state.round++; f.displayedRound = f.state.round; },
     (f: RenderFrame) => { f.displayedRound = null; },
     (f: RenderFrame) => { f.state.mode = 'MOVE'; },
     (f: RenderFrame) => { f.playerIds!.left = null; },
@@ -43,6 +43,16 @@ test('celebration cannot restore another game, round, mode, mapping, source or d
   const hold = createCelebrationUnderlay(); const frame = live(); hold.render(frame, false); hold.reset();
   frame.projection.phase = 'results-transition'; assert.equal(hold.render(frame, true), frame);
   const fresh = createCelebrationUnderlay(); assert.equal(fresh.render(frame, true), frame);
+});
+test('outgoing live underlay survives a newer server round only until answer reveal', () => {
+  const hold = createCelebrationUnderlay(); const frame = live(); hold.render(frame, false);
+  frame.state.round++; frame.projection.phase = 'results-transition';
+  frame.preparedResults = { visible: false, prepare: true, bounds: null, pins: [], lines: [] };
+  const retained = hold.render(frame, true);
+  assert.equal(retained.frozen, true); assert.equal(retained.state.round, frame.displayedRound);
+  assert.equal(retained.preparedResults, frame.preparedResults);
+  frame.projection.answer = frame.state.rounds[0].panorama;
+  assert.equal(hold.render(frame, true), frame, 'the actual reveal gate releases the live underlay even before a phase update');
 });
 test('retained frame accepts NodeCG Replicant proxies', () => {
   const hold = createCelebrationUnderlay(); const frame = live();

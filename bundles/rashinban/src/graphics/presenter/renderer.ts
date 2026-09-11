@@ -1,10 +1,10 @@
 import type { Bounds, DuelState, Mode, Panorama, Phase, Point, Projection, Views } from '../../types/presenter.ts';
 import { lockLayout } from './layout.ts';
 
-export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean; previewRound?: number | null; prewarmRound?: number | null };
+export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean; previewRound?: number | null; prewarmRound?: number | null; preparedResults?: MapFrame };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
-export type MapFrame = { visible: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[] };
+export type MapFrame = { visible: boolean; prepare?: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[] };
 export interface MapSurface { render(frame: MapFrame): void; dispose(): void }
 export type PanoramaOptions = { visible: boolean; identity: string; frozen?: boolean };
 export interface PanoramaSurface { render(panorama: Panorama | null, options?: PanoramaOptions): void; dispose(): void }
@@ -27,6 +27,22 @@ export function resultBounds(points: Point[]): Bounds | null {
 }
 const sides = ['left', 'right'] as const;
 const colors = { left: '#458af2', right: '#f05060' };
+/** Geometry may be prepared while hidden; only the gated projection makes it visible. */
+export function resultMapFrame(state: DuelState, round: number | null, playerIds: RenderFrame['playerIds'], revealedAnswer?: Point): MapFrame | null {
+  const panorama = state.rounds.find(item => item.number === round)?.panorama;
+  if (!panorama || !state.players.every(player => player.results.some(result => result.round === round))) return null;
+  const answer = { lat: revealedAnswer?.lat ?? panorama.lat, lng: revealedAnswer?.lng ?? panorama.lng };
+  const pins: MapFrame['pins'] = [{ point: answer, color: '#ffd55a', label: 'Answer', kind: 'answer' }];
+  const lines: MapFrame['lines'] = [];
+  for (const side of sides) {
+    const player = state.players.find(player => player.id === playerIds?.[side]);
+    const guess = player?.results.find(result => result.round === round)?.bestGuess;
+    if (!guess) continue;
+    const point = { lat: guess.lat, lng: guess.lng };
+    pins.push({ point, color: colors[side], label: side }); lines.push({ from: answer, to: point, color: colors[side] });
+  }
+  return { visible: false, prepare: true, bounds: resultBounds(pins.map(pin => pin.point)), pins, lines };
+}
 export function createRenderer(adapter: RendererAdapter, onError: (message: string) => void): GameRenderer {
   let key = ''; let failed = false; let disposed = false;
   const maps = new Map<string, MapSurface>(); const panos = new Map<string, PanoramaSurface>();
@@ -106,19 +122,11 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
             bounds: locked[i] ? resultBounds(pins.map(pin => pin.point)) : player?.mapBounds ?? null,
             padding: locked[i] ? 45 : 0, pins, lines: [] });
         }
-        if (plan.resultsMap && projection.answer) {
+        const resultFrame = plan.resultsMap && projection.answer
+          ? resultMapFrame(state, displayedRound, frame.playerIds, projection.answer) : frame.preparedResults;
+        if (resultFrame) {
           if (!maps.has('results-map')) maps.set('results-map', adapter.map('results-map'));
-          const answer = { lat: projection.answer.lat, lng: projection.answer.lng };
-          const pins: MapFrame['pins'] = [{ point: answer, color: '#ffd55a', label: 'Answer', kind: 'answer' }];
-          const lines: MapFrame['lines'] = [];
-          for (const side of sides) {
-            const player = state.players.find(player => player.id === frame.playerIds?.[side]);
-            const guess = player?.results.find(result => result.round === displayedRound)?.bestGuess;
-            if (!guess) continue;
-            const point = { lat: guess.lat, lng: guess.lng };
-            pins.push({ point, color: colors[side], label: side }); lines.push({ from: answer, to: point, color: colors[side] });
-          }
-          maps.get('results-map')!.render({ visible: true, bounds: resultBounds(pins.map(pin => pin.point)), pins, lines });
+          maps.get('results-map')!.render({ ...resultFrame, visible: plan.resultsMap && projection.answer !== null });
         } else maps.get('results-map')?.render({ visible: false, bounds: null, pins: [], lines: [] });
         if (showPreview && source === 'rendered' && !maps.has('preview-map')) maps.set('preview-map', adapter.map('preview-map'));
         maps.get('preview-map')?.render({ visible: showPreview && source === 'rendered', bounds: null, pins: [], lines: [] });
