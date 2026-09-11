@@ -35,20 +35,28 @@ Run `npm run build` and `npm start`, then open `http://localhost:9090/` and the
 Use [media selection](media.md) to load assets, then verify readiness and the
 program/audio owner before showing the output.
 
-Set public `presenter.input` to `live` or `replay`, then restart NodeCG. Replay
-never opens a live spectator connection. In replay mode, choose Full duel,
-Manual rounds, Maximum round time, or Aborted game and click **Restart selected
-replay**. Live party controls are hidden and rejected by the server in replay;
-replay fixture requests are likewise rejected in live mode.
+Choose **Input mode** in the dashboard, then apply the source. No restart is
+needed to switch between Replay and Live. Replay uses Full duel, Manual rounds,
+Maximum round time, or Aborted game fixtures and never opens a live connection.
+The live broadcast field remains visible and is enabled when Live is selected.
+Public `presenter.input` sets the startup default, restored on NodeCG restart.
+Commands without an explicit `input` use the running mode; party requests in
+replay and fixture requests in live remain rejected. An explicit mode change
+validates the complete request (and reads a requested replay fixture) before
+stopping the running source.
 
-In live mode, enter a **Live party ID** and click **Reconnect spectator**.
+Choose Live, enter a **Live broadcast URL or party ID**, then click
+**Apply live / reconnect spectator**. Broadcast URLs must have the exact form
+`https://www.geoguessr.com/party/broadcast/<partyId>` with no query or fragment.
+Only the party ID is extracted; the extension never fetches the supplied URL.
 Blank or whitespace selects automatic active-party discovery. IDs accept
 letters, digits, underscores and hyphens, up to 128 characters. Invalid values
 are rejected before stopping the current connection. The panel shows selected,
 configured-default and connected party identities separately; status updates
 do not overwrite an unsaved draft. Selection is a session override. A reconnect
 request without a selector retains it; a NodeCG restart restores the public
-config default.
+config default. Mode switches also clear the previous source's connection
+identity and error state.
 
 Enter competitor names/handles and wins, map the GeoGuessr player IDs to left
 and right, then **Apply series**. **Swap sides** swaps the draft; apply it to
@@ -74,6 +82,11 @@ duel state. For audio failures, use the local activation and ownership checks
 in [OBS setup](obs.md).
 
 ## Google player views and results map
+
+The dashboard's **Google Maps & Street View setup** notice checks whether a
+browser key is configured and shows the current origin's referrer pattern.
+A missing key prevents rendered Street View and maps even when replay data is
+arriving correctly. This is independent of loading a fixture or mapping players.
 
 Set `presenter.googleMapsApiKey` in the public `cfg/rashinban.json`. Enable billing and the **Maps JavaScript API** on its Google Cloud project. This is a browser key: NodeCG publishes it to the graphic and dashboard. Restrict it to the Maps JavaScript API and HTTP referrers for the exact NodeCG origins used by OBS and preview browsers (including the correct hostname and port, with `/*` for paths). Reload the graphic after restarting NodeCG. The GeoGuessr cookie stays in the separate server-only secret file; never put it beside the browser key.
 

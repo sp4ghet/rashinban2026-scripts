@@ -26,10 +26,20 @@ function record(input: unknown): Record<string, unknown> {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('Expected object');
   return input as Record<string, unknown>;
 }
+function parsePartySelection(input: unknown): string | null {
+  if (typeof input !== 'string') throw new Error('Invalid party selection');
+  const value = input.trim();
+  if (!value) return null;
+  if (/^[\w-]{1,128}$/.test(value)) return value;
+  // Accept only the documented broadcast URL; never fetch operator-provided URLs.
+  const broadcast = /^https:\/\/www\.geoguessr\.com\/party\/broadcast\/([\w-]{1,128})$/.exec(value);
+  if (!broadcast) throw new Error('Invalid broadcast URL or party ID');
+  return broadcast[1];
+}
 
 export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock): void {
   const config = (nodecg.bundleConfig as { presenter?: Record<string, unknown> }).presenter ?? {};
-  const input = config.input === 'replay' ? 'replay' : 'live';
+  let input: 'replay' | 'live' = config.input === 'replay' ? 'replay' : 'live';
   const configuredPartyId = typeof config.partyId === 'string' ? config.partyId.trim() || null : null;
   let selectedPartyId = configuredPartyId;
   let fixture: unknown = config.replayFixture ?? REPLAY_FIXTURES[0];
@@ -203,25 +213,27 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   function startReplay(name: unknown): void {
     // Validate and read before canceling an active replay.
     const rows = loadReplay(name);
-    source?.stop(); reset(); fixture = name;
-    connection.value = { ...connection.value, state: 'live', input: 'replay', error: null, replayFixture: String(name), serverOffsetMs: 0 };
+    source?.stop(); reset(); fixture = name; input = 'replay';
+    connection.value = { ...connection.value, state: 'live', input, error: null, replayFixture: String(name), serverOffsetMs: 0,
+      partyId: null, gameId: null, lastUpdateMs: null, warnings: [] };
     source = createReplay(rows, (message, at) => ingest(message, at, false), deps);
     source.start();
   }
   function reconnect(body: unknown): void {
     const value = body === undefined ? {} : record(body);
-    if (Object.keys(value).some(key => !['fixture', 'partyId'].includes(key))) throw new Error('Invalid reconnect');
-    if (input === 'replay') {
+    if (Object.keys(value).some(key => !['input', 'fixture', 'partyId'].includes(key))) throw new Error('Invalid reconnect');
+    const nextInput = 'input' in value ? value.input : input;
+    if (nextInput !== 'live' && nextInput !== 'replay') throw new Error('Invalid input mode');
+    if (nextInput === 'replay') {
       if ('partyId' in value) throw new Error('Party selection is disabled in replay mode');
       startReplay(value.fixture ?? fixture); return;
     }
     if ('fixture' in value) throw new Error('Replay is disabled in live mode');
-    if ('partyId' in value) {
-      if (typeof value.partyId !== 'string' || !/^[\w-]{0,128}$/.test(value.partyId.trim())) throw new Error('Invalid party selection');
-      selectedPartyId = value.partyId.trim() || null;
-    }
+    const nextPartyId = 'partyId' in value ? parsePartySelection(value.partyId) : selectedPartyId;
     source?.stop(); reset();
-    connection.value = { ...connection.value, selectedPartyId };
+    input = 'live'; selectedPartyId = nextPartyId;
+    connection.value = { ...connection.value, input, selectedPartyId, replayFixture: null,
+      state: 'disconnected', partyId: null, gameId: null, lastUpdateMs: null, error: null, serverOffsetMs: 0, warnings: [] };
     try {
       const credentials = loadConnectionConfig({
         ...config,

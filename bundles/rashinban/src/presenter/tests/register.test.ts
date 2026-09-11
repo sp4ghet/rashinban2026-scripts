@@ -352,5 +352,34 @@ test('live party selector validates before stopping, supports automatic discover
     assert.notEqual(reconnect({ partyId: '   ' }), 'rejected'); await flush(); assert.ok(urls.at(-1)!.endsWith('/active'));
     assert.equal(reps.get('presenterConnection').value.selectedPartyId, null);
     assert.equal(reps.get('presenterConnection').value.configuredPartyId, 'configured-party');
+    assert.notEqual(reconnect({ partyId: 'https://www.geoguessr.com/party/broadcast/url_party-2' }), 'rejected'); await flush();
+    assert.ok(urls.at(-1)!.endsWith('/url_party-2'));
+    assert.equal(reps.get('presenterConnection').value.selectedPartyId, 'url_party-2');
+    const selectedBefore = reps.get('presenterConnection').value; const stopsBeforeUrl = stops;
+    for (const partyId of [
+      'http://www.geoguessr.com/party/broadcast/a', 'https://geoguessr.com/party/broadcast/a',
+      'https://www.geoguessr.com.evil.test/party/broadcast/a', 'https://www.geoguessr.com@evil.test/party/broadcast/a',
+      'https://www.geoguessr.com/party/a', 'https://www.geoguessr.com/party/broadcast/a/extra',
+      'https://www.geoguessr.com/party/broadcast/a?next=elsewhere', 'https://www.geoguessr.com/party/broadcast/a#extra',
+      'https://www.geoguessr.com/party/broadcast/%61', 'https://www.geoguessr.com/party/broadcast/../a',
+    ]) assert.equal(reconnect({ partyId }), 'rejected');
+    assert.equal(stops, stopsBeforeUrl); assert.equal(reps.get('presenterConnection').value, selectedBefore);
+    assert.equal(reconnect({ input: 'replay', fixture: '../../private.json' }), 'rejected');
+    assert.equal(reps.get('presenterConnection').value, selectedBefore);
+    assert.notEqual(reconnect({ input: 'replay', fixture: 'gs2-ws-full-duel-sequence.json' }), 'rejected');
+    assert.equal(reps.get('presenterConnection').value.input, 'replay');
+    assert.equal(reps.get('presenterConnection').value.partyId, null);
+    const replayState = reps.get('presenterTimeline').value; const requestsBefore = urls.length;
+    for (const body of [{ partyId: 'oops' }, { input: 'other' }, { input: 'live', fixture: 'gs2-ws-full-duel-sequence.json' }, { input: 'live', partyId: '../bad' }]) {
+      assert.equal(reconnect(body), 'rejected');
+      assert.equal(reps.get('presenterTimeline').value, replayState);
+    }
+    assert.equal(urls.length, requestsBefore);
+    assert.notEqual(reconnect({ input: 'live', partyId: 'https://www.geoguessr.com/party/broadcast/back-to-live' }), 'rejected'); await flush();
+    assert.equal(reps.get('presenterConnection').value.input, 'live');
+    assert.equal(reps.get('presenterConnection').value.replayFixture, null);
+    assert.ok(urls.at(-1)!.endsWith('/back-to-live'));
+    assert.notEqual(reconnect(), 'rejected'); await flush();
+    assert.ok(urls.at(-1)!.endsWith('/back-to-live'));
   } finally { if (previousSecret === undefined) delete process.env.GEOGUESSR_NCFA; else process.env.GEOGUESSR_NCFA = previousSecret; }
 });

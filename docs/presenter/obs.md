@@ -11,6 +11,17 @@ remaining external checks.
 | Separate audio | `http://localhost:9090/bundles/rashinban/graphics/presenter-audio.html?role=audio` |
 | Silent browser preview | `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=preview` |
 
+The dashboard has **Silent preview**, **Program graphic**, and **Separate
+audio** launch links that use the current NodeCG origin. The latter two expose
+the local audio activation button for browser testing. In Separate audio mode,
+open both Program graphic and Separate audio; embedded celebration sound stays
+on the program graphic. In Embedded mode, open Program graphic for all audio.
+The silent preview cannot become an audio owner.
+
+The backdrop uses the supplied KV JPEG at
+`bundles/rashinban/graphics/assets/presenter-kv.jpg`, without generated artwork.
+Its source bytes are preserved; fixed player/map/camera rectangles are unchanged.
+
 Disable **Shutdown source when not visible** and **Refresh browser when scene
 becomes active**. Reuse one program Browser Source through nested scenes;
 creating another Browser Source creates another program candidate. The dashboard

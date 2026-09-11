@@ -3,8 +3,7 @@
 html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; }
 body { background: #0c101d; color: #f7f8fb; font-family: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif; }
 [hidden] { display: none !important; }
-.backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at 22% 52%, #20375866, transparent 54%), radial-gradient(ellipse at 78% 52%, #55283955, transparent 54%), repeating-conic-gradient(from 10deg at 50% 78%, transparent 0deg 11deg, #7182a50c 11deg 11.3deg); }
-.backdrop::after { content: ''; position: absolute; width: 1300px; height: 1300px; border: 1px solid #92a6d116; border-radius: 50%; left: 310px; top: 130px; box-shadow: 0 0 0 110px #92a6d106, 0 0 0 220px #92a6d106; }
+.backdrop { position: absolute; inset: 0; background: url('assets/presenter-kv.jpg') center / cover no-repeat; }
 .edition { position: absolute; top: 23px; left: 60px; right: 60px; font-size: 17px; font-weight: 800; letter-spacing: .23em; }
 .edition span { color: #a4aabd; margin-left: 12px; }.edition i { float: right; font-style: normal; color: #a4aabd; }
 .scoreboard { position: absolute; top: 66px; left: 0; right: 0; height: 122px; display: grid; grid-template-columns: 1fr 438px 1fr; }

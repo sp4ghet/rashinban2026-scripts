@@ -18,6 +18,18 @@ const element = (id: string) => document.getElementById(id)!;
 const input = (id: string) => element(id) as HTMLInputElement;
 const select = (id: string) => element(id) as HTMLSelectElement;
 let seriesDraft: SeriesState | null = null;
+const googleKey = (nodecg.bundleConfig as { presenter?: { googleMapsApiKey?: unknown } }).presenter?.googleMapsApiKey;
+element('google-setup-status').textContent = typeof googleKey === 'string' && googleKey.trim()
+  ? 'Google browser key configured. Check each graphic report below for API and panorama availability.'
+  : 'Google browser key missing: rendered Street View and maps cannot load, including in replay. Configure the key below to enable imagery.';
+element('google-referrer').textContent = `${location.origin}/*`;
+function showInputDraft() {
+  const replay = select('input-mode').value === 'replay';
+  element('replay-controls').hidden = !replay;
+  input('party-id').disabled = replay;
+  element('reconnect').textContent = replay ? 'Apply replay / restart fixture' : 'Apply live / reconnect spectator';
+}
+select('input-mode').addEventListener('change', showInputDraft);
 
 function assetOptions(menu: HTMLSelectElement, category: keyof typeof inventories, chosen = menu.value) {
   menu.replaceChildren(new Option('None', ''));
@@ -97,10 +109,10 @@ element('media-form').addEventListener('submit', event => {
   void control('media', next);
 });
 
-async function control(action: string, body?: unknown) {
-  element('error').textContent = '';
+async function control(action: string, body?: unknown, errorTarget = 'error') {
+  element(errorTarget).textContent = '';
   try { await nodecg.sendMessage('presenter:control', { action, body }); }
-  catch { element('error').textContent = 'Change rejected. Check the values and NodeCG connection.'; }
+  catch { element(errorTarget).textContent = 'Change rejected. Check the values and NodeCG connection.'; }
 }
 function mappingOptions(initialize = false) {
   for (const side of ['left', 'right'] as const) {
@@ -149,10 +161,7 @@ function status() {
   const value = connection.value;
   const replay = value?.input === 'replay';
   element('replay-label').hidden = !replay;
-  element('replay-controls').hidden = !replay;
-  element('live-controls').hidden = replay;
   element('party-selection').textContent = `Selected: ${value?.selectedPartyId ?? 'automatic'} · Config default: ${value?.configuredPartyId ?? 'automatic'} · Connected party: ${value?.partyId ?? 'none'}`;
-  element('reconnect').textContent = replay ? 'Restart selected replay' : 'Reconnect spectator';
   element('connection-status').textContent = value ? `${replay ? 'Replay' : 'Spectator'} · ${value.state}` : 'Connecting to NodeCG…';
   element('game-status').textContent = `${duel.value?.mode ?? 'No game'} · ${timeline.value?.phase ?? 'waiting-game'}${duel.value ? ` · Round ${duel.value.round}` : ''}`;
   element('server-warning').textContent = [value?.error, ...(value?.warnings ?? [])].filter(Boolean).join(' · ');
@@ -166,10 +175,14 @@ settings.on('change', value => {
   select('view-source').value = value.viewSource; select('key-color').value = value.keyColor;
   select('audio-output').value = value.audioOutput; input('muted').checked = value.muted;
   input('music-gain').value = String(value.musicGain); input('effects-gain').value = String(value.effectsGain);
+  element('audio-launch-help').textContent = value.audioOutput === 'separate'
+    ? 'Current audio mode: Separate. Open Separate audio for music and cue sounds, and Program graphic for visuals and embedded celebration sound.'
+    : 'Current audio mode: Embedded. Open Program graphic for visuals, music and cue sounds.';
 });
 duel.on('change', () => { mappingOptions(); status(); });
 let partyInitialized = false;
 connection.on('change', (value, previous) => {
+  if (value && (!previous || value.input !== previous.input)) { select('input-mode').value = value.input; showInputDraft(); }
   if (value && !partyInitialized) { input('party-id').value = value.selectedPartyId ?? ''; partyInitialized = true; }
   if (value?.replayFixture && value.replayFixture !== previous?.replayFixture) select('replay-fixture').value = value.replayFixture;
   status();
@@ -196,4 +209,12 @@ element('settings-form').addEventListener('submit', event => {
     audioOutput: select('audio-output').value, muted: input('muted').checked,
     musicGain: Number(input('music-gain').value), effectsGain: Number(input('effects-gain').value) });
 });
-element('reconnect').addEventListener('click', () => void control('reconnect', connection.value?.input === 'replay' ? { fixture: select('replay-fixture').value } : { partyId: input('party-id').value }));
+element('reconnect').addEventListener('click', () => {
+  const mode = select('input-mode').value;
+  const partyId = input('party-id').value.trim();
+  if (mode === 'live' && partyId && !/^(?:[\w-]{1,128}|https:\/\/www\.geoguessr\.com\/party\/broadcast\/[\w-]{1,128})$/.test(partyId)) {
+    element('source-error').textContent = 'Enter a party ID (letters, digits, underscores or hyphens), the exact https://www.geoguessr.com/party/broadcast/partyId URL, or leave blank for automatic discovery.';
+    return;
+  }
+  void control('reconnect', mode === 'replay' ? { input: mode, fixture: select('replay-fixture').value } : { input: mode, partyId }, 'source-error');
+});
