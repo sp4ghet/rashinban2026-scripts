@@ -2,10 +2,9 @@
 
 Date: 2026-09-12
 
-Design for review. The user has agreed to next-duel configuration changes,
-immediate result-map circles, and deciding round-limit finishes by remaining
-custom HP. The single-circle treatment for 5Ks below is a proposed refinement
-for review with this document.
+Approved for implementation, including next-duel configuration changes,
+immediate result-map circles, deciding round-limit finishes by remaining
+custom HP, and the single-circle treatment for 5Ks.
 
 ## Purpose and scope
 
@@ -55,6 +54,11 @@ needed to retain results across reconnect and restart. A transport reset must
 not clear it. An explicitly restarted replay is a new replay run and captures
 the latest setting even if the fixture reuses a game ID. Keep replay context
 separate from live context.
+
+When NodeCG starts in replay mode, resume the saved fixture at its last accepted
+snapshot and preserve its captured rule. Rebase remaining replay timestamps to
+the current clock. An explicit replay restart starts from the beginning using
+the next-duel setting.
 
 ## Rules and arithmetic
 
@@ -153,6 +157,9 @@ Frame ordinary results to include the finite circles and both guesses with
 padding. Handle antimeridian crossings and polar bounds. Preserve geographic
 distances even where the map projection distorts the screen shape. For global
 coverage, use world framing rather than trying to fit an unbounded circle.
+
+Sample all outlines and fill boundaries on the same 6,371,000-meter sphere
+used by recorded GeoGuessr guess distances.
 
 If map scale is absent or invalid, omit the calculated boundary and show the
 score-band explanation; do not guess a radius. A missing guess omits its pin
