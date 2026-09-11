@@ -1,0 +1,1274 @@
+{
+  "fetchedAt": "2026-09-10T20:31:35.341Z",
+  "kind": "phase-group",
+  "variables": {
+    "id": "3282655"
+  },
+  "data": {
+    "phaseGroup": {
+      "id": 3282655,
+      "displayIdentifier": "SFM201",
+      "bracketType": "DOUBLE_ELIMINATION",
+      "state": 3,
+      "numRounds": null,
+      "phase": {
+        "id": 2266152,
+        "name": "Round4",
+        "phaseOrder": 4,
+        "bracketType": "DOUBLE_ELIMINATION",
+        "groupCount": 8,
+        "numSeeds": 96
+      },
+      "progressionsOut": [
+        {
+          "id": 13747360,
+          "originPlacement": 2
+        },
+        {
+          "id": 13747368,
+          "originPlacement": 3
+        },
+        {
+          "id": 13747376,
+          "originPlacement": 3
+        }
+      ],
+      "seeds": {
+        "nodes": [
+          {
+            "id": 39629135,
+            "seedNum": 1,
+            "placement": 2,
+            "isBye": false,
+            "entrant": {
+              "id": 22117153,
+              "name": "cosa"
+            },
+            "progressionSource": {
+              "id": 13747264,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282623,
+                "displayIdentifier": "SFK201"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629152,
+            "seedNum": 16,
+            "placement": 3,
+            "isBye": false,
+            "entrant": {
+              "id": 22926879,
+              "name": "Booce_Lee"
+            },
+            "progressionSource": {
+              "id": 13747281,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282638,
+                "displayIdentifier": "SFL203"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629201,
+            "seedNum": 96,
+            "placement": 3,
+            "isBye": false,
+            "entrant": {
+              "id": 22264195,
+              "name": "Kilzyou"
+            },
+            "progressionSource": {
+              "id": 13747330,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282653,
+                "displayIdentifier": "SFK305"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629174,
+            "seedNum": 33,
+            "placement": 4,
+            "isBye": false,
+            "entrant": {
+              "id": 22089795,
+              "name": "CR | Kazunoko"
+            },
+            "progressionSource": {
+              "id": 13747303,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282648,
+                "displayIdentifier": "SFK313"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629150,
+            "seedNum": 17,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 23114632,
+              "name": "えびはら"
+            },
+            "progressionSource": {
+              "id": 13747279,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282639,
+                "displayIdentifier": "SFL207"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629166,
+            "seedNum": 32,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 22107194,
+              "name": "れれれれれーげん"
+            },
+            "progressionSource": {
+              "id": 13747295,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282654,
+                "displayIdentifier": "SFK205"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629177,
+            "seedNum": 48,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 22266873,
+              "name": "Thunder DeLangis"
+            },
+            "progressionSource": {
+              "id": 13747306,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282645,
+                "displayIdentifier": "SFL315"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629193,
+            "seedNum": 64,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 22169956,
+              "name": "REJECT | eguto"
+            },
+            "progressionSource": {
+              "id": 13747322,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282629,
+                "displayIdentifier": "SFK309"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629190,
+            "seedNum": 49,
+            "placement": 9,
+            "isBye": false,
+            "entrant": {
+              "id": 22287653,
+              "name": "なえぽょ"
+            },
+            "progressionSource": {
+              "id": 13747319,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282632,
+                "displayIdentifier": "SFL311"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629215,
+            "seedNum": 65,
+            "placement": 9,
+            "isBye": false,
+            "entrant": {
+              "id": 22917145,
+              "name": "LG | しゅうまい"
+            },
+            "progressionSource": {
+              "id": 13747344,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282624,
+                "displayIdentifier": "SFK301"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629217,
+            "seedNum": 80,
+            "placement": 9,
+            "isBye": false,
+            "entrant": {
+              "id": 22089366,
+              "name": "Vega007"
+            },
+            "progressionSource": {
+              "id": 13747346,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282637,
+                "displayIdentifier": "SFL303"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          },
+          {
+            "id": 39629200,
+            "seedNum": 81,
+            "placement": 9,
+            "isBye": false,
+            "entrant": {
+              "id": 22794107,
+              "name": "t4nuki"
+            },
+            "progressionSource": {
+              "id": 13747329,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282640,
+                "displayIdentifier": "SFL307"
+              },
+              "originPhase": {
+                "id": 2266151,
+                "name": "Round3"
+              }
+            }
+          }
+        ]
+      },
+      "sets": {
+        "pageInfo": {
+          "total": 12,
+          "totalPages": 1
+        },
+        "nodes": [
+          {
+            "id": 102395007,
+            "identifier": "N",
+            "round": -7,
+            "fullRoundText": "Losers Semi-Final",
+            "state": 3,
+            "winnerId": 22264195,
+            "displayScore": "Kilzyou 2 - CR | Kazunoko 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777711544,
+            "wPlacement": 3,
+            "lPlacement": 4,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102395007-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102395005",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22264195,
+                  "name": "Kilzyou",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 20467178,
+                      "gamerTag": "Kilzyou",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629201,
+                  "seedNum": 96
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102395007-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102395006",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22089795,
+                  "name": "CR | Kazunoko",
+                  "initialSeedNum": 96,
+                  "participants": [
+                    {
+                      "id": 20303745,
+                      "gamerTag": "Kazunoko",
+                      "prefix": "CR"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629174,
+                  "seedNum": 33
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102395005,
+            "identifier": "L",
+            "round": -6,
+            "fullRoundText": "Losers Quarter-Final",
+            "state": 3,
+            "winnerId": 22264195,
+            "displayScore": "れれれれれーげん 0 - Kilzyou 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777710045,
+            "wPlacement": 4,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102395005-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102394974",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 22107194,
+                  "name": "れれれれれーげん",
+                  "initialSeedNum": 479,
+                  "participants": [
+                    {
+                      "id": 20319633,
+                      "gamerTag": "れれれれれーげん",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629166,
+                  "seedNum": 32
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102395005-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102395003",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22264195,
+                  "name": "Kilzyou",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 20467178,
+                      "gamerTag": "Kilzyou",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629201,
+                  "seedNum": 96
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102395006,
+            "identifier": "M",
+            "round": -6,
+            "fullRoundText": "Losers Quarter-Final",
+            "state": 3,
+            "winnerId": 22089795,
+            "displayScore": "えびはら 1 - CR | Kazunoko 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777710051,
+            "wPlacement": 4,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102395006-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102394975",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 23114632,
+                  "name": "えびはら",
+                  "initialSeedNum": 114,
+                  "participants": [
+                    {
+                      "id": 21239655,
+                      "gamerTag": "えびはら",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629150,
+                  "seedNum": 17
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102395006-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102395004",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22089795,
+                  "name": "CR | Kazunoko",
+                  "initialSeedNum": 96,
+                  "participants": [
+                    {
+                      "id": 20303745,
+                      "gamerTag": "Kazunoko",
+                      "prefix": "CR"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629174,
+                  "seedNum": 33
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102395003,
+            "identifier": "J",
+            "round": -5,
+            "fullRoundText": "Losers Round 2",
+            "state": 3,
+            "winnerId": 22264195,
+            "displayScore": "Thunder DeLangis 1 - Kilzyou 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777710011,
+            "wPlacement": 5,
+            "lPlacement": 7,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102395003-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102394999",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22266873,
+                  "name": "Thunder DeLangis",
+                  "initialSeedNum": 177,
+                  "participants": [
+                    {
+                      "id": 20469501,
+                      "gamerTag": "Thunder DeLangis",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629177,
+                  "seedNum": 48
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102395003-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102395000",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22264195,
+                  "name": "Kilzyou",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 20467178,
+                      "gamerTag": "Kilzyou",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629201,
+                  "seedNum": 96
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102395004,
+            "identifier": "K",
+            "round": -5,
+            "fullRoundText": "Losers Round 2",
+            "state": 3,
+            "winnerId": 22089795,
+            "displayScore": "CR | Kazunoko 2 - REJECT | eguto 0",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777710011,
+            "wPlacement": 5,
+            "lPlacement": 7,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102395004-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102395001",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22089795,
+                  "name": "CR | Kazunoko",
+                  "initialSeedNum": 96,
+                  "participants": [
+                    {
+                      "id": 20303745,
+                      "gamerTag": "Kazunoko",
+                      "prefix": "CR"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629174,
+                  "seedNum": 33
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102395004-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102395002",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22169956,
+                  "name": "REJECT | eguto",
+                  "initialSeedNum": 65,
+                  "participants": [
+                    {
+                      "id": 20375381,
+                      "gamerTag": "eguto",
+                      "prefix": "REJECT"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629193,
+                  "seedNum": 64
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102394999,
+            "identifier": "F",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22266873,
+            "displayScore": "Thunder DeLangis 2 - LG | しゅうまい 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777709962,
+            "wPlacement": 7,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102394999-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629177",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22266873,
+                  "name": "Thunder DeLangis",
+                  "initialSeedNum": 177,
+                  "participants": [
+                    {
+                      "id": 20469501,
+                      "gamerTag": "Thunder DeLangis",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629177,
+                  "seedNum": 48
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102394999-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102394995",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22917145,
+                  "name": "LG | しゅうまい",
+                  "initialSeedNum": 360,
+                  "participants": [
+                    {
+                      "id": 21058600,
+                      "gamerTag": "しゅうまい",
+                      "prefix": "LG"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629215,
+                  "seedNum": 65
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102395000,
+            "identifier": "G",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22264195,
+            "displayScore": "なえぽょ 0 - Kilzyou 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777709966,
+            "wPlacement": 7,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102395000-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629190",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22287653,
+                  "name": "なえぽょ",
+                  "initialSeedNum": 880,
+                  "participants": [
+                    {
+                      "id": 20488284,
+                      "gamerTag": "なえぽょ",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629190,
+                  "seedNum": 49
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102395000-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102394996",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22264195,
+                  "name": "Kilzyou",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 20467178,
+                      "gamerTag": "Kilzyou",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629201,
+                  "seedNum": 96
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102395001,
+            "identifier": "H",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22089795,
+            "displayScore": "CR | Kazunoko 2 - Vega007 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777709970,
+            "wPlacement": 7,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102395001-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629174",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22089795,
+                  "name": "CR | Kazunoko",
+                  "initialSeedNum": 96,
+                  "participants": [
+                    {
+                      "id": 20303745,
+                      "gamerTag": "Kazunoko",
+                      "prefix": "CR"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629174,
+                  "seedNum": 33
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102395001-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102394997",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22089366,
+                  "name": "Vega007",
+                  "initialSeedNum": 381,
+                  "participants": [
+                    {
+                      "id": 20303364,
+                      "gamerTag": "Vega007",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629217,
+                  "seedNum": 80
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102395002,
+            "identifier": "I",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22169956,
+            "displayScore": "REJECT | eguto 2 - t4nuki 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777709976,
+            "wPlacement": 7,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102395002-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629193",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22169956,
+                  "name": "REJECT | eguto",
+                  "initialSeedNum": 65,
+                  "participants": [
+                    {
+                      "id": 20375381,
+                      "gamerTag": "eguto",
+                      "prefix": "REJECT"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629193,
+                  "seedNum": 64
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102395002-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102394998",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22794107,
+                  "name": "t4nuki",
+                  "initialSeedNum": 420,
+                  "participants": [
+                    {
+                      "id": 20943047,
+                      "gamerTag": "t4nuki",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629200,
+                  "seedNum": 81
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102394974,
+            "identifier": "A",
+            "round": 1,
+            "fullRoundText": "Winners Semi-Final",
+            "state": 3,
+            "winnerId": 22117153,
+            "displayScore": "cosa 2 - れれれれれーげん 0",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777709952,
+            "wPlacement": 3,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102394974-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629135",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22117153,
+                  "name": "cosa",
+                  "initialSeedNum": 66,
+                  "participants": [
+                    {
+                      "id": 20328893,
+                      "gamerTag": "cosa",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629135,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102394974-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "39629166",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22107194,
+                  "name": "れれれれれーげん",
+                  "initialSeedNum": 479,
+                  "participants": [
+                    {
+                      "id": 20319633,
+                      "gamerTag": "れれれれれーげん",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629166,
+                  "seedNum": 32
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102394975,
+            "identifier": "B",
+            "round": 1,
+            "fullRoundText": "Winners Semi-Final",
+            "state": 3,
+            "winnerId": 22926879,
+            "displayScore": "Booce_Lee 2 - えびはら 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777709959,
+            "wPlacement": 3,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102394975-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629152",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22926879,
+                  "name": "Booce_Lee",
+                  "initialSeedNum": 47,
+                  "participants": [
+                    {
+                      "id": 21067716,
+                      "gamerTag": "Booce_Lee",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629152,
+                  "seedNum": 16
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102394975-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "39629150",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 23114632,
+                  "name": "えびはら",
+                  "initialSeedNum": 114,
+                  "participants": [
+                    {
+                      "id": 21239655,
+                      "gamerTag": "えびはら",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629150,
+                  "seedNum": 17
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102394976,
+            "identifier": "C",
+            "round": 2,
+            "fullRoundText": "Winners Final",
+            "state": 3,
+            "winnerId": 22117153,
+            "displayScore": "cosa 2 - Booce_Lee 0",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777710185,
+            "wPlacement": 2,
+            "lPlacement": 3,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102394976-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102394974",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22117153,
+                  "name": "cosa",
+                  "initialSeedNum": 66,
+                  "participants": [
+                    {
+                      "id": 20328893,
+                      "gamerTag": "cosa",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629135,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102394976-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102394975",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22926879,
+                  "name": "Booce_Lee",
+                  "initialSeedNum": 47,
+                  "participants": [
+                    {
+                      "id": 21067716,
+                      "gamerTag": "Booce_Lee",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629152,
+                  "seedNum": 16
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

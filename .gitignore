@@ -6,6 +6,13 @@ node_modules/
 /logs/
 /assets/
 
+# Local secrets and per-machine config (see README "Secrets")
+/.env
+/.env.*
+!/.env.example
+/.secrets/
+/cfg/rashinban.json
+
 # Build output (regenerate with `npm run build`)
 bundles/rashinban/graphics/*.js
 bundles/rashinban/graphics/*.js.map

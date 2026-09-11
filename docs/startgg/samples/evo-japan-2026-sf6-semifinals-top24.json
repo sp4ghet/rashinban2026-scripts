@@ -1,0 +1,2198 @@
+{
+  "fetchedAt": "2026-09-10T20:31:34.501Z",
+  "kind": "phase-group",
+  "variables": {
+    "id": "3282663"
+  },
+  "data": {
+    "phaseGroup": {
+      "id": 3282663,
+      "displayIdentifier": "SFS205",
+      "bracketType": "DOUBLE_ELIMINATION",
+      "state": 3,
+      "numRounds": null,
+      "phase": {
+        "id": 2266153,
+        "name": "Semifinals",
+        "phaseOrder": 5,
+        "bracketType": "DOUBLE_ELIMINATION",
+        "groupCount": 1,
+        "numSeeds": 24
+      },
+      "progressionsOut": [
+        {
+          "id": 13747398,
+          "originPlacement": 5
+        },
+        {
+          "id": 13747399,
+          "originPlacement": 5
+        },
+        {
+          "id": 13747400,
+          "originPlacement": 5
+        },
+        {
+          "id": 13747401,
+          "originPlacement": 5
+        },
+        {
+          "id": 13747402,
+          "originPlacement": 7
+        },
+        {
+          "id": 13747403,
+          "originPlacement": 7
+        },
+        {
+          "id": 13747404,
+          "originPlacement": 7
+        },
+        {
+          "id": 13747405,
+          "originPlacement": 7
+        }
+      ],
+      "seeds": {
+        "nodes": [
+          {
+            "id": 39629242,
+            "seedNum": 4,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 22137613,
+              "name": "ZETA | Yamaguchi"
+            },
+            "progressionSource": {
+              "id": 13747363,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282658,
+                "displayIdentifier": "SFM217"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629244,
+            "seedNum": 6,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 22087959,
+              "name": "ZETA | Higuchi"
+            },
+            "progressionSource": {
+              "id": 13747365,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282660,
+                "displayIdentifier": "SFM325"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629245,
+            "seedNum": 7,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 22782572,
+              "name": "naooonn"
+            },
+            "progressionSource": {
+              "id": 13747366,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282661,
+                "displayIdentifier": "SFM309"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629246,
+            "seedNum": 8,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 22228070,
+              "name": "TPBE | Hope"
+            },
+            "progressionSource": {
+              "id": 13747367,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282662,
+                "displayIdentifier": "SFM209"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629240,
+            "seedNum": 2,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 22441603,
+              "name": "CR/PWS | Shuto"
+            },
+            "progressionSource": {
+              "id": 13747361,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282656,
+                "displayIdentifier": "SFM301"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629241,
+            "seedNum": 3,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 22096436,
+              "name": "広島 TEAM iXA | taketake-piano"
+            },
+            "progressionSource": {
+              "id": 13747362,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282657,
+                "displayIdentifier": "SFM317"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629243,
+            "seedNum": 5,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 22926883,
+              "name": "SR NuckleDu"
+            },
+            "progressionSource": {
+              "id": 13747364,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282659,
+                "displayIdentifier": "SFM225"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629248,
+            "seedNum": 15,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 22463723,
+              "name": "FLY | Punk"
+            },
+            "progressionSource": {
+              "id": 13747369,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282656,
+                "displayIdentifier": "SFM301"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629239,
+            "seedNum": 1,
+            "placement": 9,
+            "isBye": false,
+            "entrant": {
+              "id": 22117153,
+              "name": "cosa"
+            },
+            "progressionSource": {
+              "id": 13747360,
+              "originPlacement": 2,
+              "originPhaseGroup": {
+                "id": 3282655,
+                "displayIdentifier": "SFM201"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629255,
+            "seedNum": 17,
+            "placement": 9,
+            "isBye": false,
+            "entrant": {
+              "id": 22264195,
+              "name": "Kilzyou"
+            },
+            "progressionSource": {
+              "id": 13747376,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282655,
+                "displayIdentifier": "SFM201"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629257,
+            "seedNum": 19,
+            "placement": 9,
+            "isBye": false,
+            "entrant": {
+              "id": 22151215,
+              "name": "SS熊本 | taizen"
+            },
+            "progressionSource": {
+              "id": 13747378,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282657,
+                "displayIdentifier": "SFM317"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629261,
+            "seedNum": 23,
+            "placement": 9,
+            "isBye": false,
+            "entrant": {
+              "id": 22097454,
+              "name": "ランガサミ/rangasamy"
+            },
+            "progressionSource": {
+              "id": 13747382,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282661,
+                "displayIdentifier": "SFM309"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629253,
+            "seedNum": 10,
+            "placement": 13,
+            "isBye": false,
+            "entrant": {
+              "id": 22253783,
+              "name": "2Game | Blaz"
+            },
+            "progressionSource": {
+              "id": 13747374,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282661,
+                "displayIdentifier": "SFM309"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629251,
+            "seedNum": 12,
+            "placement": 13,
+            "isBye": false,
+            "entrant": {
+              "id": 22096599,
+              "name": "watyawacha"
+            },
+            "progressionSource": {
+              "id": 13747372,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282659,
+                "displayIdentifier": "SFM225"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629260,
+            "seedNum": 22,
+            "placement": 13,
+            "isBye": false,
+            "entrant": {
+              "id": 22908177,
+              "name": "あくたがわ"
+            },
+            "progressionSource": {
+              "id": 13747381,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282660,
+                "displayIdentifier": "SFM325"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629262,
+            "seedNum": 24,
+            "placement": 13,
+            "isBye": false,
+            "entrant": {
+              "id": 22795950,
+              "name": "2G | Brayan_Job"
+            },
+            "progressionSource": {
+              "id": 13747383,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282662,
+                "displayIdentifier": "SFM209"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629254,
+            "seedNum": 9,
+            "placement": 17,
+            "isBye": false,
+            "entrant": {
+              "id": 22770675,
+              "name": "MRG | Yuto"
+            },
+            "progressionSource": {
+              "id": 13747375,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282662,
+                "displayIdentifier": "SFM209"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629252,
+            "seedNum": 11,
+            "placement": 17,
+            "isBye": false,
+            "entrant": {
+              "id": 22267941,
+              "name": "8BitDo | Vxbao"
+            },
+            "progressionSource": {
+              "id": 13747373,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282660,
+                "displayIdentifier": "SFM325"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629250,
+            "seedNum": 13,
+            "placement": 17,
+            "isBye": false,
+            "entrant": {
+              "id": 22780347,
+              "name": "DFM | Naruo"
+            },
+            "progressionSource": {
+              "id": 13747371,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282658,
+                "displayIdentifier": "SFM217"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629249,
+            "seedNum": 14,
+            "placement": 17,
+            "isBye": false,
+            "entrant": {
+              "id": 22780848,
+              "name": "NL"
+            },
+            "progressionSource": {
+              "id": 13747370,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282657,
+                "displayIdentifier": "SFM317"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629247,
+            "seedNum": 16,
+            "placement": 17,
+            "isBye": false,
+            "entrant": {
+              "id": 22926879,
+              "name": "Booce_Lee"
+            },
+            "progressionSource": {
+              "id": 13747368,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282655,
+                "displayIdentifier": "SFM201"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629256,
+            "seedNum": 18,
+            "placement": 17,
+            "isBye": false,
+            "entrant": {
+              "id": 23086346,
+              "name": "Heretics | Lexx"
+            },
+            "progressionSource": {
+              "id": 13747377,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282656,
+                "displayIdentifier": "SFM301"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629258,
+            "seedNum": 20,
+            "placement": 17,
+            "isBye": false,
+            "entrant": {
+              "id": 22094637,
+              "name": "SS熊本 | kobayan"
+            },
+            "progressionSource": {
+              "id": 13747379,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282658,
+                "displayIdentifier": "SFM217"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          },
+          {
+            "id": 39629259,
+            "seedNum": 21,
+            "placement": 17,
+            "isBye": false,
+            "entrant": {
+              "id": 22130918,
+              "name": "WIM | Lemochin"
+            },
+            "progressionSource": {
+              "id": 13747380,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3282659,
+                "displayIdentifier": "SFM225"
+              },
+              "originPhase": {
+                "id": 2266152,
+                "name": "Round4"
+              }
+            }
+          }
+        ]
+      },
+      "sets": {
+        "pageInfo": {
+          "total": 20,
+          "totalPages": 1
+        },
+        "nodes": [
+          {
+            "id": 102398939,
+            "identifier": "V",
+            "round": -6,
+            "fullRoundText": "Losers Round 3",
+            "state": 3,
+            "winnerId": 22926883,
+            "displayScore": "SR NuckleDu 2 - Kilzyou 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777719703,
+            "wPlacement": 7,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398939-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102398879",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 22926883,
+                  "name": "SR NuckleDu",
+                  "initialSeedNum": 27,
+                  "participants": [
+                    {
+                      "id": 21067721,
+                      "gamerTag": "SR NuckleDu",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629243,
+                  "seedNum": 5
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398939-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398935",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22264195,
+                  "name": "Kilzyou",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 20467178,
+                      "gamerTag": "Kilzyou",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629255,
+                  "seedNum": 17
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398940,
+            "identifier": "W",
+            "round": -6,
+            "fullRoundText": "Losers Round 3",
+            "state": 3,
+            "winnerId": 22463723,
+            "displayScore": "cosa 1 - FLY | Punk 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777720348,
+            "wPlacement": 7,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398940-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102398878",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 22117153,
+                  "name": "cosa",
+                  "initialSeedNum": 66,
+                  "participants": [
+                    {
+                      "id": 20328893,
+                      "gamerTag": "cosa",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629239,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398940-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398936",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22463723,
+                  "name": "FLY | Punk",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 20654656,
+                      "gamerTag": "Punk",
+                      "prefix": "FLY"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629248,
+                  "seedNum": 15
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398941,
+            "identifier": "X",
+            "round": -6,
+            "fullRoundText": "Losers Round 3",
+            "state": 3,
+            "winnerId": 22096436,
+            "displayScore": "広島 TEAM iXA | taketake-piano 2 - ランガサミ/rangasamy 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777722008,
+            "wPlacement": 7,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398941-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102398881",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 22096436,
+                  "name": "広島 TEAM iXA | taketake-piano",
+                  "initialSeedNum": 52,
+                  "participants": [
+                    {
+                      "id": 20309833,
+                      "gamerTag": "taketake-piano",
+                      "prefix": "広島 TEAM iXA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629241,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398941-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398937",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22097454,
+                  "name": "ランガサミ/rangasamy",
+                  "initialSeedNum": 226,
+                  "participants": [
+                    {
+                      "id": 20310680,
+                      "gamerTag": "ランガサミ/rangasamy",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629261,
+                  "seedNum": 23
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398942,
+            "identifier": "Y",
+            "round": -6,
+            "fullRoundText": "Losers Round 3",
+            "state": 3,
+            "winnerId": 22441603,
+            "displayScore": "CR/PWS | Shuto 2 - SS熊本 | taizen 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777721168,
+            "wPlacement": 7,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398942-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102398880",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 22441603,
+                  "name": "CR/PWS | Shuto",
+                  "initialSeedNum": 57,
+                  "participants": [
+                    {
+                      "id": 20634382,
+                      "gamerTag": "Shuto",
+                      "prefix": "CR/PWS"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629240,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398942-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398938",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22151215,
+                  "name": "SS熊本 | taizen",
+                  "initialSeedNum": 132,
+                  "participants": [
+                    {
+                      "id": 20358731,
+                      "gamerTag": "taizen",
+                      "prefix": "SS熊本"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629257,
+                  "seedNum": 19
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398935,
+            "identifier": "R",
+            "round": -5,
+            "fullRoundText": "Losers Round 2",
+            "state": 3,
+            "winnerId": 22264195,
+            "displayScore": "Kilzyou 2 - 2G | Brayan_Job 0",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777718575,
+            "wPlacement": 9,
+            "lPlacement": 13,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398935-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102398927",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22264195,
+                  "name": "Kilzyou",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 20467178,
+                      "gamerTag": "Kilzyou",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629255,
+                  "seedNum": 17
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398935-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398928",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22795950,
+                  "name": "2G | Brayan_Job",
+                  "initialSeedNum": 128,
+                  "participants": [
+                    {
+                      "id": 20944748,
+                      "gamerTag": "Brayan_Job",
+                      "prefix": "2G"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629262,
+                  "seedNum": 24
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398936,
+            "identifier": "S",
+            "round": -5,
+            "fullRoundText": "Losers Round 2",
+            "state": 3,
+            "winnerId": 22463723,
+            "displayScore": "2Game | Blaz 1 - FLY | Punk 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777718975,
+            "wPlacement": 9,
+            "lPlacement": 13,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398936-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102398929",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22253783,
+                  "name": "2Game | Blaz",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 20456321,
+                      "gamerTag": "Blaz",
+                      "prefix": "2Game"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629253,
+                  "seedNum": 10
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398936-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398930",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22463723,
+                  "name": "FLY | Punk",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 20654656,
+                      "gamerTag": "Punk",
+                      "prefix": "FLY"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629248,
+                  "seedNum": 15
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398937,
+            "identifier": "T",
+            "round": -5,
+            "fullRoundText": "Losers Round 2",
+            "state": 3,
+            "winnerId": 22097454,
+            "displayScore": "watyawacha 1 - ランガサミ/rangasamy 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777720163,
+            "wPlacement": 9,
+            "lPlacement": 13,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398937-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102398931",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22096599,
+                  "name": "watyawacha",
+                  "initialSeedNum": 267,
+                  "participants": [
+                    {
+                      "id": 20309969,
+                      "gamerTag": "watyawacha",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629251,
+                  "seedNum": 12
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398937-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398932",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22097454,
+                  "name": "ランガサミ/rangasamy",
+                  "initialSeedNum": 226,
+                  "participants": [
+                    {
+                      "id": 20310680,
+                      "gamerTag": "ランガサミ/rangasamy",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629261,
+                  "seedNum": 23
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398938,
+            "identifier": "U",
+            "round": -5,
+            "fullRoundText": "Losers Round 2",
+            "state": 3,
+            "winnerId": 22151215,
+            "displayScore": "SS熊本 | taizen 2 - あくたがわ 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777719399,
+            "wPlacement": 9,
+            "lPlacement": 13,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398938-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102398933",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22151215,
+                  "name": "SS熊本 | taizen",
+                  "initialSeedNum": 132,
+                  "participants": [
+                    {
+                      "id": 20358731,
+                      "gamerTag": "taizen",
+                      "prefix": "SS熊本"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629257,
+                  "seedNum": 19
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398938-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398934",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22908177,
+                  "name": "あくたがわ",
+                  "initialSeedNum": 51,
+                  "participants": [
+                    {
+                      "id": 21050474,
+                      "gamerTag": "あくたがわ",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629260,
+                  "seedNum": 22
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398927,
+            "identifier": "J",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22264195,
+            "displayScore": "8BitDo | Vxbao 0 - Kilzyou 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777716438,
+            "wPlacement": 13,
+            "lPlacement": 17,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398927-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629252",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22267941,
+                  "name": "8BitDo | Vxbao",
+                  "initialSeedNum": 21,
+                  "participants": [
+                    {
+                      "id": 20470541,
+                      "gamerTag": "Vxbao",
+                      "prefix": "8BitDo"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629252,
+                  "seedNum": 11
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398927-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398919",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22264195,
+                  "name": "Kilzyou",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 20467178,
+                      "gamerTag": "Kilzyou",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629255,
+                  "seedNum": 17
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398928,
+            "identifier": "K",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22795950,
+            "displayScore": "NL 0 - 2G | Brayan_Job 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777716766,
+            "wPlacement": 13,
+            "lPlacement": 17,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398928-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629249",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22780848,
+                  "name": "NL",
+                  "initialSeedNum": 29,
+                  "participants": [
+                    {
+                      "id": 20930843,
+                      "gamerTag": "NL",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629249,
+                  "seedNum": 14
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398928-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398920",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22795950,
+                  "name": "2G | Brayan_Job",
+                  "initialSeedNum": 128,
+                  "participants": [
+                    {
+                      "id": 20944748,
+                      "gamerTag": "Brayan_Job",
+                      "prefix": "2G"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629262,
+                  "seedNum": 24
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398929,
+            "identifier": "L",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22253783,
+            "displayScore": "2Game | Blaz 2 - SS熊本 | kobayan 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777717425,
+            "wPlacement": 13,
+            "lPlacement": 17,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398929-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629253",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22253783,
+                  "name": "2Game | Blaz",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 20456321,
+                      "gamerTag": "Blaz",
+                      "prefix": "2Game"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629253,
+                  "seedNum": 10
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398929-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398921",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22094637,
+                  "name": "SS熊本 | kobayan",
+                  "initialSeedNum": 14,
+                  "participants": [
+                    {
+                      "id": 20308277,
+                      "gamerTag": "kobayan",
+                      "prefix": "SS熊本"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629258,
+                  "seedNum": 20
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398930,
+            "identifier": "M",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22463723,
+            "displayScore": "FLY | Punk 2 - WIM | Lemochin 0",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777718054,
+            "wPlacement": 13,
+            "lPlacement": 17,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398930-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629248",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22463723,
+                  "name": "FLY | Punk",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 20654656,
+                      "gamerTag": "Punk",
+                      "prefix": "FLY"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629248,
+                  "seedNum": 15
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398930-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398922",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22130918,
+                  "name": "WIM | Lemochin",
+                  "initialSeedNum": 304,
+                  "participants": [
+                    {
+                      "id": 20340442,
+                      "gamerTag": "Lemochin",
+                      "prefix": "WIM"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629259,
+                  "seedNum": 21
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398931,
+            "identifier": "N",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22096599,
+            "displayScore": "watyawacha 2 - Heretics | Lexx 0",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777718063,
+            "wPlacement": 13,
+            "lPlacement": 17,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398931-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629251",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22096599,
+                  "name": "watyawacha",
+                  "initialSeedNum": 267,
+                  "participants": [
+                    {
+                      "id": 20309969,
+                      "gamerTag": "watyawacha",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629251,
+                  "seedNum": 12
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398931-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398923",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 23086346,
+                  "name": "Heretics | Lexx",
+                  "initialSeedNum": 42,
+                  "participants": [
+                    {
+                      "id": 21214508,
+                      "gamerTag": "Lexx",
+                      "prefix": "Heretics"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629256,
+                  "seedNum": 18
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398932,
+            "identifier": "O",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22097454,
+            "displayScore": "DFM | Naruo 0 - ランガサミ/rangasamy 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777718770,
+            "wPlacement": 13,
+            "lPlacement": 17,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398932-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629250",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22780347,
+                  "name": "DFM | Naruo",
+                  "initialSeedNum": 147,
+                  "participants": [
+                    {
+                      "id": 20930396,
+                      "gamerTag": "Naruo",
+                      "prefix": "DFM"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629250,
+                  "seedNum": 13
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398932-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398924",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22097454,
+                  "name": "ランガサミ/rangasamy",
+                  "initialSeedNum": 226,
+                  "participants": [
+                    {
+                      "id": 20310680,
+                      "gamerTag": "ランガサミ/rangasamy",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629261,
+                  "seedNum": 23
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398933,
+            "identifier": "P",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22151215,
+            "displayScore": "MRG | Yuto 0 - SS熊本 | taizen 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777717127,
+            "wPlacement": 13,
+            "lPlacement": 17,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398933-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629254",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22770675,
+                  "name": "MRG | Yuto",
+                  "initialSeedNum": 58,
+                  "participants": [
+                    {
+                      "id": 20921603,
+                      "gamerTag": "Yuto",
+                      "prefix": "MRG"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629254,
+                  "seedNum": 9
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398933-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398925",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22151215,
+                  "name": "SS熊本 | taizen",
+                  "initialSeedNum": 132,
+                  "participants": [
+                    {
+                      "id": 20358731,
+                      "gamerTag": "taizen",
+                      "prefix": "SS熊本"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629257,
+                  "seedNum": 19
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398934,
+            "identifier": "Q",
+            "round": -4,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22908177,
+            "displayScore": "Booce_Lee 1 - あくたがわ 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777717436,
+            "wPlacement": 13,
+            "lPlacement": 17,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398934-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629247",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22926879,
+                  "name": "Booce_Lee",
+                  "initialSeedNum": 47,
+                  "participants": [
+                    {
+                      "id": 21067716,
+                      "gamerTag": "Booce_Lee",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629247,
+                  "seedNum": 16
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398934-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102398926",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22908177,
+                  "name": "あくたがわ",
+                  "initialSeedNum": 51,
+                  "participants": [
+                    {
+                      "id": 21050474,
+                      "gamerTag": "あくたがわ",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629260,
+                  "seedNum": 22
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398878,
+            "identifier": "A",
+            "round": 1,
+            "fullRoundText": "Winners Quarter-Final",
+            "state": 3,
+            "winnerId": 22228070,
+            "displayScore": "cosa 1 - TPBE | Hope 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777716407,
+            "wPlacement": 5,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398878-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629239",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22117153,
+                  "name": "cosa",
+                  "initialSeedNum": 66,
+                  "participants": [
+                    {
+                      "id": 20328893,
+                      "gamerTag": "cosa",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629239,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398878-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "39629246",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22228070,
+                  "name": "TPBE | Hope",
+                  "initialSeedNum": 74,
+                  "participants": [
+                    {
+                      "id": 20429673,
+                      "gamerTag": "Hope",
+                      "prefix": "TPBE"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629246,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398879,
+            "identifier": "B",
+            "round": 1,
+            "fullRoundText": "Winners Quarter-Final",
+            "state": 3,
+            "winnerId": 22137613,
+            "displayScore": "ZETA | Yamaguchi 2 - SR NuckleDu 1",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777716415,
+            "wPlacement": 5,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398879-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629242",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22137613,
+                  "name": "ZETA | Yamaguchi",
+                  "initialSeedNum": 62,
+                  "participants": [
+                    {
+                      "id": 20346478,
+                      "gamerTag": "Yamaguchi",
+                      "prefix": "ZETA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629242,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398879-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "39629243",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22926883,
+                  "name": "SR NuckleDu",
+                  "initialSeedNum": 27,
+                  "participants": [
+                    {
+                      "id": 21067721,
+                      "gamerTag": "SR NuckleDu",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629243,
+                  "seedNum": 5
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398880,
+            "identifier": "C",
+            "round": 1,
+            "fullRoundText": "Winners Quarter-Final",
+            "state": 3,
+            "winnerId": 22782572,
+            "displayScore": "CR/PWS | Shuto 0 - naooonn 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777717163,
+            "wPlacement": 5,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398880-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629240",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22441603,
+                  "name": "CR/PWS | Shuto",
+                  "initialSeedNum": 57,
+                  "participants": [
+                    {
+                      "id": 20634382,
+                      "gamerTag": "Shuto",
+                      "prefix": "CR/PWS"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629240,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398880-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "39629245",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22782572,
+                  "name": "naooonn",
+                  "initialSeedNum": 144,
+                  "participants": [
+                    {
+                      "id": 20932490,
+                      "gamerTag": "naooonn",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629245,
+                  "seedNum": 7
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102398881,
+            "identifier": "D",
+            "round": 1,
+            "fullRoundText": "Winners Quarter-Final",
+            "state": 3,
+            "winnerId": 22087959,
+            "displayScore": "広島 TEAM iXA | taketake-piano 0 - ZETA | Higuchi 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1777717138,
+            "wPlacement": 5,
+            "lPlacement": 9,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102398881-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629241",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22096436,
+                  "name": "広島 TEAM iXA | taketake-piano",
+                  "initialSeedNum": 52,
+                  "participants": [
+                    {
+                      "id": 20309833,
+                      "gamerTag": "taketake-piano",
+                      "prefix": "広島 TEAM iXA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629241,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102398881-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "39629244",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22087959,
+                  "name": "ZETA | Higuchi",
+                  "initialSeedNum": 5,
+                  "participants": [
+                    {
+                      "id": 20302327,
+                      "gamerTag": "Higuchi",
+                      "prefix": "ZETA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629244,
+                  "seedNum": 6
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

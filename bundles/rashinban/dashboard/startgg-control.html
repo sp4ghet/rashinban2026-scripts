@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        margin: 0;
+        padding: 12px;
+        font-family: "Segoe UI", sans-serif;
+        font-size: 13px;
+        color: #efefef;
+        background: transparent;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .row label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        flex: 1;
+      }
+
+      input[type="text"],
+      input[type="number"] {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 8px;
+        font-size: 13px;
+        color: #fff;
+        background: #37474f;
+        border: 1px solid #546e7a;
+        border-radius: 4px;
+      }
+
+      input[type="number"] { max-width: 64px; }
+
+      button {
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        background: #37474f;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover { filter: brightness(1.2); }
+      button:disabled { opacity: 0.4; }
+      #enabled.active { background: #2e7d32; }
+
+      #status {
+        white-space: pre-wrap;
+        padding: 6px 8px;
+        margin-bottom: 8px;
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        background: #1c2a33;
+        border-radius: 4px;
+      }
+
+      #status.error { color: #ff8a80; }
+
+      #summary {
+        margin-bottom: 8px;
+        color: #b0bec5;
+        font-size: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+
+      th, td {
+        padding: 3px 6px;
+        text-align: left;
+        border-bottom: 1px solid #37474f;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 220px;
+      }
+
+      th { color: #90a4ae; font-weight: 600; }
+      tr[data-state="active"] td { background: #1b5e20; }
+      tr[data-state="called"] td,
+      tr[data-state="ready"] td,
+      tr[data-state="queued"] td { background: #4e342e; }
+      tr[data-state="completed"] td { color: #90a4ae; }
+
+      .wrap { max-height: 420px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <label>Event <input id="slug" type="text" placeholder="tournament/.../event/..." /></label>
+    </div>
+    <div class="row">
+      <label>Every <input id="interval" type="number" min="10" step="5" /> s</label>
+      <button id="enabled">Polling OFF</button>
+      <button id="refresh">Refresh now</button>
+    </div>
+    <div id="status">waiting for status...</div>
+    <div id="summary">No data fetched yet.</div>
+    <div class="wrap">
+      <table>
+        <thead>
+          <tr><th>Phase</th><th>Pool</th><th>Round</th><th>Match</th><th>Score</th><th>State</th></tr>
+        </thead>
+        <tbody id="sets"></tbody>
+      </table>
+    </div>
+    <script src="startgg-control.js"></script>
+  </body>
+</html>

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>RASHINBAN 2026 — Ban &amp; Pick (Stream)</title>
+    <style>
+      /* Generic placeholder design for the Stream output. Duplicated on
+         purpose from the other banpick-*.html so each can be restyled. */
+      :root {
+        --accent: #c2185b;
+        --player-a: #ff7043;
+        --player-b: #42a5f5;
+        --panel: rgba(16, 18, 32, 0.92);
+        --text: #fff;
+        --muted: #9aa3b5;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: transparent;
+        font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+        color: var(--text);
+      }
+
+      #banpick {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 24px;
+        padding: 60px 120px;
+        box-sizing: border-box;
+        opacity: 0;
+        transform: translateY(24px);
+        transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      #banpick.visible {
+        opacity: 1;
+        transform: none;
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 32px;
+      }
+
+      .player {
+        font-size: 44px;
+        font-weight: 700;
+        padding: 12px 28px;
+        background: var(--panel);
+        border-bottom: 6px solid var(--muted);
+        transition: border-color 0.3s;
+      }
+
+      .player.a { text-align: left; }
+      .player.b { text-align: right; }
+      #banpick[data-turn="A"] .player.a { border-color: var(--player-a); }
+      #banpick[data-turn="B"] .player.b { border-color: var(--player-b); }
+
+      #step {
+        font-size: 32px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-align: center;
+        padding: 12px 32px;
+        background: var(--accent);
+        border-radius: 6px;
+        white-space: nowrap;
+      }
+
+      .bp-board {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+      }
+
+      .bp-group {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .bp-group-title {
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .bp-card {
+        position: relative;
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        grid-template-rows: 1fr auto;
+        align-items: center;
+        min-height: 150px;
+        padding: 18px 24px;
+        background: var(--panel);
+        border-left: 8px solid var(--muted);
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        transition: opacity 0.3s, transform 0.3s;
+      }
+
+      .bp-card-num {
+        grid-row: 1 / span 2;
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .bp-card-map {
+        font-size: 30px;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+
+      .bp-card-tag {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        min-height: 1.4em;
+      }
+
+      .bp-card[data-by="A"] { border-left-color: var(--player-a); }
+      .bp-card[data-by="B"] { border-left-color: var(--player-b); }
+      .bp-card[data-by="A"] .bp-card-tag { color: var(--player-a); }
+      .bp-card[data-by="B"] .bp-card-tag { color: var(--player-b); }
+
+      .bp-card[data-status="banned"] {
+        opacity: 0.35;
+      }
+
+      .bp-card[data-status="banned"] .bp-card-map {
+        text-decoration: line-through;
+      }
+
+      .bp-card[data-status="picked"],
+      .bp-card[data-status="remaining"] {
+        transform: scale(1.03);
+        outline: 3px solid var(--accent);
+      }
+
+      .bp-card[data-status="remaining"] {
+        border-left-color: var(--accent);
+      }
+
+      .bp-card[data-status="remaining"] .bp-card-tag {
+        color: var(--accent);
+      }
+
+      footer {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+      }
+
+      .bp-game {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 20px;
+        align-items: center;
+        padding: 16px 24px;
+        background: var(--panel);
+        border-radius: 6px;
+        opacity: 0.5;
+      }
+
+      .bp-game[data-filled="true"] { opacity: 1; }
+
+      .bp-game-label {
+        grid-row: 1 / span 2;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        color: var(--accent);
+      }
+
+      .bp-game-mode {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+        color: var(--muted);
+        min-height: 1.4em;
+      }
+
+      .bp-game-map {
+        font-size: 28px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="banpick">
+      <header>
+        <div class="player a" id="name-a">Player A</div>
+        <div id="step"></div>
+        <div class="player b" id="name-b">Player B</div>
+      </header>
+      <div id="board"></div>
+      <footer id="games">
+        <div class="bp-game" data-game="1"><span class="bp-game-label">GAME 1</span><span class="bp-game-mode"></span><span class="bp-game-map">TBD</span></div>
+        <div class="bp-game" data-game="2"><span class="bp-game-label">GAME 2</span><span class="bp-game-mode"></span><span class="bp-game-map">TBD</span></div>
+        <div class="bp-game" data-game="3"><span class="bp-game-label">GAME 3</span><span class="bp-game-mode"></span><span class="bp-game-map">TBD</span></div>
+      </footer>
+    </div>
+    <script src="banpick-stream.js"></script>
+  </body>
+</html>

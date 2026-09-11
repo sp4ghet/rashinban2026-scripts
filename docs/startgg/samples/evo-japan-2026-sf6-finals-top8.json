@@ -1,0 +1,1013 @@
+{
+  "fetchedAt": "2026-09-10T20:31:33.282Z",
+  "kind": "phase-group",
+  "variables": {
+    "id": "3282664"
+  },
+  "data": {
+    "phaseGroup": {
+      "id": 3282664,
+      "displayIdentifier": "SFZ1",
+      "bracketType": "DOUBLE_ELIMINATION",
+      "state": 3,
+      "numRounds": null,
+      "phase": {
+        "id": 2266154,
+        "name": "Finals",
+        "phaseOrder": 6,
+        "bracketType": "DOUBLE_ELIMINATION",
+        "groupCount": 1,
+        "numSeeds": 8
+      },
+      "progressionsOut": null,
+      "seeds": {
+        "nodes": [
+          {
+            "id": 39629305,
+            "seedNum": 4,
+            "placement": 1,
+            "isBye": false,
+            "entrant": {
+              "id": 22137613,
+              "name": "ZETA | Yamaguchi"
+            },
+            "progressionSource": {
+              "id": 13747401,
+              "originPlacement": 5,
+              "originPhaseGroup": {
+                "id": 3282663,
+                "displayIdentifier": "SFS205"
+              },
+              "originPhase": {
+                "id": 2266153,
+                "name": "Semifinals"
+              }
+            }
+          },
+          {
+            "id": 39629309,
+            "seedNum": 8,
+            "placement": 2,
+            "isBye": false,
+            "entrant": {
+              "id": 22463723,
+              "name": "FLY | Punk"
+            },
+            "progressionSource": {
+              "id": 13747405,
+              "originPlacement": 7,
+              "originPhaseGroup": {
+                "id": 3282663,
+                "displayIdentifier": "SFS205"
+              },
+              "originPhase": {
+                "id": 2266153,
+                "name": "Semifinals"
+              }
+            }
+          },
+          {
+            "id": 39629304,
+            "seedNum": 3,
+            "placement": 3,
+            "isBye": false,
+            "entrant": {
+              "id": 22087959,
+              "name": "ZETA | Higuchi"
+            },
+            "progressionSource": {
+              "id": 13747400,
+              "originPlacement": 5,
+              "originPhaseGroup": {
+                "id": 3282663,
+                "displayIdentifier": "SFS205"
+              },
+              "originPhase": {
+                "id": 2266153,
+                "name": "Semifinals"
+              }
+            }
+          },
+          {
+            "id": 39629302,
+            "seedNum": 1,
+            "placement": 4,
+            "isBye": false,
+            "entrant": {
+              "id": 22228070,
+              "name": "TPBE | Hope"
+            },
+            "progressionSource": {
+              "id": 13747398,
+              "originPlacement": 5,
+              "originPhaseGroup": {
+                "id": 3282663,
+                "displayIdentifier": "SFS205"
+              },
+              "originPhase": {
+                "id": 2266153,
+                "name": "Semifinals"
+              }
+            }
+          },
+          {
+            "id": 39629303,
+            "seedNum": 2,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 22782572,
+              "name": "naooonn"
+            },
+            "progressionSource": {
+              "id": 13747399,
+              "originPlacement": 5,
+              "originPhaseGroup": {
+                "id": 3282663,
+                "displayIdentifier": "SFS205"
+              },
+              "originPhase": {
+                "id": 2266153,
+                "name": "Semifinals"
+              }
+            }
+          },
+          {
+            "id": 39629308,
+            "seedNum": 7,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 22441603,
+              "name": "CR/PWS | Shuto"
+            },
+            "progressionSource": {
+              "id": 13747404,
+              "originPlacement": 7,
+              "originPhaseGroup": {
+                "id": 3282663,
+                "displayIdentifier": "SFS205"
+              },
+              "originPhase": {
+                "id": 2266153,
+                "name": "Semifinals"
+              }
+            }
+          },
+          {
+            "id": 39629306,
+            "seedNum": 5,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 22926883,
+              "name": "SR NuckleDu"
+            },
+            "progressionSource": {
+              "id": 13747402,
+              "originPlacement": 7,
+              "originPhaseGroup": {
+                "id": 3282663,
+                "displayIdentifier": "SFS205"
+              },
+              "originPhase": {
+                "id": 2266153,
+                "name": "Semifinals"
+              }
+            }
+          },
+          {
+            "id": 39629307,
+            "seedNum": 6,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 22096436,
+              "name": "広島 TEAM iXA | taketake-piano"
+            },
+            "progressionSource": {
+              "id": 13747403,
+              "originPlacement": 7,
+              "originPhaseGroup": {
+                "id": 3282663,
+                "displayIdentifier": "SFS205"
+              },
+              "originPhase": {
+                "id": 2266153,
+                "name": "Semifinals"
+              }
+            }
+          }
+        ]
+      },
+      "sets": {
+        "pageInfo": {
+          "total": 10,
+          "totalPages": 1
+        },
+        "nodes": [
+          {
+            "id": 102466047,
+            "identifier": "K",
+            "round": -6,
+            "fullRoundText": "Losers Final",
+            "state": 3,
+            "winnerId": 22463723,
+            "displayScore": "ZETA | Higuchi 0 - FLY | Punk 3",
+            "totalGames": 5,
+            "startedAt": 1777797796,
+            "completedAt": 1777797798,
+            "wPlacement": 2,
+            "lPlacement": 3,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466047-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102466031",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 22087959,
+                  "name": "ZETA | Higuchi",
+                  "initialSeedNum": 5,
+                  "participants": [
+                    {
+                      "id": 20302327,
+                      "gamerTag": "Higuchi",
+                      "prefix": "ZETA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629304,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466047-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102466046",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22463723,
+                  "name": "FLY | Punk",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 20654656,
+                      "gamerTag": "Punk",
+                      "prefix": "FLY"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629309,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102466046,
+            "identifier": "J",
+            "round": -5,
+            "fullRoundText": "Losers Semi-Final",
+            "state": 3,
+            "winnerId": 22463723,
+            "displayScore": "FLY | Punk 3 - TPBE | Hope 1",
+            "totalGames": 5,
+            "startedAt": 1777796715,
+            "completedAt": 1777796718,
+            "wPlacement": 3,
+            "lPlacement": 4,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466046-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102466044",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22463723,
+                  "name": "FLY | Punk",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 20654656,
+                      "gamerTag": "Punk",
+                      "prefix": "FLY"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629309,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466046-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102466045",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22228070,
+                  "name": "TPBE | Hope",
+                  "initialSeedNum": 74,
+                  "participants": [
+                    {
+                      "id": 20429673,
+                      "gamerTag": "Hope",
+                      "prefix": "TPBE"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629302,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102466044,
+            "identifier": "H",
+            "round": -4,
+            "fullRoundText": "Losers Quarter-Final",
+            "state": 3,
+            "winnerId": 22463723,
+            "displayScore": "naooonn 2 - FLY | Punk 3",
+            "totalGames": 5,
+            "startedAt": 1777793932,
+            "completedAt": 1777793938,
+            "wPlacement": 4,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466044-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102466030",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 22782572,
+                  "name": "naooonn",
+                  "initialSeedNum": 144,
+                  "participants": [
+                    {
+                      "id": 20932490,
+                      "gamerTag": "naooonn",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629303,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466044-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102466042",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22463723,
+                  "name": "FLY | Punk",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 20654656,
+                      "gamerTag": "Punk",
+                      "prefix": "FLY"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629309,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102466045,
+            "identifier": "I",
+            "round": -4,
+            "fullRoundText": "Losers Quarter-Final",
+            "state": 3,
+            "winnerId": 22228070,
+            "displayScore": "TPBE | Hope 3 - CR/PWS | Shuto 1",
+            "totalGames": 5,
+            "startedAt": 1777794894,
+            "completedAt": 1777794898,
+            "wPlacement": 4,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466045-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102466029",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 22228070,
+                  "name": "TPBE | Hope",
+                  "initialSeedNum": 74,
+                  "participants": [
+                    {
+                      "id": 20429673,
+                      "gamerTag": "Hope",
+                      "prefix": "TPBE"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629302,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466045-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102466043",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22441603,
+                  "name": "CR/PWS | Shuto",
+                  "initialSeedNum": 57,
+                  "participants": [
+                    {
+                      "id": 20634382,
+                      "gamerTag": "Shuto",
+                      "prefix": "CR/PWS"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629308,
+                  "seedNum": 7
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102466042,
+            "identifier": "F",
+            "round": -3,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22463723,
+            "displayScore": "FLY | Punk 3 - SR NuckleDu 1",
+            "totalGames": 5,
+            "startedAt": 1777791269,
+            "completedAt": 1777791571,
+            "wPlacement": 5,
+            "lPlacement": 7,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466042-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102466038",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22463723,
+                  "name": "FLY | Punk",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 20654656,
+                      "gamerTag": "Punk",
+                      "prefix": "FLY"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629309,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466042-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102466039",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22926883,
+                  "name": "SR NuckleDu",
+                  "initialSeedNum": 27,
+                  "participants": [
+                    {
+                      "id": 21067721,
+                      "gamerTag": "SR NuckleDu",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629306,
+                  "seedNum": 5
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102466043,
+            "identifier": "G",
+            "round": -3,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 22441603,
+            "displayScore": "CR/PWS | Shuto 3 - 広島 TEAM iXA | taketake-piano 2",
+            "totalGames": 5,
+            "startedAt": 1777792453,
+            "completedAt": 1777792573,
+            "wPlacement": 5,
+            "lPlacement": 7,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466043-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102466040",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22441603,
+                  "name": "CR/PWS | Shuto",
+                  "initialSeedNum": 57,
+                  "participants": [
+                    {
+                      "id": 20634382,
+                      "gamerTag": "Shuto",
+                      "prefix": "CR/PWS"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629308,
+                  "seedNum": 7
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466043-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102466041",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22096436,
+                  "name": "広島 TEAM iXA | taketake-piano",
+                  "initialSeedNum": 52,
+                  "participants": [
+                    {
+                      "id": 20309833,
+                      "gamerTag": "taketake-piano",
+                      "prefix": "広島 TEAM iXA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629307,
+                  "seedNum": 6
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102466029,
+            "identifier": "A",
+            "round": 1,
+            "fullRoundText": "Winners Semi-Final",
+            "state": 3,
+            "winnerId": 22137613,
+            "displayScore": "TPBE | Hope 2 - ZETA | Yamaguchi 3",
+            "totalGames": 5,
+            "startedAt": 1777793586,
+            "completedAt": 1777793598,
+            "wPlacement": 3,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466029-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629302",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22228070,
+                  "name": "TPBE | Hope",
+                  "initialSeedNum": 74,
+                  "participants": [
+                    {
+                      "id": 20429673,
+                      "gamerTag": "Hope",
+                      "prefix": "TPBE"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629302,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466029-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "39629305",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22137613,
+                  "name": "ZETA | Yamaguchi",
+                  "initialSeedNum": 62,
+                  "participants": [
+                    {
+                      "id": 20346478,
+                      "gamerTag": "Yamaguchi",
+                      "prefix": "ZETA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629305,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102466030,
+            "identifier": "B",
+            "round": 1,
+            "fullRoundText": "Winners Semi-Final",
+            "state": 3,
+            "winnerId": 22087959,
+            "displayScore": "naooonn 1 - ZETA | Higuchi 3",
+            "totalGames": 5,
+            "startedAt": 1777790645,
+            "completedAt": 1777790649,
+            "wPlacement": 3,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466030-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "39629303",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22782572,
+                  "name": "naooonn",
+                  "initialSeedNum": 144,
+                  "participants": [
+                    {
+                      "id": 20932490,
+                      "gamerTag": "naooonn",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629303,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466030-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "39629304",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 22087959,
+                  "name": "ZETA | Higuchi",
+                  "initialSeedNum": 5,
+                  "participants": [
+                    {
+                      "id": 20302327,
+                      "gamerTag": "Higuchi",
+                      "prefix": "ZETA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629304,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102466031,
+            "identifier": "C",
+            "round": 2,
+            "fullRoundText": "Winners Final",
+            "state": 3,
+            "winnerId": 22137613,
+            "displayScore": "ZETA | Yamaguchi 3 - ZETA | Higuchi 1",
+            "totalGames": 5,
+            "startedAt": 1777795941,
+            "completedAt": 1777795944,
+            "wPlacement": 2,
+            "lPlacement": 3,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466031-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102466029",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22137613,
+                  "name": "ZETA | Yamaguchi",
+                  "initialSeedNum": 62,
+                  "participants": [
+                    {
+                      "id": 20346478,
+                      "gamerTag": "Yamaguchi",
+                      "prefix": "ZETA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629305,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466031-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102466030",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22087959,
+                  "name": "ZETA | Higuchi",
+                  "initialSeedNum": 5,
+                  "participants": [
+                    {
+                      "id": 20302327,
+                      "gamerTag": "Higuchi",
+                      "prefix": "ZETA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629304,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 102466032,
+            "identifier": "D",
+            "round": 3,
+            "fullRoundText": "Grand Final",
+            "state": 3,
+            "winnerId": 22137613,
+            "displayScore": "ZETA | Yamaguchi 3 - FLY | Punk 1",
+            "totalGames": 5,
+            "startedAt": 1777797805,
+            "completedAt": 1777798801,
+            "wPlacement": 1,
+            "lPlacement": 2,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "102466032-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "102466031",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22137613,
+                  "name": "ZETA | Yamaguchi",
+                  "initialSeedNum": 62,
+                  "participants": [
+                    {
+                      "id": 20346478,
+                      "gamerTag": "Yamaguchi",
+                      "prefix": "ZETA"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629305,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "102466032-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "102466047",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 22463723,
+                  "name": "FLY | Punk",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 20654656,
+                      "gamerTag": "Punk",
+                      "prefix": "FLY"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 39629309,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

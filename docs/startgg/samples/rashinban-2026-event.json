@@ -1,0 +1,93 @@
+{
+  "fetchedAt": "2026-09-10T20:31:36.835Z",
+  "kind": "event",
+  "variables": {
+    "slug": "tournament/rashinban-2026/event/rashinban-2026"
+  },
+  "data": {
+    "event": {
+      "id": 1674852,
+      "name": "RASHINBAN 2026",
+      "slug": "tournament/rashinban-2026/event/rashinban-2026",
+      "numEntrants": 11,
+      "state": "CREATED",
+      "startAt": 1792814400,
+      "tournament": {
+        "id": 936556,
+        "name": "RASHINBAN 2026",
+        "slug": "tournament/rashinban-2026"
+      },
+      "phases": [
+        {
+          "id": 2352530,
+          "name": "DAY1（TOP64）",
+          "bracketType": "DOUBLE_ELIMINATION",
+          "groupCount": 4,
+          "numSeeds": 0,
+          "phaseOrder": 3,
+          "state": "CREATED",
+          "isExhibition": false,
+          "phaseGroups": {
+            "pageInfo": {
+              "total": 4
+            },
+            "nodes": [
+              {
+                "id": 3398035,
+                "displayIdentifier": "1",
+                "bracketType": "DOUBLE_ELIMINATION",
+                "numRounds": 4,
+                "state": 1
+              },
+              {
+                "id": 3410976,
+                "displayIdentifier": "2",
+                "bracketType": "DOUBLE_ELIMINATION",
+                "numRounds": 4,
+                "state": 1
+              },
+              {
+                "id": 3439052,
+                "displayIdentifier": "3",
+                "bracketType": "DOUBLE_ELIMINATION",
+                "numRounds": 4,
+                "state": 1
+              },
+              {
+                "id": 3439053,
+                "displayIdentifier": "4",
+                "bracketType": "DOUBLE_ELIMINATION",
+                "numRounds": 4,
+                "state": 1
+              }
+            ]
+          }
+        },
+        {
+          "id": 2362499,
+          "name": "DAY2（TOP8）",
+          "bracketType": "DOUBLE_ELIMINATION",
+          "groupCount": 1,
+          "numSeeds": 0,
+          "phaseOrder": 4,
+          "state": "CREATED",
+          "isExhibition": false,
+          "phaseGroups": {
+            "pageInfo": {
+              "total": 1
+            },
+            "nodes": [
+              {
+                "id": 3410975,
+                "displayIdentifier": "1",
+                "bracketType": "DOUBLE_ELIMINATION",
+                "numRounds": null,
+                "state": 1
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

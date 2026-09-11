@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>RASHINBAN 2026 &mdash; Player Cards</title>
+    <!-- kaneda-gothic comes from the same Adobe Fonts kit as the 2025 overlays; its licence forbids self-hosting.
+         Vendored OFL fonts (scripts/fetch-fonts.mjs) provide Oswald as the offline fallback and Noto Sans JP for body text. -->
+    <link rel="stylesheet" href="https://use.typekit.net/ljs6bhu.css" />
+    <link rel="stylesheet" href="assets/fonts/fonts.css" />
+    <style>
+      /* Ported from the 2025 player cards. Card = red (P1) / blue (P2), outlined white labels, condensed headings. */
+      :root {
+        --p1: #cc2626;
+        --p1-light: #ff3030;
+        --p2: #2669cc;
+        --p2-light: #3083ff;
+        --ink: #fff;
+        --card-w: 400px;
+        --heading: "kaneda-gothic", "Oswald", "Bahnschrift Condensed", "Arial Narrow", "Noto Sans JP", sans-serif;
+        --body: "Noto Sans JP", "Hiragino Sans", "Segoe UI", sans-serif;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: transparent;
+        font-family: var(--body);
+        color: var(--ink);
+      }
+
+      #cards {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: var(--card-w) 1fr var(--card-w);
+        align-items: end;
+        padding: 0 110px 70px;
+        box-sizing: border-box;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+      }
+
+      #cards.visible { opacity: 1; }
+
+      #round {
+        grid-column: 2;
+        align-self: end;
+        justify-self: center;
+        margin-bottom: 10px;
+        padding: 8px 26px;
+        font-family: var(--heading);
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: #151b26ee;
+        border-radius: 6px;
+      }
+
+      #round:empty { display: none; }
+
+      .card {
+        --accent: var(--p1);
+        --accent-light: var(--p1-light);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 560px;
+        padding: 18px 22px 24px;
+        box-sizing: border-box;
+        background: var(--accent);
+        border: 4px solid var(--accent-light);
+        border-radius: 14px;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+        transform: translateY(24px);
+        transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      #cards.visible .card { transform: none; }
+      #card-1 { grid-column: 1; }
+      #card-2 { --accent: var(--p2); --accent-light: var(--p2-light); grid-column: 3; }
+      .card[data-empty="true"] { opacity: 0.5; }
+
+      .head {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        padding: 6px 4px 10px;
+      }
+
+      .name {
+        font-family: var(--heading);
+        font-size: 54px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: 0.01em;
+      }
+
+      .twitter {
+        font-family: var(--heading);
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        opacity: 0.95;
+      }
+
+      .card[data-missing="true"] .head::after {
+        content: "NO PROFILE";
+        margin-left: auto;
+        font-family: var(--heading);
+        font-size: 14px;
+        letter-spacing: 0.15em;
+        opacity: 0.7;
+      }
+
+      /* Outlined label box, as on the 2025 cards. */
+      .label {
+        display: inline-block;
+        padding: 1px 8px;
+        font-family: var(--heading);
+        font-size: 19px;
+        font-weight: 700;
+        line-height: 1.25;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--ink);
+        border: 2px solid var(--ink);
+        border-radius: 3px;
+        white-space: nowrap;
+      }
+
+      .field { display: flex; flex-direction: column; gap: 6px; padding: 0 4px; }
+      .field .value { font-size: 20px; font-weight: 700; white-space: pre-wrap; line-height: 1.35; min-height: 1.35em; }
+
+      .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 4px 8px; }
+      .pair .field { flex-direction: row; align-items: center; gap: 12px; padding: 0; }
+      .pair .value { font-family: var(--heading); font-size: 34px; font-weight: 700; line-height: 1; }
+
+      .page { display: none; flex-direction: column; gap: 14px; }
+      #cards[data-page="profile"] .page-profile,
+      #cards[data-page="stats"] .page-stats { display: flex; }
+
+      /* Stats page */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-family: var(--heading);
+        font-weight: 700;
+      }
+
+      col.c-rate { width: 40%; }
+      col.c-played { width: 26%; }
+      col.c-place { width: 34%; }
+
+      th {
+        padding: 4px 4px 6px;
+        font-size: 19px;
+        letter-spacing: 0.04em;
+        text-align: center;
+        text-transform: uppercase;
+        white-space: nowrap;
+        border-bottom: 3px solid var(--ink);
+      }
+
+      th + th, td + td { border-left: 3px solid var(--ink); }
+
+      td {
+        padding: 5px 6px;
+        white-space: nowrap;
+        font-size: 21px;
+      }
+
+      td span { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+      td .k { font-size: 16px; font-style: normal; letter-spacing: 0.03em; }
+      td b { font-weight: 700; }
+
+      .rounds {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 12px;
+        border: 3px solid var(--ink);
+        border-radius: 6px;
+        font-family: var(--heading);
+        font-size: 30px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .rounds .label { border: none; padding: 0; font-size: 22px; }
+
+      .countries {
+        padding: 8px 12px 14px;
+        border: 3px solid var(--ink);
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .countries > .label { border: none; font-size: 22px; }
+
+      .countries .flags {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        margin-top: 8px;
+      }
+
+      .countries .flags div {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--heading);
+        font-size: 22px;
+        font-weight: 700;
+      }
+
+      .countries img { width: 76px; height: 51px; object-fit: cover; border-radius: 3px; box-shadow: 0 2px 6px #0006; }
+      .countries img[hidden] { display: none; }
+    </style>
+  </head>
+  <body>
+    <div id="cards" data-page="profile">
+      <div class="card" id="card-1">
+        <div class="head"><span class="name">TBD</span><span class="twitter"></span></div>
+        <div class="page page-profile">
+          <div class="pair">
+            <div class="field"><span class="label">Age</span><span class="value age"></span></div>
+            <div class="field"><span class="label">Rating</span><span class="value rating"></span></div>
+          </div>
+          <div class="field"><span><span class="label">Favorite game mode</span></span><span class="value favorite-mode"></span></div>
+          <div class="field"><span><span class="label">Strengths</span></span><span class="value strengths"></span></div>
+          <div class="field"><span><span class="label">Favorite food</span></span><span class="value favorite-food"></span></div>
+          <div class="field"><span><span class="label">Message</span></span><span class="value message"></span></div>
+        </div>
+        <div class="page page-stats">
+          <table>
+            <colgroup><col class="c-rate" /><col class="c-played" /><col class="c-place" /></colgroup>
+            <thead><tr><th>Match win rate</th><th>Played</th><th>Placement</th></tr></thead>
+            <tbody>
+              <tr><td><span><i class="k">ALL</i><b class="winrate-all"></b></span></td><td><span><i class="k">ALL</i><b class="played-all"></b></span></td><td><span><i class="k">ALL</i><b class="placement-all"></b></span></td></tr>
+              <tr><td><span><i class="k">MOVE</i><b class="winrate-move"></b></span></td><td><span><i class="k">MOVE</i><b class="played-move"></b></span></td><td><span><i class="k">MOVE</i><b class="placement-move"></b></span></td></tr>
+              <tr><td><span><i class="k">NO MOVE</i><b class="winrate-nm"></b></span></td><td><span><i class="k">NO MOVE</i><b class="played-nm"></b></span></td><td><span><i class="k">NO MOVE</i><b class="placement-nm"></b></span></td></tr>
+              <tr><td><span><i class="k">NMPZ</i><b class="winrate-nmpz"></b></span></td><td><span><i class="k">NMPZ</i><b class="played-nmpz"></b></span></td><td><span><i class="k">NMPZ</i><b class="placement-nmpz"></b></span></td></tr>
+            </tbody>
+          </table>
+          <div class="rounds"><span class="label">Rounds played</span><span class="rounds-played"></span></div>
+          <div class="countries">
+            <span class="label">Major country diff</span>
+            <div class="flags">
+              <div><span>[BEST]</span><img class="flag-best" hidden alt="" /></div>
+              <div><span>[WORST]</span><img class="flag-worst" hidden alt="" /></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="round"></div>
+      <div class="card" id="card-2">
+        <div class="head"><span class="name">TBD</span><span class="twitter"></span></div>
+        <div class="page page-profile">
+          <div class="pair">
+            <div class="field"><span class="label">Age</span><span class="value age"></span></div>
+            <div class="field"><span class="label">Rating</span><span class="value rating"></span></div>
+          </div>
+          <div class="field"><span><span class="label">Favorite game mode</span></span><span class="value favorite-mode"></span></div>
+          <div class="field"><span><span class="label">Strengths</span></span><span class="value strengths"></span></div>
+          <div class="field"><span><span class="label">Favorite food</span></span><span class="value favorite-food"></span></div>
+          <div class="field"><span><span class="label">Message</span></span><span class="value message"></span></div>
+        </div>
+        <div class="page page-stats">
+          <table>
+            <colgroup><col class="c-rate" /><col class="c-played" /><col class="c-place" /></colgroup>
+            <thead><tr><th>Match win rate</th><th>Played</th><th>Placement</th></tr></thead>
+            <tbody>
+              <tr><td><span><i class="k">ALL</i><b class="winrate-all"></b></span></td><td><span><i class="k">ALL</i><b class="played-all"></b></span></td><td><span><i class="k">ALL</i><b class="placement-all"></b></span></td></tr>
+              <tr><td><span><i class="k">MOVE</i><b class="winrate-move"></b></span></td><td><span><i class="k">MOVE</i><b class="played-move"></b></span></td><td><span><i class="k">MOVE</i><b class="placement-move"></b></span></td></tr>
+              <tr><td><span><i class="k">NO MOVE</i><b class="winrate-nm"></b></span></td><td><span><i class="k">NO MOVE</i><b class="played-nm"></b></span></td><td><span><i class="k">NO MOVE</i><b class="placement-nm"></b></span></td></tr>
+              <tr><td><span><i class="k">NMPZ</i><b class="winrate-nmpz"></b></span></td><td><span><i class="k">NMPZ</i><b class="played-nmpz"></b></span></td><td><span><i class="k">NMPZ</i><b class="placement-nmpz"></b></span></td></tr>
+            </tbody>
+          </table>
+          <div class="rounds"><span class="label">Rounds played</span><span class="rounds-played"></span></div>
+          <div class="countries">
+            <span class="label">Major country diff</span>
+            <div class="flags">
+              <div><span>[BEST]</span><img class="flag-best" hidden alt="" /></div>
+              <div><span>[WORST]</span><img class="flag-worst" hidden alt="" /></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="player-cards.js"></script>
+  </body>
+</html>

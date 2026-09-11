@@ -1,8 +1,15 @@
 import type NodeCG from "@nodecg/types";
 
 import { REPLICANTS } from "../types/replicants";
+import { registerBanPick } from "./banpick";
+import { loadLocalEnv } from "./env";
+import { registerStartgg } from "./startgg";
+import { registerSheet } from "./sheet";
+import { registerPlayerCards } from "./playercards";
 
 export = (nodecg: NodeCG.ServerAPI) => {
+  loadLocalEnv(nodecg);
+
   const lowerThirdVisible = nodecg.Replicant<boolean>(
     REPLICANTS.lowerThirdVisible,
     { defaultValue: false },
@@ -39,6 +46,11 @@ export = (nodecg: NodeCG.ServerAPI) => {
     round.value = Math.max(1, (round.value ?? 1) - 1);
     res.json({ round: round.value });
   });
+
+  registerBanPick(nodecg, router);
+  registerStartgg(nodecg, router);
+  registerSheet(nodecg, router);
+  registerPlayerCards(nodecg, router);
 
   nodecg.mount("/rashinban", router);
 

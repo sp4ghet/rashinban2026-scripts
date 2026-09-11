@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root {
+        --player-a: #ff7043;
+        --player-b: #42a5f5;
+        --accent: #1565c0;
+        --panel: #263238;
+        --muted: #90a4ae;
+      }
+
+      body {
+        margin: 0;
+        padding: 12px;
+        font-family: "Segoe UI", sans-serif;
+        color: #efefef;
+        background: transparent;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .row label {
+        display: flex;
+        flex: 1;
+        gap: 6px;
+        align-items: center;
+        font-size: 13px;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 8px;
+        font-size: 14px;
+        color: #fff;
+        background: #37474f;
+        border: 1px solid #546e7a;
+        border-radius: 4px;
+      }
+
+      button {
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        background: #37474f;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      button:hover { filter: brightness(1.2); }
+      button:disabled { opacity: 0.4; cursor: default; }
+      #visible.active { background: #2e7d32; }
+      #reset { background: #b71c1c; }
+
+      #step {
+        padding: 8px 12px;
+        margin-bottom: 10px;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-align: center;
+        background: var(--accent);
+        border-radius: 4px;
+      }
+
+      #step[data-turn="A"] { background: var(--player-a); }
+      #step[data-turn="B"] { background: var(--player-b); }
+
+      .bp-board {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .bp-group { display: flex; flex-direction: column; gap: 6px; }
+
+      .bp-group-title {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .bp-card {
+        display: grid;
+        grid-template-columns: 20px 1fr;
+        grid-template-rows: 1fr auto;
+        align-items: center;
+        text-align: left;
+        padding: 6px 8px;
+        font: inherit;
+        color: inherit;
+        background: var(--panel);
+        border: 2px solid transparent;
+        border-left: 5px solid var(--muted);
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .bp-card:disabled { cursor: default; }
+      .bp-card.bp-selected { border-color: #fff; }
+      .bp-card-num { grid-row: 1 / span 2; font-size: 12px; font-weight: 700; color: var(--muted); }
+      .bp-card-map { font-size: 12px; font-weight: 600; line-height: 1.2; }
+      .bp-card-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; min-height: 1.2em; }
+      .bp-card[data-by="A"] { border-left-color: var(--player-a); }
+      .bp-card[data-by="B"] { border-left-color: var(--player-b); }
+      .bp-card[data-by="A"] .bp-card-tag { color: var(--player-a); }
+      .bp-card[data-by="B"] .bp-card-tag { color: var(--player-b); }
+      .bp-card[data-status="banned"] { opacity: 0.35; }
+      .bp-card[data-status="banned"] .bp-card-map { text-decoration: line-through; }
+      .bp-card[data-status="picked"],
+      .bp-card[data-status="remaining"] { outline: 2px solid var(--accent); }
+      .bp-card[data-status="remaining"] .bp-card-tag { color: #4fc3f7; }
+
+      #games {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .bp-game {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 8px;
+        align-items: center;
+        padding: 6px 8px;
+        background: var(--panel);
+        border-radius: 4px;
+        opacity: 0.5;
+      }
+
+      .bp-game[data-filled="true"] { opacity: 1; }
+      .bp-game-label { grid-row: 1 / span 2; font-size: 11px; font-weight: 700; color: #4fc3f7; }
+      .bp-game-mode { font-size: 9px; letter-spacing: 0.1em; color: var(--muted); min-height: 1.2em; }
+      .bp-game-map { font-size: 12px; font-weight: 600; }
+
+      #status { min-height: 1.4em; font-size: 12px; color: #c5cae9; }
+      #status.error { color: #ff8a80; }
+
+      .hint { font-size: 11px; color: var(--muted); }
+      .hint a { color: #4fc3f7; word-break: break-all; }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <label>A <input id="name-a" type="text" placeholder="Player A" /></label>
+      <button id="swap" title="Swap A and B">A &harr; B</button>
+      <label>B <input id="name-b" type="text" placeholder="Player B" /></label>
+    </div>
+    <div class="row">
+      <button id="visible">Show overlay</button>
+      <button id="undo">Undo</button>
+      <button id="reset">Reset</button>
+    </div>
+    <div id="step"></div>
+    <div id="board"></div>
+    <div id="games">
+      <div class="bp-game" data-game="1"><span class="bp-game-label">G1</span><span class="bp-game-mode"></span><span class="bp-game-map">TBD</span></div>
+      <div class="bp-game" data-game="2"><span class="bp-game-label">G2</span><span class="bp-game-mode"></span><span class="bp-game-map">TBD</span></div>
+      <div class="bp-game" data-game="3"><span class="bp-game-label">G3</span><span class="bp-game-mode"></span><span class="bp-game-map">TBD</span></div>
+    </div>
+    <div id="status"></div>
+    <p class="hint">Player tablet page (append <code>?player=A</code> / <code>?player=B</code> to lock): <a id="player-link" target="_blank"></a></p>
+    <script src="banpick-control.js"></script>
+  </body>
+</html>

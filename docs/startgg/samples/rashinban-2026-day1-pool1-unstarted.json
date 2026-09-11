@@ -1,0 +1,44 @@
+{
+  "fetchedAt": "2026-09-10T20:31:36.405Z",
+  "kind": "phase-group",
+  "variables": {
+    "id": "3398035"
+  },
+  "data": {
+    "phaseGroup": {
+      "id": 3398035,
+      "displayIdentifier": "1",
+      "bracketType": "DOUBLE_ELIMINATION",
+      "state": 1,
+      "numRounds": 4,
+      "phase": {
+        "id": 2352530,
+        "name": "DAY1（TOP64）",
+        "phaseOrder": 3,
+        "bracketType": "DOUBLE_ELIMINATION",
+        "groupCount": 4,
+        "numSeeds": 0
+      },
+      "progressionsOut": [
+        {
+          "id": 14383494,
+          "originPlacement": 2
+        },
+        {
+          "id": 14383498,
+          "originPlacement": 2
+        }
+      ],
+      "seeds": {
+        "nodes": []
+      },
+      "sets": {
+        "pageInfo": {
+          "total": 0,
+          "totalPages": 0
+        },
+        "nodes": []
+      }
+    }
+  }
+}

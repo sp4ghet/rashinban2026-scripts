@@ -1,0 +1,14 @@
+{
+  "fetchedAt": "2026-09-10T20:31:35.764Z",
+  "kind": "stream-queue",
+  "variables": {
+    "slug": "rashinban-2026"
+  },
+  "data": {
+    "tournament": {
+      "id": 936556,
+      "name": "RASHINBAN 2026",
+      "streamQueue": null
+    }
+  }
+}

@@ -9,6 +9,26 @@
         "file": "dummy.html",
         "width": 1920,
         "height": 1080
+      },
+      {
+        "file": "banpick-stream.html",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "file": "banpick-led.html",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "file": "banpick-player.html",
+        "width": 1280,
+        "height": 800
+      },
+      {
+        "file": "player-cards.html",
+        "width": 1920,
+        "height": 1080
       }
     ],
     "dashboardPanels": [
@@ -18,6 +38,27 @@
         "file": "dummy-control.html",
         "width": 2,
         "headerColor": "#c2185b"
+      },
+      {
+        "name": "banpick-control",
+        "title": "Ban & Pick",
+        "file": "banpick-control.html",
+        "width": 4,
+        "headerColor": "#1565c0"
+      },
+      {
+        "name": "startgg-control",
+        "title": "start.gg",
+        "file": "startgg-control.html",
+        "width": 4,
+        "headerColor": "#37474f"
+      },
+      {
+        "name": "player-cards-control",
+        "title": "Player Cards",
+        "file": "player-cards-control.html",
+        "width": 4,
+        "headerColor": "#6a1b9a"
       }
     ]
   }

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        margin: 0;
+        padding: 12px;
+        font-family: "Segoe UI", sans-serif;
+        font-size: 13px;
+        color: #efefef;
+        background: transparent;
+      }
+
+      h4 {
+        margin: 12px 0 6px;
+        font-size: 11px;
+        letter-spacing: 0.15em;
+        color: #90a4ae;
+        text-transform: uppercase;
+      }
+
+      h4:first-child { margin-top: 0; }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .row label { display: flex; gap: 6px; align-items: center; flex: 1; }
+
+      input[type="text"],
+      input[type="number"],
+      select {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 8px;
+        font-size: 13px;
+        color: #fff;
+        background: #37474f;
+        border: 1px solid #546e7a;
+        border-radius: 4px;
+      }
+
+      input[type="number"] { max-width: 64px; }
+
+      button {
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        background: #37474f;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      button:hover { filter: brightness(1.2); }
+      button:disabled { opacity: 0.4; }
+      button.active { background: #2e7d32; }
+
+      .status,
+      #preview {
+        white-space: pre-wrap;
+        padding: 6px 8px;
+        margin-bottom: 8px;
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        background: #1c2a33;
+        border-radius: 4px;
+      }
+
+      .status.error { color: #ff8a80; }
+      #error { color: #ff8a80; min-height: 1.2em; font-size: 12px; }
+      .modes { display: flex; gap: 12px; margin-bottom: 8px; }
+      .modes label { display: flex; gap: 4px; align-items: center; }
+    </style>
+  </head>
+  <body>
+    <h4>Google Sheet (players tab)</h4>
+    <div class="row">
+      <label>Sheet <input id="sheet-url" type="text" placeholder="paste the players tab URL (with #gid=)" /></label>
+    </div>
+    <div class="row">
+      <label>Every <input id="sheet-interval" type="number" min="5" step="5" /> s</label>
+      <button id="sheet-enabled">Polling OFF</button>
+      <button id="sheet-refresh">Refresh now</button>
+    </div>
+    <div class="status" id="sheet-status">waiting...</div>
+
+    <h4>Current match</h4>
+    <div class="modes">
+      <label><input type="radio" name="mode" value="auto" /> auto (start.gg queue / live)</label>
+      <label><input type="radio" name="mode" value="set" /> pick a set</label>
+      <label><input type="radio" name="mode" value="tags" /> players from sheet</label>
+    </div>
+    <div class="row"><select id="set-select"></select></div>
+    <div class="row">
+      <label>P1 <input id="tag-1" type="text" list="players-list" placeholder="pick or type a tag" autocomplete="off" /></label>
+      <button id="swap-tags" title="Swap P1 and P2">&harr;</button>
+      <label>P2 <input id="tag-2" type="text" list="players-list" placeholder="pick or type a tag" autocomplete="off" /></label>
+    </div>
+    <datalist id="players-list"></datalist>
+    <div id="preview">-</div>
+
+    <h4>Cards</h4>
+    <div class="row">
+      <button id="cards-visible">Cards hidden</button>
+      <button id="cards-page">Page: PROFILE</button>
+    </div>
+    <div id="error"></div>
+    <script src="player-cards-control.js"></script>
+  </body>
+</html>

@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <title>RASHINBAN 2026 &mdash; Ban &amp; Pick (Player)</title>
+    <style>
+      :root {
+        --accent: #1565c0;
+        --player-a: #ff7043;
+        --player-b: #42a5f5;
+        --bg: #101220;
+        --panel: #1c1f33;
+        --text: #fff;
+        --muted: #9aa3b5;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+        touch-action: manipulation;
+      }
+
+      #panel {
+        display: grid;
+        grid-template-rows: auto auto 1fr auto;
+        gap: 16px;
+        min-height: 100vh;
+        padding: 16px 16px 100px;
+        box-sizing: border-box;
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .player {
+        font-size: 24px;
+        font-weight: 700;
+        padding: 10px 16px;
+        background: var(--panel);
+        border-bottom: 5px solid var(--muted);
+        border-radius: 4px;
+      }
+
+      .player.b { text-align: right; }
+      #panel[data-turn="A"] .player.a { border-color: var(--player-a); }
+      #panel[data-turn="B"] .player.b { border-color: var(--player-b); }
+      #panel[data-locked="A"] .player.b,
+      #panel[data-locked="B"] .player.a { opacity: 0.5; }
+
+      #step {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-align: center;
+        padding: 14px;
+        border-radius: 6px;
+        background: var(--accent);
+      }
+
+      #panel[data-turn="A"] #step { background: var(--player-a); }
+      #panel[data-turn="B"] #step { background: var(--player-b); }
+      #panel.complete #step { background: #2e7d32; }
+      #panel.locked-out #step { filter: grayscale(0.6) brightness(0.7); }
+      #panel.locked-out #step::after { content: " (WAIT)"; }
+
+      .bp-board {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+
+      .bp-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .bp-group-title {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .bp-card {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        grid-template-rows: 1fr auto;
+        align-items: center;
+        text-align: left;
+        min-height: 110px;
+        padding: 12px 14px;
+        font: inherit;
+        color: inherit;
+        background: var(--panel);
+        border: 3px solid transparent;
+        border-left: 8px solid var(--muted);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .bp-card:disabled { cursor: default; }
+      .bp-card.bp-selected { border-color: #fff; background: #2a2e4a; }
+
+      .bp-card-num {
+        grid-row: 1 / span 2;
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .bp-card-map {
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+
+      .bp-card-tag {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        min-height: 1.3em;
+      }
+
+      .bp-card[data-by="A"] { border-left-color: var(--player-a); }
+      .bp-card[data-by="B"] { border-left-color: var(--player-b); }
+      .bp-card[data-by="A"] .bp-card-tag { color: var(--player-a); }
+      .bp-card[data-by="B"] .bp-card-tag { color: var(--player-b); }
+      .bp-card[data-status="banned"] { opacity: 0.35; }
+      .bp-card[data-status="banned"] .bp-card-map { text-decoration: line-through; }
+      .bp-card[data-status="picked"],
+      .bp-card[data-status="remaining"] { outline: 3px solid var(--accent); }
+      .bp-card[data-status="remaining"] .bp-card-tag { color: var(--accent); }
+
+      footer {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+
+      .bp-game {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        column-gap: 12px;
+        align-items: center;
+        padding: 10px 14px;
+        background: var(--panel);
+        border-radius: 6px;
+        opacity: 0.5;
+      }
+
+      .bp-game[data-filled="true"] { opacity: 1; }
+      .bp-game-label { grid-row: 1 / span 2; font-size: 16px; font-weight: 700; letter-spacing: 0.12em; color: var(--accent); }
+      .bp-game-mode { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; color: var(--muted); min-height: 1.3em; }
+      .bp-game-map { font-size: 18px; font-weight: 600; }
+
+      #confirm {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 12px;
+        align-items: center;
+        padding: 16px;
+        background: #000c;
+        backdrop-filter: blur(6px);
+        transform: translateY(110%);
+        transition: transform 0.25s ease;
+      }
+
+      #confirm.visible { transform: none; }
+
+      #confirm-text { font-size: 20px; font-weight: 600; }
+
+      #confirm button {
+        min-width: 140px;
+        padding: 16px 24px;
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      #confirm-yes { background: #2e7d32; }
+      #confirm-no { background: #455a64; }
+      #confirm button:disabled { opacity: 0.5; }
+
+      #toast {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translate(-50%, -150%);
+        padding: 12px 24px;
+        font-size: 18px;
+        font-weight: 600;
+        background: #c62828;
+        border-radius: 6px;
+        transition: transform 0.25s ease;
+        z-index: 10;
+      }
+
+      #toast.visible { transform: translate(-50%, 0); }
+    </style>
+  </head>
+  <body>
+    <div id="panel">
+      <header>
+        <div class="player a" id="name-a">Player A</div>
+        <div class="player b" id="name-b">Player B</div>
+      </header>
+      <div id="step"></div>
+      <div id="board"></div>
+      <footer id="games">
+        <div class="bp-game" data-game="1"><span class="bp-game-label">GAME 1</span><span class="bp-game-mode"></span><span class="bp-game-map">TBD</span></div>
+        <div class="bp-game" data-game="2"><span class="bp-game-label">GAME 2</span><span class="bp-game-mode"></span><span class="bp-game-map">TBD</span></div>
+        <div class="bp-game" data-game="3"><span class="bp-game-label">GAME 3</span><span class="bp-game-mode"></span><span class="bp-game-map">TBD</span></div>
+      </footer>
+    </div>
+    <div id="confirm">
+      <span id="confirm-text"></span>
+      <button id="confirm-no">Cancel</button>
+      <button id="confirm-yes">Confirm</button>
+    </div>
+    <div id="toast"></div>
+    <script src="banpick-player.js"></script>
+  </body>
+</html>
