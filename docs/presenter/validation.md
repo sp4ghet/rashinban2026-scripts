@@ -181,12 +181,15 @@ The rule, Config controls, persisted duel context and results-map overlays were
 validated on branch `feat/presenter-tie-range`. Operator instructions are in
 [tie-range.md](tie-range.md).
 
-The automated suite passes 288 tests. Type checking, production build and
+The automated suite passes 298 tests. Type checking, production build and
 `git diff --check` also pass. New coverage includes full/half band equality,
 half-to-even damage, captured server-health baselines, custom knockout and
 round-limit completion, abort/undo, frozen history, next-duel configuration,
 live/replay restart, NodeCG proxy ownership, rounded-score radius conversion,
 5K treatment, display-side colors, overlay cleanup and the answer-reveal gate.
+Final review regressions additionally cover missing prior-round history,
+recovery when valid scores or historical panoramas arrive later, and rejecting
+an inherited server winner without a verified custom terminal result.
 
 A separate local HTTP harness ran the built graphic in hidden Chrome using
 the actual Google Maps API and geographically consistent synthetic results.

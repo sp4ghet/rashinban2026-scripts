@@ -144,7 +144,16 @@ Include missing scale/guess, equal scores/distances, antimeridian, polar/world b
 
 **Files:** Focused fixes only in files from Tasks 1-3; completion notes in this plan and validation document.
 
-- [ ] Review the whole diff against every spec section, checking reconnect persistence, raw-state isolation, animation timing, geographic thresholds, and configuration scope.
-- [ ] Address review findings with focused regression tests before changes; rerun affected tests and full required checks after final changes.
-- [ ] Run `npm test`, `npm run typecheck`, `npm run build`, and `git diff --check`; record evidence and final commit IDs.
-- [ ] Deliver the feature branch/worktree and validation summary. Do not publish or change live game controls.
+- [x] Review the whole diff against every spec section, checking reconnect persistence, raw-state isolation, animation timing, geographic thresholds, and configuration scope.
+- [x] Address review findings with focused regression tests before changes; rerun affected tests and full required checks after final changes.
+- [x] Run `npm test`, `npm run typecheck`, `npm run build`, and `git diff --check`; record evidence and final commit IDs.
+- [x] Deliver the feature branch/worktree and validation summary. Do not publish or change live game controls.
+
+## Completion
+
+Implemented on branch feat/presenter-tie-range through code commit ce0c1af.
+All three task reviews and the final scoped re-review passed. Final validation:
+298 tests passed, typecheck/build passed, and diff checks clean. Nine actual
+Google Maps/browser cases and the projection limits are recorded in
+docs/presenter/validation.md. The branch is ready for integration; no live game
+controls were changed.

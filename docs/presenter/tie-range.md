@@ -8,6 +8,10 @@ waiting for the host to start. The panel shows the active rule and any different
 setting saved for the next duel. Reconnecting or restarting NodeCG keeps the
 current duel's rule.
 
+If required history or rule inputs are missing, the presenter withholds custom
+HP and shows a diagnostic at the top of this panel. A later complete snapshot
+can recover the presentation while keeping the duel's selected rule.
+
 ## Round behavior
 
 Damage always uses the score difference and the higher-scoring team's current
