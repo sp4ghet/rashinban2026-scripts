@@ -4,6 +4,9 @@ import { createAudio, stemOffset } from '../../graphics/presenter/audio.ts';
 import { EMPTY_MEDIA, type MediaManifest } from '../media.ts';
 import { DEFAULT_SETTINGS } from '../settings.ts';
 import { advanceTimeline } from '../timeline.ts';
+import { applySnapshot } from '../normalize.ts';
+import { loadReplay } from '../../extension/presenter/replay.ts';
+import { finishEffect } from '../timeline.ts';
 
 // The external audio port records actual scheduling instructions. Evaluate
 // automation without calling JS again to model a stalled page's audio thread.
@@ -106,6 +109,39 @@ test('equal-gain context transition applies its authored fade without restarting
 });
 
 const cueMedia: MediaManifest = { ...EMPTY_MEDIA, sounds: { pin: '/pin', guess: '/guess', countdown: '/tick', results: '/results', count: '/count', damage: '/damage', 'five-k': '/five-k' } };
+test('second lock-in plays in full across immediate results, including coalesced guesses and 5K', async () => {
+  for (const perfect of [false, true]) for (const coalesced of [false, true]) {
+    const rows = loadReplay('gs2-ws-presenter-showcase.json');
+    const result = structuredClone(applySnapshot(null, rows.find(row => (row.message as { code: string }).code === 'DuelRoundTimedOut')!.message).state!);
+    if (!perfect) result.players[0].results[0].score = 4999;
+    result.rounds[0].startAtMs = 0; result.rounds[0].endAtMs = 100000;
+    const live = structuredClone(result);
+    live.players.forEach(player => { player.results = []; });
+    live.players[1].guesses = [];
+    const p = port(); await p.audio.load({ ...EMPTY_MEDIA, sounds: { guess: '/guess' } }); p.audio.lease(30000, 1000);
+    let t = advanceTimeline(null, live, 1000, true, DEFAULT_SETTINGS.timing);
+    p.audio.sync(t, DEFAULT_SETTINGS, 1000);
+    if (!coalesced) {
+      live.players[1].guesses = structuredClone(result.players[1].guesses);
+      t = advanceTimeline(t, live, 1100, false, DEFAULT_SETTINGS.timing);
+      p.context.currentTime = 10.1; p.audio.sync(t, DEFAULT_SETTINGS, 1100);
+    }
+    t = advanceTimeline(t, result, 1150, false, DEFAULT_SETTINGS.timing);
+    p.context.currentTime = 10.15; p.audio.sync(t, DEFAULT_SETTINGS, 1150);
+    assert.equal(p.sources.length, 1, `lock-in must exist: perfect=${perfect}, coalesced=${coalesced}`);
+    const sound = p.sources[0];
+    assert.equal(sound.stops, 0, 'results must not cancel the pending lock-in');
+    if (perfect) t = finishEffect(t, t.generation, 1350, DEFAULT_SETTINGS.timing);
+    p.context.currentTime = 10.4; p.audio.sync(t, DEFAULT_SETTINGS, 1400);
+    t = advanceTimeline(t, result, 2000, false, DEFAULT_SETTINGS.timing);
+    p.context.currentTime = 11; p.audio.sync(t, DEFAULT_SETTINGS, 2000);
+    assert.equal(sound.stops, 0, 'started one-shot must run to its natural end');
+    assert.equal(p.sources.length, 1, 'lock-in must not be replayed');
+    p.audio.stop(); assert.equal(sound.stops, 1, 'explicit audio shutdown still cancels sound');
+    const adopted = advanceTimeline(null, result, 2000, true, DEFAULT_SETTINGS.timing);
+    assert.equal(adopted.cues.some(cue => cue.kind === 'guess'), false, 'joining results must not replay old guesses');
+  }
+});
 function cue(id: string, kind: import('../../types/presenter.ts').CueKind, atMs: number, untilMs = atMs + 250) { return { id, kind, atMs, untilMs, playerId: null }; }
 test('audio schedules future cues against shared clock once and cancels replaced countdowns', async () => {
   const p = port(); await p.audio.load(cueMedia); p.audio.lease(20000, 1000);

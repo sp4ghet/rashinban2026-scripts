@@ -50,6 +50,7 @@ function scheduleReveal(timeline: Timeline, atMs: number, timing: Timing): Timel
     holdAtMs,
     scoring,
     cues: [
+      ...timeline.cues.filter(item => item.kind === 'guess'),
       cue(timeline, 'results', revealAtMs, revealAtMs + 250),
       cue(timeline, 'count', scoring.countAtMs, scoring.countEndAtMs),
       cue(timeline, scoring.tied ? 'tie' : 'collision', scoring.collisionAtMs, scoring.collisionAtMs + 250),
@@ -123,9 +124,13 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
     if (bootstrap) {
       timeline = { ...timeline, revealAtMs: nowMs, damageAtMs: nowMs, holdAtMs: nowMs };
     } else if (timeline.revealAtMs === null && timeline.effect === 'none') {
+      // Results can arrive before a scheduled lock-in starts, or carry the
+      // final guess themselves. Observe it while still live and retain those
+      // one-shots through scoring; the audio engine lets them finish naturally.
+      timeline = liveCues(timeline, state, nowMs, bootstrap, timing);
       const scores = state.players.map(player => player.results.find(result => result.round === timeline.round)!.score);
       const effect = effectFor(scores);
-      timeline = { ...timeline, phase: 'results-transition', music: 'results', cues: [], effect,
+      timeline = { ...timeline, phase: 'results-transition', music: 'results', cues: timeline.cues.filter(item => item.kind === 'guess'), effect,
         scoringResult: scoreCalculation(state, timeline.round!),
         hasDamage: state.players.some(player => player.results.some(result => result.round === timeline.round && result.healthAfter < result.healthBefore)) };
       if (effect === 'none') timeline = scheduleReveal(timeline, nowMs, timing);
@@ -135,7 +140,7 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
         timeline = {
           ...timeline,
           effectDeadlineMs: startAtMs + watchdogMs,
-          cues: [cue(timeline, 'five-k', startAtMs, startAtMs + watchdogMs)],
+          cues: [...timeline.cues, cue(timeline, 'five-k', startAtMs, startAtMs + watchdogMs)],
         };
       }
     }
