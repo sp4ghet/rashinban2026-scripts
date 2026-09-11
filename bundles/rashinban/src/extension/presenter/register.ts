@@ -194,12 +194,13 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   function ingest(message: unknown, at: number, bootstrap: boolean, offset = 0): void {
     const adjusted = offset === 0 ? message : shiftMessageClock(message, -offset);
     // The source owns protocol versioning and rollback even after our game finishes.
-    const previous = rawDuel ?? ruleContexts.value[input]?.source ?? null;
+    const previous = bootstrap && input === 'replay' ? null : rawDuel ?? ruleContexts.value[input]?.source ?? null;
     const accepted = applySnapshot(previous, adjusted);
     function present(state: DuelState, restore: boolean): void {
       const configured = settings.value.tieRange.enabled ? settings.value.tieRange.mode : 'off';
       const context = updateRuleContext(ruleContexts.value[input], state, configured, rollbackRound(previous, state, adjusted));
-      ruleContexts.value = { ...ruleContexts.value, [input]: context };
+      // Publication recursively proxies nested objects. Keep our calculation input detached.
+      ruleContexts.value = JSON.parse(JSON.stringify({ ...ruleContexts.value, [input]: context })) as RuleContexts;
       rawDuel = state;
       try {
         const derived = deriveTieRange(context.source, context.mode);
@@ -231,24 +232,32 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
     connection.value = { ...connection.value, lastUpdateMs: at,
       gameId: rawDuel?.gameId ?? connection.value.gameId, warnings: [...accepted.warnings, ...ruleWarnings] };
   }
-  function startReplay(name: unknown): void {
+  function startReplay(name: unknown, restore = false): void {
     // Validate and read before canceling an active replay.
-    const rows = loadReplay(name);
+    let rows = loadReplay(name);
+    const saved = restore && ruleContexts.value.replayFixture === name ? ruleContexts.value.replay : null;
+    const position = saved ? rows.reduce((found, row, index) => {
+      const state = (row.message as { duel?: { state?: { gameId?: string; version?: number } } }).duel?.state;
+      return state?.gameId === saved.source.gameId && state?.version === saved.source.version ? index : found;
+    }, -1) : -1;
+    const resuming = position >= 0;
+    if (resuming) rows = rows.slice(position);
     source?.stop(); reset(); fixture = name; input = 'replay';
-    ruleContexts.value = { ...ruleContexts.value, replay: null };
+    ruleContexts.value = { ...ruleContexts.value, replay: resuming ? saved : null, replayFixture: String(name) };
     connection.value = { ...connection.value, state: 'live', input, error: null, replayFixture: String(name), serverOffsetMs: 0,
       partyId: null, gameId: null, lastUpdateMs: null, warnings: [] };
-    source = createReplay(rows, (message, at) => ingest(message, at, false), deps);
+    let bootstrap = resuming;
+    source = createReplay(rows, (message, at) => { ingest(message, at, bootstrap); bootstrap = false; }, deps);
     source.start();
   }
-  function reconnect(body: unknown): void {
+  function reconnect(body: unknown, restoreReplay = false): void {
     const value = body === undefined ? {} : record(body);
     if (Object.keys(value).some(key => !['input', 'fixture', 'partyId'].includes(key))) throw new Error('Invalid reconnect');
     const nextInput = 'input' in value ? value.input : input;
     if (nextInput !== 'live' && nextInput !== 'replay') throw new Error('Invalid input mode');
     if (nextInput === 'replay') {
       if ('partyId' in value) throw new Error('Party selection is disabled in replay mode');
-      startReplay(value.fixture ?? fixture); return;
+      startReplay(value.fixture ?? fixture, restoreReplay); return;
     }
     if ('fixture' in value) throw new Error('Replay is disabled in live mode');
     const nextPartyId = 'partyId' in value ? parsePartySelection(value.partyId) : selectedPartyId;
@@ -314,6 +323,6 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   nodecg.listenFor('presenter:clock', (_request, ack) => { if (ack && !ack.handled) ack(null, deps.now()); });
   try {
     if (config.input !== undefined && config.input !== 'live' && config.input !== 'replay') throw new Error('Invalid input mode');
-    reconnect(undefined);
+    reconnect(undefined, true);
   } catch { connection.value = { ...connection.value, state: 'disconnected', error: 'Invalid presenter input or replay fixture' }; }
 }

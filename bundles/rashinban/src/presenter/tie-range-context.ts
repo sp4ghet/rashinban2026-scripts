@@ -1,7 +1,7 @@
 import type { DuelState, TieRangeMode } from '../types/presenter.ts';
 
 export type RuleContext = { mode: TieRangeMode; source: DuelState };
-export type RuleContexts = { live: RuleContext | null; replay: RuleContext | null };
+export type RuleContexts = { live: RuleContext | null; replay: RuleContext | null; replayFixture?: string };
 
 /** Capture only paired settled results. Explicit rollback releases their frozen inputs. */
 export function updateRuleContext(previous: RuleContext | null, source: DuelState,
@@ -24,8 +24,8 @@ export function updateRuleContext(previous: RuleContext | null, source: DuelStat
     player.guesses = [...player.guesses.filter(guess => !settled.has(guess.round)),
       ...old.guesses.filter(guess => settled.has(guess.round))].sort((a, b) => a.round - b.round || a.createdAtMs - b.createdAtMs);
   }
-  next.rounds = next.rounds.map(round => settled.has(round.number)
-    ? previous.source.rounds.find(old => old.number === round.number) ?? round : round);
+  next.rounds = [...next.rounds.filter(round => !settled.has(round.number)),
+    ...previous.source.rounds.filter(round => settled.has(round.number))].sort((a, b) => a.number - b.number);
   // Detach inherited results/rounds before the next Replicant publication.
   return JSON.parse(JSON.stringify({ mode: previous.mode, source: next })) as RuleContext;
 }

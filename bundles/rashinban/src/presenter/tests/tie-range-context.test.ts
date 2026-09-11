@@ -82,3 +82,21 @@ test('disabled mode preserves incoming server results without freezing correctio
   const corrected = structuredClone(source); corrected.players[0].results[0].score = 42;
   assert.equal(updateRuleContext(first, corrected, 'full').source.players[0].results[0].score, 42);
 });
+
+test('snapshot omissions cannot remove frozen historical answers', () => {
+  const source = resolved();
+  const first = updateRuleContext(null, source, 'full');
+  const partial = structuredClone(source); partial.version++; partial.rounds = partial.rounds.slice(1);
+  const updated = updateRuleContext(first, partial, 'half');
+  assert.deepEqual(updated.source.rounds[0], source.rounds[0]);
+});
+
+test('a higher-version reconnect snapshot can confirm rollback after an abort', () => {
+  const previous = resolved(); previous.aborted = true;
+  const rows = sample('gs2-ws-full-duel-sequence-manual-rounds.json') as any[];
+  const restart = structuredClone(rows.find(row => row.message.code === 'DuelNewRound'
+    && row.message.duel.state.currentRoundNumber === 2)!.message);
+  restart.code = 'DuelStarted'; restart.duel.state.version = previous.version + 1;
+  assert.equal(applySnapshot(previous, restart).state?.aborted, false);
+  assert.equal(applySnapshot(previous, restart).state?.round, 2);
+});
