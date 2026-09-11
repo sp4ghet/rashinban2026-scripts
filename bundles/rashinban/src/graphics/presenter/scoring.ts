@@ -56,7 +56,13 @@ export function paintScoring(root: HTMLElement, projection: Projection, series: 
     show(loser, multiplied ? s.damage : s.difference, points[loser], 1, wobble);
     if (multiplied) {
       const label = el('score-calculation'); label.hidden = false; label.textContent = `×${s.multiplier}`;
-      label.style.left = `${points[loser].x}px`; label.style.top = `${points[loser].y - 75}px`;
+      const token = el(`score-token-${loser}`).getBoundingClientRect();
+      const panel = el(`${loser}-result`).getBoundingClientRect();
+      const labelWidth = label.getBoundingClientRect().width;
+      // Anchor the multiplier beside the number, clear of the centered distance.
+      // Keep long damage values and two-digit multipliers inside their panel.
+      label.style.left = `${(Math.min(token.right + 6 * scale, panel.right - labelWidth) - rootRect.left) / scale}px`;
+      label.style.top = `${(token.top - rootRect.top) / scale + 18}px`;
     }
   } else if (s.stage === 'flight' || s.stage === 'impact') {
     const hit = center(`${loser}-health`);

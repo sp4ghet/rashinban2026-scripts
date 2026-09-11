@@ -42,7 +42,7 @@ footer { position: absolute; left: 430px; right: 430px; top: 878px; text-align: 
 #scoring-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
 .score-token { position: absolute; font-size: 90px; line-height: 1.25; font-weight: 900; text-shadow: 0 3px 12px #10131fcc; white-space: nowrap; }
 .score-token.left { color: #78adff; }.score-token.right { color: #ff8290; }
-#score-calculation { position: absolute; transform: translate(-50%, -50%); font-size: 40px; color: #ffd55a; text-shadow: 0 3px 10px #10131f; }
+#score-calculation { position: absolute; transform: translateY(-50%); font-size: 32px; line-height: 1; white-space: nowrap; color: #ffd55a; text-shadow: 0 3px 10px #10131f; }
 .health { box-shadow: 0 0 calc(24px * var(--score-impact, 0)) rgba(255, 100, 125, var(--score-impact, 0)); }
 
 body[data-lock="left"] .player-window.left, body[data-lock="right"] .player-window.right { width: 600px; }
