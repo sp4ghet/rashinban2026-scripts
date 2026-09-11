@@ -3,6 +3,7 @@ import path from 'node:path';
 
 export type ReplayRow = { receivedAt: number; message: unknown };
 export const REPLAY_FIXTURES = [
+  'gs2-ws-presenter-showcase.json',
   'gs2-ws-full-duel-sequence.json',
   'gs2-ws-full-duel-sequence-manual-rounds.json',
   'gs2-ws-full-duel-sequence-maxroundtime.json',
