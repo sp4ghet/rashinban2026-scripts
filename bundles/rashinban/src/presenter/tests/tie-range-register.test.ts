@@ -129,6 +129,69 @@ test('missing rule inputs withhold custom state and recover on valid input', asy
   assert.deepEqual(app.read('presenterConnection').warnings, []);
 });
 
+test('missing historical panorama recovers while retaining the same-duel rule', async () => {
+  const complete = rows().find(message => message.code === 'DuelNewRound'
+    && message.duel.state.currentRoundNumber === 4);
+  assert.ok(complete);
+  const incomplete = structuredClone(complete);
+  incomplete.duel.state.rounds = incomplete.duel.state.rounds.filter((round: any) => round.roundNumber !== 1);
+  const app = await live(incomplete, enabled());
+  assert.equal(app.read('presenterDuel'), null);
+  assert.ok(app.read('presenterConnection').warnings.some((warning: string) => warning.includes('Tie-range')));
+
+  app.settings('half');
+  const repaired = structuredClone(complete); repaired.duel.state.version++;
+  app.send(repaired);
+
+  assert.equal(app.read('presenterDuel').tieRange.mode, 'full');
+  assert.deepEqual(app.read('presenterConnection').warnings, []);
+});
+
+test('invalid paired score recovers while retaining the same-duel rule', async () => {
+  const complete = rows().find(message => message.code === 'DuelNewRound'
+    && message.duel.state.currentRoundNumber === 4);
+  assert.ok(complete);
+  const invalid = structuredClone(complete);
+  invalid.duel.state.teams[0].roundResults[0].score = 5001;
+  const app = await live(invalid, enabled());
+  assert.equal(app.read('presenterDuel'), null);
+  assert.ok(app.read('presenterConnection').warnings.some((warning: string) => warning.includes('Tie-range')));
+
+  app.settings('half');
+  const repaired = structuredClone(complete); repaired.duel.state.version++;
+  app.send(repaired);
+
+  assert.equal(app.read('presenterDuel').tieRange.mode, 'full');
+  assert.deepEqual(app.read('presenterConnection').warnings, []);
+});
+
+test('cold round 2 without round 1 results withholds state and recovers with complete history', async () => {
+  const complete = rows().find(message => message.code === 'DuelNewRound'
+    && message.duel.state.currentRoundNumber === 2);
+  assert.ok(complete);
+  const incomplete = structuredClone(complete);
+  for (const team of incomplete.duel.state.teams) team.roundResults = [];
+  const app = await live(incomplete, enabled());
+  assert.equal(app.read('presenterDuel'), null);
+  assert.ok(app.read('presenterConnection').warnings.some((warning: string) => warning.includes('Tie-range')));
+
+  const repaired = structuredClone(complete); repaired.duel.state.version++;
+  app.send(repaired);
+
+  assert.equal(app.read('presenterDuel').tieRange.mode, 'full');
+  assert.deepEqual(app.read('presenterConnection').warnings, []);
+});
+
+test('finished source without completed history withholds an unverified custom outcome', async () => {
+  const incomplete = structuredClone(rows().find(message => message.code === 'DuelFinished'));
+  assert.ok(incomplete);
+  for (const team of incomplete.duel.state.teams) team.roundResults = [];
+  const app = await live(incomplete, enabled());
+
+  assert.equal(app.read('presenterDuel'), null);
+  assert.ok(app.read('presenterConnection').warnings.some((warning: string) => warning.includes('Tie-range')));
+});
+
 test('explicit replay restart captures preferences without replacing the saved live rule', async () => {
   const first = rows()[0]; const app = await live(first, enabled());
   app.settings('half'); app.replay();

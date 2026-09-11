@@ -32,9 +32,13 @@ function roundHalfEven(difference: number, multiplierTenths: number): number {
 /** Validate lazily: server rounds after our terminal round do not belong to this game. */
 function* validatedCompletedRounds(state: DuelState): Generator<[RoundResult, RoundResult]> {
   const all = state.players.flatMap(player => player.results);
-  if (all.some(result => !Number.isInteger(result.round) || result.round < 1)) throw new Error('Invalid tie-range round number');
-  const highest = Math.max(0, ...all.map(result => result.round));
-  for (let round = 1; round <= highest; round += 1) {
+  const validRoundNumbers = all.filter(result => Number.isInteger(result.round) && result.round >= 1)
+    .map(result => result.round);
+  const currentRoundResolved = all.some(result => result.round === state.round);
+  const completedByProgression = Math.max(0, state.round
+    - (currentRoundResolved || (state.status === 'Finished' && !state.aborted) ? 0 : 1));
+  const requiredThrough = Math.max(completedByProgression, 0, ...validRoundNumbers);
+  for (let round = 1; round <= requiredThrough; round += 1) {
     const blue = state.players[0].results.filter(result => result.round === round);
     const red = state.players[1].results.filter(result => result.round === round);
     if (blue.length > 1 || red.length > 1) throw new Error(`Duplicate tie-range result at round ${round}`);
@@ -51,6 +55,9 @@ function* validatedCompletedRounds(state: DuelState): Generator<[RoundResult, Ro
       }
     }
     yield [blueResult, redResult];
+  }
+  if (all.some(result => !Number.isInteger(result.round) || result.round < 1)) {
+    throw new Error('Invalid tie-range round number');
   }
 }
 
@@ -141,6 +148,10 @@ function deriveHealth(state: DuelState, mode: Exclude<TieRangeMode, 'off'> | nul
     derived.players[index].multiplier = multiplierTenths[index] / 10;
   }
   if (mode !== null) derived.tieRange = { mode, rounds: metadata };
+
+  if (mode !== null && state.status === 'Finished' && !state.aborted && terminalRound === null) {
+    throw new Error('Server game finished before a custom outcome could be verified');
+  }
 
   if (terminalRound !== null) {
     derived.round = terminalRound;

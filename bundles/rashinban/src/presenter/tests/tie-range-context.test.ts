@@ -91,6 +91,37 @@ test('snapshot omissions cannot remove frozen historical answers', () => {
   assert.deepEqual(updated.source.rounds[0], source.rounds[0]);
 });
 
+test('a newly supplied panorama repairs an initially incomplete settled round without changing its mode', () => {
+  const complete = resolved();
+  const incomplete = structuredClone(complete);
+  incomplete.rounds = incomplete.rounds.filter(round => round.number !== 1);
+  const first = updateRuleContext(null, incomplete, 'full');
+
+  complete.version++;
+  const repaired = updateRuleContext(first, complete, 'half');
+
+  assert.equal(repaired.mode, 'full');
+  assert.deepEqual(repaired.source.rounds.find(round => round.number === 1), complete.rounds[0]);
+});
+
+test('invalid or duplicate paired scores remain replaceable by a later valid snapshot', () => {
+  for (const kind of ['invalid', 'duplicate']) {
+    const bad = resolved();
+    if (kind === 'invalid') bad.players[0].results[0].score = 5001;
+    else bad.players[0].results.push(structuredClone(bad.players[0].results[0]));
+    const first = updateRuleContext(null, bad, 'full');
+    const corrected = resolved();
+    corrected.version++;
+
+    const repaired = updateRuleContext(first, corrected, 'half');
+
+    assert.equal(repaired.mode, 'full', kind);
+    assert.equal(repaired.source.players[0].results.filter(result => result.round === 1).length, 1, kind);
+    assert.equal(repaired.source.players[0].results.find(result => result.round === 1)?.score,
+      corrected.players[0].results[0].score, kind);
+  }
+});
+
 test('a higher-version reconnect snapshot can confirm rollback after an abort', () => {
   const previous = resolved(); previous.aborted = true;
   const rows = sample('gs2-ws-full-duel-sequence-manual-rounds.json') as any[];

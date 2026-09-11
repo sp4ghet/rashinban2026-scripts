@@ -209,10 +209,11 @@ test('an abort before custom knockout remains aborted', () => {
 });
 
 test('a settled knockout ignores incomplete or malformed later server rounds', () => {
-  for (const kind of ['asymmetric', 'score', 'panorama', 'duplicate']) {
+  for (const kind of ['asymmetric', 'score', 'round', 'panorama', 'duplicate']) {
     const source = state([[5000, 0], [5000, 0], [4000, 3000]]);
     if (kind === 'asymmetric') source.players[1].results.pop();
     if (kind === 'score') source.players[0].results[2].score = 5001;
+    if (kind === 'round') source.players[0].results[2].round = -1;
     if (kind === 'panorama') source.rounds.pop();
     if (kind === 'duplicate') source.players[0].results.push({ ...source.players[0].results[2] });
     const derived = deriveTieRange(source, 'full');
@@ -220,6 +221,36 @@ test('a settled knockout ignores incomplete or malformed later server rounds', (
     assert.equal(derived.status, 'Finished', kind);
     assert.equal(derived.winnerTeamId, 'blue-team', kind);
   }
+});
+
+test('an active later round requires complete prior result history', () => {
+  const empty = state([], { round: 2 });
+  assert.throws(() => deriveTieRange(empty, 'full'), /history.*round 1/i);
+
+  const partial = state([[4000, 3000]], { round: 3 });
+  assert.throws(() => deriveTieRange(partial, 'full'), /history.*round 2/i);
+});
+
+test('a finished source cannot publish an unverified custom outcome', () => {
+  const source = state([], {
+    round: 2, status: 'Finished', aborted: false, winnerTeamId: 'blue-team',
+  });
+  assert.throws(() => deriveTieRange(source, 'full'), /history.*round 1/i);
+});
+
+test('an early server finish cannot supply the winner while custom health survives', () => {
+  const source = state([[4000, 3000]], {
+    status: 'Finished', aborted: false, winnerTeamId: 'blue-team', maxRounds: 50,
+  });
+  assert.throws(() => deriveTieRange(source, 'full'), /finished.*custom outcome/i);
+});
+
+test('custom knockout and round-limit finishes do not inspect absent later history', () => {
+  const knockout = state([[5000, 0], [5000, 0]], { round: 4 });
+  assert.equal(deriveTieRange(knockout, 'full').round, 2);
+
+  const roundLimit = state([[4000, 3000]], { round: 3, maxRounds: 1 });
+  assert.equal(deriveTieRange(roundLimit, 'full').round, 1);
 });
 
 test('the completed round limit decides a winner or draw from remaining custom HP', () => {
