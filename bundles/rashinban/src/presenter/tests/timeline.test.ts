@@ -42,6 +42,40 @@ test('two perfect scores select one double celebration', () => {
   assert.equal(effectFor([5000, 4999]), 'single-5k');
   assert.equal(effectFor([4999, 4999]), 'none');
 });
+test('round-start schedules at future panorama reveal once, including pre-round bootstrap', () => {
+  const start = sequence('gs2-ws-full-duel-sequence-maxroundtime.json')[0];
+  const at = start.state.rounds.find(round => round.number === start.state.round)!.startAtMs!;
+  for (const bootstrap of [false, true]) {
+    let timeline = advance(null, start.state, at - 1000, bootstrap);
+    const cue = timeline.cues.find(cue => cue.kind === 'round-start')!;
+    assert.equal(cue.atMs, at); assert.equal(cue.untilMs, at + 250);
+    timeline = advance(timeline, start.state, at - 500);
+    assert.deepEqual(timeline.cues.filter(cue => cue.kind === 'round-start'), [cue]);
+    timeline = advance(timeline, start.state, at);
+    assert.equal(timeline.phase, 'live'); assert.equal(timeline.cues.filter(cue => cue.kind === 'round-start').length, 1);
+    timeline = advance(timeline, start.state, at + 300);
+    assert.equal(timeline.cues.some(cue => cue.kind === 'round-start'), false);
+    timeline = advance(timeline, start.state, at + 400);
+    assert.equal(timeline.cues.some(cue => cue.kind === 'round-start'), false);
+  }
+  assert.equal(advance(null, start.state, at + 1, true).cues.some(cue => cue.kind === 'round-start'), false);
+  assert.equal(advance(null, start.state, at + 1).cues.some(cue => cue.kind === 'round-start'), false);
+});
+test('round-start reschedules a changed future deadline and drops old-round or aborted cues', () => {
+  const start = structuredClone(sequence('gs2-ws-full-duel-sequence-maxroundtime.json')[0]);
+  const round = start.state.rounds.find(round => round.number === start.state.round)!;
+  const at = round.startAtMs!;
+  const original = advance(null, start.state, at - 1000);
+  round.startAtMs = at + 1000;
+  const moved = advance(original, start.state, at - 500);
+  assert.deepEqual(moved.cues.filter(cue => cue.kind === 'round-start').map(cue => cue.atMs), [at + 1000]);
+  const next = structuredClone(start.state); next.round++; next.rounds.push({ ...round, number: next.round, startAtMs: at + 5000 });
+  const replaced = advance(moved, next, at);
+  assert.deepEqual(replaced.cues.filter(cue => cue.kind === 'round-start').map(cue => cue.atMs), [at + 5000]);
+  assert.notEqual(replaced.generation, moved.generation);
+  next.aborted = true;
+  assert.equal(advance(replaced, next, at + 1).cues.length, 0);
+});
 
 test('manual capture waits for host before start and after completing results', () => {
   const manual = sequence('gs2-ws-full-duel-sequence-manual-rounds.json');

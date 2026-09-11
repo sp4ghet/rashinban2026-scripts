@@ -5,7 +5,7 @@ import express from 'express';
 import type NodeCG from '@nodecg/types';
 import { registerPresenter } from '../../extension/presenter/register.ts';
 import { DEFAULT_SETTINGS } from '../settings.ts';
-import { EMPTY_MEDIA } from '../media.ts';
+import { CUE_KINDS, EMPTY_MEDIA } from '../media.ts';
 import { sample } from './fixtures.ts';
 import type { ConnectionDeps } from '../../extension/presenter/connection.ts';
 
@@ -83,10 +83,10 @@ test('audio mode handoff waits for old mute acknowledgement or expiry, and denie
   now = 106000; for (const t of tasks.filter(t => t.active && t.at <= now)) { t.active = false; t.fn(); }
   assert.equal(audio().clientId, 'two'); assert.equal(audio().releasing, false);
   assert.equal(message('presenter:audio-muted', { clientId: 'one', token: first.token }), false);
-  const missing = [...Array.from({ length: 32 }, (_, i) => `stem-${i}`), 'pin', 'guess', 'countdown', 'results', 'count', 'collision', 'tie', 'multiplier', 'damage', 'five-k'];
+  const missing = [...Array.from({ length: 32 }, (_, i) => `stem-${i}`), ...CUE_KINDS];
   const reportMissing = (ids: string[]) => message('presenter:client', { clientId: 'full-missing', role: 'audio', ready: false, renderer: 'unreported', clockFresh: true, audio: { state: 'error', missing: ids } });
   assert.notEqual(reportMissing(missing), 'rejected', 'all supported media failures must fit a readiness report');
-  assert.equal(reps.get('presenterClients').value.clients.find((client: any) => client.clientId === 'full-missing').audio.missing.length, 42);
+  assert.equal(reps.get('presenterClients').value.clients.find((client: any) => client.clientId === 'full-missing').audio.missing.length, missing.length);
   assert.equal(reportMissing([...missing, 'overflow']), 'rejected');
 });
 

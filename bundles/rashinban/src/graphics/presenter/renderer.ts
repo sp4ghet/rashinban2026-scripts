@@ -1,7 +1,7 @@
 import type { Bounds, DuelState, Mode, Panorama, Phase, Point, Projection, Views } from '../../types/presenter.ts';
 import { lockLayout } from './layout.ts';
 
-export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null } };
+export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
 export type MapFrame = { visible: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string }[]; lines: { from: Point; to: Point; color: string }[] };
@@ -71,7 +71,7 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
             ? shared ? (ids.some(Boolean) ? initial : null) : ids[index] ? players[index]?.panorama ?? initial : null
             : null;
           const frozen = shared ? lock === 'both' : locked[index];
-          pano.render(value, { visible: live && slots.includes(slot) && !frozen, frozen,
+          pano.render(value, { visible: live && slots.includes(slot) && !frozen, frozen: frozen || frame.frozen,
             identity: `${state.gameId}:${state.round}:${shared ? 'shared' : ids[index] ?? ''}` });
         });
         if (plan.playerMaps) for (const slot of ['left-map', 'right-map']) {

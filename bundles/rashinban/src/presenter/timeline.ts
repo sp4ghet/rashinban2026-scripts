@@ -28,6 +28,7 @@ function fresh(previous: Timeline | null, state: DuelState | null, nowMs: number
     cues: [],
     observed: {},
     countdownEndAtMs: null,
+    roundStartAtMs: null,
   };
 }
 
@@ -82,6 +83,15 @@ function liveCues(timeline: Timeline, state: DuelState, nowMs: number, bootstrap
     observed[player.id] = { pin: bootstrap || !old ? player.pin : old.pin, statePin: player.pin, guessed, pinCueAtMs: old?.pinCueAtMs ?? null };
   }
   const round = state.rounds.find(item => item.number === timeline.round);
+  const roundStartAtMs = round?.startAtMs ?? null;
+  if (roundStartAtMs !== (timeline.roundStartAtMs ?? null)) {
+    for (let i = cues.length - 1; i >= 0; i--) if (cues[i].kind === 'round-start') cues.splice(i, 1);
+    // Schedule the future panorama reveal, including a bootstrap during its
+    // countdown. Joining an already-live round must not replay its start.
+    if (timeline.phase === 'pre-round' && roundStartAtMs !== null && roundStartAtMs > nowMs) {
+      cues.push(cue(timeline, 'round-start', roundStartAtMs, roundStartAtMs + 250));
+    }
+  }
   const end = round?.endAtMs ?? null;
   const countdownEndAtMs = timeline.phase === 'live' || timeline.phase === 'pre-round' ? end : null;
   if (countdownEndAtMs !== timeline.countdownEndAtMs) {
@@ -96,7 +106,7 @@ function liveCues(timeline: Timeline, state: DuelState, nowMs: number, bootstrap
       }
     }
   }
-  return applyPinCues({ ...timeline, cues, observed, countdownEndAtMs }, changedPins, nowMs, timing);
+  return applyPinCues({ ...timeline, cues, observed, countdownEndAtMs, roundStartAtMs }, changedPins, nowMs, timing);
 }
 
 /** Accept normalized authoritative state; call again on time boundaries even without a new snapshot. */

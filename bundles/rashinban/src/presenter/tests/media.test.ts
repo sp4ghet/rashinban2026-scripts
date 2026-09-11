@@ -7,6 +7,10 @@ test('empty media is silent; local media preserves loops, gains and separate var
   assert.deepEqual(parseMedia(EMPTY_MEDIA), EMPTY_MEDIA);
   assert.deepEqual(parseMedia(valid()), valid());
 });
+test('round-start accepts a local effect asset', () => {
+  const media = { ...structuredClone(EMPTY_MEDIA), sounds: { 'round-start': '/assets/rashinban/effects/round-reveal.wav' } };
+  assert.deepEqual(parseMedia(media), media);
+});
 test('rejects missing or duplicate IDs, invalid loops, gains, watchdog and soundtrack combinations', () => {
   for (const patch of [{ id: '' }, { id: undefined }, { loopStartS: -1 }, { loopEndS: 0 }, { gains: { idle: 2, round: 0, urgent: 0, results: 0 } }]) {
     const v = valid(); Object.assign(v.stems[0]!, patch); assert.throws(() => parseMedia(v));

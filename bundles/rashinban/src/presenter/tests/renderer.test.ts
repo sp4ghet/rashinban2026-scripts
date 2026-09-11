@@ -30,6 +30,17 @@ function lockPlayer(f: RenderFrame, index: number) {
   player.guesses.push({ lat: 1 + index, lng: 179 - index, round: f.state.round, score: 4000, distanceM: 100, createdAtMs: 1 });
   f.projection.players.push({ id: player.id, locked: true, health: 6000, score: null, distanceM: null });
 }
+test('frozen celebration frame retains visible active imagery and locked maps without revealing an answer', () => {
+  const f = frame(); f.state.mode = 'MOVE'; const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  lockPlayer(f, 0); renderer.render(f);
+  const priorMaps = fake.maps.map(map => structuredClone(map.frames.at(-1)));
+  renderer.render({ ...f, frozen: true });
+  assert.deepEqual(fake.maps.map(map => map.frames.at(-1)), priorMaps);
+  assert.equal(fake.panos[0].options.at(-1).visible, false);
+  assert.equal(fake.panos[1].options.at(-1).visible, true);
+  assert.ok(fake.panos.every(pano => pano.options.at(-1).frozen));
+  assert.ok(fake.maps.every(map => map.slot !== 'results-map'));
+});
 test('lock layout respects mapped current-round guesses, projection and rendered source', () => {
   const f = frame(); lockPlayer(f, 0); assert.equal(lockLayout(f), 'left');
   f.playerIds = { left: f.state.players[1].id, right: f.state.players[0].id }; assert.equal(lockLayout(f), 'right');

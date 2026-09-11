@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.
 import { project } from '../presenter/projection.ts';
 import { layoutKind, multiplierLabel, distanceLabel, lockLayout } from './presenter/layout.ts';
 import { paintScoring } from './presenter/scoring.ts';
+import { createCelebrationUnderlay } from './presenter/celebration.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
 import type { GameRenderer, RenderFrame } from './presenter/renderer.ts';
 import { clientRole, createPresenterClient } from './presenter/client.ts';
@@ -50,6 +51,7 @@ const element = (id: string) => document.getElementById(id)!;
 const write = (id: string, value: string) => { const el = element(id); if (el.textContent !== value) el.textContent = value; };
 let renderer: GameRenderer | null = null;
 let previousFrame: RenderFrame | null = null;
+const celebrationUnderlay = createCelebrationUnderlay();
 function publishRenderer(status: RendererStatus) {
   document.body.dataset.renderer = status;
   client.setRendererStatus(status); client.setReady(status === 'api-ready');
@@ -84,13 +86,20 @@ function frame() {
   document.documentElement.style.setProperty('--key-color', options.keyColor);
   document.body.dataset.source = options.viewSource;
   document.body.dataset.layout = layoutKind(state?.mode ?? 'NMPZ', options.viewSource);
+  document.body.dataset.celebrationUnderlay = 'false';
+  if (!state || !views.value || !timing || !match) celebrationUnderlay.reset();
   if (timing && match) {
     const visible = project(state ?? null, timing, client.now());
+    const gameFrame = state && views.value ? celebrationUnderlay.render({ state, views: views.value,
+      projection: visible, source: options.viewSource, displayedRound: timing.round,
+      playerIds: { left: match.left.playerId, right: match.right.playerId } }, timing.effect !== 'none') : null;
+    const underlay = gameFrame?.frozen === true;
+    document.body.dataset.celebrationUnderlay = String(underlay);
     document.body.dataset.phase = visible.phase;
     const results = visible.answer !== null;
     element('results-area').hidden = !results;
-    element('live-area').hidden = results || visible.phase === 'results-transition';
-    element('transition').hidden = visible.phase !== 'results-transition';
+    element('live-area').hidden = results || (visible.phase === 'results-transition' && !underlay);
+    element('transition').hidden = visible.phase !== 'results-transition' || underlay;
     write('round-number', timing.round === null ? '—' : String(timing.round));
     write('mode', state?.mode ?? '—');
     const multiplier = multiplierLabel(state ?? null, timing, { left: match.left.playerId, right: match.right.playerId });
@@ -106,7 +115,8 @@ function frame() {
       const health = Math.max(0, Math.min(1, (player?.healthBar ?? player?.health ?? 0) / (state?.initialHealth || 6000)));
       element(`${side}-health-fill`).style.transform = `scaleX(${health})`;
       element(`${side}-health-fill`).style.background = health < 0.25 ? '#e04f66' : health < 0.5 ? '#dbae40' : '#8abb43';
-      element(`${side}-lock`).hidden = visible.phase !== 'live' || !player?.locked;
+      const lockPlayer = underlay ? gameFrame.projection.players.find(item => item.id === competitor.playerId) : player;
+      element(`${side}-lock`).hidden = (visible.phase !== 'live' && !underlay) || !lockPlayer?.locked;
       write(`${side}-score`, player?.score == null ? '—' : String(player.score));
       const distance = player?.distanceM;
       write(`${side}-distance`, distanceLabel(distance, player?.score));
@@ -127,9 +137,8 @@ function frame() {
       }
     }
     write('phase-label', label);
-    if (state && views.value) {
-      previousFrame = { state, views: views.value, projection: visible, source: options.viewSource,
-        displayedRound: timing.round, playerIds: { left: match.left.playerId, right: match.right.playerId } };
+    if (gameFrame) {
+      previousFrame = gameFrame;
       document.body.dataset.lock = lockLayout(previousFrame);
       renderer?.render(previousFrame);
     }
