@@ -220,6 +220,11 @@ export function createConnection(
     const finishedAt = deps.now();
     const serverMs = serverTimeMs(response.headers.get('X-ServerTime'));
     if (serverMs !== null) status.serverOffsetMs = serverMs - (startedAt + finishedAt) / 2;
+    // Active-party discovery returns no content when this account has no party.
+    // Other endpoints still require their documented JSON payloads.
+    if (response.status === 204 && url === 'https://www.geoguessr.com/api/v4/parties/v2/active') {
+      return { partyId: null, lobbyId: null, gameState: 'NoGame' };
+    }
     try {
       return await response.json();
     } catch {

@@ -104,6 +104,7 @@ function spectator(lobbyId: string): Response {
 function scriptedConnection(
   responses: Response[],
   overrides: Partial<ConnectionDeps> = {},
+  partyId: string | null = 'party-one',
 ): {
   connection: ReturnType<typeof createConnection>;
   calls: FetchCall[];
@@ -138,7 +139,7 @@ function scriptedConnection(
     ...overrides,
   };
   const connection = createConnection(
-    { cookie: 'test-only-secret', partyId: 'party-one', clientVersion: 'fixture-version' },
+    { cookie: 'test-only-secret', partyId, clientVersion: 'fixture-version' },
     {
       onMessage(value, receivedAtMs, bootstrap) {
         messages.push({ value, receivedAtMs, bootstrap });
@@ -156,6 +157,54 @@ async function flush(): Promise<void> {
   await waitForImmediate();
   await waitForImmediate();
 }
+
+test('204 active-party discovery waits normally, discovers a future lobby, and clears a departed party', async () => {
+  const harness = scriptedConnection([
+    profile(), new Response(null, { status: 204 }), new Response(null, { status: 204 }),
+    party('lobby-one'), phonebook('lobby-one'), spectator('lobby-one'), new Response(null, { status: 204 }),
+  ], {}, null);
+  try {
+    harness.connection.start(); await flush();
+    assert.equal(harness.calls.at(-1)?.url, 'https://www.geoguessr.com/api/v4/parties/v2/active');
+    assert.equal(harness.statuses.at(-1)?.state, 'disconnected');
+    assert.equal(harness.statuses.at(-1)?.partyId, null);
+    assert.equal(harness.statuses.at(-1)?.gameId, null);
+    assert.equal(harness.statuses.at(-1)?.error, null);
+    assert.deepEqual(harness.clock.activeDelays(), [5000]);
+    assert.equal(harness.sockets.length, 0);
+    harness.clock.runDelay(5000); await flush();
+    assert.equal(harness.statuses.at(-1)?.state, 'disconnected');
+    assert.deepEqual(harness.clock.activeDelays(), [5000]);
+    harness.clock.runDelay(5000); await flush();
+    assert.equal(harness.sockets.length, 1);
+    harness.sockets[0].open();
+    assert.equal(harness.statuses.at(-1)?.state, 'live');
+    assert.equal(harness.statuses.at(-1)?.partyId, 'party-one');
+    assert.equal(harness.messages.length, 1);
+    harness.clock.runDelay(5000); await flush();
+    assert.equal(harness.sockets[0].closed, true);
+    assert.equal(harness.statuses.at(-1)?.state, 'disconnected');
+    assert.equal(harness.statuses.at(-1)?.partyId, null);
+    assert.equal(harness.statuses.at(-1)?.gameId, null);
+    assert.equal(harness.statuses.at(-1)?.error, null);
+    assert.deepEqual(harness.clock.activeDelays(), [5000]);
+  } finally { harness.connection.stop(); }
+});
+
+for (const endpoint of ['profile', 'selected party', 'spectator'] as const) test(`204 ${endpoint} remains an invalid response`, async () => {
+  const empty = new Response(null, { status: 204 });
+  const harness = scriptedConnection(endpoint === 'profile' ? [empty]
+    : endpoint === 'selected party' ? [profile(), empty]
+    : [profile(), party('lobby-one'), phonebook('lobby-one'), empty]);
+  try {
+    harness.connection.start(); await flush();
+    assert.equal(harness.statuses.at(-1)?.state, 'stale');
+    assert.equal(harness.statuses.at(-1)?.error, 'GeoGuessr connection interrupted');
+    assert.equal(harness.sockets.length, 0);
+    assert.equal(harness.messages.length, 0);
+    assert.ok(harness.clock.activeDelays().some(delay => delay >= 800 && delay <= 1200));
+  } finally { harness.connection.stop(); }
+});
 
 test('bootstrap delivers the latest server offset before a status publication', async () => {
   const responses = [profile(), party('lobby-one'), phonebook('lobby-one'),

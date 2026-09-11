@@ -58,6 +58,11 @@ request without a selector retains it; a NodeCG restart restores the public
 config default. Mode switches also clear the previous source's connection
 identity and error state.
 
+If the signed-in account has no active party, discovery returns HTTP 204.
+The presenter shows disconnected with no game and no error, then polls every
+five seconds so joining a party later connects automatically. This is a normal
+waiting state, distinct from an interrupted request or expired authentication.
+
 Enter competitor names/handles and wins, map the GeoGuessr player IDs to left
 and right, then **Apply series**. **Swap sides** swaps the draft; apply it to
 publish. Wins are integers 0–2 and never increment from duel results. To reset
