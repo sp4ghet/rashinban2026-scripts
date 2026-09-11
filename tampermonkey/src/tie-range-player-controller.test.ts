@@ -459,7 +459,7 @@ test('restores the captured mode and output before the refresh resolves', async 
   h.controller.start();
   await flush();
 
-  assert.equal(h.views.at(-1)?.status, 'ready');
+  assert.equal(h.views.at(-1)?.status, 'stale');
   assert.equal(h.views.at(-1)?.capturedMode, 'half');
   assert.equal(h.views.at(-1)?.configuredMode, 'full');
   assert.equal(h.views.at(-1)?.appliesToNextDuel, true);
@@ -467,12 +467,12 @@ test('restores the captured mode and output before the refresh resolves', async 
   h.controller.dispose();
 });
 
-test('uses the legacy archive only after phonebook positively reports inactive', async () => {
+test('uses the legacy archive after the observed Finished phonebook status', async () => {
   const calls: string[] = [];
   const h = harness(async url => {
     calls.push(url);
     if (url.startsWith(PHONEBOOK_PREFIX)) {
-      return response({ gameId: 'player-rest-full', gameServerNodeId: null, status: 'Inactive' });
+      return response({ gameId: 'player-rest-full', gameServerNodeId: null, status: 'Finished' });
     }
     return response(game());
   });
@@ -515,4 +515,43 @@ test('refreshes a stale active node after 404 without accepting the archive endp
   ]);
   assert.equal(h.views.at(-1)?.status, 'ready');
   assert.ok(calls.every(url => !url.includes('/api/duels/')));
+});
+
+test('a response body for another game never attaches under the requested route', async () => {
+  const h = harness(activeFetch(async () => response(game('wrong-game'))));
+  h.controller.start();
+  await flush();
+  assert.equal(h.views.at(-1)?.context, null);
+  assert.equal(h.views.at(-1)?.output, null);
+  assert.equal(h.views.at(-1)?.status, 'reconnecting');
+  h.controller.dispose();
+});
+
+test('saved HP is stale when a reload cannot fetch current state', async () => {
+  const storage = new MemoryStorage();
+  await savePlayerContext(storage, acceptPlayerSnapshot(null, game(), 'full').context!);
+  const h = harness(activeFetch(async () => { throw Error('offline'); }), {storage});
+  h.controller.start();
+  await flush();
+  await h.clock.advance(10000);
+  assert.equal(h.views.at(-1)?.status, 'stale');
+  assert.deepEqual(h.views.at(-1)?.output?.currentHealth, [0, 5644]);
+  h.controller.dispose();
+});
+
+test('an old party discovery response cannot clear a newer direct duel', async () => {
+  const pending = deferred<ReturnType<typeof response>>();
+  const h = harness(activeFetch(async url => url.endsWith('/parties/v2/active')
+    ? pending.promise : response(game('new-game'))), {path:'/party/lobby'});
+  h.controller.start();
+  await flush();
+  h.setPath('/duels/new-game');
+  h.controller.routeChanged();
+  await flush();
+  assert.equal(h.views.at(-1)?.context?.gameId, 'new-game');
+  pending.resolve(response({partyId:'old-party',gameState:'NoGame'}));
+  await flush();
+  assert.equal(h.views.at(-1)?.context?.gameId, 'new-game');
+  assert.equal(h.views.at(-1)?.status, 'ready');
+  h.controller.dispose();
 });

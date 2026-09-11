@@ -62,6 +62,15 @@ Separate audio: `http://localhost:9090/bundles/rashinban/graphics/presenter-audi
 Use `?role=preview` for silent graphic inspection. The dashboard includes
 party selection/reconnect, side mapping, media, mute and output-mode controls.
 
+## Player tie-range userscript
+
+Players can use [RASHINBAN Player Tie-Range](tampermonkey/rashinban-tie-range.user.js)
+to display the same custom HP and multipliers as the presenter. Choose matching
+Off / Full / Half settings before the duel; no NodeCG connection is required.
+See [installation and supported games](docs/presenter/player-tie-range.md).
+Build with `npm run build`; run the Chrome integration check with
+`npm run validate:player`.
+
 ## Layout
 
 - `bundles/rashinban/` — the NodeCG bundle. TypeScript sources live in

@@ -23,7 +23,7 @@ const liveLimitFixture = JSON.parse(readFileSync(
 const liveManualFixture = JSON.parse(readFileSync(
   new URL('../../docs/geoguessr/samples/player-tie-range/player-live-manual.json', import.meta.url),
   'utf8',
-)) as { created: unknown; resolved: unknown; resolvedDamage: unknown };
+)) as { created: unknown; resolved: unknown; resolvedDamage: unknown; finished: unknown };
 
 function snapshot(change: (value: any) => void = () => {}): unknown {
   const value = structuredClone(fixture);
@@ -367,4 +367,96 @@ test('reports an unavailable active context when its rules schema is old', async
   assert.equal(restored.context, null);
   assert.equal(restored.output, null);
   assert.equal(restored.diagnostic?.code, 'schema-mismatch');
+});
+
+test('a changed start time clears stale results and waits for the reset history', () => {
+  const first = acceptPlayerSnapshot(null, snapshot(), 'full');
+  const restart = snapshot(value => {
+    value.version = 50;
+    value.status = 'Started';
+    value.rounds[3].startTime = '2026-09-12T00:00:00Z';
+  });
+  const reset = acceptPlayerSnapshot(first.context, restart, 'full');
+  assert.deepEqual(reset.context?.input.rounds.map(r => r.round), [1, 2, 3]);
+  assert.equal(reset.output?.terminal, null);
+  const repeated = structuredClone(restart) as any;
+  repeated.version = 51;
+  const stillWaiting = acceptPlayerSnapshot(reset.context, repeated, 'full');
+  assert.equal(stillWaiting.output?.terminal, null);
+  assert.equal(stillWaiting.context?.input.rounds.length, 3);
+  repeated.version = 52;
+  for (const team of repeated.teams) team.roundResults.splice(3);
+  const clean = acceptPlayerSnapshot(stillWaiting.context, repeated, 'full');
+  const settled = structuredClone(restart) as any;
+  settled.version = 53;
+  const resumed = acceptPlayerSnapshot(clean.context, settled, 'full');
+  assert.equal(resumed.output?.terminal?.round, 5);
+});
+
+test('reload rejects cross-game keys, inconsistent identities, and malformed Off inputs', async () => {
+  for (const mutate of [
+    (v: any) => { v.gameId = 'another-game'; },
+    (v: any) => { v.teamIds.reverse(); },
+    (v: any) => { v.playerIds[1] = v.playerIds[0]; },
+    (v: any) => { v.sourceVersion = -1; },
+    (v: any) => { v.roundStarts.push(v.roundStarts[0]); },
+    (v: any) => { v.mode = 'off'; v.input.initialHealth = -1; },
+  ]) {
+    const storage = new MemoryStorage();
+    const context = acceptPlayerSnapshot(null, snapshot(), 'full').context!;
+    await savePlayerContext(storage, context);
+    const key = [...storage.values.keys()].find(k => k.includes('.game.'))!;
+    const value = JSON.parse(storage.values.get(key) as string);
+    mutate(value);
+    storage.values.set(key, JSON.stringify(value));
+    const restored = await loadPlayerContext(storage, context.gameId);
+    assert.equal(restored.context, null);
+    assert.equal(restored.diagnostic?.code, 'invalid-saved-context');
+  }
+});
+
+test('overlapping asynchronous saves keep every recency entry and enforce the bound', async () => {
+  const values = new Map<string, unknown>();
+  const storage: PlayerTieRangeStorage = {
+    get: async key => { const value = values.get(key); await new Promise(r => setTimeout(r, 1)); return value; },
+    set: async (key, value) => { await new Promise(r => setTimeout(r, 1)); values.set(key, value); },
+    remove: async key => { values.delete(key); },
+  };
+  await Promise.all(Array.from({ length: 12 }, (_, i) => savePlayerContext(storage,
+    acceptPlayerSnapshot(null, snapshot(v => { v.gameId = `concurrent-${i}`; }), 'full').context!)));
+  assert.equal([...values.keys()].filter(k => k.includes('.game.')).length, 10);
+  assert.equal(JSON.parse(values.get('rashinban.tie-range.games') as string).length, 10);
+  assert.ok((await loadPlayerContext(storage, 'concurrent-11')).context);
+});
+
+test('late attachment with missing previous rounds cannot show initial HP as current HP', () => {
+  const accepted = acceptPlayerSnapshot(null, snapshot(v => {
+    v.currentRoundNumber = 4;
+    v.status = 'Ongoing';
+    for (const team of v.teams) team.roundResults.splice(1);
+  }), 'full');
+  assert.equal(accepted.accepted, false);
+  assert.equal(accepted.output, null);
+  assert.equal(accepted.diagnostic?.code, 'recovery');
+});
+
+test('reload preserves rollback recovery and ended-without-winner diagnostics', async () => {
+  const original = acceptPlayerSnapshot(null, snapshot(), 'full').context;
+  const cases = [
+    acceptPlayerSnapshot(original, snapshot(v => { v.version=50; v.currentRoundNumber=3; v.status='Ongoing'; }), 'full'),
+    acceptPlayerSnapshot(null, snapshot(v => { v.currentRoundNumber=1; v.teams.forEach((t:any)=>t.roundResults.splice(1)); }), 'full'),
+  ];
+  for (const accepted of cases) {
+    const storage = new MemoryStorage();
+    await savePlayerContext(storage, accepted.context!);
+    const restored = await loadPlayerContext(storage, accepted.context!.gameId);
+    assert.equal(restored.diagnostic?.code, accepted.diagnostic?.code);
+  }
+});
+
+test('the completed live manual duel keeps settled HP instead of forced native loser zero', () => {
+  const result = acceptPlayerSnapshot(null, liveManualFixture.finished, 'full');
+  assert.deepEqual(result.output?.currentHealth, [6000, 2295]);
+  assert.deepEqual(result.output?.currentMultiplierTenths, [20, 20]);
+  assert.deepEqual(result.output?.terminal, {round:3,winnerTeamId:'team-blue',isDraw:false});
 });

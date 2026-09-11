@@ -44,6 +44,7 @@ export type PlayerGameContext = {
   teamLabels: ['blue', 'red'];
   playerIds: [string, string];
   roundStarts: PlayerRoundStart[];
+  rollbackPendingFrom?: number | null;
   input: TieRangeInput;
 };
 
@@ -64,9 +65,10 @@ export interface PlayerTieRangeStorage {
   get(key: string): unknown | Promise<unknown>;
   set(key: string, value: unknown): void | Promise<void>;
   remove(key: string): void | Promise<void>;
+  withLock?<T>(operation: () => Promise<T>): Promise<T>;
 }
 
-type DecodedSnapshot = Omit<PlayerGameContext, 'schemaVersion' | 'mode'>;
+type DecodedSnapshot = Omit<PlayerGameContext, 'schemaVersion' | 'mode' | 'rollbackPendingFrom'>;
 
 class DecodeError extends Error {
   readonly code: PlayerDiagnosticCode;
@@ -362,7 +364,13 @@ export function acceptPlayerSnapshot(
     return retained(activePrevious, 'stale-version', 'An older duel response was ignored');
   }
   if (activePrevious && decoded.sourceVersion === activePrevious.sourceVersion) {
-    return { accepted: true, context: activePrevious, output: outputFor(activePrevious), diagnostic: null };
+    return {
+      accepted: true, context: activePrevious, output: outputFor(activePrevious),
+      diagnostic: activePrevious.rollbackPendingFrom
+        ? diagnostic('recovery', 'Waiting for restarted round history to clear')
+        : activePrevious.sourceStatus === 'Finished' && outputFor(activePrevious)?.terminal === null
+          ? diagnostic('source-ended', 'Duel ended without a custom winner') : null,
+    };
   }
   if (activePrevious && (!tupleEqual(activePrevious.teamIds, decoded.teamIds)
     || !tupleEqual(activePrevious.playerIds, decoded.playerIds))) {
@@ -373,7 +381,12 @@ export function acceptPlayerSnapshot(
   }
 
   const rollback = activePrevious ? rollbackStart(activePrevious, decoded) : null;
+  if (rollback === null && !activePrevious?.rollbackPendingFrom
+    && decoded.input.rounds.length < decoded.currentRoundNumber - 1) {
+    return retained(activePrevious, 'recovery', 'Earlier resolved rounds are missing from the player response');
+  }
   let acceptedRounds = decoded.input.rounds;
+  let rollbackPendingFrom = activePrevious?.rollbackPendingFrom ?? null;
   if (activePrevious) {
     if (rollback === null) {
       if (decoded.input.rounds.length < activePrevious.input.rounds.length
@@ -391,12 +404,18 @@ export function acceptPlayerSnapshot(
         || !sameRound(round, decoded.input.rounds[index]))) {
         return retained(activePrevious, 'recovery', 'Rollback response does not contain the verified prefix');
       }
-      acceptedRounds = decoded.currentRoundNumber < activePrevious.currentRoundNumber
-        ? prefix
-        : [
-          ...prefix,
-          ...decoded.input.rounds.filter(round => round.round >= rollback),
-        ];
+      acceptedRounds = prefix;
+      rollbackPendingFrom = decoded.input.rounds.some(round => round.round >= rollback) ? rollback : null;
+    }
+  }
+
+  if (rollback === null && rollbackPendingFrom !== null) {
+    if (decoded.input.rounds.some(round => round.round >= rollbackPendingFrom!)) {
+      // A newer version alone cannot tie an old score to the restarted round.
+      // Wait until the authoritative history clears before accepting its suffix.
+      acceptedRounds = acceptedRounds.filter(round => round.round < rollbackPendingFrom!);
+    } else {
+      rollbackPendingFrom = null;
     }
   }
 
@@ -407,6 +426,7 @@ export function acceptPlayerSnapshot(
     sourceVersion: decoded.sourceVersion,
     currentRoundNumber: decoded.currentRoundNumber,
     sourceStatus: decoded.sourceStatus,
+    rollbackPendingFrom,
     teamIds: [...decoded.teamIds],
     teamLabels: ['blue', 'red'],
     playerIds: [...decoded.playerIds],
@@ -423,9 +443,11 @@ export function acceptPlayerSnapshot(
     accepted: true,
     context,
     output,
-    diagnostic: endedWithoutCustomWinner
-      ? diagnostic('source-ended', 'Duel ended without a custom winner')
-      : null,
+    diagnostic: rollbackPendingFrom !== null
+      ? diagnostic('recovery', 'Waiting for restarted round history to clear')
+      : endedWithoutCustomWinner
+        ? diagnostic('source-ended', 'Duel ended without a custom winner')
+        : null,
   };
 }
 
@@ -445,7 +467,7 @@ function parseIndex(value: unknown): string[] {
   }
 }
 
-function restoreContext(value: unknown): PlayerContextRestore {
+function restoreContext(value: unknown, expectedGameId: string): PlayerContextRestore {
   if (typeof value !== 'string') return { context: null, output: null, diagnostic: null };
   try {
     const parsed = record(JSON.parse(value), 'Saved tie-range context') as unknown as PlayerGameContext;
@@ -457,18 +479,42 @@ function restoreContext(value: unknown): PlayerContextRestore {
       };
     }
     if ((parsed.mode !== 'off' && parsed.mode !== 'full' && parsed.mode !== 'half')
-      || typeof parsed.gameId !== 'string'
-      || !Number.isInteger(parsed.sourceVersion)
-      || !Number.isInteger(parsed.currentRoundNumber)
-      || typeof parsed.sourceStatus !== 'string'
+      || parsed.gameId !== expectedGameId || expectedGameId.length === 0
+      || !Number.isInteger(parsed.sourceVersion) || parsed.sourceVersion < 0
+      || !Number.isInteger(parsed.currentRoundNumber) || parsed.currentRoundNumber < 1
+      || typeof parsed.sourceStatus !== 'string' || parsed.sourceStatus.length === 0
       || !Array.isArray(parsed.teamIds) || parsed.teamIds.length !== 2
       || !Array.isArray(parsed.teamLabels) || !tupleEqual(parsed.teamLabels, ['blue', 'red'])
       || !Array.isArray(parsed.playerIds) || parsed.playerIds.length !== 2
       || !Array.isArray(parsed.roundStarts)) {
       throw new Error('invalid context');
     }
+    for (const tuple of [parsed.teamIds, parsed.playerIds]) {
+      if (tuple.some(id => typeof id !== 'string' || id.length === 0) || tuple[0] === tuple[1]) {
+        throw new Error('invalid identity');
+      }
+    }
+    if (!parsed.input || !tupleEqual(parsed.teamIds, parsed.input.teamIds)) throw new Error('identity mismatch');
+    // Off contexts still need valid inputs: they can be restored before a fetch.
+    foldTieRange(parsed.input, parsed.mode === 'off' ? null : parsed.mode);
+    const seen = new Set<number>();
+    for (const start of parsed.roundStarts) {
+      if (!start || !Number.isInteger(start.round) || start.round < 1 || seen.has(start.round)
+        || typeof start.startTime !== 'string' || start.startTime.length === 0) throw new Error('invalid round identity');
+      seen.add(start.round);
+    }
+    if (parsed.rollbackPendingFrom !== undefined && parsed.rollbackPendingFrom !== null
+      && (!Number.isInteger(parsed.rollbackPendingFrom) || parsed.rollbackPendingFrom < 1
+        || parsed.input.rounds.some(round => round.round >= parsed.rollbackPendingFrom!))) throw new Error('invalid rollback');
     const context = freezeContext(parsed);
-    return { context, output: outputFor(context), diagnostic: null };
+    const output = outputFor(context);
+    return {
+      context, output,
+      diagnostic: context.rollbackPendingFrom
+        ? diagnostic('recovery', 'Waiting for restarted round history to clear')
+        : context.sourceStatus === 'Finished' && output?.terminal === null
+          ? diagnostic('source-ended', 'Duel ended without a custom winner') : null,
+    };
   } catch {
     return {
       context: null,
@@ -482,17 +528,25 @@ export async function loadPlayerContext(
   storage: PlayerTieRangeStorage,
   gameId: string,
 ): Promise<PlayerContextRestore> {
-  return restoreContext(await storage.get(gameKey(gameId)));
+  return restoreContext(await storage.get(gameKey(gameId)), gameId);
 }
+
+const saveQueues = new WeakMap<PlayerTieRangeStorage, Promise<void>>();
 
 export async function savePlayerContext(
   storage: PlayerTieRangeStorage,
   context: PlayerGameContext,
 ): Promise<void> {
-  await storage.set(gameKey(context.gameId), JSON.stringify(context));
-  const oldIndex = parseIndex(await storage.get(STORAGE_INDEX_KEY));
-  const index = [...oldIndex.filter(gameId => gameId !== context.gameId), context.gameId];
-  const evicted = index.splice(0, Math.max(0, index.length - MAX_SAVED_GAMES));
-  await storage.set(STORAGE_INDEX_KEY, JSON.stringify(index));
-  await Promise.all(evicted.map(gameId => storage.remove(gameKey(gameId))));
+  const operation = async () => {
+    await storage.set(gameKey(context.gameId), JSON.stringify(context));
+    const oldIndex = parseIndex(await storage.get(STORAGE_INDEX_KEY));
+    const index = [...new Set(oldIndex.filter(gameId => gameId !== context.gameId)), context.gameId];
+    const evicted = index.splice(0, Math.max(0, index.length - MAX_SAVED_GAMES));
+    await storage.set(STORAGE_INDEX_KEY, JSON.stringify(index));
+    await Promise.all(evicted.map(gameId => storage.remove(gameKey(gameId))));
+  };
+  const previous = saveQueues.get(storage) ?? Promise.resolve();
+  const next = previous.catch(() => {}).then(() => storage.withLock ? storage.withLock(operation) : operation());
+  saveQueues.set(storage, next);
+  try { await next; } finally { if (saveQueues.get(storage) === next) saveQueues.delete(storage); }
 }

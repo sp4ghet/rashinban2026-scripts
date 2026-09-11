@@ -321,7 +321,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
             replacement.setAttribute('data-rb', 'summary-health');
             Object.assign(replacement.style, {
               position: 'absolute', inset: '0', zIndex: '2', display: 'grid', placeItems: 'center',
-              background: 'rgba(16, 20, 28, .98)', color: teamIndex === 0 ? '#59b7ff' : '#ff6978',
+              background: '#10141c', color: teamIndex === 0 ? '#59b7ff' : '#ff6978',
               font: '600 14px/1.2 Inter, system-ui, sans-serif', pointerEvents: 'none',
             });
             cell.append(replacement);
@@ -352,7 +352,9 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     if (disclosed && expectedRound !== null && lastView.context) {
       revealedRoundIdentity = playerRoundIdentity(lastView.context, expectedRound);
     }
-    if (summaryDisclosesTerminal(document, roots, lastView) && lastView.output?.terminal) {
+    const terminalSummaryVisible = summaryDisclosesTerminal(document, roots, lastView);
+    terminal.style.top = terminalSummaryVisible ? '100px' : '22%';
+    if (terminalSummaryVisible && lastView.output?.terminal) {
       revealedRoundIdentity = lastView.context
         ? playerRoundIdentity(lastView.context, lastView.output.terminal.round)
         : null;

@@ -108,7 +108,7 @@ function readPhonebook(raw: unknown, gameId: string): GameEndpoint {
       url: `${LIVE_GAME_ORIGIN}/${value.gameServerNodeId}/${gameId}`,
     };
   }
-  if (value.status === 'Inactive' || value.status === 'Archived') {
+  if (value.status === 'Inactive' || value.status === 'Archived' || value.status === 'Finished') {
     return { gameId, kind: 'archive', url: `${DUEL_API}${encodeURIComponent(gameId)}` };
   }
   throw new Error('Game-server phonebook status is unavailable');
@@ -279,12 +279,16 @@ export function createPlayerTieRangeController(
     }, Math.max(0, at - now));
   }
 
+  function requireCurrent(expectedGeneration: number): void {
+    if (expectedGeneration !== generation || !started) throw new DOMException('Aborted', 'AbortError');
+  }
+
   async function fetchJson(
     url: string,
     expectedGeneration: number,
     allowNoContent = false,
   ): Promise<unknown | typeof NO_CONTENT> {
-    if (expectedGeneration !== generation || !started) throw new DOMException('Aborted', 'AbortError');
+    requireCurrent(expectedGeneration);
     const controller = new AbortController();
     request = controller;
     requestTimeout = {
@@ -297,9 +301,12 @@ export function createPlayerTieRangeController(
         credentials: 'include',
         signal: controller.signal,
       });
+      requireCurrent(expectedGeneration);
       if (!response.ok) throw new HttpError(response.status);
       if (allowNoContent && response.status === 204) return NO_CONTENT;
-      return await response.json();
+      const value = await response.json();
+      requireCurrent(expectedGeneration);
+      return value;
     } finally {
       if (request === controller) request = null;
       clearRequestTimeout(controller);
@@ -326,13 +333,18 @@ export function createPlayerTieRangeController(
     schemaBlocked = restored.diagnostic?.code === 'schema-mismatch';
     if (schemaBlocked) publish('unavailable', 'Custom HP unavailable');
     else if (context?.mode === 'off') publish('off');
-    else if (output) publish('ready');
+    else if (output) {
+      lastAcceptedAt = dependencies.now() - STALE_MS;
+      if (diagnostic?.code === 'source-ended') publish('ended', diagnostic.message);
+      else publish('stale', diagnostic?.message ?? 'Checking saved HP against the current duel');
+    }
     else publish('loading');
     return true;
   }
 
   async function discoverPartyGame(expectedGeneration: number): Promise<string | null | undefined> {
     const raw = await fetchJson(ACTIVE_PARTY_API, expectedGeneration, true);
+    requireCurrent(expectedGeneration);
     if (raw === NO_CONTENT) {
       if (output?.terminal || context?.sourceStatus === 'Finished') {
         publish('ended', diagnostic?.message ?? 'Custom duel finished');
@@ -394,6 +406,7 @@ export function createPlayerTieRangeController(
       `${PHONEBOOK_API}${encodeURIComponent(targetGameId)}`,
       expectedGeneration,
     );
+    requireCurrent(expectedGeneration);
     if (raw === NO_CONTENT) throw new Error('Game-server phonebook response is empty');
     gameEndpoint = readPhonebook(raw, targetGameId);
     return gameEndpoint;
@@ -404,6 +417,7 @@ export function createPlayerTieRangeController(
     try {
       return await fetchJson(endpoint.url, expectedGeneration);
     } catch (error) {
+      requireCurrent(expectedGeneration);
       if (endpoint.kind === 'active') gameEndpoint = null;
       if (!(error instanceof HttpError) || error.status !== 404 || endpoint.kind !== 'active') throw error;
       const refreshed = await resolveGameEndpoint(targetGameId, expectedGeneration);
@@ -459,6 +473,9 @@ export function createPlayerTieRangeController(
       }
       const raw = await fetchGameSnapshot(targetGameId, expectedGeneration);
       if (!started || expectedGeneration !== generation || gameId !== targetGameId) return;
+      if (typeof raw !== 'object' || raw === null || (raw as { gameId?: unknown }).gameId !== targetGameId) {
+        throw new Error('Player response belongs to another game');
+      }
       const accepted = acceptPlayerSnapshot(context, raw, configuredMode());
       context = accepted.context;
       output = accepted.output;

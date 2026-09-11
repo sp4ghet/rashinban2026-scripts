@@ -1,0 +1,461 @@
+{
+  "created": {
+    "gameId": "player-rest-live-manual",
+    "version": 0,
+    "currentRoundNumber": 1,
+    "status": "Created",
+    "isPaused": false,
+    "options": {
+      "initialHealth": 6000,
+      "individualInitialHealth": false,
+      "roundsWithoutDamageMultiplier": 1,
+      "multiplierIncrement": 0,
+      "roundWinMultiplierIncrement": 5,
+      "disableMultipliers": false,
+      "disableHealing": true,
+      "maxNumberOfRounds": 3,
+      "movementOptions": {
+        "forbidMoving": true,
+        "forbidZooming": false,
+        "forbidRotating": false
+      },
+      "roundStartingBehavior": "ManuallyStartAllRounds"
+    },
+    "teams": [
+      {
+        "id": "team-blue",
+        "name": "blue",
+        "health": 6000,
+        "currentMultiplier": 1,
+        "players": [
+          {
+            "playerId": "player-blue"
+          }
+        ],
+        "roundResults": []
+      },
+      {
+        "id": "team-red",
+        "name": "red",
+        "health": 6000,
+        "currentMultiplier": 1,
+        "players": [
+          {
+            "playerId": "player-red"
+          }
+        ],
+        "roundResults": []
+      }
+    ],
+    "rounds": [
+      {
+        "roundNumber": 1,
+        "hasProcessedRoundTimeout": false,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": null,
+        "endTime": null,
+        "timerStartTime": null
+      },
+      {
+        "roundNumber": 2,
+        "hasProcessedRoundTimeout": false,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": null,
+        "endTime": null,
+        "timerStartTime": null
+      },
+      {
+        "roundNumber": 3,
+        "hasProcessedRoundTimeout": false,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": null,
+        "endTime": null,
+        "timerStartTime": null
+      }
+    ]
+  },
+  "resolved": {
+    "gameId": "player-rest-live-manual",
+    "version": 8,
+    "currentRoundNumber": 1,
+    "status": "Ongoing",
+    "isPaused": false,
+    "options": {
+      "initialHealth": 6000,
+      "individualInitialHealth": false,
+      "roundsWithoutDamageMultiplier": 1,
+      "multiplierIncrement": 0,
+      "roundWinMultiplierIncrement": 5,
+      "disableHealing": true,
+      "maxNumberOfRounds": 3,
+      "movementOptions": {
+        "forbidMoving": true,
+        "forbidZooming": false,
+        "forbidRotating": false,
+        "speedLimit": false
+      },
+      "roundStartingBehavior": "ManuallyStartAllRounds"
+    },
+    "teams": [
+      {
+        "id": "team-blue",
+        "name": "blue",
+        "health": 6000,
+        "currentMultiplier": 1,
+        "players": [
+          {
+            "playerId": "player-blue"
+          }
+        ],
+        "roundResults": [
+          {
+            "roundNumber": 1,
+            "score": 0,
+            "healthBefore": 6000,
+            "healthAfter": 6000,
+            "damageDealt": 0,
+            "multiplier": 1
+          }
+        ]
+      },
+      {
+        "id": "team-red",
+        "name": "red",
+        "health": 6000,
+        "currentMultiplier": 1,
+        "players": [
+          {
+            "playerId": "player-red"
+          }
+        ],
+        "roundResults": [
+          {
+            "roundNumber": 1,
+            "score": 0,
+            "healthBefore": 6000,
+            "healthAfter": 6000,
+            "damageDealt": 0,
+            "multiplier": 1
+          }
+        ]
+      }
+    ],
+    "rounds": [
+      {
+        "roundNumber": 1,
+        "hasProcessedRoundTimeout": true,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": "2026-09-11T20:29:04.8628569Z",
+        "endTime": "2026-09-11T20:30:04.8628569Z",
+        "timerStartTime": "2026-09-11T20:29:04.8628569Z",
+        "skippedByPlayerId": null
+      }
+    ]
+  },
+  "resolvedDamage": {
+    "gameId": "player-rest-live-manual",
+    "version": 15,
+    "currentRoundNumber": 2,
+    "status": "Ongoing",
+    "isPaused": false,
+    "options": {
+      "initialHealth": 6000,
+      "individualInitialHealth": false,
+      "roundsWithoutDamageMultiplier": 1,
+      "multiplierIncrement": 0,
+      "roundWinMultiplierIncrement": 5,
+      "disableHealing": true,
+      "maxNumberOfRounds": 3,
+      "movementOptions": {
+        "forbidMoving": true,
+        "forbidZooming": false,
+        "forbidRotating": false,
+        "speedLimit": false
+      },
+      "roundStartingBehavior": "ManuallyStartAllRounds"
+    },
+    "teams": [
+      {
+        "id": "team-blue",
+        "name": "blue",
+        "health": 6000,
+        "currentMultiplier": 1.5,
+        "players": [
+          {
+            "playerId": "player-blue"
+          }
+        ],
+        "roundResults": [
+          {
+            "roundNumber": 1,
+            "score": 0,
+            "healthBefore": 6000,
+            "healthAfter": 6000,
+            "damageDealt": 0,
+            "multiplier": 1
+          },
+          {
+            "roundNumber": 2,
+            "score": 2470,
+            "healthBefore": 6000,
+            "healthAfter": 6000,
+            "damageDealt": 3705,
+            "multiplier": 1.5
+          }
+        ]
+      },
+      {
+        "id": "team-red",
+        "name": "red",
+        "health": 2295,
+        "currentMultiplier": 1.5,
+        "players": [
+          {
+            "playerId": "player-red"
+          }
+        ],
+        "roundResults": [
+          {
+            "roundNumber": 1,
+            "score": 0,
+            "healthBefore": 6000,
+            "healthAfter": 6000,
+            "damageDealt": 0,
+            "multiplier": 1
+          },
+          {
+            "roundNumber": 2,
+            "score": 0,
+            "healthBefore": 6000,
+            "healthAfter": 2295,
+            "damageDealt": 0,
+            "multiplier": 1.5
+          }
+        ]
+      }
+    ],
+    "rounds": [
+      {
+        "roundNumber": 1,
+        "hasProcessedRoundTimeout": true,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": "2026-09-11T20:29:04.8628569Z",
+        "endTime": "2026-09-11T20:30:04.8628569Z",
+        "timerStartTime": "2026-09-11T20:29:04.8628569Z",
+        "skippedByPlayerId": null
+      },
+      {
+        "roundNumber": 2,
+        "hasProcessedRoundTimeout": true,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": "2026-09-11T20:34:55.8822384Z",
+        "endTime": "2026-09-11T20:35:55.8822384Z",
+        "timerStartTime": "2026-09-11T20:34:55.8822384Z",
+        "skippedByPlayerId": null
+      }
+    ]
+  },
+  "finished": {
+    "gameId": "player-rest-live-manual",
+    "version": 25,
+    "currentRoundNumber": 3,
+    "status": "Finished",
+    "isPaused": false,
+    "options": {
+      "initialHealth": 6000,
+      "individualInitialHealth": false,
+      "roundsWithoutDamageMultiplier": 1,
+      "multiplierIncrement": 0,
+      "roundWinMultiplierIncrement": 5,
+      "disableMultipliers": false,
+      "disableHealing": true,
+      "maxNumberOfRounds": 3,
+      "movementOptions": {
+        "forbidMoving": true,
+        "forbidZooming": false,
+        "forbidRotating": false
+      },
+      "roundStartingBehavior": "ManuallyStartAllRounds"
+    },
+    "teams": [
+      {
+        "id": "team-blue",
+        "name": "blue",
+        "health": 6000,
+        "currentMultiplier": 2,
+        "players": [
+          {
+            "playerId": "player-blue"
+          }
+        ],
+        "roundResults": [
+          {
+            "roundNumber": 1,
+            "score": 0,
+            "healthBefore": 6000,
+            "healthAfter": 6000,
+            "activeMultiplier": true,
+            "damageDealt": 0,
+            "multiplier": 1
+          },
+          {
+            "roundNumber": 2,
+            "score": 2470,
+            "healthBefore": 6000,
+            "healthAfter": 6000,
+            "activeMultiplier": true,
+            "damageDealt": 3705,
+            "multiplier": 1.5
+          },
+          {
+            "roundNumber": 3,
+            "score": 0,
+            "healthBefore": 6000,
+            "healthAfter": 6000,
+            "activeMultiplier": true,
+            "damageDealt": 0,
+            "multiplier": 2
+          }
+        ]
+      },
+      {
+        "id": "team-red",
+        "name": "red",
+        "health": 0,
+        "currentMultiplier": 1.5,
+        "players": [
+          {
+            "playerId": "player-red"
+          }
+        ],
+        "roundResults": [
+          {
+            "roundNumber": 1,
+            "score": 0,
+            "healthBefore": 6000,
+            "healthAfter": 6000,
+            "activeMultiplier": true,
+            "damageDealt": 0,
+            "multiplier": 1
+          },
+          {
+            "roundNumber": 2,
+            "score": 0,
+            "healthBefore": 6000,
+            "healthAfter": 2295,
+            "activeMultiplier": true,
+            "damageDealt": 0,
+            "multiplier": 1.5
+          },
+          {
+            "roundNumber": 3,
+            "score": 0,
+            "healthBefore": 2295,
+            "healthAfter": 2295,
+            "activeMultiplier": true,
+            "damageDealt": 0,
+            "multiplier": 1.5
+          }
+        ]
+      }
+    ],
+    "rounds": [
+      {
+        "roundNumber": 1,
+        "hasProcessedRoundTimeout": true,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": "2026-09-11T20:29:04.862+00:00",
+        "endTime": "2026-09-11T20:30:04.862+00:00",
+        "timerStartTime": "2026-09-11T20:29:04.862+00:00"
+      },
+      {
+        "roundNumber": 2,
+        "hasProcessedRoundTimeout": true,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": "2026-09-11T20:34:55.882+00:00",
+        "endTime": "2026-09-11T20:35:55.882+00:00",
+        "timerStartTime": "2026-09-11T20:34:55.882+00:00"
+      },
+      {
+        "roundNumber": 3,
+        "hasProcessedRoundTimeout": true,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": "2026-09-11T21:01:49.009+00:00",
+        "endTime": "2026-09-11T21:02:49.009+00:00",
+        "timerStartTime": "2026-09-11T21:01:49.009+00:00"
+      },
+      {
+        "roundNumber": 4,
+        "hasProcessedRoundTimeout": false,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": null,
+        "endTime": null,
+        "timerStartTime": null
+      },
+      {
+        "roundNumber": 5,
+        "hasProcessedRoundTimeout": false,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": null,
+        "endTime": null,
+        "timerStartTime": null
+      },
+      {
+        "roundNumber": 6,
+        "hasProcessedRoundTimeout": false,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": null,
+        "endTime": null,
+        "timerStartTime": null
+      },
+      {
+        "roundNumber": 7,
+        "hasProcessedRoundTimeout": false,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": null,
+        "endTime": null,
+        "timerStartTime": null
+      },
+      {
+        "roundNumber": 8,
+        "hasProcessedRoundTimeout": false,
+        "isHealingRound": false,
+        "multiplier": 1,
+        "damageMultiplier": 1,
+        "startTime": null,
+        "endTime": null,
+        "timerStartTime": null
+      }
+    ],
+    "result": {
+      "isDraw": false,
+      "winningTeamId": "team-blue"
+    }
+  }
+}
