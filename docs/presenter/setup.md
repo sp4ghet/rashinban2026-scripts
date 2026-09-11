@@ -88,7 +88,7 @@ in [OBS setup](obs.md).
 
 ## Google player views and results map
 
-Player minimaps and the results map use the observed GeoGuessr vector cloud
+Player minimaps and the results map use the selected GeoGuessr raster cloud
 map style with the operator's own Google browser key. See [map color
 provenance](map-style.md) for the public map ID and captured settings.
 
