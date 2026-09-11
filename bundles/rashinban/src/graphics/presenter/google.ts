@@ -1,0 +1,187 @@
+/// <reference types="google.maps" />
+import { createRenderer, type GameRenderer, type RendererAdapter } from './renderer.ts';
+import type { Panorama } from '../../types/presenter.ts';
+import { createPovSmoother, type Pov } from './pov.ts';
+
+// Public GeoGuessr cloud map style observed in the spectator client; see docs/presenter/map-style.md.
+const GEOGUESSR_RASTER_MAP_ID = '61449c20e7fc278b';
+
+// Round snapshots encode ASCII panorama IDs as hex; movement samples are plain.
+// This is format conversion only. The service must still resolve the exact ID.
+export function googlePanoId(value: string): string {
+  if (value.length >= 40 && /^(?:[a-f\d]{2})+$/i.test(value)) {
+    const decoded = value.match(/../g)!.map(pair => String.fromCharCode(parseInt(pair, 16))).join('');
+    if (/^[\w-]+$/.test(decoded)) return decoded;
+  }
+  return value;
+}
+
+let apiPromise: Promise<typeof google.maps> | undefined;
+const authFailures = new Set<() => void>();
+function loadGoogle(apiKey: string): Promise<typeof google.maps> {
+  if (apiPromise) return apiPromise;
+  apiPromise = new Promise((resolve, reject) => {
+    const host = window as typeof window & { __rashinbanGoogleReady?: () => void; gm_authFailure?: () => void };
+    const script = document.createElement('script');
+    const fail = () => { clearTimeout(timeout); reject(new Error('Google Maps API unavailable')); };
+    const timeout = setTimeout(fail, 15000);
+    host.gm_authFailure = () => { fail(); authFailures.forEach(fn => fn()); };
+    host.__rashinbanGoogleReady = () => { clearTimeout(timeout); resolve(google.maps); delete host.__rashinbanGoogleReady; };
+    script.onerror = fail;
+    script.async = true;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=quarterly&loading=async&libraries=marker&callback=__rashinbanGoogleReady`;
+    document.head.append(script);
+  });
+  return apiPromise;
+}
+
+export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onError: (message: string) => void, onRecovery: () => void = () => {}, now: () => number = () => performance.now()): RendererAdapter {
+  const failedPanos = new Set<symbol>();
+  function recovered(id: symbol) { if (failedPanos.delete(id) && failedPanos.size === 0) onRecovery(); }
+  function mount(slot: string) {
+    const host = root.querySelector<HTMLElement>(`#${slot}`);
+    if (!host) throw new Error('Missing map slot');
+    const canvas = host.ownerDocument.createElement('div'); canvas.className = 'google-surface'; canvas.inert = true;
+    const status = host.ownerDocument.createElement('div'); status.className = 'google-status'; status.hidden = true;
+    host.replaceChildren(canvas, status);
+    return { host, canvas, status, clear() { host.replaceChildren(); host.style.visibility = ''; host.dataset.inactive = ''; } };
+  }
+  function release(value: google.maps.MVCObject) { maps.event.clearInstanceListeners(value); value.unbindAll(); }
+  function construct<T>(dom: ReturnType<typeof mount>, create: () => T): T {
+    try { return create(); } catch (error) { dom.clear(); throw error; }
+  }
+  return {
+    panorama(slot) {
+      const surfaceId = Symbol(slot);
+      const dom = mount(slot);
+      const pano = construct(dom, () => new maps.StreetViewPanorama(dom.canvas, {
+        visible: false, disableDefaultUI: true, clickToGo: false, linksControl: false, panControl: false,
+        zoomControl: false, scrollwheel: false, disableDoubleClickZoom: true,
+        motionTracking: false, motionTrackingControl: false, showRoadLabels: false,
+        addressControl: false, fullscreenControl: false, enableCloseButton: false,
+      }));
+      const service = new maps.StreetViewService();
+      let latest: Panorama | null = null; let requested: string | null = null; let resolved = ''; let generation = 0; let disposed = false;
+      let identity: string | undefined; let visible = true; let canvasVisible = false; let sdkVisible = false; let canvasSize = ''; let frozen = false;
+      const smoothing = createPovSmoother(); let writtenPov: Pov | null = null; let snapPov = true;
+      function show() {
+        const ready = !!resolved;
+        if (ready !== sdkVisible) { sdkVisible = ready; pano.setVisible(ready); }
+        const next = visible && ready;
+        dom.canvas.style.visibility = next ? 'visible' : 'hidden';
+        const nextSize = `${dom.canvas.clientWidth}:${dom.canvas.clientHeight}`;
+        if (next && (!canvasVisible || nextSize !== canvasSize)) maps.event.trigger(pano, 'resize');
+        canvasSize = nextSize;
+        canvasVisible = next;
+      }
+      function reset() {
+        smoothing.reset(); writtenPov = null; snapPov = true;
+        generation++; requested = null; resolved = ''; latest = null; show(); recovered(surfaceId);
+      }
+      function unavailable() {
+        failedPanos.add(surfaceId);
+        // Keep the last exact scene for this identity; diagnostics belong in the dashboard.
+        show();
+        onError('Exact Street View panorama unavailable');
+      }
+      function applyPov() {
+        if (!latest || !resolved || googlePanoId(latest.panoId) !== resolved) return;
+        const next = smoothing.sample(latest, now(), snapPov || !visible); snapPov = false;
+        if (!writtenPov || next.heading !== writtenPov.heading || next.pitch !== writtenPov.pitch) pano.setPov({ heading: next.heading, pitch: next.pitch });
+        if (!writtenPov || next.zoom !== writtenPov.zoom) pano.setZoom(next.zoom);
+        writtenPov = next;
+      }
+      pano.addListener('status_changed', () => { if (!disposed && resolved && requested === resolved && pano.getStatus() !== 'OK') unavailable(); });
+      return {
+        render(value, options) {
+          if (disposed) return;
+          const nextVisible = options?.visible ?? true;
+          if (visible !== nextVisible) snapPov = true;
+          visible = nextVisible;
+          if (identity !== options?.identity) { identity = options?.identity; reset(); }
+          // A submitted guess may reset telemetry to spawn. Retain the hidden
+          // panorama and its pose until this player is active again.
+          if (options?.frozen) {
+            if (!frozen) { generation++; requested = resolved || null; }
+            frozen = true; show(); return;
+          }
+          frozen = false;
+          if (!value) {
+            if (latest || requested || resolved) reset();
+            show(); return;
+          }
+          latest = value;
+          const id = googlePanoId(value.panoId);
+          if (id === requested) { applyPov(); show(); return; }
+          requested = id; const token = ++generation;
+          show();
+          if (!id) { unavailable(); return; }
+          service.getPanorama({ pano: id }, (data, status) => {
+            if (disposed || token !== generation) return;
+            if (status !== 'OK' || data?.location?.pano !== id) { unavailable(); return; }
+            resolved = id; smoothing.reset(); writtenPov = null; snapPov = true;
+            pano.setPano(id); applyPov(); show();
+            recovered(surfaceId);
+          });
+        },
+        dispose() { disposed = true; generation++; pano.setVisible(false); release(pano); dom.clear(); recovered(surfaceId); },
+      };
+    },
+    map(slot) {
+      const dom = mount(slot);
+      const map = construct(dom, () => new maps.Map(dom.canvas, { center: { lat: 0, lng: 0 }, zoom: 1, minZoom: 1, maxZoom: 18,
+        mapId: GEOGUESSR_RASTER_MAP_ID, renderingType: 'RASTER', mapTypeId: 'roadmap', isFractionalZoomEnabled: false,
+        disableDefaultUI: true, clickableIcons: false, gestureHandling: 'none', keyboardShortcuts: false,
+        streetViewControl: false, mapTypeControl: false, fullscreenControl: false, tilt: 0 }));
+      dom.status.hidden = true;
+      let previous = ''; let fit = ''; let visible = false; let prepared = false; let inactive = false; let disposed = false; let size = ''; let padding = -1;
+      const overlays: (google.maps.Marker | google.maps.Polyline)[] = [];
+      function clearOverlays() { overlays.splice(0).forEach(item => { item.setMap(null); release(item); }); }
+      return {
+        render(frame) {
+          if (disposed) return;
+          dom.host.style.visibility = frame.visible ? 'visible' : 'hidden';
+          dom.host.style.opacity = frame.visible ? '1' : '0';
+          dom.host.dataset.inactive = String(frame.inactive ?? false);
+          const bounds = JSON.stringify(frame.bounds);
+          const nextSize = `${dom.host.clientWidth}:${dom.host.clientHeight}`;
+          const nextPadding = frame.padding ?? (slot === 'results-map' ? 45 : 0);
+          if ((frame.visible || frame.prepare) && ((!visible && frame.visible) || !prepared || bounds !== fit || inactive !== !!frame.inactive || size !== nextSize || padding !== nextPadding)) {
+            maps.event.trigger(map, 'resize');
+            if (frame.bounds) map.fitBounds(frame.bounds, nextPadding);
+            else { map.setCenter({ lat: 0, lng: 0 }); map.setZoom(1); }
+            fit = bounds;
+            size = nextSize; padding = nextPadding;
+          }
+          visible = frame.visible;
+          prepared = frame.visible || frame.prepare === true;
+          inactive = !!frame.inactive;
+          const content = JSON.stringify([frame.pins, frame.lines]);
+          if (content === previous) return;
+          previous = content; clearOverlays();
+          for (const pin of frame.pins) overlays.push(new maps.Marker({ map, position: pin.point, title: pin.label,
+            clickable: false, zIndex: pin.kind === 'answer' ? 1000 : 1,
+            icon: pin.kind === 'answer'
+              // Authentic circular summary flag: center anchor, unlike the newer teardrop pin.
+              ? { url: 'assets/geoguessr-correct-location-flag.png', scaledSize: new maps.Size(40, 40), anchor: new maps.Point(20, 20) }
+              : { path: maps.SymbolPath.CIRCLE, scale: 8, fillColor: pin.color, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 } }));
+          for (const line of frame.lines) overlays.push(new maps.Polyline({ map, path: [line.from, line.to], geodesic: true,
+            clickable: false, strokeColor: line.color, strokeOpacity: 0.9, strokeWeight: 3 }));
+        },
+        dispose() { disposed = true; clearOverlays(); release(map); dom.clear(); },
+      };
+    },
+  };
+}
+
+export async function createGoogleRenderer(root: HTMLElement, apiKey: string, onError: (message: string) => void, onRecovery: () => void = () => {}): Promise<GameRenderer> {
+  if (!apiKey.trim()) { const message = 'Google Maps browser key missing'; onError(message); throw new Error(message); }
+  let maps: typeof google.maps;
+  try { maps = await loadGoogle(apiKey); }
+  catch { const message = 'Google Maps API unavailable'; onError(message); throw new Error(message); }
+  let otherFailure = false;
+  const renderer = createRenderer(googleAdapter(root, maps, onError, () => { if (!otherFailure) onRecovery(); }), message => { otherFailure = true; onError(message); });
+  const failure = () => { otherFailure = true; renderer.dispose(); onError('Google Maps API unavailable'); };
+  authFailures.add(failure);
+  return { render: frame => renderer.render(frame), dispose() { authFailures.delete(failure); renderer.dispose(); } };
+}

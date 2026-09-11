@@ -1,10 +1,15 @@
 node_modules/
 .worktrees/
+/.superpowers/sdd/
+/artifacts/presenter-validation/
+/artifacts/presenter-followup/
 
 # NodeCG runtime state (replicant db, logs, uploaded assets)
 /db/
 /logs/
 /assets/
+/cfg/rashinban.json
+/.secrets/
 
 # Local secrets and per-machine config (see README "Secrets")
 /.env

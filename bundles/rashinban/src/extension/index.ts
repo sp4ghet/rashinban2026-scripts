@@ -7,8 +7,11 @@ import { registerStartgg } from "./startgg";
 import { registerSheet } from "./sheet";
 import { registerPlayerCards } from "./playercards";
 
+import { registerPresenter } from './presenter/register.ts';
+
 export = (nodecg: NodeCG.ServerAPI) => {
   loadLocalEnv(nodecg);
+  registerPresenter(nodecg);
 
   const lowerThirdVisible = nodecg.Replicant<boolean>(
     REPLICANTS.lowerThirdVisible,

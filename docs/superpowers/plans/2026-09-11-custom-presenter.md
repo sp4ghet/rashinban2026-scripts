@@ -10,6 +10,8 @@
 
 **Spec:** [Approved presenter design](../specs/2026-09-11-custom-presenter-design.md). Also read [protocol notes](../../geoguessr/presenter-protocol.md) before implementing transport or normalization.
 
+**Implementation status (2026-09-11):** Tasks 1–11 are implemented with local unit, browser, and OBS evidence. External live/Google/intended-media checks remain open below. The measured 30-minute run passed with continuous authored music and 90 ms OBS video delay; cue-only resumption after silence did not pass in this OBS setup. See [validation and limits](../../presenter/validation.md).
+
 ## Global Constraints
 
 - Scope is 1v1 Duels in MOVE, NM, and NMPZ, with no healing rounds.
@@ -81,8 +83,10 @@ All bundle paths below start at `bundles/rashinban/`.
 
 Modify root `package.json`, `package-lock.json`, `.gitignore`, bundle
 `package.json`, and existing `src/extension/index.ts` as the tasks below require.
-Add `cfg/rashinban.example.json` as a sanitized example and ignore the real
-`cfg/rashinban.json`. Audio/video live beneath NodeCG's already ignored
+Add `cfg/rashinban.example.json` as a sanitized public-config example and ignore
+the real `cfg/rashinban.json`. Keep the cookie in a separate ignored
+`.secrets/geoguessr.json`, read only by the extension: NodeCG exposes bundle
+config in browser HTML. Audio/video live beneath NodeCG's already ignored
 `assets/` directory, not in Git or inline in Replicants.
 
 ## Task 1: Normalize captured duel state with replayable tests
@@ -130,14 +134,14 @@ export function applySnapshot(previous: DuelState | null, message: unknown): App
 export function sample(name: string): unknown;
 ```
 
-- [ ] Extend the existing test command to discover both existing capture tests
+- [x] Extend the existing test command to discover both existing capture tests
   and `bundles/rashinban/src/presenter/tests/**/*.test.ts`, retaining Node's
   existing strip-types flags. Use `node:assert/strict` and `node:test`.
 
 ```json
 "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --test \"tampermonkey/src/**/*.test.ts\" \"bundles/rashinban/src/presenter/tests/**/*.test.ts\""
 ```
-- [ ] Add fixture loader and this failing regression first:
+- [x] Add fixture loader and this failing regression first:
 
 ```ts
 import assert from 'node:assert/strict';
@@ -154,9 +158,9 @@ test('repeated snapshot does not become another accepted transition', () => {
 });
 ```
 
-- [ ] Run `node --experimental-strip-types --test bundles/rashinban/src/presenter/tests/normalize.test.ts`;
-  expect the missing module/export failure before implementation.
-- [ ] Implement structural validation of only consumed protocol fields; do not
+- [x] Run `node --experimental-strip-types --test bundles/rashinban/src/presenter/tests/normalize.test.ts`;
+  establish a behavioral failure against minimal interfaces before implementation.
+- [x] Implement structural validation of only consumed protocol fields; do not
   use unchecked casts as validation. Flatten the two single-player teams,
   parse ISO times, map `movementOptions` using actual fixture field names,
   and map round-numbered guesses/results. Preserve `bestGuess: null`.
@@ -169,12 +173,12 @@ if (previous?.gameId === next.gameId && next.version <= previous.version) {
 }
 ```
 
-- [ ] Add named cases for lower version, new game with lower version, Created
+- [x] Add named cases for lower version, new game with lower version, Created
   with null times, abort versus finish, and no-pin versus zero-score guess.
   Feed each `{receivedAt, message}` entry from the full-sequence fixture
   through `applySnapshot`; assert final state and per-round results against
   fixture data, not a snapshot copied from the implementation.
-- [ ] Run the focused test, `npm test`, and `npm run typecheck`. Commit explicit
+- [x] Run the focused test, `npm test`, and `npm run typecheck`. Commit explicit
   Task 1 paths with message `feat: normalize captured presenter duel state`.
 
 ## Task 2: Track player views and source-independent series state
@@ -199,7 +203,7 @@ export type SeriesState = { id: string; source: 'manual'; left: Competitor; righ
 export function parseSeries(input: unknown): SeriesState; // throws a field-specific Error
 ```
 
-- [ ] Write the invalid-wins regression and run its file expecting failure:
+- [x] Write the invalid-wins regression and run its file expecting failure:
 
 ```ts
 test('BO3 wins must be integers from zero through two', () => {
@@ -209,22 +213,22 @@ test('BO3 wins must be integers from zero through two', () => {
 });
 ```
 
-- [ ] Implement telemetry decoding for MapDisplay, MapBoundingBox,
+- [x] Implement telemetry decoding for MapDisplay, MapBoundingBox,
   PinPosition, GuessWithLatLng, PanoPosition, PanoPov, and PanoZoom using
   nested sample payloads. Ignore unknown players/types; compare timestamps
   per sample type, not globally, so independent fields are not lost.
   Clear views on game/round change; reject samples predating a known start.
   The connection task supplies the active socket generation to reject old lobbies.
-- [ ] Keep a fixed round panorama position for NM and fixed complete panorama
+- [x] Keep a fixed round panorama position for NM and fixed complete panorama
   for NMPZ; do not copy one player's map onto the other. Validate finite
   coordinates/POV values; preserve antimeridian-crossing bounds.
-- [ ] Implement series validation separately; unique competitor IDs and mapped
+- [x] Implement series validation separately; unique competitor IDs and mapped
   player IDs, names treated as text, integer wins, explicit left/right swap.
   Never update wins as a consequence of normalization.
-- [ ] Test movement-trace position changes, out-of-order POV/map samples,
+- [x] Test movement-trace position changes, out-of-order POV/map samples,
   two independent maps, round reset, and fixed NMPZ POV. Use
   `gs2-ws-LiveStreamSamples.json` and the movement-trace fixture.
-- [ ] Run both focused test files and typecheck. Commit Task 2 files with
+- [x] Run both focused test files and typecheck. Commit Task 2 files with
   `feat: track player views and independent series state`.
 
 ## Task 3: Implement the direct authenticated spectator connection
@@ -260,10 +264,10 @@ export function createConnection(config: ConnectionConfig, sink: ConnectionSink,
   deps: ConnectionDeps): { start(): void; stop(): void; reconnect(): void };
 ```
 
-- [ ] Add `ws` explicitly with `npm install ws` and use the existing ws types.
+- [x] Add `ws` explicitly with `npm install ws` and use the existing ws types.
   Read current primary documentation for NodeCG config access and ws headers
   before writing adapters; do not copy a credential into test fixtures.
-- [ ] Write fake fetch/socket/time ports. First regression checks failed auth
+- [x] Write fake fetch/socket/time ports. First regression checks failed auth
   causes no socket opening or automatic retry loop:
 
 ```ts
@@ -285,27 +289,29 @@ test('authentication failure stops discovery', async () => {
 });
 ```
 
-- [ ] Run the connection test expecting failure, then implement the captured
+- [x] Run the connection test expecting failure, then implement the captured
   REST sequence and 5-second party poll. Use explicit cookie headers and
   `X-Client` only for the documented GeoGuessr hosts; reject unexpected redirects
   rather than forwarding credentials. Resolve subscription player identity
   from the authenticated account, not an arbitrary competitor.
-- [ ] Subscribe to lobby/live stream on open; heartbeat every 15 seconds.
+- [x] Subscribe to lobby/live stream on open; heartbeat every 15 seconds.
   Treat the initial spectator snapshot and first reconnect snapshot as
   bootstrap data. Use a lifecycle generation plus cancellation to ignore
   responses from replaced lobbies. Keep client version configurable.
   Wrap the REST spectator state into the same validated envelope consumed by
   `applySnapshot`, using the actual captured REST root shape; do not require
   REST responses to already be WebSocket messages.
-- [ ] Implement transient backoff starting at 1 second and capped at 30
+- [x] Implement transient backoff starting at 1 second and capped at 30
   seconds with jitter, 4100 as stopped/error, 1012 as reconnect, normal ended
   session as party discovery. Stop all timers/sockets on shutdown. Estimate
   GeoGuessr server offset from valid X-ServerTime responses and request midpoint.
-- [ ] Add fake-clock tests for subscribe contents, heartbeat, transient close,
+- [x] Add fake-clock tests for subscribe contents, heartbeat, transient close,
   stopped session, new lobby while old fetch completes, and redacted errors.
-  Ignore real `cfg/rashinban.json`; example contains empty cookie and a
-  configurable client version, never a copied production credential.
-- [ ] Run focused tests and typecheck; commit `feat: subscribe directly to GeoGuessr spectator state`.
+  Ignore real `cfg/rashinban.json` and `.secrets/`; the public config example
+  contains a cookie-file reference and configurable client version, never a
+  cookie value. Add a server-only secret-file loader with sanitized errors;
+  document the secret JSON shape and verify no public config/status contains it.
+- [x] Run focused tests and typecheck; commit `feat: subscribe directly to GeoGuessr spectator state`.
 
 ## Task 4: Build the authoritative presentation timeline and projection
 
@@ -337,7 +343,7 @@ export type Projection = { phase: Phase; remainingMs: number | null; answer: Pan
 export function project(state: DuelState | null, timeline: Timeline, nowMs: number): Projection;
 ```
 
-- [ ] Start with the double-5K classification regression and run the file red:
+- [x] Start with the double-5K classification regression and run the file red:
 
 ```ts
 test('two perfect scores select one double celebration', () => {
@@ -347,16 +353,16 @@ test('two perfect scores select one double celebration', () => {
 });
 ```
 
-- [ ] Implement pure phase transitions from complete results, status, and
+- [x] Implement pure phase transitions from complete results, status, and
   timestamps. No round resolution on timer expiry alone. Default timing:
   lead 200 ms, count 1200 ms, damage 800 ms, watchdog 10 seconds; settings
   can override these values. Schedule follow-up ticks for timestamp boundaries
   even when no WebSocket message arrives.
-- [ ] Freeze resolved results by reading the timeline's round number from
+- [x] Freeze resolved results by reading the timeline's round number from
   state; show healthBefore until damage stage, then interpolate to healthAfter.
   Hide score, distance, and answer in live projection despite early guesses.
   Return to waiting for the host after resolved manual-start rounds.
-- [ ] Preserve a pending final-round sequence when Finished arrives immediately
+- [x] Preserve a pending final-round sequence when Finished arrives immediately
   after resolution. Abort cancels it. A new round/game replaces the generation
   and all pending cues. Bootstrap snapshots restore the current phase with
   final values and no historical celebration/counting cues.
@@ -368,13 +374,13 @@ export function effectFor(scores: readonly number[]): EffectKind {
 }
 ```
 
-- [ ] Add regression cases using manual-round/max-time/abort/full-sequence
+- [x] Add regression cases using manual-round/max-time/abort/full-sequence
   fixtures: future start, first guess, deadline zero without results, no-pin,
   duplicate result, early-score hiding, stale video callback, final result
   before winner, watchdog, and next round overtaking a video. Construct double
   5K by cloning a normalized resolved state and setting both matching round
   results to 5000; never edit committed original captures.
-- [ ] Run focused tests, full unit suite, and typecheck; commit
+- [x] Run focused tests, full unit suite, and typecheck; commit
   `feat: coordinate presenter phases and result reveals`.
 
 ## Task 5: Wire NodeCG controls, isolated replay, and the keyed graphic
@@ -400,7 +406,7 @@ export function layoutKind(mode: Mode, source: PresenterSettings['viewSource']):
 export function registerPresenter(nodecg: import('@nodecg/types').ServerAPI): void;
 ```
 
-- [ ] Write the key-layout regression before wiring DOM and run it red:
+- [x] Write the key-layout regression before wiring DOM and run it red:
 
 ```ts
 test('chroma NMPZ uses two complete player windows', () => {
@@ -409,7 +415,7 @@ test('chroma NMPZ uses two complete player windows', () => {
 });
 ```
 
-- [ ] Add Replicants `presenterConnection`, `presenterDuel`, `presenterViews`,
+- [x] Add Replicants `presenterConnection`, `presenterDuel`, `presenterViews`,
   `presenterSeries`, `presenterSettings`, and `presenterTimeline`. Persist only
   series/settings; runtime state bootstraps afresh. Validate server-side edits
   through message/HTTP handlers before assigning Replicants.
@@ -418,20 +424,20 @@ test('chroma NMPZ uses two complete player windows', () => {
   timestamps then use NodeCG milliseconds; fixture-only normalizer tests retain
   fixture time. Browser clients apply only their NodeCG offset, never the
   GeoGuessr offset a second time.
-- [ ] Mount presentation routes under `/rashinban/presenter`: `POST /view/chroma`,
+- [x] Mount presentation routes under `/rashinban/presenter`: `POST /view/chroma`,
   `/view/rendered`, `/mute`, `/unmute`, `/reconnect`, `/series` (JSON body), and
   `/settings` (JSON body). Reject invalid bodies with 400 and current-state
   response on success. Preserve the existing routes.
-- [ ] Register presenter HTML as 1920 x 1080 and dashboard panel width 3.
+- [x] Register presenter HTML as 1920 x 1080 and dashboard panel width 3.
   Bind name fields with `textContent`. Show editable series wins, side mapping,
   global view/key selection, gains/output mode, reconnect, and status.
   Mapping gaps display an operator warning instead of silently swapping players.
-- [ ] Add isolated replay mode selected by server config `presenter.input`:
+- [x] Add isolated replay mode selected by server config `presenter.input`:
   `live` or `replay`. Live and replay are mutually exclusive; the dashboard
   labels replay prominently. Replay allowlists repository fixture names and
   converts their recorded times to the current clock while preserving intervals
   in both messages and telemetry. Do not expose arbitrary filesystem reads.
-- [ ] Build keyed live layout, scoreboard, timer, health, and lock indicators.
+- [x] Build keyed live layout, scoreboard, timer, health, and lock indicators.
   Cameras remain at fixed bottom left/right positions during results. Draw
   a results area with score/distance labels now; Task 6 supplies its actual map.
 
@@ -444,7 +450,7 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; }
 .camera.right { right: 60px; }
 ```
 
-- [ ] Test settings reject invalid gains/key/source and replay preserves
+- [x] Test settings reject invalid gains/key/source and replay preserves
   relative timing. Run build, typecheck, tests; open the replay graphic and
   dashboard and verify both key colors, manual waiting, series edits, lock-in,
   countdown, results cameras, finished/abort states. Record screenshots in
@@ -471,11 +477,11 @@ export function createGoogleRenderer(root: HTMLElement, apiKey: string,
   onError: (message: string) => void): Promise<GameRenderer>;
 ```
 
-- [ ] Read current official Google Maps JavaScript documentation for panorama
+- [x] Read current official Google Maps JavaScript documentation for panorama
   loading, POV/zoom, API-key setup, disabled navigation, attribution, and map
   bounds. Add Google types; document that the browser key is public and must
   be appropriately restricted, unlike the server-side GeoGuessr cookie.
-- [ ] Write the instance-count regression and run it red:
+- [x] Write the instance-count regression and run it red:
 
 ```ts
 test('shared NMPZ renders one panorama and two player maps', () => {
@@ -488,24 +494,27 @@ test('shared NMPZ renders one panorama and two player maps', () => {
 });
 ```
 
-- [ ] Implement one API loader and adapter-owned instances, mounting only
+- [x] Implement one API loader and adapter-owned instances, mounting only
   instances required by `rendererPlan`. Dispose listeners/instances on global
   source or layout changes. Retain loading/error slots and scoreboard/cameras
   when Maps is unavailable; publish sanitized readiness to the dashboard.
-- [ ] Apply panorama ID and POV/zoom from normalized telemetry for MOVE/NM;
-  use round initial panorama exclusively for NMPZ. Investigate captured pano-ID
-  format against a real API request. Do not silently fall back to nearest
+- [x] Apply panorama ID and POV/zoom from normalized telemetry for MOVE/NM;
+  use round initial panorama exclusively for NMPZ. Do not silently fall back to nearest
   coordinates if that changes the image; expose failure if exact pano resolution
   cannot be established. Keep local navigation disabled and attribution visible.
-- [ ] Fit player maps to independent bounds, respect active/sticky display,
+- [ ] Verify captured panorama IDs against a real Google API request once a key
+  is supplied. Local decoding and exact-ID request behavior are tested; actual
+  historical panorama resolution remains pending.
+- [x] Fit player maps to independent bounds, respect active/sticky display,
   and show independent pins. Results map uses answer and actual best guesses,
   connection lines, and antimeridian-aware fit. No-pin results have no invented
   marker. Results map is enabled in both source modes only after reveal.
-- [ ] Test adapter orchestration with fake map/panorama objects: required
+- [x] Test adapter orchestration with fake map/panorama objects: required
   instance counts, disposal, fixed NMPZ POV, independent bounds, no early answer,
-  and map failure. Verify live fidelity in a test party once a key/cookie exists;
-  record unresolved compatibility honestly if inputs are absent.
-- [ ] Run focused tests, typecheck, build; commit
+  and map failure.
+- [ ] Verify live fidelity in a test party once a key/cookie exists; record
+  unresolved compatibility honestly if inputs are absent.
+- [x] Run focused tests, typecheck, build; commit
   `feat: render player maps panoramas and round results`.
 
 ## Task 7: Synchronize browser clocks and establish program ownership
@@ -525,7 +534,7 @@ export type ClientReady = { clientId: string; role: ClientRole; ready: boolean }
 export function eligibleCompletion(lease: Lease | null, clientId: string, nowMs: number): boolean;
 ```
 
-- [ ] Write and run the clock regression red:
+- [x] Write and run the clock regression red:
 
 ```ts
 test('clock offset uses request midpoint', () => {
@@ -533,21 +542,21 @@ test('clock offset uses request midpoint', () => {
 });
 ```
 
-- [ ] Add a NodeCG ping/reply message carrying NodeCG server time. Collect
+- [x] Add a NodeCG ping/reply message carrying NodeCG server time. Collect
   five initial samples, estimate offset from the lowest-RTT sample, refresh
   every 10 seconds. Use a monotonic browser elapsed-time base anchored to that
   offset; keep GeoGuessr server offset conversion separate and applied once.
-- [ ] Add `presenterClients` nonpersistent Replicant for readiness and leases.
+- [x] Add `presenterClients` nonpersistent Replicant for readiness and leases.
   Program registration renews every 2 seconds and expires after 6 seconds;
   default URLs are preview-safe unless explicitly marked `?role=program`.
   Preview never receives audible ownership or sends effective completion.
   A second program client remains inactive until the existing lease expires
   or the operator explicitly transfers program ownership.
-- [ ] Reject completion unless client lease, generation, and active effect
+- [x] Reject completion unless client lease, generation, and active effect
   all match. Disconnect clears ownership after expiry; timeline watchdog
   still completes results. On bootstrap, sources adopt current phase without
   replaying expired one-shot cues.
-- [ ] Test RTT selection, stale samples, expired leases, duplicate clients,
+- [x] Test RTT selection, stale samples, expired leases, duplicate clients,
   preview callbacks, and ownership transfer. Run typecheck/build and focused
   tests; commit `feat: synchronize presenter clients and program ownership`.
 
@@ -575,7 +584,7 @@ export function playCelebration(port: VideoPort, generation: string,
   complete: (generation: string, failed: boolean) => void): () => void;
 ```
 
-- [ ] Write the completion-once regression with a fake port and run red:
+- [x] Write the completion-once regression with a fake port and run red:
 
 ```ts
 test('video ended followed by error completes only once', async () => {
@@ -587,24 +596,24 @@ test('video ended followed by error completes only once', async () => {
 });
 ```
 
-- [ ] Add NodeCG asset categories for music, effects, and video using current
+- [x] Add NodeCG asset categories for music, effects, and video using current
   NodeCG primary docs; dashboard chooses assets via the public asset inventory.
   Persist validated manifest separately as `presenterMedia`. Accept only local
   served asset URLs; reject missing IDs, invalid gains/loops, and unsupported
   soundtrack combinations. Empty manifest is valid and silent.
-- [ ] Render one full-screen topmost video, preloaded on selection. Guard
+- [x] Render one full-screen topmost video, preloaded on selection. Guard
   play rejection/error/end/cancel with a completion-once closure. Report to
   NodeCG only as active program client. Track asset metadata duration and use
   bounded per-asset watchdog; a missing or invalid video skips to results.
-- [ ] Connect effective completion to `finishEffect`; schedule reveal/count
+- [x] Connect effective completion to `finishEffect`; schedule reveal/count
   and then damage cues with shared timestamps. A double 5K never falls back
   to playing two singles. If the double asset is missing, reveal normally
   and report missing media to the operator.
-- [ ] Verify both variants using temporary local test videos, no-asset mode,
+- [x] Verify both variants using temporary local test videos, no-asset mode,
   autoplay failure, new-round cancellation, and cameras covered during video
   then restored on results. Document accepted OBS video formats based on
   actual playback testing, not assumed desktop-browser support.
-- [ ] Run focused tests, build/typecheck; commit
+- [x] Run focused tests, build/typecheck; commit
   `feat: sequence custom single and double 5K celebrations`.
 
 ## Task 9: Implement continuous authored stems and separate audio output
@@ -626,7 +635,7 @@ export interface PresenterAudio {
 export function createAudio(context: AudioContext, fetchAsset: typeof fetch): PresenterAudio;
 ```
 
-- [ ] Write loop-phase recovery regression and run red:
+- [x] Write loop-phase recovery regression and run red:
 
 ```ts
 test('reloaded stem rejoins the shared loop phase', () => {
@@ -634,7 +643,7 @@ test('reloaded stem rejoins the shared loop phase', () => {
 });
 ```
 
-- [ ] Decode all configured stems, validate finite loop bounds against decoded
+- [x] Decode all configured stems, validate finite loop bounds against decoded
   duration and common loop duration, and create looping sources sharing one
   scheduled start. Late decoding joins at the epoch-derived loop offset.
   Use gain nodes for context fades; muted stems keep advancing. Keep playback
@@ -647,18 +656,18 @@ export function stemOffset(epochMs: number, nowMs: number, start: number, end: n
 }
 ```
 
-- [ ] Apply authored `round`, `urgent`, `results`, and `idle` gains and
+- [x] Apply authored `round`, `urgent`, `results`, and `idle` gains and
   per-context fade times; do not restart loops on round transitions. Fade out
   at abort/finished hold; a new game establishes a new epoch. Stop old nodes
   only when replacing assets/session or releasing audio ownership.
-- [ ] Use one expiring audio lease tied to client ID and selected output mode.
+- [x] Use one expiring audio lease tied to client ID and selected output mode.
   Make output-mode handoff acknowledge old-source mute before new-source
   activation; expiry handles a missing source. Previews and duplicate audio
   pages remain silent. Embedded fallback imports this same engine.
-- [ ] Report decode errors, suspended AudioContext, and readiness to dashboard;
+- [x] Report decode errors, suspended AudioContext, and readiness to dashboard;
   provide a browser-local unlock action if activation is needed during testing.
   No audio asset should block graphics. Missing layers are silent with status.
-- [ ] Test gain scheduling, shared starts, muted-layer continuity, asset reload
+- [x] Test gain scheduling, shared starts, muted-layer continuity, asset reload
   cleanup, epoch recovery, output ownership, and missing buffers with fake audio
   ports; exercise actual Web Audio in browser. Run tests/typecheck/build and
   commit `feat: play synchronized authored presenter stems`.
@@ -677,7 +686,7 @@ export function pinCue(playerId: string, previous: Point | null, next: Point | n
   lastCueMs: number, nowMs: number, generation: string): Cue | null;
 ```
 
-- [ ] Write late-join suppression regression and run red:
+- [x] Write late-join suppression regression and run red:
 
 ```ts
 test('late join does not replay an expired submission sound', () => {
@@ -688,25 +697,25 @@ test('late join does not replay an expired submission sound', () => {
 });
 ```
 
-- [ ] Deduplicate guess cues by game/round/player; pin cues compare actual
+- [x] Deduplicate guess cues by game/round/player; pin cues compare actual
   coordinates and use 150 ms rate limiting. Route state/telemetry pin changes
   through one shared previous-pin cache to avoid two sounds for one action.
   Bootstrap clears history without producing sounds.
-- [ ] Schedule countdown cues at remaining 3, 2, 1 seconds, once per deadline
+- [x] Schedule countdown cues at remaining 3, 2, 1 seconds, once per deadline
   generation. No timer sound at null deadline; no missed-tick burst after resume.
   Results/count/damage cues come only from presentation stage times.
   Do not generate a damage sound when neither player loses health.
-- [ ] Map cue timestamps to AudioContext time using the shared clock. Count
+- [x] Map cue timestamps to AudioContext time using the shared clock. Count
   sound loops only until `damageAtMs`; stop/cancel on generation replacement.
   Short one-shots expire after 250 ms if unscheduled, while active interval
   sounds join only their remaining duration. Bound played-ID storage to the
   active game and current/prior round.
-- [ ] Enforce 5K soundtrack ownership: embedded selects video audio only;
+- [x] Enforce 5K soundtrack ownership: embedded selects video audio only;
   cue selects muted video and the `five-k` sound; silent selects neither.
   Cancel associated audio when the video is interrupted. Add dashboard
   preview controls that target preview audio explicitly and cannot mutate
   live game/timeline state.
-- [ ] Test repeated state and telemetry, pin drag throttling, first guess,
+- [x] Test repeated state and telemetry, pin drag throttling, first guess,
   no-pin timeout, countdown shortening, score-loop cancellation, zero damage,
   and reconnection. Run focused/full tests, typecheck/build; commit
   `feat: synchronize presenter interaction and reveal sounds`.
@@ -722,28 +731,29 @@ files implicated by observed failures, with focused regressions where useful.
 ```text
 http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program
 http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=preview
-http://localhost:9090/bundles/rashinban/graphics/presenter-audio.html
+http://localhost:9090/bundles/rashinban/graphics/presenter-audio.html?role=audio
 http://localhost:9090/  (presenter dashboard)
 ```
 
-- [ ] Run `npm test`, `npm run typecheck`, and `npm run build`; record commands,
+- [x] Run `npm test`, `npm run typecheck`, and `npm run build`; record commands,
   date, and actual results. Confirm the dummy graphic and existing Companion
   actions still work. Confirm no secret-bearing config or generated media is staged.
-- [ ] Use replay mode to inspect every mode/source combination at 1920 x 1080,
+- [x] Use replay mode to inspect every mode/source combination at 1920 x 1080,
   both key colors, created/pre-round/live/results/finished/aborted phases,
   long names, wins 0/1/2, no-pin N/A, and one/double-5K transitions. Verify
   no hidden result leaks visually before reveal. Save representative screenshots
   and references to them in the validation log without committing private images.
-- [ ] Configure OBS player feeds and cameras below the presenter, cropped to
+- [x] Configure synthetic OBS player feeds and cameras below the actual presenter, cropped to
   their documented fixed rectangles. Verify regional keying/crop arrangement
-  preserves green/magenta pixels in real game maps and 5K video. If the selected
+  preserves green/magenta result-map test patches and actual 5K video. If the selected
   OBS workflow cannot key regions safely, record the failing composition and
   resolve the source/mask arrangement before declaring it ready; do not silently
   switch the product to transparent slots contrary to the design.
-- [ ] Keep the dedicated audio source active across scenes, disable shutdown
-  and refresh-on-activation, and mute native GeoGuessr/player-feed audio to
+- [ ] Repeat regional composition with intended feeds and actual Google map content once available.
+- [x] Keep the dedicated audio source active across test scenes, disable shutdown
+  and refresh-on-activation, and document muting native GeoGuessr/player-feed audio to
   prevent doubling. Document separate versus embedded ownership and video audio.
-- [ ] Record a local test with temporary synchronized flash/click cues using
+- [x] Record a local test with temporary synchronized flash/click cues using
   the real timeline and audio scheduler. Measure audio onset versus visual frame
   at start, middle, and end of a 30-minute session. Target absolute alignment
   within 50 ms, no accumulating drift, and no duplicate playback. Repeat after
@@ -753,11 +763,11 @@ http://localhost:9090/  (presenter dashboard)
   duel, manual next round, and new lobby with stable series scores. Observe
   actual Google panorama/POV/map fidelity and map attribution. Mark unavailable
   credential/media/live-party checks as pending with the precise needed input.
-- [ ] Document operator startup, replay/live selection, program ownership,
+- [x] Document operator startup, replay/live selection, program ownership,
   series reset, chroma switching, media selection, missing-asset fallback,
   reconnect behavior, and recovery from audio activation failures. Include
   actual layout rectangle coordinates from the final CSS.
-- [ ] Commit docs and validated fixes as `docs: document presenter operation and OBS validation`.
+- [x] Commit docs and validated fixes as `docs: document presenter operation and OBS validation`.
   Summarize what passed, what remains externally unverified, and any chosen
   embedded-audio fallback. Do not claim event readiness while required live/OBS
   checks are pending.
