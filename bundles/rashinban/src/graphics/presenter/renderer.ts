@@ -5,7 +5,8 @@ export interface GameRenderer { render(frame: RenderFrame): void; dispose(): voi
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
 export type MapFrame = { visible: boolean; inactive?: boolean; bounds: Bounds | null; pins: { point: Point; color: string; label: string }[]; lines: { from: Point; to: Point; color: string }[] };
 export interface MapSurface { render(frame: MapFrame): void; dispose(): void }
-export interface PanoramaSurface { render(panorama: Panorama | null): void; dispose(): void }
+export type PanoramaOptions = { visible: boolean; identity: string };
+export interface PanoramaSurface { render(panorama: Panorama | null, options?: PanoramaOptions): void; dispose(): void }
 export interface RendererAdapter { map(slot: string): MapSurface; panorama(slot: string): PanoramaSurface }
 export function rendererPlan(mode: Mode, source: 'rendered' | 'chroma', phase: Phase): RendererPlan {
   const live = phase === 'live' && source === 'rendered';
@@ -27,8 +28,8 @@ const sides = ['left', 'right'] as const;
 const colors = { left: '#458af2', right: '#f05060' };
 export function createRenderer(adapter: RendererAdapter, onError: (message: string) => void): GameRenderer {
   let key = ''; let failed = false; let disposed = false;
-  const maps: MapSurface[] = []; const panos: PanoramaSurface[] = [];
-  function clear() { maps.splice(0).forEach(map => map.dispose()); panos.splice(0).forEach(pano => pano.dispose()); }
+  const maps = new Map<string, MapSurface>(); const panos = new Map<string, PanoramaSurface>();
+  function clear() { maps.forEach(map => map.dispose()); panos.forEach(pano => pano.dispose()); maps.clear(); panos.clear(); }
   return {
     render(frame) {
       if (disposed) return;
@@ -38,29 +39,46 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
       // Replicants arrive independently; result geometry follows the same round
       // as the projection. Older callers without a displayed round use state.
       const displayedRound = frame.displayedRound === undefined ? state.round : frame.displayedRound;
-      const nextKey = `${state.gameId}:${plan.resultsMap ? displayedRound : state.round}:${state.mode}:${source}:${JSON.stringify(plan)}`;
-      if (key !== nextKey) { clear(); key = nextKey; failed = false; }
+      const nextKey = `${state.gameId}:${state.round}:${state.mode}:${source}`;
+      if (key !== nextKey) { key = nextKey; failed = false; }
       if (failed) return;
       try {
-        if (!panos.length && plan.panoramas) {
-          for (const slot of plan.panoramas === 1 ? ['shared-panorama'] : ['left-view', 'right-view']) panos.push(adapter.panorama(slot));
-        }
-        if (!maps.length) {
-          for (const slot of plan.resultsMap ? ['results-map'] : plan.playerMaps ? ['left-map', 'right-map'] : []) maps.push(adapter.map(slot));
-        }
         const initial = state.rounds.find(round => round.number === state.round)?.panorama ?? null;
         const currentViews = views.gameId === state.gameId && views.round === state.round;
+        const ids = sides.map(side => {
+          const id = frame.playerIds?.[side];
+          return id && state.players.some(player => player.id === id) ? id : null;
+        });
         const players = sides.map(side => {
           const id = frame.playerIds?.[side];
           return id && state.players.some(player => player.id === id) && currentViews ? views.players[id] : undefined;
         });
-        panos.forEach((pano, i) => pano.render(plan.panoramas === 1 ? initial : players[i]?.panorama ?? null));
-        if (plan.playerMaps) maps.forEach((map, i) => {
-          const player = players[i];
-          map.render({ visible: !!player && (plan.panoramas === 1 || player.mapActive || player.mapSticky), inactive: !!player && !player.mapActive && !player.mapSticky, bounds: player?.mapBounds ?? null,
-            pins: player?.pin ? [{ point: player.pin, color: colors[sides[i]], label: sides[i] }] : [], lines: [] });
+        // Only prepare panorama metadata already present in this round's snapshot.
+        // Projection visibility remains authoritative when Replicants arrive separately.
+        const prepare = !['waiting-game', 'aborted', 'finished'].includes(projection.phase);
+        const live = projection.phase === 'live' && displayedRound === state.round && source === 'rendered';
+        const slots = state.mode === 'NMPZ' ? ['shared-panorama'] : ['left-view', 'right-view'];
+        for (const slot of slots) {
+          if (prepare && source === 'rendered' && !panos.has(slot)) panos.set(slot, adapter.panorama(slot));
+        }
+        panos.forEach((pano, slot) => {
+          const index = slot === 'right-view' ? 1 : 0;
+          const shared = slot === 'shared-panorama';
+          const value = prepare && slots.includes(slot)
+            ? shared ? (ids.some(Boolean) ? initial : null) : ids[index] ? players[index]?.panorama ?? initial : null
+            : null;
+          pano.render(value, { visible: live && slots.includes(slot), identity: `${state.gameId}:${state.round}:${shared ? 'shared' : ids[index] ?? ''}` });
         });
+        if (plan.playerMaps) for (const slot of ['left-map', 'right-map']) {
+          if (!maps.has(slot)) maps.set(slot, adapter.map(slot));
+        }
+        for (let i = 0; i < sides.length; i++) {
+          const player = players[i];
+          maps.get(`${sides[i]}-map`)?.render({ visible: live && !!ids[i], inactive: !player?.mapActive && !player?.mapSticky, bounds: player?.mapBounds ?? null,
+            pins: player?.pin ? [{ point: player.pin, color: colors[sides[i]], label: sides[i] }] : [], lines: [] });
+        }
         if (plan.resultsMap && projection.answer) {
+          if (!maps.has('results-map')) maps.set('results-map', adapter.map('results-map'));
           const answer = { lat: projection.answer.lat, lng: projection.answer.lng };
           const pins: MapFrame['pins'] = [{ point: answer, color: '#ffd55a', label: 'Answer' }];
           const lines: MapFrame['lines'] = [];
@@ -71,8 +89,8 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
             const point = { lat: guess.lat, lng: guess.lng };
             pins.push({ point, color: colors[side], label: side }); lines.push({ from: answer, to: point, color: colors[side] });
           }
-          maps[0].render({ visible: true, bounds: resultBounds(pins.map(pin => pin.point)), pins, lines });
-        }
+          maps.get('results-map')!.render({ visible: true, bounds: resultBounds(pins.map(pin => pin.point)), pins, lines });
+        } else maps.get('results-map')?.render({ visible: false, bounds: null, pins: [], lines: [] });
       } catch { clear(); failed = true; onError('Google Maps view unavailable'); }
     },
     dispose() { clear(); disposed = true; },

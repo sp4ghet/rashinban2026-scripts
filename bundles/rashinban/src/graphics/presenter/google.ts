@@ -38,7 +38,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
     const host = root.querySelector<HTMLElement>(`#${slot}`);
     if (!host) throw new Error('Missing map slot');
     const canvas = host.ownerDocument.createElement('div'); canvas.className = 'google-surface'; canvas.inert = true;
-    const status = host.ownerDocument.createElement('div'); status.className = 'google-status'; status.textContent = 'Loading view…';
+    const status = host.ownerDocument.createElement('div'); status.className = 'google-status'; status.hidden = true;
     host.replaceChildren(canvas, status);
     return { host, canvas, status, clear() { host.replaceChildren(); host.style.visibility = ''; host.dataset.inactive = ''; } };
   }
@@ -58,33 +58,48 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
       }));
       const service = new maps.StreetViewService();
       let latest: Panorama | null = null; let requested: string | null = null; let resolved = ''; let generation = 0; let disposed = false;
+      let identity: string | undefined; let visible = true; let canvasVisible = false; let sdkVisible = false;
+      function show() {
+        const ready = !!resolved;
+        if (ready !== sdkVisible) { sdkVisible = ready; pano.setVisible(ready); }
+        const next = visible && ready;
+        dom.canvas.style.visibility = next ? 'visible' : 'hidden';
+        if (next && !canvasVisible) maps.event.trigger(pano, 'resize');
+        canvasVisible = next;
+      }
+      function reset() {
+        generation++; requested = null; resolved = ''; latest = null; show(); recovered(surfaceId);
+      }
       function unavailable() {
         failedPanos.add(surfaceId);
-        pano.setVisible(false); dom.status.hidden = false; dom.status.textContent = 'View unavailable';
+        // Keep the last exact scene for this identity; diagnostics belong in the dashboard.
+        show();
         onError('Exact Street View panorama unavailable');
       }
       function applyPov() {
-        if (!latest || !resolved) return;
+        if (!latest || !resolved || googlePanoId(latest.panoId) !== resolved) return;
         pano.setPov({ heading: latest.heading, pitch: latest.pitch }); pano.setZoom(latest.zoom);
       }
-      pano.addListener('status_changed', () => { if (!disposed && resolved && pano.getStatus() !== 'OK') unavailable(); });
+      pano.addListener('status_changed', () => { if (!disposed && resolved && requested === resolved && pano.getStatus() !== 'OK') unavailable(); });
       return {
-        render(value) {
+        render(value, options) {
           if (disposed) return;
-          latest = value;
+          visible = options?.visible ?? true;
+          if (identity !== options?.identity) { identity = options?.identity; reset(); }
           if (!value) {
-            generation++; requested = null; resolved = ''; pano.setVisible(false);
-            dom.status.hidden = false; dom.status.textContent = 'View unavailable'; recovered(surfaceId); return;
+            if (latest || requested || resolved) reset();
+            show(); return;
           }
+          latest = value;
           const id = googlePanoId(value.panoId);
-          if (id === requested) { applyPov(); return; }
-          requested = id; resolved = ''; const token = ++generation;
-          pano.setVisible(false); dom.status.hidden = false; dom.status.textContent = 'Loading view…';
+          if (id === requested) { applyPov(); show(); return; }
+          requested = id; const token = ++generation;
+          show();
           if (!id) { unavailable(); return; }
           service.getPanorama({ pano: id }, (data, status) => {
             if (disposed || token !== generation) return;
             if (status !== 'OK' || data?.location?.pano !== id) { unavailable(); return; }
-            resolved = id; pano.setPano(id); applyPov(); pano.setVisible(true); dom.status.hidden = true;
+            resolved = id; pano.setPano(id); applyPov(); show();
             recovered(surfaceId);
           });
         },
@@ -97,7 +112,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
         disableDefaultUI: true, clickableIcons: false, gestureHandling: 'none', keyboardShortcuts: false,
         streetViewControl: false, mapTypeControl: false, fullscreenControl: false, tilt: 0 }));
       dom.status.hidden = true;
-      let previous = ''; let fit = ''; let visible = false; let disposed = false;
+      let previous = ''; let fit = ''; let visible = false; let inactive = false; let disposed = false;
       const overlays: (google.maps.Marker | google.maps.Polyline)[] = [];
       function clearOverlays() { overlays.splice(0).forEach(item => { item.setMap(null); release(item); }); }
       return {
@@ -106,13 +121,14 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
           dom.host.style.visibility = frame.visible ? 'visible' : 'hidden';
           dom.host.dataset.inactive = String(frame.inactive ?? false);
           const bounds = JSON.stringify(frame.bounds);
-          if (frame.visible && (!visible || bounds !== fit)) {
+          if (frame.visible && (!visible || bounds !== fit || inactive !== !!frame.inactive)) {
             maps.event.trigger(map, 'resize');
             if (frame.bounds) map.fitBounds(frame.bounds, slot === 'results-map' ? 45 : 0);
             else { map.setCenter({ lat: 0, lng: 0 }); map.setZoom(1); }
             fit = bounds;
           }
           visible = frame.visible;
+          inactive = !!frame.inactive;
           const content = JSON.stringify([frame.pins, frame.lines]);
           if (content === previous) return;
           previous = content; clearOverlays();
