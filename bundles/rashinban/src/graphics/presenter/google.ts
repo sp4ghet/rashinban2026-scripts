@@ -62,14 +62,16 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
       }));
       const service = new maps.StreetViewService();
       let latest: Panorama | null = null; let requested: string | null = null; let resolved = ''; let generation = 0; let disposed = false;
-      let identity: string | undefined; let visible = true; let canvasVisible = false; let sdkVisible = false;
+      let identity: string | undefined; let visible = true; let canvasVisible = false; let sdkVisible = false; let canvasSize = ''; let frozen = false;
       const smoothing = createPovSmoother(); let writtenPov: Pov | null = null; let snapPov = true;
       function show() {
         const ready = !!resolved;
         if (ready !== sdkVisible) { sdkVisible = ready; pano.setVisible(ready); }
         const next = visible && ready;
         dom.canvas.style.visibility = next ? 'visible' : 'hidden';
-        if (next && !canvasVisible) maps.event.trigger(pano, 'resize');
+        const nextSize = `${dom.canvas.clientWidth}:${dom.canvas.clientHeight}`;
+        if (next && (!canvasVisible || nextSize !== canvasSize)) maps.event.trigger(pano, 'resize');
+        canvasSize = nextSize;
         canvasVisible = next;
       }
       function reset() {
@@ -97,6 +99,13 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
           if (visible !== nextVisible) snapPov = true;
           visible = nextVisible;
           if (identity !== options?.identity) { identity = options?.identity; reset(); }
+          // A submitted guess may reset telemetry to spawn. Retain the hidden
+          // panorama and its pose until this player is active again.
+          if (options?.frozen) {
+            if (!frozen) { generation++; requested = resolved || null; }
+            frozen = true; show(); return;
+          }
+          frozen = false;
           if (!value) {
             if (latest || requested || resolved) reset();
             show(); return;
@@ -125,7 +134,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
         disableDefaultUI: true, clickableIcons: false, gestureHandling: 'none', keyboardShortcuts: false,
         streetViewControl: false, mapTypeControl: false, fullscreenControl: false, tilt: 0 }));
       dom.status.hidden = true;
-      let previous = ''; let fit = ''; let visible = false; let inactive = false; let disposed = false;
+      let previous = ''; let fit = ''; let visible = false; let inactive = false; let disposed = false; let size = ''; let padding = -1;
       const overlays: (google.maps.Marker | google.maps.Polyline)[] = [];
       function clearOverlays() { overlays.splice(0).forEach(item => { item.setMap(null); release(item); }); }
       return {
@@ -134,11 +143,14 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
           dom.host.style.visibility = frame.visible ? 'visible' : 'hidden';
           dom.host.dataset.inactive = String(frame.inactive ?? false);
           const bounds = JSON.stringify(frame.bounds);
-          if (frame.visible && (!visible || bounds !== fit || inactive !== !!frame.inactive)) {
+          const nextSize = `${dom.host.clientWidth}:${dom.host.clientHeight}`;
+          const nextPadding = frame.padding ?? (slot === 'results-map' ? 45 : 0);
+          if (frame.visible && (!visible || bounds !== fit || inactive !== !!frame.inactive || size !== nextSize || padding !== nextPadding)) {
             maps.event.trigger(map, 'resize');
-            if (frame.bounds) map.fitBounds(frame.bounds, slot === 'results-map' ? 45 : 0);
+            if (frame.bounds) map.fitBounds(frame.bounds, nextPadding);
             else { map.setCenter({ lat: 0, lng: 0 }); map.setZoom(1); }
             fit = bounds;
+            size = nextSize; padding = nextPadding;
           }
           visible = frame.visible;
           inactive = !!frame.inactive;

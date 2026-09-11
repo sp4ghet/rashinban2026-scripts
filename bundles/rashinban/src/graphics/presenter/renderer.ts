@@ -1,11 +1,12 @@
 import type { Bounds, DuelState, Mode, Panorama, Phase, Point, Projection, Views } from '../../types/presenter.ts';
+import { lockLayout } from './layout.ts';
 
 export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null } };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
-export type MapFrame = { visible: boolean; inactive?: boolean; bounds: Bounds | null; pins: { point: Point; color: string; label: string }[]; lines: { from: Point; to: Point; color: string }[] };
+export type MapFrame = { visible: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string }[]; lines: { from: Point; to: Point; color: string }[] };
 export interface MapSurface { render(frame: MapFrame): void; dispose(): void }
-export type PanoramaOptions = { visible: boolean; identity: string };
+export type PanoramaOptions = { visible: boolean; identity: string; frozen?: boolean };
 export interface PanoramaSurface { render(panorama: Panorama | null, options?: PanoramaOptions): void; dispose(): void }
 export interface RendererAdapter { map(slot: string): MapSurface; panorama(slot: string): PanoramaSurface }
 export function rendererPlan(mode: Mode, source: 'rendered' | 'chroma', phase: Phase): RendererPlan {
@@ -57,6 +58,8 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
         // Projection visibility remains authoritative when Replicants arrive separately.
         const prepare = !['waiting-game', 'aborted', 'finished'].includes(projection.phase);
         const live = projection.phase === 'live' && displayedRound === state.round && source === 'rendered';
+        const lock = lockLayout(frame);
+        const locked = sides.map(side => lock === side || lock === 'both');
         const slots = state.mode === 'NMPZ' ? ['shared-panorama'] : ['left-view', 'right-view'];
         for (const slot of slots) {
           if (prepare && source === 'rendered' && !panos.has(slot)) panos.set(slot, adapter.panorama(slot));
@@ -67,15 +70,29 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
           const value = prepare && slots.includes(slot)
             ? shared ? (ids.some(Boolean) ? initial : null) : ids[index] ? players[index]?.panorama ?? initial : null
             : null;
-          pano.render(value, { visible: live && slots.includes(slot), identity: `${state.gameId}:${state.round}:${shared ? 'shared' : ids[index] ?? ''}` });
+          const frozen = shared ? lock === 'both' : locked[index];
+          pano.render(value, { visible: live && slots.includes(slot) && !frozen, frozen,
+            identity: `${state.gameId}:${state.round}:${shared ? 'shared' : ids[index] ?? ''}` });
         });
         if (plan.playerMaps) for (const slot of ['left-map', 'right-map']) {
           if (!maps.has(slot)) maps.set(slot, adapter.map(slot));
         }
         for (let i = 0; i < sides.length; i++) {
           const player = players[i];
-          maps.get(`${sides[i]}-map`)?.render({ visible: live && !!ids[i], inactive: !player?.mapActive && !player?.mapSticky, bounds: player?.mapBounds ?? null,
-            pins: player?.pin ? [{ point: player.pin, color: colors[sides[i]], label: sides[i] }] : [], lines: [] });
+          const pins: MapFrame['pins'] = [];
+          for (let j = 0; j < sides.length; j++) {
+            if (j !== i && !locked[i]) continue;
+            const snapshotPlayer = state.players.find(value => value.id === ids[j]);
+            const submitted = snapshotPlayer?.guesses.find(guess => guess.round === state.round);
+            // A missing Views update can lag the current snapshot. An explicit
+            // null in current telemetry remains authoritative (pin cleared).
+            const view = players[j];
+            const point = submitted ?? (view ? view.pin : snapshotPlayer?.pin);
+            if (point) pins.push({ point: { lat: point.lat, lng: point.lng }, color: colors[sides[j]], label: sides[j] });
+          }
+          maps.get(`${sides[i]}-map`)?.render({ visible: live && !!ids[i], inactive: !locked[i] && !player?.mapActive && !player?.mapSticky,
+            bounds: locked[i] ? resultBounds(pins.map(pin => pin.point)) : player?.mapBounds ?? null,
+            padding: locked[i] ? 45 : 0, pins, lines: [] });
         }
         if (plan.resultsMap && projection.answer) {
           if (!maps.has('results-map')) maps.set('results-map', adapter.map('results-map'));

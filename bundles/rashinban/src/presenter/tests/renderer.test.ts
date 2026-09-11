@@ -8,6 +8,7 @@ import { advanceTimeline, DEFAULT_TIMING } from '../timeline.ts';
 import { project } from '../projection.ts';
 import { sample } from './fixtures.ts';
 import { createGoogleRenderer, googleAdapter, googlePanoId } from '../../graphics/presenter/google.ts';
+import { lockLayout } from '../../graphics/presenter/layout.ts';
 
 function frame(): RenderFrame {
   const state = structuredClone(applySnapshot(null, sample('gs2-ws-DuelStarted.json')).state!);
@@ -24,6 +25,53 @@ function surfaces() {
   };
   return { maps, panos, adapter };
 }
+function lockPlayer(f: RenderFrame, index: number) {
+  const player = f.state.players[index];
+  player.guesses.push({ lat: 1 + index, lng: 179 - index, round: f.state.round, score: 4000, distanceM: 100, createdAtMs: 1 });
+  f.projection.players.push({ id: player.id, locked: true, health: 6000, score: null, distanceM: null });
+}
+test('lock layout respects mapped current-round guesses, projection and rendered source', () => {
+  const f = frame(); lockPlayer(f, 0); assert.equal(lockLayout(f), 'left');
+  f.playerIds = { left: f.state.players[1].id, right: f.state.players[0].id }; assert.equal(lockLayout(f), 'right');
+  lockPlayer(f, 1); assert.equal(lockLayout(f), 'both');
+  f.source = 'chroma'; assert.equal(lockLayout(f), 'none'); f.source = 'rendered';
+  f.displayedRound = f.state.round - 1; assert.equal(lockLayout(f), 'none'); f.displayedRound = f.state.round;
+  f.projection.phase = 'results-transition'; assert.equal(lockLayout(f), 'none'); f.projection.phase = 'live';
+  f.state.round++; assert.equal(lockLayout(f), 'none');
+});
+test('locked map compares submitted and live opponent pins without revealing the answer or stale telemetry', () => {
+  const f = frame(); f.state.mode = 'MOVE'; const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  f.views.players[f.state.players[0].id].pin = { lat: 80, lng: 80 };
+  f.views.players[f.state.players[1].id].pin = { lat: 2, lng: -179 };
+  renderer.render(f); lockPlayer(f, 0); renderer.render(f);
+  const locked = fake.maps[0].frames.at(-1)!;
+  assert.deepEqual(locked.pins.map(pin => pin.point), [{ lat: 1, lng: 179 }, { lat: 2, lng: -179 }]);
+  assert.deepEqual(locked.bounds, { north: 2, south: 1, west: 179, east: -179 });
+  assert.equal(locked.inactive, false); assert.equal(locked.padding, 45); assert.deepEqual(locked.lines, []);
+  assert.equal(fake.panos[0].options.at(-1).visible, false); assert.equal(fake.panos[0].options.at(-1).frozen, true);
+  assert.equal(fake.panos[1].options.at(-1).visible, true);
+  f.views.round--; renderer.render(f); assert.equal(fake.maps[0].frames.at(-1)!.pins.length, 1);
+  f.views.round++; f.views.gameId = 'stale-game'; renderer.render(f); assert.equal(fake.maps[0].frames.at(-1)!.pins.length, 1);
+  f.views.gameId = f.state.gameId; lockPlayer(f, 1); renderer.render(f);
+  assert.ok(fake.panos.every(p => !p.options.at(-1).visible));
+  assert.deepEqual(fake.maps[0].frames.at(-1)!.pins, fake.maps[1].frames.at(-1)!.pins);
+  f.state.players.forEach(player => { player.guesses = []; }); renderer.render(f);
+  assert.ok(fake.panos.every(p => p.options.at(-1).visible)); assert.equal(fake.panos.length, 2);
+});
+test('missing current telemetry uses current snapshot pin, while explicit null does not resurrect it', () => {
+  const f = frame(); lockPlayer(f, 0); const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  f.state.players[1].pin = { lat: 2, lng: 3 };
+  renderer.render(f); assert.equal(fake.maps[0].frames.at(-1)!.pins.length, 1);
+  f.views.round--; renderer.render(f);
+  assert.deepEqual(fake.maps[0].frames.at(-1)!.pins[1].point, { lat: 2, lng: 3 });
+});
+test('NMPZ retains one panorama until both players lock and chroma has no lock layout', () => {
+  const f = frame(); const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  renderer.render(f); lockPlayer(f, 0); renderer.render(f);
+  assert.equal(fake.panos.length, 1); assert.equal(fake.panos[0].options.at(-1).visible, true);
+  lockPlayer(f, 1); renderer.render(f); assert.equal(fake.panos[0].options.at(-1).visible, false);
+  f.source = 'chroma'; renderer.render(f); assert.ok(fake.maps.every(map => !map.frames.at(-1)!.visible));
+});
 test('shared NMPZ renders one panorama and two player maps', () => {
   assert.deepEqual(rendererPlan('NMPZ', 'rendered', 'live'), { panoramas: 1, playerMaps: 2, resultsMap: false });
   assert.deepEqual(rendererPlan('NMPZ', 'chroma', 'results-reveal'), { panoramas: 0, playerMaps: 0, resultsMap: true });
@@ -158,6 +206,7 @@ test('missing browser key fails without touching the DOM or loading Google', asy
 // view state, exact lookup behavior, and cleanup produced by the real adapter.
 function googleBoundary() {
   class Element {
+    clientWidth = 420; clientHeight = 280;
     style: Record<string, string> = {}; dataset: Record<string, string> = {}; className = ''; textContent = ''; hidden = false;
     children: Element[] = []; ownerDocument = { createElement: () => new Element() };
     replaceChildren(...children: Element[]) { this.children = children; }
@@ -356,6 +405,32 @@ test('empty exact panorama ID reports unavailable', () => {
   const surface = adapter.panorama('left-view');
   surface.render({ lat: 0, lng: 0, panoId: '', heading: 0, pitch: 0, zoom: 0 });
   assert.deepEqual(errors, ['Exact Street View panorama unavailable']);
+});
+test('locked panorama ignores spawn resets and resumes using the same object after unlock', () => {
+  const fake = googleBoundary(); const surface = googleAdapter(fake.root, fake.api, assert.fail).panorama('left-view');
+  const p = { lat: 1, lng: 2, panoId: 'moved', heading: 120, pitch: 20, zoom: 2 };
+  const options = { visible: true, identity: 'game:1:left' };
+  surface.render(p, options); fake.requests[0].callback({ location: { pano: 'moved' } }, 'OK');
+  surface.render({ ...p, panoId: 'pending-move' }, options);
+  surface.render({ ...p, panoId: 'spawn', heading: 0, zoom: 0 }, { ...options, visible: false, frozen: true });
+  fake.requests[1].callback({ location: { pano: 'pending-move' } }, 'OK');
+  assert.equal(fake.requests.length, 2); assert.equal(fake.panos[0].pano, 'moved');
+  assert.equal(fake.panos[0].pov.heading, 120); assert.equal(fake.panos[0].zoom, 2);
+  surface.render(p, options); assert.equal(fake.panos.length, 1); assert.equal(fake.requests.length, 2);
+  surface.render({ ...p, panoId: 'next-round' }, { visible: true, identity: 'game:2:left' });
+  assert.equal(fake.requests.length, 3);
+});
+test('map and active panorama resize when lock layout changes their measured size', () => {
+  const fake = googleBoundary(); const adapter = googleAdapter(fake.root, fake.api, assert.fail);
+  const map = adapter.map('left-map');
+  const frame: MapFrame = { visible: true, bounds: { north: 2, south: 0, east: 3, west: 1 }, pins: [], lines: [] };
+  map.render(frame); fake.slots.get('#left-map')!.clientWidth = 610; map.render(frame); map.render(frame);
+  assert.equal(fake.maps[0].fits.length, 2);
+  const pano = adapter.panorama('right-view'); const p = { lat: 1, lng: 2, panoId: 'same', heading: 0, pitch: 0, zoom: 1 };
+  pano.render(p); fake.requests[0].callback({ location: { pano: 'same' } }, 'OK');
+  const before = fake.resized.length;
+  fake.slots.get('#right-view')!.children[0].clientWidth = 1210; pano.render(p); pano.render(p);
+  assert.equal(fake.resized.length, before + 1);
 });
 test('failed Google constructors clear loading slots', () => {
   const fake = googleBoundary(); const adapter = googleAdapter(fake.root, fake.api, assert.fail);

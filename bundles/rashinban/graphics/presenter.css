@@ -38,3 +38,19 @@ body[data-layout="shared"] .shared-view { display: grid; }body[data-layout="shar
 #transition { position: absolute; top: 270px; left: 40px; width: 1840px; height: 512px; display: grid; place-items: center; background: #171c2d; border: 2px solid #596580; font-size: 49px; letter-spacing: .14em; z-index: 5; }
 .camera { position: absolute; bottom: 40px; width: 340px; height: 192px; border: 4px solid var(--blue); border-radius: 10px; }.camera.left { left: 60px; }.camera.right { right: 60px; border-color: var(--red); }
 footer { position: absolute; left: 430px; right: 430px; top: 878px; text-align: center; }#phase-label { font-size: 21px; letter-spacing: .14em; color: #c1c9dc; min-height: 28px; margin-bottom: 19px; }.wordmark { font-size: 40px; font-weight: 900; letter-spacing: .14em; }.wordmark span { margin-left: 18px; font-weight: 400; color: #8d99b1; }
+
+#scoring-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+.score-token { position: absolute; font-size: 90px; line-height: 1.25; font-weight: 900; text-shadow: 0 3px 12px #10131fcc; white-space: nowrap; }
+.score-token.left { color: #78adff; }.score-token.right { color: #ff8290; }
+#score-calculation { position: absolute; transform: translate(-50%, -50%); font-size: 40px; color: #ffd55a; text-shadow: 0 3px 10px #10131f; }
+.health { box-shadow: 0 0 calc(24px * var(--score-impact, 0)) rgba(255, 100, 125, var(--score-impact, 0)); }
+
+body[data-lock="left"] .player-window.left, body[data-lock="right"] .player-window.right { width: 600px; }
+body[data-lock="left"] .player-window.right, body[data-lock="right"] .player-window.left { width: 1220px; }
+body[data-lock="left"] .player-window.left .player-map, body[data-lock="right"] .player-window.right .player-map,
+body[data-lock="both"] .player-map { inset: 0; width: 100%; height: 100%; border: 0; }
+body[data-lock="left"] .player-window.left .lock, body[data-lock="right"] .player-window.right .lock,
+body[data-lock="both"] .lock { top: 12px; left: 50%; transform: translateX(-50%); font-size: 16px; padding: 5px 10px; opacity: .9; }
+body[data-layout="shared"][data-lock="left"] .shared-view { left: 660px; width: 1220px; }
+body[data-layout="shared"][data-lock="right"] .shared-view { left: 40px; width: 1220px; }
+body[data-layout="shared"][data-lock="both"] .shared-view { display: none; }

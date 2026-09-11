@@ -86,6 +86,10 @@ does not increment series wins. A new lobby preserves wins while replacing
 duel state. For audio failures, use the local activation and ownership checks
 in [OBS setup](obs.md).
 
+Results now explain score counting, subtraction/ties, multiplication and HP
+impact with moving score copies. See [scoring choreography](scoring.md) for
+source-derived timings and the treatment of existing count-duration settings.
+
 ## Google player views and results map
 
 Player minimaps and the results map use the selected GeoGuessr raster cloud

@@ -18,9 +18,10 @@
   </main>
   <section id="results-area" hidden>
     <div id="results-map"><span>ROUND RESULTS</span></div>
-    <div class="result left"><small id="left-distance">—</small><strong id="left-score">—</strong><span>POINTS</span></div>
-    <div class="result right"><small id="right-distance">—</small><strong id="right-score">—</strong><span>POINTS</span></div>
+    <div class="result left" id="left-result"><small id="left-distance">—</small><strong id="left-score">—</strong><span>POINTS</span></div>
+    <div class="result right" id="right-result"><small id="right-distance">—</small><strong id="right-score">—</strong><span>POINTS</span></div>
   </section>
+  <div id="scoring-layer" hidden aria-hidden="true"><strong id="score-token-left" class="score-token left" hidden></strong><strong id="score-token-right" class="score-token right" hidden></strong><b id="score-calculation" hidden></b></div>
   <div id="transition" hidden>ROUND COMPLETE</div>
   <div id="timer" hidden>00:00</div>
   <div class="camera key-slot left"></div><div class="camera key-slot right"></div>

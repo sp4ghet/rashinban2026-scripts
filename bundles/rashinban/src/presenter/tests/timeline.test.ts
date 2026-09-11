@@ -52,9 +52,10 @@ test('manual capture waits for host before start and after completing results', 
   const result = manual.find(item => item.code === 'DuelRoundTimedOut')!;
   timeline = advance(timeline, result.state, result.at);
   assert.equal(timeline.phase, 'results-transition');
-  timeline = advance(timeline, result.state, result.at + 2200);
+  const completeAt = timeline.holdAtMs!;
+  timeline = advance(timeline, result.state, completeAt);
   assert.equal(timeline.phase, 'waiting-host');
-  assert.deepEqual(project(result.state, timeline, result.at + 2200).players.map(player => player.health), result.state.players.map(player => player.results[0].healthAfter));
+  assert.deepEqual(project(result.state, timeline, completeAt).players.map(player => player.health), result.state.players.map(player => player.results[0].healthAfter));
 });
 
 test('future start and maximum timer wake on authoritative boundaries without another snapshot', () => {
@@ -124,22 +125,24 @@ test('results reveal counts before interpolating damage and ignores duplicate re
   assert.equal(timeline.phase, 'results-transition');
   assert.equal(timeline.music, 'results');
   assert.equal(timeline.revealAtMs, 10200);
-  assert.equal(timeline.damageAtMs, 11400);
-  assert.equal(timeline.holdAtMs, 12200);
+  assert.equal(timeline.damageAtMs, 15010);
+  assert.equal(timeline.holdAtMs, 17010);
   assert.equal(nextTimelineWakeAtMs(timeline, result.state, at), 10200);
   assert.deepEqual(project(result.state, timeline, at).players.map(player => [player.health, player.score]), [[6000, null], [6000, null]]);
   assert.equal(project(result.state, timeline, at).answer, null);
   assert.deepEqual(advance(timeline, structuredClone(result.state), at), timeline);
-  timeline = advance(timeline, result.state, 10800);
+  timeline = advance(timeline, result.state, 11785);
   assert.equal(timeline.phase, 'results-reveal');
-  assert.deepEqual(project(result.state, timeline, 10800).players.map(player => [player.health, player.score]), [[6000, 2120], [6000, 2082]]);
-  assert.equal(project(result.state, timeline, 10800).answer?.lat, 14.91906512738777);
-  assert.equal(nextTimelineWakeAtMs(timeline, result.state, 10800), 11400);
-  assert.deepEqual(project(result.state, timeline, 11800).players.map(player => [player.health, player.score]), [[6000, 4240], [5962, 4164]]);
-  timeline = advance(timeline, result.state, 12200);
+  assert.deepEqual(project(result.state, timeline, 11785).players.map(player => [player.health, player.score]), [[6000, 2120], [6000, 2082]]);
+  assert.equal(project(result.state, timeline, 11785).answer?.lat, 14.91906512738777);
+  assert.equal(nextTimelineWakeAtMs(timeline, result.state, 11785), 12160);
+  const duringImpact = project(result.state, timeline, 15410);
+  assert.deepEqual(duringImpact.players.map(player => player.score), [4240, 4164]);
+  assert.ok(duringImpact.players[1].health > 5924 && duringImpact.players[1].health < 6000);
+  timeline = advance(timeline, result.state, 17010);
   assert.equal(timeline.phase, 'between-rounds');
-  assert.deepEqual(project(result.state, timeline, 12200).players.map(player => player.health), [6000, 5924]);
-  assert.equal(nextTimelineWakeAtMs(timeline, result.state, 12200), null);
+  assert.deepEqual(project(result.state, timeline, 17010).players.map(player => player.health), [6000, 5924]);
+  assert.equal(nextTimelineWakeAtMs(timeline, result.state, 17010), null);
 });
 
 test('projection uses the timeline round even if state has a newer current round', () => {
@@ -173,23 +176,23 @@ test('one double celebration gates all counting until matching completion plus l
   timeline = finishEffect(timeline, timeline.generation, 12000, timing);
   assert.equal(original.revealAtMs, null);
   assert.equal(timeline.revealAtMs, 12200);
-  assert.equal(timeline.damageAtMs, 13400);
-  assert.equal(timeline.holdAtMs, 14200);
+  assert.equal(timeline.damageAtMs, 17010);
+  assert.equal(timeline.holdAtMs, 19010);
   assert.equal(timeline.effect, 'none');
   assert.deepEqual(finishEffect(timeline, timeline.generation, 13000, timing), timeline);
-  assert.deepEqual(timeline.cues.filter(cue => cue.kind === 'count').map(cue => [cue.atMs, cue.untilMs]), [[12200, 13400]]);
-  assert.deepEqual(timeline.cues.filter(cue => cue.kind === 'damage').map(cue => [cue.atMs, cue.untilMs]), [[13400, 14200]]);
+  assert.deepEqual(timeline.cues.filter(cue => cue.kind === 'count').map(cue => [cue.atMs, cue.untilMs]), [[13410, 14160]]);
+  assert.deepEqual(timeline.cues.filter(cue => cue.kind === 'damage').map(cue => [cue.atMs, cue.untilMs]), [[17010, 17810]]);
 });
 
 test('watchdog advances with unchanged state and late callback cannot reschedule stages', () => {
   const state = perfectState();
   const original = advance(null, state, 10000);
   assert.equal(nextTimelineWakeAtMs(original, state, 10200), 20200);
-  const timeline = advance(original, state, 25000);
+  const timeline = advance(original, state, 30000);
   assert.equal(timeline.effect, 'none');
   assert.equal(timeline.revealAtMs, 20400);
   assert.equal(timeline.phase, 'between-rounds');
-  assert.deepEqual(finishEffect(timeline, original.generation, 26000, timing), timeline);
+  assert.deepEqual(finishEffect(timeline, original.generation, 31000, timing), timeline);
 });
 
 test('Finished arriving immediately preserves the final round reveal before winner', () => {
@@ -203,10 +206,11 @@ test('Finished arriving immediately preserves the final round reveal before winn
   assert.equal(project(finished.state, timeline, 10001).players[0].health, 5533);
   timeline = advance(timeline, finished.state, 11800);
   assert.equal(timeline.phase, 'results-reveal');
-  timeline = advance(timeline, finished.state, 12200);
+  const completeAt = timeline.holdAtMs!;
+  timeline = advance(timeline, finished.state, completeAt);
   assert.equal(timeline.phase, 'finished');
   assert.equal(timeline.music, 'idle');
-  assert.equal(project(finished.state, timeline, 12200).players[0].health, 0);
+  assert.equal(project(finished.state, timeline, completeAt).players[0].health, 0);
 });
 
 test('finished snapshot first seen during live also sequences its complete results', () => {
@@ -304,6 +308,7 @@ test('non-default media timing determines the watchdog and all subsequent stages
   assert.equal(timeline.effectDeadlineMs, 10950);
   timeline = advanceTimeline(timeline, state, 10950, false, custom);
   assert.equal(timeline.revealAtMs, 11000);
-  assert.equal(timeline.damageAtMs, 11400);
-  assert.equal(timeline.holdAtMs, 11600);
+  assert.equal(timeline.damageAtMs, 15460);
+  assert.equal(timeline.scoring?.healthEndAtMs, 15660);
+  assert.equal(timeline.holdAtMs, 17460);
 });

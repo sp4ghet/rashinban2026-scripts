@@ -1,4 +1,5 @@
 import { applyPinCues, samePin } from './cues.ts';
+import { scoreCalculation, scoreSequence } from './scoring.ts';
 import type { Cue, CueKind, DuelState, EffectKind, Timeline, Timing } from '../types/presenter.ts';
 
 export function effectFor(scores: readonly number[]): EffectKind {
@@ -6,7 +7,7 @@ export function effectFor(scores: readonly number[]): EffectKind {
   return perfect === 2 ? 'double-5k' : perfect === 1 ? 'single-5k' : 'none';
 }
 
-export const DEFAULT_TIMING: Timing = { leadMs: 200, countMs: 1200, damageMs: 800, effectWatchdogMs: 10000 };
+export const DEFAULT_TIMING: Timing = { leadMs: 200, countMs: 750, damageMs: 800, effectWatchdogMs: 10000 };
 
 function fresh(previous: Timeline | null, state: DuelState | null, nowMs: number): Timeline {
   const revision = (previous?.revision ?? 0) + 1;
@@ -23,6 +24,7 @@ function fresh(previous: Timeline | null, state: DuelState | null, nowMs: number
     revealAtMs: null,
     damageAtMs: null,
     holdAtMs: null,
+    scoring: null,
     cues: [],
     observed: {},
     countdownEndAtMs: null,
@@ -35,8 +37,9 @@ function cue(timeline: Timeline, kind: CueKind, atMs: number, untilMs: number, p
 
 function scheduleReveal(timeline: Timeline, atMs: number, timing: Timing): Timeline {
   const revealAtMs = atMs + timing.leadMs;
-  const damageAtMs = revealAtMs + timing.countMs;
-  const holdAtMs = damageAtMs + timing.damageMs;
+  const scoring = scoreSequence(timeline.scoringResult ?? { tied: false, hasDamage: timeline.hasDamage !== false, winnerId: null, loserId: null, difference: 0, damage: 0, multiplier: 1 }, revealAtMs, timing);
+  const damageAtMs = scoring.impactAtMs;
+  const holdAtMs = scoring.completeAtMs;
   return {
     ...timeline,
     effect: 'none',
@@ -44,10 +47,13 @@ function scheduleReveal(timeline: Timeline, atMs: number, timing: Timing): Timel
     revealAtMs,
     damageAtMs,
     holdAtMs,
+    scoring,
     cues: [
       cue(timeline, 'results', revealAtMs, revealAtMs + 250),
-      cue(timeline, 'count', revealAtMs, damageAtMs),
-      ...(timeline.hasDamage === false ? [] : [cue(timeline, 'damage', damageAtMs, holdAtMs)]),
+      cue(timeline, 'count', scoring.countAtMs, scoring.countEndAtMs),
+      cue(timeline, scoring.tied ? 'tie' : 'collision', scoring.collisionAtMs, scoring.collisionAtMs + 250),
+      ...(scoring.multiplierAtMs === null ? [] : [cue(timeline, 'multiplier', scoring.multiplierAtMs, scoring.multiplierAtMs + 250)]),
+      ...(damageAtMs === null ? [] : [cue(timeline, 'damage', damageAtMs, scoring.healthEndAtMs)]),
     ],
   };
 }
@@ -110,6 +116,7 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
       const scores = state.players.map(player => player.results.find(result => result.round === timeline.round)!.score);
       const effect = effectFor(scores);
       timeline = { ...timeline, phase: 'results-transition', music: 'results', cues: [], effect,
+        scoringResult: scoreCalculation(state, timeline.round!),
         hasDamage: state.players.some(player => player.results.some(result => result.round === timeline.round && result.healthAfter < result.healthBefore)) };
       if (effect === 'none') timeline = scheduleReveal(timeline, nowMs, timing);
       else {
@@ -148,6 +155,8 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
 /** Next coordinator wakeup. Browser sources schedule the individual timestamped cues themselves. */
 export function nextTimelineWakeAtMs(timeline: Timeline, state: DuelState | null, nowMs: number): number | null {
   const boundaries = [timeline.effectDeadlineMs, timeline.revealAtMs, timeline.damageAtMs, timeline.holdAtMs];
+  if (timeline.scoring) boundaries.push(timeline.scoring.countAtMs, timeline.scoring.countEndAtMs, timeline.scoring.subtractAtMs,
+    timeline.scoring.collisionAtMs, timeline.scoring.differenceAtMs, timeline.scoring.multiplierAtMs, timeline.scoring.flightAtMs, timeline.scoring.healthEndAtMs);
   if (state?.gameId === timeline.gameId && (timeline.phase === 'pre-round' || timeline.phase === 'live')) {
     const round = state.rounds.find(item => item.number === timeline.round);
     boundaries.push(round?.startAtMs ?? null, round?.endAtMs == null ? null : round.endAtMs - 15000, round?.endAtMs ?? null);

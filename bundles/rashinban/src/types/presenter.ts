@@ -105,7 +105,14 @@ export type Phase = 'waiting-game' | 'waiting-host' | 'pre-round' | 'live'
   | 'results-transition' | 'results-reveal' | 'between-rounds' | 'finished' | 'aborted';
 export type MusicContext = 'idle' | 'round' | 'urgent' | 'results';
 export type EffectKind = 'none' | 'single-5k' | 'double-5k';
-export type CueKind = 'pin' | 'guess' | 'countdown' | 'results' | 'count' | 'damage' | 'five-k';
+export type CueKind = 'pin' | 'guess' | 'countdown' | 'results' | 'count' | 'collision' | 'tie' | 'multiplier' | 'damage' | 'five-k';
+export type ScoreCalculation = { tied: boolean; winnerId: string | null; loserId: string | null; difference: number; damage: number; multiplier: number; hasDamage: boolean };
+export type ScoreSequence = ScoreCalculation & {
+  countAtMs: number; countEndAtMs: number; subtractAtMs: number; collisionAtMs: number; differenceAtMs: number;
+  multiplierAtMs: number | null; flightAtMs: number | null; impactAtMs: number | null; healthEndAtMs: number; completeAtMs: number;
+};
+export type ScoreStage = 'entry' | 'count' | 'score-hold' | 'subtract' | 'difference' | 'tie' | 'multiplier' | 'flight' | 'impact' | 'complete';
+export type ScoreProjection = ScoreCalculation & { stage: ScoreStage; entryProgress: number; subtractProgress: number; multiplierProgress: number; flightProgress: number; impactProgress: number; tieProgress: number };
 export type Cue = { id: string; kind: CueKind; atMs: number; untilMs: number; playerId: string | null };
 export type Timeline = {
   generation: string;
@@ -122,10 +129,12 @@ export type Timeline = {
   holdAtMs: number | null;
   cues: Cue[];
   hasDamage?: boolean;
+  scoring?: ScoreSequence | null;
+  scoringResult?: ScoreCalculation;
   // Observations suppress replay when snapshots or scheduled ticks repeat.
   observed: Record<string, { pin: Point | null; statePin?: Point | null; guessed: boolean; pinCueAtMs: number | null }>;
   countdownEndAtMs: number | null;
 };
 export type Timing = { leadMs: number; countMs: number; damageMs: number; effectWatchdogMs: number; pinRateLimitMs?: number };
-export type VisiblePlayer = { id: string; health: number; locked: boolean; score: number | null; distanceM: number | null };
-export type Projection = { phase: Phase; remainingMs: number | null; answer: Panorama | null; players: VisiblePlayer[] };
+export type VisiblePlayer = { id: string; health: number; healthBar?: number; locked: boolean; score: number | null; distanceM: number | null };
+export type Projection = { phase: Phase; remainingMs: number | null; answer: Panorama | null; players: VisiblePlayer[]; scoring?: ScoreProjection };

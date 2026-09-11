@@ -32,7 +32,7 @@ Audio mode changes keep the old lease in a releasing state until its browser has
 
 ## Interaction and result sounds
 
-Pin placement uses shared state/telemetry coordinate history with a 150 ms minimum interval; panning and repeated coordinates stay silent. Submission plays once per game/round/player, including the first guess, and is never inferred from a no-pin timeout. A known deadline schedules only the remaining 3, 2, 1 seconds; shortening it replaces pending ticks. Results/count/damage follow the shared presentation stages. Count loops stop at damage time, and zero health loss has no damage sound.
+Pin placement uses shared state/telemetry coordinate history with a 150 ms minimum interval; panning and repeated coordinates stay silent. Submission plays once per game/round/player, including the first guess, and is never inferred from a no-pin timeout. A known deadline schedules only the remaining 3, 2, 1 seconds; shortening it replaces pending ticks. Result entry, counting, score collision or tie, multiplication, and HP impact have separate timestamped cues. Count loops stop when score counting ends, before subtraction. Zero health loss has no damage sound. Select custom `collision`, `tie`, and `multiplier` assets in the dashboard to hear those new stages; empty selections remain silent and no GeoGuessr audio is bundled.
 
 Cues use the same AudioContext and ownership gate as music. Expired one-shots are ignored after 250 ms; new owners ignore historical one-shots and join only the remaining count interval. Future cues survive refresh when still eligible, without replaying earlier cues. Generation replacement cancels pending sounds. Already started one-shots finish their selected asset unless the sequence or audio ownership is canceled.
 
@@ -63,7 +63,7 @@ A selected video has this form:
 
 Music stems contain `id`, `url`, `loopStartS`, `loopEndS`, and gains for `idle`, `round`, `urgent`, and `results`. IDs must be unique, nonempty, and contain only letters, digits, underscores or hyphens (80 characters maximum). All gains are finite values from 0 to 1. Loop bounds are finite seconds from 0 to 86400, with end strictly after start; decoding and loop-to-file-duration checks belong to the music player. Fade values are finite milliseconds from 0 to 120000. At most 32 stems are accepted.
 
-Sound keys are `pin`, `guess`, `countdown`, `results`, `count`, `damage`, and `five-k`. URLs must be canonical, root-relative NodeCG asset URLs within the matching category of this bundle. Remote URLs, cross-bundle/category URLs, query strings, fragments and path traversal are rejected. Use the inventory URLs directly; filenames are URI-encoded by NodeCG. Unknown manifest fields and unsupported soundtrack values are rejected.
+Sound keys are `pin`, `guess`, `countdown`, `results`, `count`, `collision`, `tie`, `multiplier`, `damage`, and `five-k`. URLs must be canonical, root-relative NodeCG asset URLs within the matching category of this bundle. Remote URLs, cross-bundle/category URLs, query strings, fragments and path traversal are rejected. Use the inventory URLs directly; filenames are URI-encoded by NodeCG. Unknown manifest fields and unsupported soundtrack values are rejected.
 
 ## Playback evidence and OBS setup
 

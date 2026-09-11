@@ -12,7 +12,7 @@ import { createConnection, createDefaultConnectionDeps, type ConnectionDeps } fr
 import { loadConnectionConfig } from './secrets.ts';
 import { createReplay, loadReplay, REPLAY_FIXTURES, shiftMessageClock } from './replay.ts';
 import { mountPresenterRoutes, PRESENTER_ACTIONS, type PresenterAction } from './routes.ts';
-import { AUDIO_STATES, celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest, type AudioStatus } from '../../presenter/media.ts';
+import { AUDIO_STATES, CUE_KINDS, celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest, type AudioStatus } from '../../presenter/media.ts';
 import type { PresenterMediaStatus } from '../../types/replicants.ts';
 
 type Clock = { now(): number; schedule(fn: () => void, delayMs: number): () => void; connection?: ConnectionDeps };
@@ -94,7 +94,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
       if (value.audio !== undefined) {
         const status = record(value.audio);
         if (Object.keys(status).some(k => !['state', 'missing'].includes(k)) || !AUDIO_STATES.includes(status.state as AudioStatus['state'])
-          || !Array.isArray(status.missing) || status.missing.length > 39 || status.missing.some(id => typeof id !== 'string' || !/^[\w-]{1,80}$/.test(id))) throw Error();
+          || !Array.isArray(status.missing) || status.missing.length > 32 + CUE_KINDS.length || status.missing.some(id => typeof id !== 'string' || !/^[\w-]{1,80}$/.test(id))) throw Error();
         audio = { state: status.state as AudioStatus['state'], missing: [...status.missing] as string[] };
       }
       if (value.clockFresh !== undefined && typeof value.clockFresh !== 'boolean') throw Error();

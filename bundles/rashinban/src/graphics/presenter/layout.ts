@@ -1,5 +1,18 @@
 import type { Mode } from '../../types/presenter.ts';
 import type { DuelState, Timeline } from '../../types/presenter.ts';
+import type { RenderFrame } from './renderer.ts';
+
+export function lockLayout(frame: RenderFrame): 'none' | 'left' | 'right' | 'both' {
+  if (frame.source !== 'rendered' || frame.projection.phase !== 'live'
+    || (frame.displayedRound !== undefined && frame.displayedRound !== frame.state.round)) return 'none';
+  const locked = (['left', 'right'] as const).map(side => {
+    const id = frame.playerIds?.[side];
+    const player = frame.state.players.find(player => player.id === id);
+    return !!player?.guesses.some(guess => guess.round === frame.state.round)
+      && !!frame.projection.players.find(player => player.id === id)?.locked;
+  });
+  return locked[0] && locked[1] ? 'both' : locked[0] ? 'left' : locked[1] ? 'right' : 'none';
+}
 
 export function multiplierLabel(state: DuelState | null, timeline: Timeline, sides: { left: string | null; right: string | null }): string {
   const results = !['waiting-game', 'pre-round', 'live', 'aborted'].includes(timeline.phase);

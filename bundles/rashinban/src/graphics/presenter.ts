@@ -2,7 +2,8 @@ import { REPLICANTS, type RendererStatus, type PresenterClients } from '../types
 import type { DuelState, SeriesState, Timeline, Views } from '../types/presenter.ts';
 import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
 import { project } from '../presenter/projection.ts';
-import { layoutKind, multiplierLabel, distanceLabel } from './presenter/layout.ts';
+import { layoutKind, multiplierLabel, distanceLabel, lockLayout } from './presenter/layout.ts';
+import { paintScoring } from './presenter/scoring.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
 import type { GameRenderer, RenderFrame } from './presenter/renderer.ts';
 import { clientRole, createPresenterClient } from './presenter/client.ts';
@@ -102,7 +103,7 @@ function frame() {
       write(`${side}-handle`, competitor.handle);
       write(`${side}-wins`, String(competitor.wins));
       write(`${side}-health`, player ? String(player.health) : '—');
-      const health = Math.max(0, Math.min(1, (player?.health ?? 0) / (state?.initialHealth || 6000)));
+      const health = Math.max(0, Math.min(1, (player?.healthBar ?? player?.health ?? 0) / (state?.initialHealth || 6000)));
       element(`${side}-health-fill`).style.transform = `scaleX(${health})`;
       element(`${side}-health-fill`).style.background = health < 0.25 ? '#e04f66' : health < 0.5 ? '#dbae40' : '#8abb43';
       element(`${side}-lock`).hidden = visible.phase !== 'live' || !player?.locked;
@@ -110,6 +111,7 @@ function frame() {
       const distance = player?.distanceM;
       write(`${side}-distance`, distanceLabel(distance, player?.score));
     }
+    paintScoring(document.body, visible, match);
     element('timer').hidden = visible.remainingMs === null;
     element('timer').classList.toggle('urgent', timing.music === 'urgent');
     const seconds = Math.ceil((visible.remainingMs ?? 0) / 1000);
@@ -128,10 +130,12 @@ function frame() {
     if (state && views.value) {
       previousFrame = { state, views: views.value, projection: visible, source: options.viewSource,
         displayedRound: timing.round, playerIds: { left: match.left.playerId, right: match.right.playerId } };
+      document.body.dataset.lock = lockLayout(previousFrame);
       renderer?.render(previousFrame);
     }
   }
   if ((!state || !views.value || !timing || !match) && previousFrame) {
+    document.body.dataset.lock = 'none';
     renderer?.render({ ...previousFrame, source: options.viewSource, projection: { phase: 'waiting-game', answer: null, players: [], remainingMs: null } });
     previousFrame = null;
   }
