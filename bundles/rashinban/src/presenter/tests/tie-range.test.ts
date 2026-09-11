@@ -208,6 +208,20 @@ test('an abort before custom knockout remains aborted', () => {
   assert.equal(derived.winnerTeamId, 'red-team');
 });
 
+test('a settled knockout ignores incomplete or malformed later server rounds', () => {
+  for (const kind of ['asymmetric', 'score', 'panorama', 'duplicate']) {
+    const source = state([[5000, 0], [5000, 0], [4000, 3000]]);
+    if (kind === 'asymmetric') source.players[1].results.pop();
+    if (kind === 'score') source.players[0].results[2].score = 5001;
+    if (kind === 'panorama') source.rounds.pop();
+    if (kind === 'duplicate') source.players[0].results.push({ ...source.players[0].results[2] });
+    const derived = deriveTieRange(source, 'full');
+    assert.equal(derived.round, 2, kind);
+    assert.equal(derived.status, 'Finished', kind);
+    assert.equal(derived.winnerTeamId, 'blue-team', kind);
+  }
+});
+
 test('the completed round limit decides a winner or draw from remaining custom HP', () => {
   const winner = deriveTieRange(state([[4000, 3000], [4000, 3000]], { maxRounds: 2 }), 'full');
   assert.deepEqual({ status: winner.status, winner: winner.winnerTeamId, draw: winner.isDraw }, {

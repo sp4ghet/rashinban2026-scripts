@@ -29,25 +29,17 @@ function roundHalfEven(difference: number, multiplierTenths: number): number {
   return integer + (remainder > 5 || (remainder === 5 && integer % 2 !== 0) ? 1 : 0);
 }
 
-function resultsByRound(results: RoundResult[], playerId: string): Map<number, RoundResult> {
-  const mapped = new Map<number, RoundResult>();
-  for (const result of results) {
-    if (!Number.isInteger(result.round) || result.round < 1 || mapped.has(result.round)) {
-      throw new Error(`Invalid tie-range result history for player ${playerId}`);
-    }
-    mapped.set(result.round, result);
-  }
-  return mapped;
-}
-
-function validatedCompletedRounds(state: DuelState): Array<[RoundResult, RoundResult]> {
-  const blue = resultsByRound(state.players[0].results, state.players[0].id);
-  const red = resultsByRound(state.players[1].results, state.players[1].id);
-  const highest = Math.max(0, ...blue.keys(), ...red.keys());
-  const completed: Array<[RoundResult, RoundResult]> = [];
+/** Validate lazily: server rounds after our terminal round do not belong to this game. */
+function* validatedCompletedRounds(state: DuelState): Generator<[RoundResult, RoundResult]> {
+  const all = state.players.flatMap(player => player.results);
+  if (all.some(result => !Number.isInteger(result.round) || result.round < 1)) throw new Error('Invalid tie-range round number');
+  const highest = Math.max(0, ...all.map(result => result.round));
   for (let round = 1; round <= highest; round += 1) {
-    const blueResult = blue.get(round);
-    const redResult = red.get(round);
+    const blue = state.players[0].results.filter(result => result.round === round);
+    const red = state.players[1].results.filter(result => result.round === round);
+    if (blue.length > 1 || red.length > 1) throw new Error(`Duplicate tie-range result at round ${round}`);
+    const blueResult = blue[0];
+    const redResult = red[0];
     if (!blueResult && !redResult) throw new Error(`Tie-range result history has a gap at round ${round}`);
     if (!blueResult || !redResult) throw new Error(`Incomplete tie-range result history at round ${round}`);
     if (!state.rounds.some(candidate => candidate.number === round)) {
@@ -58,9 +50,8 @@ function validatedCompletedRounds(state: DuelState): Array<[RoundResult, RoundRe
         throw new Error(`Invalid tie-range score at round ${round}`);
       }
     }
-    completed.push([blueResult, redResult]);
+    yield [blueResult, redResult];
   }
-  return completed;
 }
 
 function deriveHealth(state: DuelState, mode: Exclude<TieRangeMode, 'off'> | null): DuelState {
@@ -84,9 +75,11 @@ function deriveHealth(state: DuelState, mode: Exclude<TieRangeMode, 'off'> | nul
   let terminalWinner: string | null = null;
   let terminalDraw = false;
   const metadata: TieRangeRound[] = [];
+  let lastCompleted = 0;
 
   for (const [blueSource, redSource] of completed) {
     const roundNumber = blueSource.round;
+    lastCompleted = roundNumber;
     const scores = [blueSource.score, redSource.score];
     const bestScore = Math.max(scores[0], scores[1]);
     const band = mode === null ? 0 : tieRangeBand(bestScore, mode);
@@ -161,8 +154,7 @@ function deriveHealth(state: DuelState, mode: Exclude<TieRangeMode, 'off'> | nul
       player.guesses = player.guesses.filter(guess => guess.round <= terminalRound!);
       player.results = player.results.filter(result => result.round <= terminalRound!);
     }
-  } else if (completed.length > 0) {
-    const lastCompleted = completed.at(-1)![0].round;
+  } else if (lastCompleted > 0) {
     const nextRound = derived.rounds.find(round => round.number > lastCompleted);
     if (nextRound) nextRound.multiplier = mutualTenths / 10;
   }
