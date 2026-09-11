@@ -48,14 +48,14 @@ test('both automatic and manual results preview only after all 5K and scoring st
     s.rounds.pop(); assert.equal(projectScene(s, t, t.holdAtMs! + 60000).kind, 'results');
   }
 });
-test('finished winner and played-round summary persist, never revealing a privileged unused round', () => {
+test('finished winner persists, never revealing a privileged unused round', () => {
   const s = result(); s.status = 'Finished'; s.winnerTeamId = s.players[1].teamId;
   const t = advanceTimeline(null, s, 10000, true, DEFAULT_TIMING);
   for (const now of [10000, 16001, 1000000]) {
     const scene = projectScene(s, t, now);
     assert.equal(scene.kind, 'summary'); assert.equal(scene.winnerTeamId, s.players[1].teamId);
     assert.equal(scene.previewRound, null); assert.equal(scene.prewarmRound, null);
-    assert.deepEqual(scene.rounds.map(row => row.round), [1]);
+    assert.equal(scene.winnerPlayerId, s.players[1].id);
   }
   s.isDraw = true; assert.equal(projectScene(s, t, 10000).winnerTeamId, null);
   s.aborted = true; assert.equal(projectScene(s, t, 10000).kind, 'aborted');
@@ -73,7 +73,7 @@ test('paused scenes retain their valid presentation without a countdown; new gam
   assert.notEqual(scene.previewRound, before.previewRound);
   assert.equal(scene.projection.remainingMs, null);
 });
-test('round limit blocks a next preview and final scoring finishes before a paged summary', () => {
+test('round limit blocks a next preview and final scoring finishes before the winner appears', () => {
   const s = result(); s.maxRounds = 1;
   let t = advanceTimeline(null, s, 10000, false, DEFAULT_TIMING);
   s.status = 'Finished'; assert.notEqual(projectScene(s, t, 10000).kind, 'summary');
@@ -81,21 +81,14 @@ test('round limit blocks a next preview and final scoring finishes before a page
   assert.notEqual(projectScene(s, t, t.holdAtMs! - 1).kind, 'summary');
   s.status = 'Ongoing'; assert.equal(projectScene(s, t, t.holdAtMs!).kind, 'results');
   assert.equal(projectScene(s, t, t.holdAtMs!).prewarmRound, null);
-  s.status = 'Finished'; s.round = 50;
-  s.players.forEach(player => { const first = player.results[0]; player.results = Array.from({ length: 50 }, (_, i) => ({ ...first, round: i + 1 })); });
-  t = advanceTimeline(null, s, 20000, true, DEFAULT_TIMING);
-  for (let page = 0; page < 5; page++) {
-    const scene = projectScene(s, t, 20000 + page * 8000);
-    assert.equal(scene.kind, 'summary'); assert.equal(scene.pageRounds.length, 10);
-    assert.equal(scene.pageRounds[0].round, page * 10 + 1); assert.equal(scene.pages, 5);
-  }
+  s.status = 'Finished'; assert.equal(projectScene(s, t, t.holdAtMs!).kind, 'summary');
 });
 test('a final snapshot arriving before its timeline cannot skip the final round scoring', () => {
   const s = result(); const previous = advanceTimeline(null, s, 10000, true, DEFAULT_TIMING);
   s.round = 2; s.status = 'Finished'; s.winnerTeamId = s.players[0].teamId;
   s.players.forEach(player => player.results.push({ ...player.results[0], round: 2, score: 5000 }));
   const mismatched = projectScene(s, previous, 20000);
-  assert.notEqual(mismatched.kind, 'summary'); assert.equal(mismatched.rounds.length, 0);
+  assert.notEqual(mismatched.kind, 'summary'); assert.equal(mismatched.winnerPlayerId, null);
   const finalTimeline = advanceTimeline(previous, s, 20000, false, DEFAULT_TIMING);
   assert.equal(finalTimeline.effect, 'double-5k');
   assert.notEqual(projectScene(s, finalTimeline, 20000).kind, 'summary');

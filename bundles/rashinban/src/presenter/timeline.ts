@@ -95,26 +95,34 @@ function liveCues(timeline: Timeline, state: DuelState, nowMs: number, bootstrap
   }
   const end = round?.endAtMs ?? null;
   const countdownEndAtMs = timeline.phase === 'live' || timeline.phase === 'pre-round' ? end : null;
-  if (countdownEndAtMs !== timeline.countdownEndAtMs) {
-    // First guess can replace the maximum-round deadline: remove its scheduled ticks.
-    for (let i = cues.length - 1; i >= 0; i--) if (cues[i].kind === 'countdown') cues.splice(i, 1);
-    if (countdownEndAtMs !== null) {
-      for (let seconds = 3; seconds >= 1; seconds--) {
-        const atMs = countdownEndAtMs - seconds * 1000;
-        if (atMs >= nowMs + timing.leadMs && atMs >= (round?.startAtMs ?? 0)) {
-          cues.push({ ...cue(timeline, 'countdown', atMs, atMs + 250), id: `${timeline.generation}:countdown:${countdownEndAtMs}:${seconds}` });
-        }
+  const alreadyStarted = timeline.countdownStarted === true || timeline.cues.some(item => item.kind === 'countdown' && item.atMs <= nowMs);
+  if (countdownEndAtMs !== timeline.countdownEndAtMs || round?.timerStartAtMs !== timeline.countdownTimerStartAtMs
+    || roundStartAtMs !== timeline.roundStartAtMs) {
+    // Replace a pending long-round schedule when the first guess shortens it.
+    // Once its window has begun, further guesses/deadline updates never restart it.
+    if (!alreadyStarted) {
+      for (let i = cues.length - 1; i >= 0; i--) if (cues[i].kind === 'countdown') cues.splice(i, 1);
+      if (countdownEndAtMs !== null && round?.startAtMs != null && round.timerStartAtMs !== null) {
+        const atMs = Math.max(round.startAtMs, round.timerStartAtMs, countdownEndAtMs - 15000);
+        if (atMs < countdownEndAtMs) cues.push({ ...cue(timeline, 'countdown', atMs, countdownEndAtMs),
+          offsetS: Math.max(0, (15000 - (countdownEndAtMs - atMs)) / 1000),
+          id: `${timeline.generation}:countdown:${countdownEndAtMs}` });
       }
     }
   }
-  return applyPinCues({ ...timeline, cues, observed, countdownEndAtMs, roundStartAtMs }, changedPins, nowMs, timing);
+  const countdownStarted = alreadyStarted || cues.some(item => item.kind === 'countdown' && item.atMs <= nowMs);
+  return applyPinCues({ ...timeline, cues, observed, countdownEndAtMs, countdownStarted,
+    countdownTimerStartAtMs: round?.timerStartAtMs ?? null, roundStartAtMs }, changedPins, nowMs, timing);
 }
 
 /** Accept normalized authoritative state; call again on time boundaries even without a new snapshot. */
 export function advanceTimeline(previous: Timeline | null, state: DuelState | null, nowMs: number, bootstrap: boolean, timing: Timing,
   effectWatchdogs: Partial<Record<Exclude<EffectKind, 'none'>, number>> = {}): Timeline {
+  const roundStart = state?.rounds.find(round => round.number === state.round)?.startAtMs;
+  const restarted = previous?.gameId === state?.gameId && previous?.round === state?.round
+    && previous?.roundStartAtMs != null && roundStart !== undefined && roundStart !== previous.roundStartAtMs;
   const replace = bootstrap || previous === null || previous.gameId !== (state?.gameId ?? null)
-    || previous.round !== (state?.round ?? null) || (state?.aborted && previous.phase !== 'aborted');
+    || previous.round !== (state?.round ?? null) || restarted || (state?.aborted && previous.phase !== 'aborted');
   let timeline = replace ? fresh(previous, state, nowMs) : { ...previous! };
   if (state === null) return timeline;
   if (state.aborted) return { ...timeline, phase: 'aborted', music: 'idle' };
@@ -124,10 +132,8 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
     if (bootstrap) {
       timeline = { ...timeline, revealAtMs: nowMs, damageAtMs: nowMs, holdAtMs: nowMs };
     } else if (timeline.revealAtMs === null && timeline.effect === 'none') {
-      // Results can arrive before a scheduled lock-in starts, or carry the
-      // final guess themselves. Observe it while still live and retain those
-      // one-shots through scoring; the audio engine lets them finish naturally.
-      timeline = liveCues(timeline, state, nowMs, bootstrap, timing);
+      // Preserve genuine live submission cues even before their scheduled
+      // start. Never infer a submission from results: timeout can insert guesses.
       const scores = state.players.map(player => player.results.find(result => result.round === timeline.round)!.score);
       const effect = effectFor(scores);
       timeline = { ...timeline, phase: 'results-transition', music: 'results', cues: timeline.cues.filter(item => item.kind === 'guess'), effect,

@@ -34,11 +34,10 @@ locations or puts an answer pin on the preview map. Game, round and mapping
 identities guard panorama reuse; hidden/chroma surfaces remain invisible.
 
 After final scoring, the winner follows `winnerTeamId`, not HP comparison. Draws
-are neutral; aborted games say GAME CANCELLED. The winner and played-round table
-remain until a new game replaces the state. There is no six-second expiry,
-automatic lobby navigation, or avatar animation. At most ten rows appear per
-page; longer summaries cycle every eight seconds on the shared clock and show
-their round range. Future unplayed rounds never appear in the table.
+are neutral; aborted games say GAME CANCELLED. The post-game panel shows only
+the winner and remains until a new game replaces the state. There is no match
+breakdown, six-second expiry, automatic lobby navigation, or avatar animation.
+The series header and camera windows remain visible.
 
 A paused/review game shows a banner and suppresses the running countdown without
 inventing a new start time. A valid existing preview can remain during review;
@@ -47,6 +46,6 @@ slate and clears retained frames. A new game clears the prior scene selection.
 
 Behavior reference: `docs/geoguessr/game-master-flow.md` in the main checkout and
 its captured manual/automatic game-master states. The custom automatic preview
-and combined winner/summary hold above are intentional broadcast adaptations.
+and winner hold above are intentional broadcast adaptations.
 The isolated browser QA can call `projectScene` and `paintScene` from
 `src/graphics/presenter/scene.ts` without writing Replicants.

@@ -43,9 +43,13 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
     if (timeline.phase === 'aborted') return;
     for (const cue of timeline.cues) {
       const remember = () => { played.add(cue.id); history.set(cue.id, { game: timeline.gameId, round: timeline.round }); };
-      if (adopting && cue.kind !== 'count' && cue.atMs < now) { remember(); continue; }
+      const countdown = cue.kind === 'countdown';
+      if (countdown && timeline.phase !== 'live' && timeline.phase !== 'pre-round') continue;
+      if (adopting && cue.kind !== 'count' && !countdown && cue.atMs < now) { remember(); continue; }
       if (!canPlayCue(cue, now, played)) continue;
       const buffer = sounds[cue.kind]; if (!buffer || cue.kind === 'five-k' && (effect?.soundtrack !== 'cue' || programOwner === null)) continue;
+      const offset = countdown ? Math.max(0, cue.offsetS ?? 0) + Math.max(0, (now - cue.atMs) / 1000) : 0;
+      if (offset >= buffer.duration) { remember(); continue; }
       const start = time + Math.max(0, (cue.atMs - now) / 1000);
       // Keep far-future records eligible until an audible lease covers their start.
       if (start >= cutoff) continue;
@@ -55,7 +59,7 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       source.buffer = buffer; source.loop = cue.kind === 'count';
       gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain, time);
       source.connect(gain); gain.connect(gate);
-      source.start(start, cue.kind === 'count' ? Math.max(0, (now - cue.atMs) / 1000) % buffer.duration : 0);
+      source.start(start, cue.kind === 'count' ? Math.max(0, (now - cue.atMs) / 1000) % buffer.duration : offset);
       if (cue.kind === 'count' || cue.kind === 'five-k') source.stop(time + Math.max(0, (end - now) / 1000));
       cueNodes.set(cue.id, { source, gain, cue, start, programOwner }); remember();
       source.onended = () => { if (cueNodes.get(cue.id)?.source === source) cueNodes.delete(cue.id); source.disconnect(); gain.disconnect(); };

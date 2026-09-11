@@ -10,7 +10,7 @@ The initial snapshot also contains the unstarted second round, matching the
 privileged game-master API. Once round 1 scoring finishes, the presenter previews
 that distinct next panorama while keeping round 1's settled HP. This happens in
 both automatic and manual start modes. At the two-round limit, it retains the
-final results until Finished arrives, then holds the winner and round summary.
+final results until Finished arrives, then holds the winner announcement.
 
 | Elapsed | What to watch |
 | --- | --- |

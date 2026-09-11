@@ -76,8 +76,10 @@ test('showcase ingests both players movement and maps, reverses lock order, and 
         firstLocks.push(locked[0].id);
         assert.equal(projection.remainingMs, 15000);
         assert.equal(timeline.music, 'urgent');
-        const lastSeconds = timeline.cues.filter(cue => cue.kind === 'countdown').map(cue => cue.atMs);
-        for (const remaining of [1000, 2000, 3000]) assert.ok(lastSeconds.includes(row.receivedAt + 15000 - remaining));
+        const countdown = timeline.cues.filter(cue => cue.kind === 'countdown');
+        assert.equal(countdown.length, 1);
+        assert.equal(countdown[0].atMs, row.receivedAt);
+        assert.equal(countdown[0].untilMs, row.receivedAt + 15000);
       }
       assert.equal(projection.answer, null);
       assert.ok(projection.players.every(player => player.score === null));

@@ -116,7 +116,7 @@ export type ScoreSequence = ScoreCalculation & {
 };
 export type ScoreStage = 'entry' | 'count' | 'score-hold' | 'subtract' | 'difference' | 'tie' | 'multiplier' | 'flight' | 'impact' | 'complete';
 export type ScoreProjection = ScoreCalculation & { stage: ScoreStage; entryProgress: number; subtractProgress: number; multiplierProgress: number; flightProgress: number; impactProgress: number; tieProgress: number };
-export type Cue = { id: string; kind: CueKind; atMs: number; untilMs: number; playerId: string | null };
+export type Cue = { id: string; kind: CueKind; atMs: number; untilMs: number; playerId: string | null; offsetS?: number };
 export type Timeline = {
   generation: string;
   revision: number;
@@ -137,6 +137,8 @@ export type Timeline = {
   // Observations suppress replay when snapshots or scheduled ticks repeat.
   observed: Record<string, { pin: Point | null; statePin?: Point | null; guessed: boolean; pinCueAtMs: number | null }>;
   countdownEndAtMs: number | null;
+  countdownStarted?: boolean;
+  countdownTimerStartAtMs?: number | null;
   roundStartAtMs?: number | null;
 };
 export type Timing = { leadMs: number; countMs: number; damageMs: number; effectWatchdogMs: number; pinRateLimitMs?: number };

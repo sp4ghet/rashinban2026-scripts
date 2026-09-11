@@ -1,8 +1,8 @@
 import type { Cue, DuelState, Point, Timeline, Timing } from '../types/presenter.ts';
 
-/** Future cues can be scheduled; only count is an interval that may be joined late. */
+/** Count loops and the deadline-aligned countdown may be joined while active. */
 export function canPlayCue(cue: Cue, nowMs: number, played: ReadonlySet<string>): boolean {
-  return !played.has(cue.id) && nowMs < cue.untilMs && (cue.kind === 'count' || nowMs < cue.atMs + 250);
+  return !played.has(cue.id) && nowMs < cue.untilMs && (cue.kind === 'count' || cue.kind === 'countdown' || nowMs < cue.atMs + 250);
 }
 export function samePin(a: Point | null | undefined, b: Point | null | undefined): boolean {
   return a?.lat === b?.lat && a?.lng === b?.lng;

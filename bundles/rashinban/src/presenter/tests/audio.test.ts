@@ -109,7 +109,26 @@ test('equal-gain context transition applies its authored fade without restarting
 });
 
 const cueMedia: MediaManifest = { ...EMPTY_MEDIA, sounds: { pin: '/pin', guess: '/guess', countdown: '/tick', results: '/results', count: '/count', damage: '/damage', 'five-k': '/five-k' } };
-test('second lock-in plays in full across immediate results, including coalesced guesses and 5K', async () => {
+test('continuous countdown seeks on late entry, finishes through results, and skips stale tails', async () => {
+  const p = port(); await p.audio.load(cueMedia); p.audio.lease(30000, 8000);
+  const t = { ...timeline, cues: [cue('continuous', 'countdown', 1000, 16000)] };
+  p.audio.sync(t, DEFAULT_SETTINGS, 8000);
+  assert.equal(p.sources.length, 1);
+  assert.deepEqual(p.sources[0].starts[0], [10, 7]);
+  p.context.currentTime = 11;
+  p.audio.sync({ ...t, phase: 'results-transition', cues: [] }, DEFAULT_SETTINGS, 9000);
+  assert.equal(p.sources[0].stops, 0);
+  const stale = port(); await stale.audio.load(cueMedia); stale.audio.lease(30000, 17000);
+  stale.audio.sync(t, DEFAULT_SETTINGS, 17000); assert.equal(stale.sources.length, 0);
+  const short = port(); await short.audio.load(cueMedia); short.audio.lease(30000, 1000);
+  short.audio.sync({ ...t, cues: [{ ...cue('short', 'countdown', 1000, 11000), offsetS: 5 }] }, DEFAULT_SETTINGS, 1000);
+  assert.deepEqual(short.sources[0].starts[0], [10, 5]);
+  const pending = port(); await pending.audio.load(cueMedia); pending.audio.lease(30000, 1000);
+  pending.audio.sync({ ...t, cues: [cue('pending', 'countdown', 5000, 20000)] }, DEFAULT_SETTINGS, 1000);
+  pending.audio.sync({ ...t, phase: 'results-transition', cues: [] }, DEFAULT_SETTINGS, 1100);
+  assert.equal(pending.sources[0].stops, 1);
+});
+test('actual second lock-in finishes across results; guesses first seen in timeout results stay silent', async () => {
   for (const perfect of [false, true]) for (const coalesced of [false, true]) {
     const rows = loadReplay('gs2-ws-presenter-showcase.json');
     const result = structuredClone(applySnapshot(null, rows.find(row => (row.message as { code: string }).code === 'DuelRoundTimedOut')!.message).state!);
@@ -128,6 +147,11 @@ test('second lock-in plays in full across immediate results, including coalesced
     }
     t = advanceTimeline(t, result, 1150, false, DEFAULT_SETTINGS.timing);
     p.context.currentTime = 10.15; p.audio.sync(t, DEFAULT_SETTINGS, 1150);
+    if (coalesced) {
+      assert.equal(p.sources.length, 0, 'timeout result guesses are not submission events');
+      assert.equal(t.cues.some(cue => cue.kind === 'guess'), false);
+      continue;
+    }
     assert.equal(p.sources.length, 1, `lock-in must exist: perfect=${perfect}, coalesced=${coalesced}`);
     const sound = p.sources[0];
     assert.equal(sound.stops, 0, 'results must not cancel the pending lock-in');

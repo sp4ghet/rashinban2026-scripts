@@ -1,12 +1,10 @@
 import type { DuelState, Projection, SeriesState, Timeline } from '../../types/presenter.ts';
 import { project } from '../../presenter/projection.ts';
 
-export type SummaryRound = { round: number; players: { id: string; score: number | null; health: number | null; damage: number | null }[] };
 export type PresenterScene = {
   gameId: string | null; serverRound: number | null; kind: 'waiting' | 'live' | 'preview' | 'results' | 'transition' | 'summary' | 'aborted';
   projection: Projection; previewRound: number | null; prewarmRound: number | null; countdown: number | null;
   paused: boolean; winnerTeamId: string | null; winnerPlayerId: string | null; draw: boolean;
-  rounds: SummaryRound[]; pageRounds: SummaryRound[]; page: number; pages: number;
 };
 
 /** Local scene selection never advances the server round or starts a game. */
@@ -14,7 +12,7 @@ export function projectScene(state: DuelState | null, timeline: Timeline, nowMs:
   const projection = project(state, timeline, nowMs);
   const scene: PresenterScene = { gameId: state?.gameId ?? null, serverRound: state?.round ?? null,
     kind: 'waiting', projection, previewRound: null, prewarmRound: null, countdown: null,
-    paused: false, winnerTeamId: null, winnerPlayerId: null, draw: false, rounds: [], pageRounds: [], page: 0, pages: 1 };
+    paused: false, winnerTeamId: null, winnerPlayerId: null, draw: false };
   if (!state || state.gameId !== timeline.gameId) return scene;
   scene.paused = state.paused && state.status !== 'Finished';
   const current = state.rounds.find(round => round.number === state.round);
@@ -56,14 +54,6 @@ export function projectScene(state: DuelState | null, timeline: Timeline, nowMs:
     scene.countdown = null; scene.projection = { ...scene.projection, remainingMs: null };
   }
   if (scene.kind === 'summary' || scene.kind === 'aborted') {
-    const rounds = [...new Set(state.players.flatMap(player => player.results.map(result => result.round)))].filter(round => round <= state.round).sort((a, b) => a - b);
-    scene.rounds = rounds.map(round => ({ round, players: state.players.map(player => {
-      const result = player.results.find(result => result.round === round);
-      return { id: player.id, score: result?.score ?? null, health: result?.healthAfter ?? null, damage: result?.damageDealt ?? null };
-    }) }));
-    scene.pages = Math.max(1, Math.ceil(scene.rounds.length / 10));
-    scene.page = Math.floor(Math.max(0, nowMs - (timeline.holdAtMs ?? 0)) / 8000) % scene.pages;
-    scene.pageRounds = scene.rounds.slice(scene.page * 10, (scene.page + 1) * 10);
     scene.projection = { ...projection, answer: null, scoring: undefined, remainingMs: null };
   }
   return scene;
@@ -83,21 +73,4 @@ export function paintScene(root: HTMLElement, scene: PresenterScene, series: Ser
   const winner = [series.left, series.right].find(player => player.playerId === scene.winnerPlayerId);
   el('summary-title').textContent = scene.kind === 'aborted' ? 'GAME CANCELLED' : scene.draw ? 'DRAW' : winner ? `${winner.name} WINS` : 'GAME FINISHED';
   el('summary-title').dataset.winner = winner === series.left ? 'left' : winner === series.right ? 'right' : 'none';
-  el('summary-left-name').textContent = series.left.name;
-  el('summary-right-name').textContent = series.right.name;
-  const label = scene.pageRounds.length ? `ROUNDS ${scene.pageRounds[0].round}–${scene.pageRounds.at(-1)!.round} OF ${scene.rounds.length}` : 'NO COMPLETED ROUNDS';
-  el('summary-page').textContent = label;
-  const rows = el('summary-rows');
-  const signature = JSON.stringify([scene.pageRounds, series.left.playerId, series.right.playerId]);
-  if (rows.dataset.content === signature) return;
-  rows.dataset.content = signature;
-  rows.replaceChildren(...scene.pageRounds.map(round => {
-    const row = root.ownerDocument.createElement('tr');
-    const cells = [String(round.round), ...[series.left, series.right].map(player => {
-      const value = round.players.find(value => value.id === player.playerId);
-      return value?.score == null ? '—' : `${value.score.toLocaleString('en-US')} pts · ${value.damage ?? 0} damage · ${value.health ?? '—'} HP`;
-    })];
-    cells.forEach(text => { const cell = root.ownerDocument.createElement('td'); cell.textContent = text; row.append(cell); });
-    return row;
-  }));
 }

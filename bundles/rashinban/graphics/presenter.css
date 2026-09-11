@@ -64,10 +64,6 @@ body[data-source="chroma"] #preview-map { display: none; }
 #preview-countdown { position: absolute; inset: 0; display: grid; place-items: center; font-size: 150px; text-shadow: 0 5px 25px #000; z-index: 2; }
 #waiting-area { display: grid; place-items: center; font-size: 44px; letter-spacing: .15em; }
 #review-banner { position: absolute; top: 218px; left: 700px; width: 520px; text-align: center; background: #a96c16; padding: 8px 12px; font-size: 23px; font-weight: 800; z-index: 20; }
-#summary-area { padding: 18px 75px; background: #111827ed; }
-#summary-title { margin: 0; text-align: center; font-size: 48px; line-height: 1.15; }
+#summary-area { display: grid; place-items: center; padding: 40px 75px; background: #111827ed; }
+#summary-title { margin: 0; max-width: 100%; text-align: center; font-size: 80px; line-height: 1.15; overflow-wrap: anywhere; }
 #summary-title[data-winner="left"] { color: #78adff; } #summary-title[data-winner="right"] { color: #ff8290; }
-#summary-page { margin: 8px 0 10px; text-align: center; color: #acb6ca; font-size: 17px; letter-spacing: .12em; }
-#summary-table { width: 100%; border-collapse: collapse; font-size: 20px; font-variant-numeric: tabular-nums; }
-#summary-table th { color: #acb6ca; font-size: 15px; padding: 6px; } #summary-table td { padding: 4px 6px; border-top: 1px solid #ffffff20; text-align: center; }
-#summary-table th:first-child { width: 100px; } #summary-table td:nth-child(2) { color: #9ac3ff; } #summary-table td:nth-child(3) { color: #ffacb6; }

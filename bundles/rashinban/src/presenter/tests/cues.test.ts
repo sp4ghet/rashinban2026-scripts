@@ -49,14 +49,15 @@ test('state and telemetry share pin history even when a timer tick sees an uncha
   t = advanceTimeline(t, next, 1403, true, DEFAULT_TIMING);
   assert.equal(t.cues.filter(c => c.kind === 'pin' || c.kind === 'guess').length, 0);
 });
-test('deadline shortening replaces ticks with only future 3, 2, 1 seconds', () => {
-  const state = live(); state.rounds.find(r=>r.number===state.round)!.endAtMs = 20000;
+test('deadline shortening replaces a pending continuous countdown', () => {
+  const state = live(); const round = state.rounds.find(r=>r.number===state.round)!;
+  round.startAtMs = 0; round.timerStartAtMs = 0; round.endAtMs = 40000;
   let t = advanceTimeline(null, state, 1000, true, DEFAULT_TIMING);
-  assert.deepEqual(t.cues.map(c=>c.atMs), [17000, 18000, 19000]);
-  state.rounds.find(r=>r.number===state.round)!.endAtMs = 10000;
+  assert.deepEqual(t.cues.map(c=>c.atMs), [25000]);
+  round.endAtMs = 10000; round.timerStartAtMs = 7500;
   t = advanceTimeline(t, state, 7500, false, DEFAULT_TIMING);
-  assert.deepEqual(t.cues.map(c=>c.atMs), [8000, 9000]);
-  assert.equal(new Set(t.cues.map(c=>c.id)).size, 2);
+  assert.deepEqual(t.cues.map(c=>[c.atMs,c.offsetS]), [[7500,12.5]]);
+  assert.equal(new Set(t.cues.map(c=>c.id)).size, 1);
   t = advanceTimeline(t, state, 10000, false, DEFAULT_TIMING); assert.deepEqual(t.cues, []);
 });
 test('no health loss suppresses damage both normal and five-k completion paths', () => {

@@ -145,7 +145,7 @@ function frame() {
     }
     write('phase-label', label);
     if (scene.kind === 'preview') write('phase-label', scene.paused ? 'GAME IS UNDER REVIEW' : visible.phase === 'pre-round' ? 'ROUND STARTING' : 'WAITING FOR GAME MASTER');
-    if (scene.kind === 'summary') write('phase-label', 'MATCH SUMMARY');
+    if (scene.kind === 'summary') write('phase-label', 'GAME FINISHED');
     if (scene.kind === 'aborted') write('phase-label', 'GAME CANCELLED');
     if (gameFrame) {
       previousFrame = gameFrame;

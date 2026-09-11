@@ -8,6 +8,29 @@ import { advanceTimeline, DEFAULT_TIMING, effectFor, finishEffect, nextTimelineW
 import { sample } from './fixtures.ts';
 
 const timing = DEFAULT_TIMING;
+test('continuous countdown aligns to final fifteen seconds and does not restart after a second guess', () => {
+  const s = structuredClone(full[0].state); const round = s.rounds.find(r => r.number === s.round)!;
+  s.status = 'Ongoing'; s.players.forEach(p => { p.guesses = []; p.results = []; });
+  round.startAtMs = 1000; round.timerStartAtMs = 1000; round.endAtMs = 61000;
+  let t = advance(null, s, 1000, true);
+  assert.deepEqual(t.cues.filter(c => c.kind === 'countdown').map(c => [c.atMs, c.untilMs, c.offsetS]), [[46000, 61000, 0]]);
+  round.timerStartAtMs = 10000; round.endAtMs = 25000;
+  t = advance(t, s, 10000);
+  const first = t.cues.find(c => c.kind === 'countdown')!;
+  assert.equal(first.atMs, 10000);
+  t = advance(t, s, 11000); assert.deepEqual(t.cues.filter(c => c.kind === 'countdown'), [first]);
+  round.endAtMs = 26000; t = advance(t, s, 12000);
+  assert.deepEqual(t.cues.filter(c => c.kind === 'countdown'), [first], 'deadline update during playback must not create another voice');
+  round.startAtMs = 1000; round.timerStartAtMs = 1000; round.endAtMs = 11000;
+  t = advance(null, s, 1000, true);
+  assert.deepEqual(t.cues.filter(c => c.kind === 'countdown').map(c => [c.atMs, c.offsetS]), [[1000, 5]]);
+  round.timerStartAtMs = null; round.endAtMs = null;
+  assert.equal(advance(null, s, 1000, true).cues.some(c => c.kind === 'countdown'), false);
+  round.startAtMs = 20000; round.timerStartAtMs = 20000; round.endAtMs = 40000;
+  const restart = advance(t, s, 20000);
+  assert.notEqual(restart.generation, t.generation, 'same-number rollback must create a fresh audio run');
+  assert.deepEqual(restart.cues.filter(c => c.kind === 'countdown').map(c => c.atMs), [25000]);
+});
 function stateFrom(name: string): DuelState {
   const result = applySnapshot(null, sample(name));
   assert.ok(result.state);
@@ -286,7 +309,7 @@ test('bootstrap restores final results without historical cues or animation and 
   const restored = advance(null, live, Date.parse('2026-09-10T12:30:50Z'), true);
   assert.equal(restored.music, 'urgent');
   assert.equal(restored.cues.some(cue => cue.kind === 'guess' || cue.kind === 'pin'), false);
-  assert.equal(restored.cues.every(cue => cue.atMs > Date.parse('2026-09-10T12:30:50Z')), true);
+  assert.equal(restored.cues.every(cue => cue.kind === 'countdown' || cue.atMs > Date.parse('2026-09-10T12:30:50Z')), true);
   assert.equal(advance(null, entry(5, 'DuelFinished').state, 10000, true).phase, 'finished');
 });
 
