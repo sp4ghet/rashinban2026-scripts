@@ -20,25 +20,21 @@ function validRuleOptions(options: DuelState['ruleOptions']): options is NonNull
     && Number.isInteger(options.delay) && options.delay >= 0;
 }
 
-function resultsByRound(results: RoundResult[], playerId: string): Map<number, RoundResult> {
-  const mapped = new Map<number, RoundResult>();
-  for (const result of results) {
-    if (!Number.isInteger(result.round) || result.round < 1 || mapped.has(result.round)) {
-      throw new Error(`Invalid tie-range result history for player ${playerId}`);
-    }
-    mapped.set(result.round, result);
-  }
-  return mapped;
-}
-
-function validatedCompletedRounds(state: DuelState): Array<[RoundResult, RoundResult]> {
-  const blue = resultsByRound(state.players[0].results, state.players[0].id);
-  const red = resultsByRound(state.players[1].results, state.players[1].id);
-  const highest = Math.max(0, ...blue.keys(), ...red.keys());
-  const completed: Array<[RoundResult, RoundResult]> = [];
-  for (let round = 1; round <= highest; round += 1) {
-    const blueResult = blue.get(round);
-    const redResult = red.get(round);
+/** Validate lazily: server rounds after our terminal round do not belong to this game. */
+function* validatedCompletedRounds(state: DuelState): Generator<[RoundResult, RoundResult]> {
+  const all = state.players.flatMap(player => player.results);
+  const validRoundNumbers = all.filter(result => Number.isInteger(result.round) && result.round >= 1)
+    .map(result => result.round);
+  const currentRoundResolved = all.some(result => result.round === state.round);
+  const completedByProgression = Math.max(0, state.round
+    - (currentRoundResolved || (state.status === 'Finished' && !state.aborted) ? 0 : 1));
+  const requiredThrough = Math.max(completedByProgression, 0, ...validRoundNumbers);
+  for (let round = 1; round <= requiredThrough; round += 1) {
+    const blue = state.players[0].results.filter(result => result.round === round);
+    const red = state.players[1].results.filter(result => result.round === round);
+    if (blue.length > 1 || red.length > 1) throw new Error(`Duplicate tie-range result at round ${round}`);
+    const blueResult = blue[0];
+    const redResult = red[0];
     if (!blueResult && !redResult) throw new Error(`Tie-range result history has a gap at round ${round}`);
     if (!blueResult || !redResult) throw new Error(`Incomplete tie-range result history at round ${round}`);
     if (!state.rounds.some(candidate => candidate.number === round)) {
@@ -49,9 +45,11 @@ function validatedCompletedRounds(state: DuelState): Array<[RoundResult, RoundRe
         throw new Error(`Invalid tie-range score at round ${round}`);
       }
     }
-    completed.push([blueResult, redResult]);
+    yield [blueResult, redResult];
   }
-  return completed;
+  if (all.some(result => !Number.isInteger(result.round) || result.round < 1)) {
+    throw new Error('Invalid tie-range round number');
+  }
 }
 
 function deriveHealth(state: DuelState, mode: Exclude<TieRangeMode, 'off'> | null): DuelState {
@@ -66,16 +64,23 @@ function deriveHealth(state: DuelState, mode: Exclude<TieRangeMode, 'off'> | nul
     throw new Error('Tie-range maximum rounds is invalid');
   }
 
-  const completed = validatedCompletedRounds(state);
-  const folded = foldTieRange({
+  const input = {
     initialHealth: state.initialHealth,
     individual: state.ruleOptions.individual,
     mutual: state.ruleOptions.mutual,
     delay: state.ruleOptions.delay,
     maxRounds: state.maxRounds ?? null,
-    teamIds: [state.players[0].teamId, state.players[1].teamId],
-    rounds: completed.map(([blue, red]) => ({ round: blue.round, scores: [blue.score, red.score] })),
-  }, mode);
+    teamIds: [state.players[0].teamId, state.players[1].teamId] as [string, string],
+    rounds: [] as Array<{ round: number; scores: [number, number] }>,
+  };
+  let folded = foldTieRange(input, mode);
+  // Validate only the history belonging to the custom duel. Later native rounds
+  // can be incomplete after an earlier custom knockout.
+  for (const [blue, red] of validatedCompletedRounds(state)) {
+    input.rounds.push({ round: blue.round, scores: [blue.score, red.score] });
+    folded = foldTieRange(input, mode);
+    if (folded.terminal !== null) break;
+  }
   const derived = structuredClone(state);
   const metadata: TieRangeRound[] = [];
 
@@ -106,6 +111,10 @@ function deriveHealth(state: DuelState, mode: Exclude<TieRangeMode, 'off'> | nul
   }
   if (mode !== null) derived.tieRange = { mode, rounds: metadata };
 
+  if (mode !== null && state.status === 'Finished' && !state.aborted && folded.terminal === null) {
+    throw new Error('Server game finished before a custom outcome could be verified');
+  }
+
   if (folded.terminal !== null) {
     const terminalRound = folded.terminal.round;
     derived.round = terminalRound;
@@ -119,8 +128,8 @@ function deriveHealth(state: DuelState, mode: Exclude<TieRangeMode, 'off'> | nul
       player.guesses = player.guesses.filter(guess => guess.round <= terminalRound);
       player.results = player.results.filter(result => result.round <= terminalRound);
     }
-  } else if (completed.length > 0) {
-    const lastCompleted = completed.at(-1)![0].round;
+  } else if (folded.rounds.length > 0) {
+    const lastCompleted = folded.rounds.at(-1)!.round;
     const nextRound = derived.rounds.find(round => round.number > lastCompleted);
     if (nextRound) nextRound.multiplier = folded.currentMutualMultiplierTenths / 10;
   }

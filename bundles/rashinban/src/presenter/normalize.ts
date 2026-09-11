@@ -46,8 +46,7 @@ export function applySnapshot(previous: DuelState | null, message: unknown): App
   }
   // A later generic spectator snapshot does not carry the abort event reason.
   // Keep its terminal history intact until a different duel is selected.
-  const explicitRollback = (message as { code?: string }).code === 'DuelNewRound'
-    && rollbackRound(previous, next, message) !== undefined;
+  const explicitRollback = rollbackRound(previous, next, message) !== undefined;
   if (previous?.gameId === next.gameId && previous.aborted && !next.aborted && !explicitRollback) {
     return { state: previous, accepted: false, warnings: [] };
   }

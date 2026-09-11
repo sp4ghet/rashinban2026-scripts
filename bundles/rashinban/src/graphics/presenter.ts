@@ -6,7 +6,7 @@ import { layoutKind, multiplierLabel, distanceLabel, lockLayout } from './presen
 import { paintScoring } from './presenter/scoring.ts';
 import { createCelebrationUnderlay } from './presenter/celebration.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
-import { resultMapFrame, type GameRenderer, type RenderFrame } from './presenter/renderer.ts';
+import { paintResultMapLabel, resultMapFrame, type GameRenderer, type RenderFrame } from './presenter/renderer.ts';
 import { clientRole, createPresenterClient } from './presenter/client.ts';
 import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
 import { createVideoPlayer } from './presenter/video.ts';
@@ -94,8 +94,9 @@ function frame() {
     previousScene = scene;
     const visible = scene.projection;
     paintScene(document.body, scene, match);
-    const preparedResults = state?.gameId === timing.gameId && scene.kind === 'transition'
-      ? resultMapFrame(state, timing.round, { left: match.left.playerId, right: match.right.playerId }) ?? undefined : undefined;
+    const resultFrame = state?.gameId === timing.gameId
+      ? resultMapFrame(state, timing.round, { left: match.left.playerId, right: match.right.playerId }, visible.answer ?? undefined) : null;
+    const preparedResults = scene.kind === 'transition' ? resultFrame ?? undefined : undefined;
     const gameFrame = state && views.value ? celebrationUnderlay.render({ state, views: views.value,
       projection: visible, source: options.viewSource, displayedRound: timing.round,
       preparedResults,
@@ -108,6 +109,7 @@ function frame() {
     element('results-area').hidden = !results && !preparedResults;
     element('results-area').style.visibility = results ? 'visible' : 'hidden';
     element('results-area').style.opacity = results ? '1' : '0';
+    paintResultMapLabel(document.body, resultFrame, results && visible.answer !== null);
     element('live-area').hidden = scene.kind !== 'live' && !underlay;
     element('transition').hidden = scene.kind !== 'transition' || underlay || timing.effect !== 'none';
     write('round-number', scene.previewRound === null ? timing.round === null ? '—' : String(timing.round) : String(scene.previewRound));
@@ -163,6 +165,7 @@ function frame() {
     }
   }
   if (!timing || !match) {
+    paintResultMapLabel(document.body, null, false);
     for (const id of ['preview-area', 'summary-area', 'results-area', 'live-area', 'transition', 'timer', 'scoring-layer', 'review-banner']) element(id).hidden = true;
     element('waiting-area').hidden = false;
   }

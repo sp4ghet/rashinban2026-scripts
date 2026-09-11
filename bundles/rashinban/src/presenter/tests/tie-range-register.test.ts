@@ -9,7 +9,7 @@ import { sample } from './fixtures.ts';
 const rows = () => (sample('gs2-ws-full-duel-sequence-manual-rounds.json') as any[])
   .map(row => row.message).filter(message => message.duel?.state);
 
-async function live(snapshot: any, saved = new Map<string, any>()) {
+async function live(snapshot: any, saved = new Map<string, any>(), proxyReplicants = false) {
   const reps = new Map<string, any>(); const listeners = new Map<string, Function>();
   let now = 1900000000000; let deliver: (text: string) => void = () => assert.fail('No socket');
   const tasks: { fn: () => void; at: number; active: boolean }[] = [];
@@ -22,7 +22,15 @@ async function live(snapshot: any, saved = new Map<string, any>()) {
       bundleConfig: { presenter: { input: 'live', partyId: 'party', clientVersion: 'fixture' } },
       Replicant(name: string, options: any) {
         const value = options.persistent && saved.has(name) ? structuredClone(saved.get(name)) : options.defaultValue;
-        const rep = { value, persistent: options.persistent }; reps.set(name, rep); return rep;
+        // NodeCG mutates assigned objects recursively, replacing children with proxies.
+        function wrap(input: any): any {
+          if (!proxyReplicants || input === null || typeof input !== 'object') return input;
+          for (const key of Object.keys(input)) input[key] = wrap(input[key]);
+          return new Proxy(input, {});
+        }
+        let stored = wrap(value);
+        const rep = { get value() { return stored; }, set value(next) { stored = wrap(next); }, persistent: options.persistent };
+        reps.set(name, rep); return rep;
       },
       Router: express.Router, mount() {}, listenFor(name: string, fn: Function) { listeners.set(name, fn); },
       log: { info() {}, warn() {} },
@@ -121,6 +129,69 @@ test('missing rule inputs withhold custom state and recover on valid input', asy
   assert.deepEqual(app.read('presenterConnection').warnings, []);
 });
 
+test('missing historical panorama recovers while retaining the same-duel rule', async () => {
+  const complete = rows().find(message => message.code === 'DuelNewRound'
+    && message.duel.state.currentRoundNumber === 4);
+  assert.ok(complete);
+  const incomplete = structuredClone(complete);
+  incomplete.duel.state.rounds = incomplete.duel.state.rounds.filter((round: any) => round.roundNumber !== 1);
+  const app = await live(incomplete, enabled());
+  assert.equal(app.read('presenterDuel'), null);
+  assert.ok(app.read('presenterConnection').warnings.some((warning: string) => warning.includes('Tie-range')));
+
+  app.settings('half');
+  const repaired = structuredClone(complete); repaired.duel.state.version++;
+  app.send(repaired);
+
+  assert.equal(app.read('presenterDuel').tieRange.mode, 'full');
+  assert.deepEqual(app.read('presenterConnection').warnings, []);
+});
+
+test('invalid paired score recovers while retaining the same-duel rule', async () => {
+  const complete = rows().find(message => message.code === 'DuelNewRound'
+    && message.duel.state.currentRoundNumber === 4);
+  assert.ok(complete);
+  const invalid = structuredClone(complete);
+  invalid.duel.state.teams[0].roundResults[0].score = 5001;
+  const app = await live(invalid, enabled());
+  assert.equal(app.read('presenterDuel'), null);
+  assert.ok(app.read('presenterConnection').warnings.some((warning: string) => warning.includes('Tie-range')));
+
+  app.settings('half');
+  const repaired = structuredClone(complete); repaired.duel.state.version++;
+  app.send(repaired);
+
+  assert.equal(app.read('presenterDuel').tieRange.mode, 'full');
+  assert.deepEqual(app.read('presenterConnection').warnings, []);
+});
+
+test('cold round 2 without round 1 results withholds state and recovers with complete history', async () => {
+  const complete = rows().find(message => message.code === 'DuelNewRound'
+    && message.duel.state.currentRoundNumber === 2);
+  assert.ok(complete);
+  const incomplete = structuredClone(complete);
+  for (const team of incomplete.duel.state.teams) team.roundResults = [];
+  const app = await live(incomplete, enabled());
+  assert.equal(app.read('presenterDuel'), null);
+  assert.ok(app.read('presenterConnection').warnings.some((warning: string) => warning.includes('Tie-range')));
+
+  const repaired = structuredClone(complete); repaired.duel.state.version++;
+  app.send(repaired);
+
+  assert.equal(app.read('presenterDuel').tieRange.mode, 'full');
+  assert.deepEqual(app.read('presenterConnection').warnings, []);
+});
+
+test('finished source without completed history withholds an unverified custom outcome', async () => {
+  const incomplete = structuredClone(rows().find(message => message.code === 'DuelFinished'));
+  assert.ok(incomplete);
+  for (const team of incomplete.duel.state.teams) team.roundResults = [];
+  const app = await live(incomplete, enabled());
+
+  assert.equal(app.read('presenterDuel'), null);
+  assert.ok(app.read('presenterConnection').warnings.some((warning: string) => warning.includes('Tie-range')));
+});
+
 test('explicit replay restart captures preferences without replacing the saved live rule', async () => {
   const first = rows()[0]; const app = await live(first, enabled());
   app.settings('half'); app.replay();
@@ -144,4 +215,26 @@ test('later snapshots cannot change settled custom scores, including after resta
   assert.deepEqual(app.read('presenterDuel').players, original.players);
   const restored = await live(changed, app.save());
   assert.deepEqual(restored.read('presenterDuel').players, original.players);
+});
+
+test('enabled rule works with NodeCG recursive proxy ownership', async () => {
+  const app = await live(rows()[0], enabled(), true);
+  assert.equal(app.read('presenterDuel')?.tieRange.mode, 'full');
+  assert.deepEqual(app.read('presenterConnection').warnings, []);
+});
+
+test('configured replay resumes its saved rule and position after a process restart', async () => {
+  const app = await live(rows()[0], enabled()); app.replay();
+  for (let i = 0; i < 10; i++) app.settle();
+  app.settings('half');
+  const saved = app.save(); const before = app.read('presenterDuel');
+  const reps = new Map<string, any>();
+  registerPresenter({ bundleConfig: { presenter: { input: 'replay', replayFixture: 'gs2-ws-full-duel-sequence-manual-rounds.json' } },
+    Replicant(name: string, opts: any) { const rep = { value: opts.persistent && saved.has(name) ? structuredClone(saved.get(name)) : opts.defaultValue }; reps.set(name, rep); return rep; },
+    Router: express.Router, mount() {}, listenFor() {}, log: { info() {}, warn() {} },
+  } as unknown as NodeCG.ServerAPI, { now: () => 1900010000000, schedule: () => () => {} });
+  assert.equal(reps.get('presenterDuel').value?.tieRange.mode, 'full');
+  assert.equal(reps.get('presenterDuel').value?.round, before.round);
+  assert.equal(reps.get('presenterDuel').value?.status, 'Finished');
+  assert.equal(reps.get('presenterTimeline').value.phase, 'finished');
 });

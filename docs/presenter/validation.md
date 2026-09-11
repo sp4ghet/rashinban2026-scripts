@@ -175,6 +175,48 @@ exact final program bundle. Its continuous-bed and 90 ms video-delay limits
 still apply. The isolated hidden preview was restarted with the fixed extension;
 port 9090 and the OBS setup were untouched.
 
+## Standalone tie-range (2026-09-12)
+
+The rule, Config controls, persisted duel context and results-map overlays were
+validated on branch `feat/presenter-tie-range`. Operator instructions are in
+[tie-range.md](tie-range.md).
+
+The automated suite passes 298 tests. Type checking, production build and
+`git diff --check` also pass. New coverage includes full/half band equality,
+half-to-even damage, captured server-health baselines, custom knockout and
+round-limit completion, abort/undo, frozen history, next-duel configuration,
+live/replay restart, NodeCG proxy ownership, rounded-score radius conversion,
+5K treatment, display-side colors, overlay cleanup and the answer-reveal gate.
+Final review regressions additionally cover missing prior-round history,
+recovery when valid scores or historical panoramas arrive later, and rejecting
+an inherited server winner without a verified custom terminal result.
+
+A separate local HTTP harness ran the built graphic in hidden Chrome using
+the actual Google Maps API and geographically consistent synthetic results.
+The 1920×1080 checks covered ordinary concentric circles, single/double 5Ks,
+unbounded range, antimeridian crossing, extreme polar geometry, delayed
+multipliers and mutual-only increments. The Config panel was also checked at
+450 pixels wide: toggling enablement controls the mode selector, submitting
+sends the selected preference, and the status distinguishes active Full
+from next-duel Half. No uncaught browser exceptions were recorded.
+
+Visual inspection confirmed the closer pin lies on the inner outline, the
+annulus leaves its center unshaded, finite boundaries fit within the map,
+5Ks use one gold circle, and labels and Google attribution remain readable.
+The synthetic 89° polar case renders projected curves beyond Google's imagery
+extent; Mercator cannot display a pole as a complete circular map region.
+Unbounded views use Google's repeating world map. Neither is a scoring input.
+
+Private local evidence: [browser results](../../artifacts/presenter-validation/tie-range/results.json),
+[ordinary](../../artifacts/presenter-validation/tie-range/ordinary.png),
+[single 5K](../../artifacts/presenter-validation/tie-range/five-k.png),
+[double 5K](../../artifacts/presenter-validation/tie-range/double-five-k.png),
+[antimeridian](../../artifacts/presenter-validation/tie-range/dateline.png),
+[polar](../../artifacts/presenter-validation/tie-range/polar.png) and
+[Config](../../artifacts/presenter-validation/tie-range/dashboard.png).
+These checks use synthetic NodeCG inputs and real map rendering; they do not
+exercise a live host-controlled duel or repeat the OBS audio timing test.
+
 ## External checks still required
 
 | Needed input | Required acceptance |
