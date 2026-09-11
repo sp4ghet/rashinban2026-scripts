@@ -26,3 +26,20 @@ test('settings reject invalid gains, key, source, output, mute and timings', () 
   ]) assert.throws(() => parseSettings({ ...DEFAULT_SETTINGS, ...patch }));
   for (const input of [null, [], {}, 'chroma']) assert.throws(() => parseSettings(input));
 });
+
+test('tie-range preferences migrate without resetting existing presentation settings', () => {
+  const legacy = { ...DEFAULT_SETTINGS, musicGain: 0.25, muted: true } as any;
+  delete legacy.tieRange;
+  const migrated = parseSettings(legacy);
+  assert.deepEqual(migrated.tieRange, { enabled: false, mode: 'full' });
+  assert.equal(migrated.musicGain, 0.25);
+  assert.equal(migrated.muted, true);
+  const preferences = { enabled: true, mode: 'half' as const };
+  const parsed = parseSettings({ ...DEFAULT_SETTINGS, tieRange: preferences });
+  assert.deepEqual(parsed.tieRange, preferences);
+  assert.notEqual(parsed.tieRange, preferences);
+  for (const tieRange of [null, [], true, {}, { enabled: 1, mode: 'full' },
+    { enabled: true, mode: 'third' }, { enabled: true, mode: 'full', divisor: 3 }]) {
+    assert.throws(() => parseSettings({ ...DEFAULT_SETTINGS, tieRange }));
+  }
+});
