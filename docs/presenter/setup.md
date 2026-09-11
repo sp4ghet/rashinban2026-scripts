@@ -88,6 +88,10 @@ in [OBS setup](obs.md).
 
 ## Google player views and results map
 
+Player minimaps and the results map use the observed GeoGuessr vector cloud
+map style with the operator's own Google browser key. See [map color
+provenance](map-style.md) for the public map ID and captured settings.
+
 The dashboard's **Google Maps & Street View setup** notice checks whether a
 browser key is configured and shows the current origin's referrer pattern.
 A missing key prevents rendered Street View and maps even when replay data is

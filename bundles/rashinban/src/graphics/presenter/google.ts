@@ -3,6 +3,9 @@ import { createRenderer, type GameRenderer, type RendererAdapter } from './rende
 import type { Panorama } from '../../types/presenter.ts';
 import { createPovSmoother, type Pov } from './pov.ts';
 
+// Public GeoGuessr cloud map style observed in the spectator client; see docs/presenter/map-style.md.
+const GEOGUESSR_VECTOR_MAP_ID = '8b406a8de121b3e6';
+
 // Round snapshots encode ASCII panorama IDs as hex; movement samples are plain.
 // This is format conversion only. The service must still resolve the exact ID.
 export function googlePanoId(value: string): string {
@@ -118,6 +121,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
     map(slot) {
       const dom = mount(slot);
       const map = construct(dom, () => new maps.Map(dom.canvas, { center: { lat: 0, lng: 0 }, zoom: 1, minZoom: 1, maxZoom: 18,
+        mapId: GEOGUESSR_VECTOR_MAP_ID, renderingType: 'VECTOR', mapTypeId: 'roadmap', isFractionalZoomEnabled: false,
         disableDefaultUI: true, clickableIcons: false, gestureHandling: 'none', keyboardShortcuts: false,
         streetViewControl: false, mapTypeControl: false, fullscreenControl: false, tilt: 0 }));
       dom.status.hidden = true;
