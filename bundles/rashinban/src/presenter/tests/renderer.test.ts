@@ -530,7 +530,7 @@ test('Google map adapter draws annular fill and sampled circle outlines below li
   surface.render(frame);
 
   assert.deepEqual(fake.overlays.map(value => value.constructor.name), ['Polygon', 'Polyline', 'Polyline', 'Polyline', 'Marker']);
-  assert.equal(fake.overlays[0].options.fillOpacity, 0.14);
+  assert.equal(fake.overlays[0].options.fillOpacity, 0.18);
   assert.deepEqual(fake.overlays[0].options.paths, [outer, inner]);
   assert.equal(fake.overlays[1].options.geodesic, true);
   assert.equal(fake.overlays[1].options.strokeOpacity, 0);
