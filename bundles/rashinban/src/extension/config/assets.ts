@@ -43,8 +43,13 @@ export function listMediaAssets(roots: InstallationRoots): EffectiveAssetInvento
       let filenames: string[];
       try { filenames = readdirSync(path.join(root, 'assets/rashinban', category)); } catch { continue; }
       for (const filename of filenames) {
-        if (!allowed(category, filename) || !containedFile(root, category, filename)) continue;
-        entries.set(filename, {base: filename, url: `/assets/rashinban/${category}/${encodeURIComponent(filename)}`, source});
+        if (!allowed(category, filename)) continue;
+        const file = containedFile(root, category, filename);
+        if (!file) continue;
+        let stats: ReturnType<typeof statSync>;
+        try { stats = statSync(file); } catch { continue; }
+        entries.set(filename, {base: filename, url: `/assets/rashinban/${category}/${encodeURIComponent(filename)}`, source,
+          version: `${stats.size}:${stats.mtimeMs}`});
       }
     }
     result[category] = [...entries.values()].sort((a,b) => a.base!.localeCompare(b.base!));

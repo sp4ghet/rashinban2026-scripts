@@ -97,7 +97,7 @@ test('available celebration holds results with its own deadline; missing double 
   registerPresenter({ bundleConfig: { presenter: { input: 'replay' } },
     Replicant(name: string, opts: any = {}) {
       const rep = Object.assign(new EventEmitter(), { value: name === 'presenterAssets'
-        ? { music: [], effects: [], video: [{ url, source: 'shared' }] }
+        ? { music: [], effects: [], video: [{ url, source: 'shared', version: '1:1' }] }
         : opts.defaultValue, opts });
       reps.set(name, rep); return rep;
     },

@@ -60,3 +60,32 @@ test('autoplay rejection completes as failure and cancellation suppresses late e
   cancel(); cancel(); canceled.end(); canceled.error();
   assert.deepEqual(calls, [true]); assert.equal(canceled.stops(), 1);
 });
+
+test('changed bound video replaces the future cache while an active clip completes normally', () => {
+  class Video extends EventTarget {
+    hidden = true; muted = true; volume = 1; src = ''; preload = ''; playsInline = false;
+    duration = 2; readyState = 1; currentTime = 0; paused = true; error: unknown = null; removed = false;
+    load() {} play() { this.paused = false; return Promise.resolve(); } pause() { this.paused = true; }
+    remove() { this.removed = true; } removeAttribute() { this.src = ''; }
+  }
+  const videos: Video[] = [];
+  const player = createVideoPlayer(() => { const video = new Video(); videos.push(video); return video as unknown as HTMLVideoElement; }, () => () => {});
+  const asset: EffectAsset = { url: '/assets/rashinban/video/five.webm', watchdogMs: 8000, soundtrack: 'embedded' };
+  const media = { ...EMPTY_MEDIA, fiveK: { single: asset, double: null } };
+  const calls: unknown[] = [];
+  player.preload(media, { [asset.url]: '200:1' });
+  player.play(asset, 'active', (generation, failed) => calls.push([generation, failed]));
+  player.invalidate([asset.url]);
+  player.preload(media, { [asset.url]: '200:2' });
+  assert.equal(videos.length, 2);
+  assert.equal(videos[0]!.paused, false, 'the active old bytes continue without interruption');
+  assert.equal(videos[0]!.removed, false);
+  assert.equal(videos[1]!.src, '/rashinban/media/video/five.webm?v=200%3A2');
+  assert.equal(calls.length, 0);
+  videos[0]!.dispatchEvent(new Event('ended'));
+  assert.deepEqual(calls, [['active', false]]);
+  assert.equal(videos[0]!.removed, true, 'retired active element is removed after normal completion');
+  player.play(asset, 'future', (generation, failed) => calls.push([generation, failed]));
+  assert.equal(videos[1]!.paused, false, 'future playback uses the refreshed cache');
+  player.dispose();
+});

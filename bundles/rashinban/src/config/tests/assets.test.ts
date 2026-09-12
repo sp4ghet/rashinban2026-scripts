@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import express from 'express';
 import { EventEmitter } from 'node:events';
 import type NodeCG from '@nodecg/types';
 import { listMediaAssets, resolveMediaFile, createMediaRouter, registerSharedAssets } from '../../extension/config/assets.ts';
-import { mediaAssetOptions, mediaAssetsForCategory, mediaPlaybackUrl } from '../media-url.ts';
+import { boundMediaState, changedVideoBindings, mediaAssetOptions, mediaAssetsForCategory, mediaPlaybackUrl } from '../media-url.ts';
+import { EMPTY_MEDIA } from '../../presenter/media.ts';
 
 function fixture(t: { after(fn: () => void): void }) {
   const base = mkdtempSync(path.join(tmpdir(), 'rashinban-assets-'));
@@ -26,10 +27,16 @@ test('shared inventory merges by category and filename with local precedence and
   file('sharedRoot','video','5K.webm','VIDEO');
   file('sharedRoot','music','ignore.txt','TEXT');
   const local = file('appRoot','music','A song.mp3','LOCAL');
+  utimesSync(local, new Date('2020-01-01T00:00:00Z'), new Date('2020-01-01T00:00:00Z'));
   const list = listMediaAssets(roots);
-  assert.deepEqual(list.music, [{base:'A song.mp3',url:'/assets/rashinban/music/A%20song.mp3',source:'local'}]);
+  assert.deepEqual(list.music.map(({base,url,source}) => ({base,url,source})), [{base:'A song.mp3',url:'/assets/rashinban/music/A%20song.mp3',source:'local'}]);
+  assert.match(list.music[0]!.version, /^5:\d+(?:\.\d+)?$/);
   assert.equal(list.video[0].source,'shared');
   assert.equal(resolveMediaFile(roots,'music','A song.mp3'),local);
+  const previousVersion = list.music[0]!.version;
+  writeFileSync(local, 'FRESH');
+  utimesSync(local, new Date('2021-01-01T00:00:00Z'), new Date('2021-01-01T00:00:00Z'));
+  assert.notEqual(listMediaAssets(roots).music[0]!.version, previousVersion, 'same-path, same-size replacement changes its content version');
   rmSync(local);
   assert.equal(listMediaAssets(roots).music[0].source,'shared');
   assert.equal(resolveMediaFile(roots,'music','A song.mp3'),path.join(roots.sharedRoot,'assets/rashinban/music/A song.mp3'));
@@ -71,7 +78,7 @@ test('stored canonical asset references map to delivery URLs without changing ma
 });
 
 test('merged inventory remains authoritative and selector refreshes preserve dirty choices', () => {
-  const inherited = { base: 'shared cue.wav', url: '/assets/rashinban/effects/shared%20cue.wav', source: 'shared' as const };
+  const inherited = { base: 'shared cue.wav', url: '/assets/rashinban/effects/shared%20cue.wav', source: 'shared' as const, version: '10:1' };
   const merged = { music: [], effects: [inherited], video: [] };
   const native = [{ base: 'local-only.wav', url: '/assets/rashinban/effects/local-only.wav' }];
   assert.deepEqual(mediaAssetsForCategory(merged, 'effects', native), [inherited]);
@@ -82,6 +89,24 @@ test('merged inventory remains authoritative and selector refreshes preserve dir
     { label: 'shared cue.wav (inherited)', value: inherited.url },
     { label: 'Unavailable · dirty.wav', value: '/assets/rashinban/effects/dirty.wav' },
   ]);
+});
+
+test('bound media state changes only for selected source, availability, and content versions', () => {
+  const music = '/assets/rashinban/music/theme.mp3';
+  const video = '/assets/rashinban/video/five.webm';
+  const media = { ...structuredClone(EMPTY_MEDIA),
+    stems: [{ id: 'theme', url: music, loopStartS: 0, loopEndS: 8, gains: { idle: 1, round: 1, urgent: 1, results: 1 } }],
+    fiveK: { single: { url: video, watchdogMs: 5000, soundtrack: 'embedded' as const }, double: null } };
+  const shared = { music: [{ url: music, source: 'shared' as const, version: '100:1' }], effects: [], video: [{ url: video, source: 'shared' as const, version: '200:1' }] };
+  const unrelated = { ...shared, effects: [{ url: '/assets/rashinban/effects/other.wav', source: 'local' as const, version: '5:1' }] };
+  const localVideo = { ...shared, video: [{ url: video, source: 'local' as const, version: '200:2' }] };
+  const missingVideo = { ...shared, video: [] };
+  const initial = boundMediaState(media, shared);
+  assert.deepEqual(boundMediaState(media, unrelated), initial, 'unbound uploads do not change playback state');
+  const overridden = boundMediaState(media, localVideo);
+  assert.deepEqual(changedVideoBindings(initial, overridden), [video]);
+  assert.deepEqual(changedVideoBindings(overridden, boundMediaState(media, missingVideo)), [video]);
+  assert.notEqual(initial.audioSignature, boundMediaState(media, { ...shared, music: [{ ...shared.music[0]!, version: '100:2' }] }).audioSignature);
 });
 
 test('shared asset registration protects delivery and refreshes inventory after local upload/deletion', async t => {

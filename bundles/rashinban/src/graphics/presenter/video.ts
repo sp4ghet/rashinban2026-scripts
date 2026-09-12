@@ -3,17 +3,26 @@ import type { EffectAsset, MediaManifest } from '../../presenter/media.ts';
 import { mediaPlaybackUrl } from '../../config/media-url.ts';
 export function createVideoPlayer(makeVideo: () => HTMLVideoElement, schedule: (fn: () => void, ms: number) => () => void) {
   const videos = new Map<string, HTMLVideoElement>();
-  let active: { generation: string; asset: EffectAsset; video: HTMLVideoElement; cancel(): void } | null = null;
+  let active: { generation: string; asset: EffectAsset; video: HTMLVideoElement; cancel(): void; retire: boolean } | null = null;
   function cancel() { active?.cancel(); active = null; }
   function remove(video: HTMLVideoElement) { video.pause(); video.removeAttribute('src'); video.load(); video.remove(); }
   return {
-    preload(media: MediaManifest) {
+    preload(media: MediaManifest, versions: Readonly<Record<string, string>> = {}) {
       const urls = new Set([media.fiveK.single?.url, media.fiveK.double?.url].filter((url): url is string => !!url));
       if (active && !urls.has(active.asset.url)) cancel();
       for (const [url, video] of videos) if (!urls.has(url)) { remove(video); videos.delete(url); }
       for (const url of urls) if (!videos.has(url)) {
         const video = makeVideo(); video.hidden = true; video.muted = true; video.preload = 'auto'; video.playsInline = true;
-        video.src = mediaPlaybackUrl(url); videos.set(url, video); video.load();
+        video.src = mediaPlaybackUrl(url, versions[url]); videos.set(url, video); video.load();
+      }
+    },
+    invalidate(urls: readonly string[]) {
+      for (const url of urls) {
+        const video = videos.get(url);
+        if (!video) continue;
+        videos.delete(url);
+        if (active?.video === video) active.retire = true;
+        else remove(video);
       }
     },
     play(asset: EffectAsset, generation: string, complete: (generation: string, failed: boolean) => void, muted = false, gain = 1) {
@@ -42,12 +51,13 @@ export function createVideoPlayer(makeVideo: () => HTMLVideoElement, schedule: (
         stop() {
           for (const stop of timers) stop();
           video.removeEventListener('ended', ended); video.removeEventListener('error', error); video.removeEventListener('loadedmetadata', metadata);
-          video.pause(); video.muted = true; video.hidden = true;
+          if (active?.video === video && active.retire) remove(video);
+          else { video.pause(); video.muted = true; video.hidden = true; }
         },
         onEnded(fn) { ended = fn; video.addEventListener('ended', ended); },
         onError(fn) { error = fn; video.addEventListener('error', error); },
       };
-      const playback = { generation, asset: { ...asset }, video, cancel: () => {} };
+      const playback = { generation, asset: { ...asset }, video, cancel: () => {}, retire: false };
       active = playback;
       playback.cancel = playCelebration(port, generation, (g, failed) => {
         if (active === playback) active = null;

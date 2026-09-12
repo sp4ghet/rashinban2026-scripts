@@ -46,6 +46,21 @@ test('audio fetches canonical stored references through the effective media rout
   assert.deepEqual(p.fetched, ['/rashinban/media/music/shared%20stem.mp3', '/rashinban/media/effects/shared%20cue.wav']);
   assert.equal(stored.stems[0]!.url, '/assets/rashinban/music/shared%20stem.mp3');
 });
+test('audio reload uses content versions and updates readiness after a bound asset disappears', async () => {
+  const p = port();
+  const url = '/assets/rashinban/music/versioned.mp3';
+  const stored = { ...structuredClone(EMPTY_MEDIA), stems: [{ ...manifest.stems[0]!, url }] };
+  await p.audio.load(stored, { [url]: '12:1000' });
+  assert.equal(p.audio.status().state, 'ready');
+  assert.equal(p.fetched.at(-1), '/rashinban/media/music/versioned.mp3?v=12%3A1000');
+  await p.audio.load(stored, { [url]: '12:2000' });
+  assert.equal(p.fetched.at(-1), '/rashinban/media/music/versioned.mp3?v=12%3A2000');
+
+  const missingFetch = async () => ({ ok: false, arrayBuffer: async () => new ArrayBuffer(0) });
+  const missing = createAudio(p.context as unknown as AudioContext, missingFetch as unknown as typeof fetch);
+  await missing.load(stored);
+  assert.deepEqual(missing.status(), { state: 'error', missing: ['base'] });
+});
 test('all stems share a scheduled start and muted layers advance through context fades', async () => {
   const p = port(); await p.audio.load(manifest); p.audio.lease(20000, 13500); p.audio.sync(timeline, DEFAULT_SETTINGS, 13500);
   assert.equal(p.sources.length, 2); const [base, urgent] = p.sources;

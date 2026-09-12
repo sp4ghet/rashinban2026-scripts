@@ -12,7 +12,7 @@ import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type Me
 import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
 import type { PresenterPublicConfig } from '../config/types.ts';
-import { mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
+import { boundMediaState, changedVideoBindings, mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
@@ -28,16 +28,25 @@ let selectedMedia = EMPTY_MEDIA;
 const videoPlayer = createVideoPlayer(() => {
   const video = document.createElement('video'); video.className = 'celebration-video'; document.body.append(video); return video;
 }, (fn, ms) => { const id = setTimeout(fn, ms); return () => clearTimeout(id); });
-media.on('change', value => {
-  try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
-  videoPlayer.preload(selectedMedia);
-  void audioOutput.load(selectedMedia);
-});
 const role = clientRole(location.search);
 const clientId = crypto.randomUUID();
 const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
   send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });
 const audioOutput = createAudioOutput(client);
+let boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
+media.on('change', value => {
+  try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
+  boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
+  videoPlayer.preload(selectedMedia, boundAssets.versions);
+  void audioOutput.load(selectedMedia, boundAssets.versions);
+});
+presenterAssets.on('change', inventory => {
+  const next = boundMediaState(selectedMedia, inventory);
+  const changedVideos = changedVideoBindings(boundAssets, next);
+  if (next.audioSignature !== boundAssets.audioSignature) void audioOutput.load(selectedMedia, next.versions);
+  boundAssets = next;
+  if (changedVideos.length) { videoPlayer.invalidate(changedVideos); videoPlayer.preload(selectedMedia, next.versions); }
+});
 document.body.dataset.clientId = clientId; document.body.dataset.role = role;
 function reconcileVideo() {
   const options = settings.value ?? DEFAULT_SETTINGS;

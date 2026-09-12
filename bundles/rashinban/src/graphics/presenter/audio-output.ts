@@ -54,7 +54,7 @@ export function createAudioOutput(client: ReturnType<typeof createPresenterClien
   publish();
   return {
     engine,
-    async load(media: MediaManifest) { const loading = engine.load(media); publish(); await loading; if (!disposed) { publish(); if (current) sync(current.timeline, current.settings); } },
+    async load(media: MediaManifest, versions?: Readonly<Record<string, string>>) { const loading = engine.load(media, versions); publish(); await loading; if (!disposed) { publish(); if (current) sync(current.timeline, current.settings); } },
     sync,
     dispose() { disposed = true; engine.stop(); context.onstatechange = null; unlock?.remove(); void context.close(); },
   };
