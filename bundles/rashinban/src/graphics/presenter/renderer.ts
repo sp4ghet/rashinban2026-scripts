@@ -50,9 +50,9 @@ export function resultMapFrame(state: DuelState, round: number | null, playerIds
     pins.push({ point, color: colors[side], label: side }); lines.push({ from: answer, to: point, color: colors[side] });
   }
   const tieRange = tieRangeMapGeometry(state, round!, playerIds, answer) ?? undefined;
-  const bounds = tieRange?.world ? null : resultBounds([...pins.map(pin => pin.point), ...(tieRange?.framePoints ?? [])]);
-  if (bounds && tieRange?.fullLongitude) { bounds.west = -180; bounds.east = 180; }
-  return { visible: false, prepare: true, padding: tieRange ? 64 : undefined, bounds, pins, lines, tieRange };
+  // Keep the answer and guesses readable; large tie-range rings may extend offscreen.
+  const bounds = resultBounds(pins.map(pin => pin.point));
+  return { visible: false, prepare: true, bounds, pins, lines, tieRange };
 }
 export function createRenderer(adapter: RendererAdapter, onError: (message: string) => void): GameRenderer {
   let key = ''; let failed = false; let disposed = false;
