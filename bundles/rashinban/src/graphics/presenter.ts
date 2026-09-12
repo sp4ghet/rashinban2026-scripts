@@ -134,10 +134,10 @@ function frame() {
     write('mode', state?.mode ?? '—');
     // Series wins count completed games; the active game is the next one.
     write('game-number', String(match.left.wins + match.right.wins + 1));
-    const multiplier = scene.kind === 'preview' ? ''
-      : multiplierLabel(state ?? null, timing, { left: match.left.playerId, right: match.right.playerId });
-    write('multiplier-label', scene.kind === 'preview' ? '' : 'DAMAGE');
-    write('right-multiplier-label', scene.kind === 'preview' ? '' : 'DAMAGE');
+    const multiplier = multiplierLabel(state ?? null, scene.kind === 'preview' ? { ...timing, phase: 'pre-round' } : timing,
+      { left: match.left.playerId, right: match.right.playerId });
+    write('multiplier-label', 'DAMAGE');
+    write('right-multiplier-label', 'DAMAGE');
     const sideMultipliers = multiplier.startsWith('L ') ? multiplier.slice(2).split(' · R ') : [multiplier, multiplier];
     write('multiplier', sideMultipliers[0]);
     write('right-multiplier', sideMultipliers[1]);
