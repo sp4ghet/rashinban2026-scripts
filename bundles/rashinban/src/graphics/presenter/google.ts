@@ -160,11 +160,11 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
           if (content === previous) return;
           previous = content; clearOverlays();
           if (frame.tieRange?.annulus) overlays.push(new maps.Polygon({ map, paths: frame.tieRange.annulus,
-            clickable: false, geodesic: true, fillColor: '#f5f7fc', fillOpacity: 0.14,
+            clickable: false, geodesic: true, fillColor: '#334155', fillOpacity: 0.18,
             strokeOpacity: 0, strokeWeight: 0, zIndex: 1 }));
           if (frame.tieRange?.outerPath) overlays.push(new maps.Polyline({ map, path: frame.tieRange.outerPath,
-            geodesic: true, clickable: false, strokeColor: '#f5f7fc', strokeOpacity: 0, strokeWeight: 2, zIndex: 8,
-            icons: [{ icon: { path: 'M 0,-1 0,1', strokeColor: '#f5f7fc', strokeOpacity: 0.9, strokeWeight: 2, scale: 3 },
+            geodesic: true, clickable: false, strokeColor: '#334155', strokeOpacity: 0, strokeWeight: 3, zIndex: 8,
+            icons: [{ icon: { path: 'M 0,-1 0,1', strokeColor: '#334155', strokeOpacity: 1, strokeWeight: 3, scale: 3 },
               offset: '0', repeat: '14px' }] }));
           for (let index = 0; index < (frame.tieRange?.circles.length ?? 0); index++) {
             const circle = frame.tieRange!.circles[index]; const path = frame.tieRange!.circlePaths[index];
