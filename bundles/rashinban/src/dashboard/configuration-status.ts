@@ -6,6 +6,7 @@ export class ConfigurationDraft {
   private loadedRevision: string | undefined;
   private dirty = false;
   private hasLoaded = false;
+  private pendingProjection: (() => void) | undefined;
 
   observeRevision(revision: string): void {
     this.currentRevision = revision;
@@ -16,13 +17,30 @@ export class ConfigurationDraft {
     this.dirty = false;
     this.hasLoaded = true;
     this.loadedRevision = this.currentRevision;
+    this.pendingProjection = undefined;
   }
 
   markDirty(): void { this.dirty = true; }
   isDirty(): boolean { return this.dirty; }
 
+  acceptProjection(apply: () => void): void {
+    if (this.dirty) {
+      this.pendingProjection = apply;
+      return;
+    }
+    apply();
+    this.loaded();
+  }
+
   saved(): void {
     this.dirty = false;
+    if (this.pendingProjection) {
+      const apply = this.pendingProjection;
+      this.pendingProjection = undefined;
+      apply();
+      this.loaded();
+      return;
+    }
     this.loadedRevision = this.currentRevision;
   }
 
@@ -74,11 +92,7 @@ export function bindConfigurationControls(
 
   return {
     draft,
-    acceptProjection(apply) {
-      if (draft.isDirty()) return;
-      apply();
-      draft.loaded();
-    },
+    acceptProjection: apply => draft.acceptProjection(apply),
     saved() { draft.saved(); },
   };
 }
