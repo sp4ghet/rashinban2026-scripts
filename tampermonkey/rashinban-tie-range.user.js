@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.1.4
+// @version      0.1.5
 // @description  Player HP and multipliers for RASHINBAN's Full / Half tie-range rules. Set the same mode as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -146,6 +146,39 @@
     if (!Number.isFinite(threshold) || threshold < 1 || threshold > 5e3 || !Number.isFinite(maxErrorDistance) || maxErrorDistance <= 0) return null;
     return Math.max(25, -(maxErrorDistance / 10) * Math.log((threshold - 0.5) / 5e3));
   }
+  function sampleGeodesicCircle(_center, _radiusM, _segments = 128) {
+    const center = _center;
+    const radiusM = _radiusM;
+    const segments = Math.max(8, Math.floor(_segments));
+    if (!validPoint(center) || !Number.isFinite(radiusM) || radiusM < 0) return [];
+    const angular = Math.min(Math.PI, radiusM / EARTH_RADIUS_M);
+    const lat1 = radians(center.lat);
+    const lng1 = radians(center.lng);
+    const path = [];
+    for (let index = 0; index < segments; index++) {
+      const bearing = 2 * Math.PI * index / segments;
+      const lat = Math.asin(Math.sin(lat1) * Math.cos(angular) + Math.cos(lat1) * Math.sin(angular) * Math.cos(bearing));
+      const lng = lng1 + Math.atan2(
+        Math.sin(bearing) * Math.sin(angular) * Math.cos(lat1),
+        Math.cos(angular) - Math.sin(lat1) * Math.sin(lat)
+      );
+      path.push({ lat: degrees(lat), lng: normalizeLongitude(degrees(lng)) });
+    }
+    path.push(path[0]);
+    return path;
+  }
+  function radians(value) {
+    return value * Math.PI / 180;
+  }
+  function degrees(value) {
+    return value * 180 / Math.PI;
+  }
+  function normalizeLongitude(value) {
+    return ((value + 180) % 360 + 360) % 360 - 180;
+  }
+  function validPoint(point) {
+    return Number.isFinite(point.lat) && point.lat >= -90 && point.lat <= 90 && Number.isFinite(point.lng);
+  }
 
   // tampermonkey/src/tie-range-player-map.ts
   function object(value) {
@@ -267,23 +300,57 @@
           return;
         }
         const radii = playerCircleRadii(geometry, result.scores, result.band);
-        const key = JSON.stringify([geometry.identity, radii, result.scores]);
+        const key = JSON.stringify([geometry.identity, geometry.answer, radii, result.scores]);
         if (map === currentMap && key === currentKey) return;
         clear();
         const bestIndex = result.scores[0] === result.scores[1] ? (geometry.distances[0] ?? Infinity) <= (geometry.distances[1] ?? Infinity) ? 0 : 1 : result.scores[0] > result.scores[1] ? 0 : 1;
         const color = result.scores.includes(5e3) ? "#ffd55a" : bestIndex === 0 ? "#458af2" : "#f05060";
+        const fiveK = result.scores.includes(5e3);
+        const distance = geometry.distances[bestIndex];
+        const inner = fiveK ? radii[0] : distance !== null && distance < Math.PI * 6371e3 ? distance : void 0;
+        const outer = !fiveK && geometry.maxErrorDistance !== null ? tieScoreRadius(Math.max(...result.scores) - result.band, geometry.maxErrorDistance) : null;
+        const { Polygon, Polyline } = page.google.maps;
         try {
-          radii.forEach((radius, index) => circles.push(new Circle({
+          if (outer !== null && outer < Math.PI * 6371e3) {
+            const outerPath = sampleGeodesicCircle(geometry.answer, outer);
+            if (Polygon && inner !== void 0 && inner < outer) circles.push(new Polygon({
+              map,
+              paths: [outerPath, sampleGeodesicCircle(geometry.answer, inner).reverse()],
+              geodesic: true,
+              fillColor: "#243746",
+              fillOpacity: 0.14,
+              strokeOpacity: 0,
+              strokeWeight: 0,
+              clickable: false,
+              zIndex: 1
+            }));
+            if (Polyline) circles.push(new Polyline({
+              map,
+              path: outerPath,
+              geodesic: true,
+              strokeOpacity: 0,
+              clickable: false,
+              zIndex: 8,
+              icons: [{ icon: {
+                path: "M 0,-1 0,1",
+                strokeColor: "#243746",
+                strokeOpacity: 0.9,
+                strokeWeight: 2,
+                scale: 3
+              }, offset: "0", repeat: "14px" }]
+            }));
+          }
+          if (inner !== void 0) circles.push(new Circle({
             map,
             center: geometry.answer,
-            radius,
+            radius: inner,
             strokeColor: color,
-            strokeOpacity: index === 0 ? 1 : 0.7,
-            strokeWeight: 2,
+            strokeOpacity: 0.95,
+            strokeWeight: fiveK ? 4 : 3,
             fillOpacity: 0,
             clickable: false,
-            zIndex: 2
-          })));
+            zIndex: 10
+          }));
         } catch {
           clear();
           return;

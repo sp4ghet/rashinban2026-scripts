@@ -1,5 +1,5 @@
 import { playerRoundIdentity } from './tie-range-player-view-model.ts';
-import { tieScoreRadius } from '../../bundles/rashinban/src/presenter/tie-range-geometry.ts';
+import { sampleGeodesicCircle, tieScoreRadius } from '../../bundles/rashinban/src/presenter/tie-range-geometry.ts';
 import type { PlayerGameContext } from './tie-range-player-state.ts';
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
 
@@ -55,7 +55,8 @@ export function playerCircleRadii(round: PlayerMapRound, scores: [number, number
 
 type NativeMap = { getDiv(): HTMLElement; getProjection(): unknown };
 type NativeCircle = { setMap(map: NativeMap | null): void };
-type MapsPage = Window & { google?: { maps?: { Circle?: new (options: Record<string, unknown>) => NativeCircle } } };
+type OverlayConstructor = new (options: Record<string, unknown>) => NativeCircle;
+type MapsPage = Window & { google?: { maps?: { Circle?: OverlayConstructor; Polygon?: OverlayConstructor; Polyline?: OverlayConstructor } } };
 
 /** Read the existing React map reference; never patch Map, fetch, or WebSocket. */
 export function findPlayerResultMap(root: HTMLElement): NativeMap | null {
@@ -119,16 +120,37 @@ export function createPlayerMapOverlay(getPage: () => MapsPage) {
       const map = currentMap && root.contains(currentMap.getDiv()) ? currentMap : findPlayerResultMap(root);
       if (!map) { clear(); return; }
       const radii = playerCircleRadii(geometry, result.scores, result.band);
-      const key = JSON.stringify([geometry.identity, radii, result.scores]);
+      const key = JSON.stringify([geometry.identity, geometry.answer, radii, result.scores]);
       if (map === currentMap && key === currentKey) return;
       clear();
       const bestIndex = result.scores[0] === result.scores[1]
         ? ((geometry.distances[0] ?? Infinity) <= (geometry.distances[1] ?? Infinity) ? 0 : 1)
         : result.scores[0] > result.scores[1] ? 0 : 1;
       const color = result.scores.includes(5000) ? '#ffd55a' : bestIndex === 0 ? '#458af2' : '#f05060';
-      try { radii.forEach((radius, index) => circles.push(new Circle({ map, center: geometry.answer, radius,
-        strokeColor: color, strokeOpacity: index === 0 ? 1 : .7, strokeWeight: 2,
-        fillOpacity: 0, clickable: false, zIndex: 2 }))); } catch { clear(); return; }
+      const fiveK = result.scores.includes(5000);
+      const distance = geometry.distances[bestIndex];
+      const inner = fiveK ? radii[0] : distance !== null && distance < Math.PI * 6371000 ? distance : undefined;
+      const outer = !fiveK && geometry.maxErrorDistance !== null
+        ? tieScoreRadius(Math.max(...result.scores) - result.band, geometry.maxErrorDistance) : null;
+      const { Polygon, Polyline } = page.google!.maps!;
+      try {
+        if (outer !== null && outer < Math.PI * 6371000) {
+          const outerPath = sampleGeodesicCircle(geometry.answer, outer);
+          if (Polygon && inner !== undefined && inner < outer) circles.push(new Polygon({
+            map, paths: [outerPath, sampleGeodesicCircle(geometry.answer, inner).reverse()],
+            geodesic: true, fillColor: '#243746', fillOpacity: .14,
+            strokeOpacity: 0, strokeWeight: 0, clickable: false, zIndex: 1,
+          }));
+          if (Polyline) circles.push(new Polyline({ map, path: outerPath, geodesic: true,
+            strokeOpacity: 0, clickable: false, zIndex: 8,
+            icons: [{ icon: { path: 'M 0,-1 0,1', strokeColor: '#243746',
+              strokeOpacity: .9, strokeWeight: 2, scale: 3 }, offset: '0', repeat: '14px' }],
+          }));
+        }
+        if (inner !== undefined) circles.push(new Circle({ map, center: geometry.answer, radius: inner,
+          strokeColor: color, strokeOpacity: .95, strokeWeight: fiveK ? 4 : 3,
+          fillOpacity: 0, clickable: false, zIndex: 10 }));
+      } catch { clear(); return; }
       currentMap = map; currentKey = key;
     },
     dispose: clear,

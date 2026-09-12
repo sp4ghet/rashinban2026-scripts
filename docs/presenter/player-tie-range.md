@@ -41,8 +41,8 @@ remain clickable.
 The game's delay, mutual increment, initial HP, and round limit still apply.
 
 After the native answer marker appears, the results map shows the closer
-player's distance circle and the tie-band boundary using the presenter's radius
-calculation. A 5K uses one gold boundary. Circles follow native map pan/zoom;
+player's solid colored distance circle, a dark dashed outer boundary, and
+translucent shading between them, using the presenter's radius calculation. A 5K uses one gold boundary. Circles follow native map pan/zoom;
 no description is added. The script reads the existing map through Tampermonkey's
 `unsafeWindow` permission. Unsupported map markup leaves the native map usable.
 Geometry stays in memory and is never saved in Tampermonkey storage.

@@ -28,6 +28,10 @@ window.google = { maps: { Circle: class {
   constructor(options) { Object.assign(this, options); drawnCircles.push(this); }
   setMap(map) { this.map = map; }
 }}};
+for (const kind of ['Polygon','Polyline']) google.maps[kind] = class {
+  constructor(options) { this.kind=kind;Object.assign(this,options);drawnCircles.push(this); }
+  setMap(map) { this.map=map; }
+};
 window.attachResultMap = () => {
   const root = document.querySelector('[class*="round-score_root__"]');
   const div = document.createElement('div'); div.style.cssText = 'height:200px;width:500px'; root.append(div);
@@ -269,12 +273,18 @@ try {
   await delay(150);
   assert.equal(await evaluate('drawnCircles.filter(c=>c.map).length'),0,'answer under transparent ancestor must not disclose geometry');
   await evaluate(`document.getElementById('answer-marker-parent').style.opacity='1'`);
-  await until('drawnCircles.filter(c=>c.map).length===2','two tie range circles on the revealed native map');
-  const radii=await evaluate('drawnCircles.filter(c=>c.map).map(c=>c.radius)');
-  assert.equal(radii[0],264000);
-  assert.ok(radii[1]>radii[0]);
+  await until('drawnCircles.filter(c=>c.map).length===3','solid inner boundary, dashed outer boundary and shaded band');
+  const shapes=await evaluate('drawnCircles.filter(c=>c.map).map(({map,...options})=>options)');
+  assert.equal(shapes.find(s=>s.radius).radius,264000,'solid circle keeps the closer guess distance');
+  const band=shapes.find(s=>s.kind==='Polygon'), edge=shapes.find(s=>s.kind==='Polyline');
+  assert.equal(band.paths.length,2,'shading has an inner hole');
+  assert.equal(band.fillOpacity,.14);
+  assert.equal(edge.strokeOpacity,0,'outer edge uses spaced dash symbols');
+  assert.equal(edge.icons[0].repeat,'14px');
+  assert.equal(edge.icons[0].icon.strokeColor,'#243746');
+  assert.ok(shapes.every(s=>s.clickable===false),'band leaves native map interaction available');
   await evaluate('refresh()');await delay(200);
-  assert.equal(await evaluate('drawnCircles.length'),2,'polling does not recreate circles');
+  assert.equal(await evaluate('drawnCircles.length'),3,'polling does not recreate circles');
   await screenshot('07-reported-round4');
   await evaluate(`fixture=reported(6);document.querySelector('[class*="round-score_roundNumber__"]').textContent='Round 6';refresh()`);
   await until(`!${shadow}.querySelector('[data-rb="moving-score-1"]').hidden`,'opponent win moves right score toward local score');
