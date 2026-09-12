@@ -22,6 +22,23 @@ for (const candidate of candidates) { try { await access(candidate); chromePath 
 if (!chromePath) throw Error('Chrome was not found. Set CHROME_PATH to its executable.');
 
 const preload = `
+window.animationStarts = [];
+const nativeAnimate = Element.prototype.animate;
+Element.prototype.animate = function(...args) { if(this.dataset.rb==='damage') animationStarts.push(this.parentElement.dataset.rb); return nativeAnimate.apply(this,args); };
+window.unsafeWindow = window;
+window.drawnCircles = [];
+window.google = { maps: { Circle: class {
+  constructor(options) { Object.assign(this, options); drawnCircles.push(this); }
+  setMap(map) { this.map = map; }
+}}};
+window.attachResultMap = () => {
+  const root = document.querySelector('[class*="round-score_root__"]');
+  const div = document.createElement('div'); div.style.cssText = 'height:200px;width:500px'; root.append(div);
+  const map = { getDiv:()=>div, getProjection:()=>({}) };
+  div.__reactFiber$test = { memoizedProps: { map } };
+  const parent = document.createElement('div'); parent.id='answer-marker-parent';parent.style.opacity='0';div.append(parent);
+  const marker = document.createElement('div');marker.className='result-map_correctLocation__test';marker.textContent='Answer';parent.append(marker);
+};
 window.fixture = ${JSON.stringify(manual.created)};
 window.manual = ${JSON.stringify(manual)};
 window.full = ${JSON.stringify(full)};
@@ -32,7 +49,7 @@ window.reported = through => {
   const value=structuredClone(manual.created);
   value.gameId='reported-half';value.version=through;value.currentRoundNumber=through;value.status='Ongoing';value.options.maxNumberOfRounds=30;
   value.rounds=reportedScores.slice(0,through).map((_,i)=>({roundNumber:i+1,startTime:'2026-09-12T00:00:0'+i+'Z'}));
-  value.teams.forEach((t,i)=>{t.roundResults=reportedScores.slice(0,through).map((scores,r)=>({roundNumber:r+1,score:scores[i]}));});
+  value.options.map={maxErrorDistance:14999250};value.rounds.forEach(r=>r.panorama={lat:9,lng:-1});value.teams.forEach((t,i)=>{t.roundResults=reportedScores.slice(0,through).map((scores,r)=>({roundNumber:r+1,score:scores[i],bestGuess:{distance:i===0?264000:526000}}));});
   return value;
 };
 window.native = ${JSON.stringify(native)};
@@ -142,6 +159,11 @@ try {
   await delay(150);
   assert.ok(!(await evaluate(`${shadow}.textContent`)).includes('2295'),'result HP is not disclosed before native reveal');
   await evaluate(`scene('result')`);
+  await until(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').getAnimations().length===1`,'damage number travels to opponent');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent`),'6000','HP waits for the flying number');
+  await delay(950);
+  const movingHp=Number(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent`));
+  assert.ok(movingHp>2295 && movingHp<6000,'HP counts down during impact');
   await until(`${shadow}?.textContent.includes('2295')`,'revealed custom damage');
   const resultText=await evaluate(`${shadow}.textContent`);
   assert.match(resultText,/3705|3,705/,'full damage inside the band');
@@ -163,6 +185,7 @@ try {
   await until(`${shadow}?.querySelector('[data-rb="mode"]').textContent.includes('Full')`,'captured mode survives real page reload');
   await evaluate(`fixture=structuredClone(manual.resolvedDamage);scene('result');refresh()`);
   await until(`${shadow}?.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent==='2295'`,'saved scores recover after reload');
+  assert.deepEqual(await evaluate('animationStarts'),[],'reloaded results never replay old damage');
 
   // A remount from a prior result must not disclose the next settled round.
   await evaluate(`fixture=structuredClone(full);scene('result');refresh()`);
@@ -215,14 +238,27 @@ try {
 
   await evaluate(`openSettings();var s=${shadow}.querySelector('[data-rb="mode-select"]');s.value='half';s.dispatchEvent(new Event('change'))`);
   await until(`saved['rb-tie-range:mode']==='half'`,'Half setting for reported game');
-  await evaluate(`fixture=reported(4);scene('result');document.querySelector('[class*="round-score_roundNumber__"]').textContent='Round 4';refresh()`);
+  await evaluate(`fixture=reported(4);scene('result');document.getElementById('native').setAttribute('aria-hidden','true');document.querySelector('[class*="round-score_root__"]').style.display='contents';document.querySelector('[class*="round-score_roundNumber__"]').textContent='Round 4';refresh()`);
   await until(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent==='350'`,'reported round4 custom HP');
   assert.match(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').textContent`),/1344/,'reported round4 uses custom2x rather than native1.5x');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="result"]').hidden`),false,'visible heading discloses scores without a wrapper layout box');
+  await evaluate(`attachResultMap()`);
+  await delay(150);
+  assert.equal(await evaluate('drawnCircles.filter(c=>c.map).length'),0,'answer under transparent ancestor must not disclose geometry');
+  await evaluate(`document.getElementById('answer-marker-parent').style.opacity='1'`);
+  await until('drawnCircles.filter(c=>c.map).length===2','two tie range circles on the revealed native map');
+  const radii=await evaluate('drawnCircles.filter(c=>c.map).map(c=>c.radius)');
+  assert.equal(radii[0],264000);
+  assert.ok(radii[1]>radii[0]);
+  await evaluate('refresh()');await delay(200);
+  assert.equal(await evaluate('drawnCircles.length'),2,'polling does not recreate circles');
   await screenshot('07-reported-round4');
   await evaluate(`fixture=reported(6);document.querySelector('[class*="round-score_roundNumber__"]').textContent='Round 6';refresh()`);
+  await until(`animationStarts.includes('team-0')`,'opponent win flies toward local HP bar');
   await until(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="health"]').textContent==='5316'`,'reported round6 custom HP');
   assert.match(await evaluate(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="damage"]').textContent`),/586/,'opponent win damages the local HP bar');
   await evaluate(`scene('summary');var container=document.querySelector('[class*="game-summary-2_playedRounds__"]');var template=container.querySelector('[class*="game-summary-2_playedRound__"]').cloneNode(true);container.replaceChildren();reportedScores.forEach((scores,i)=>{let row=template.cloneNode(true);row.querySelector('[class*="game-summary-2_roundNumber__"]').textContent=i+1;row.children[0].querySelector('div').textContent='x1.5';row.children[1].textContent=scores[0]+' points';row.children[2].textContent=scores[1]+' points';container.append(row)});document.querySelectorAll('[class*="game-summary-2_playedRoundsHeader__"] a').forEach(a=>a.replaceWith(document.createTextNode(a.textContent)));`);
+  await until('drawnCircles.filter(c=>c.map).length===0','leaving results removes map circles');
   await until(`document.querySelectorAll('[data-rb="summary-health"]').length===12`,'six reported rounds get custom breakdown values');
   assert.match(await evaluate(`document.querySelectorAll('[class*="game-summary-2_playedRound__"]')[3].children[4].querySelector('[data-rb="summary-health"]').textContent`),/350.*1344/,'breakdown uses custom HP and damage');
   assert.equal(await evaluate(`getComputedStyle(document.querySelector('[class*="game-summary-2_playedRound__"]').children[0].querySelector('div')).visibility`),'hidden','native multiplier badge does not contradict custom breakdown');

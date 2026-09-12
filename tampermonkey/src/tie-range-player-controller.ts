@@ -1,3 +1,4 @@
+import { decodePlayerMapRounds, type PlayerMapRound } from './tie-range-player-map.ts';
 import type { TieRangeBandMode, TieRangeOutput } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
 import {
   acceptPlayerSnapshot,
@@ -44,6 +45,7 @@ export type PlayerTieRangeViewStatus =
   | 'unavailable';
 
 export type PlayerTieRangeView = {
+  mapRounds?: PlayerMapRound[];
   status: PlayerTieRangeViewStatus;
   gameId: string | null;
   configuredMode: TieRangeBandMode;
@@ -130,7 +132,7 @@ function readActiveParty(raw: unknown): {
   const value = raw as Record<string, unknown>;
   const partyId = value.partyId === undefined ? null : value.partyId;
   if (partyId !== null && !validPathId(partyId)) throw new Error('Active party ID is invalid');
-  if (value.gameState === 'NoGame') {
+  if (value.gameState === 'NoGame' || (value.gameState === 'Finished' && value.lobbyId === null)) {
     return { gameId: null, partyId, waiting: true, gameMaster: false };
   }
   if (value.gameState !== 'Ongoing' && value.gameState !== 'Finished') {
@@ -165,6 +167,7 @@ export function createPlayerTieRangeController(
   let currentRoute: PlayerPageRoute | null = null;
   let currentRouteKey: string | null = null;
   let gameId: string | null = null;
+  let mapRounds: PlayerMapRound[] = [];
   let context: PlayerGameContext | null = null;
   let output: TieRangeOutput | null = null;
   let diagnostic: PlayerDiagnostic | null = null;
@@ -207,6 +210,7 @@ export function createPlayerTieRangeController(
       appliesToNextDuel: context !== null && context.mode !== configured,
       localTeamId: localTeamId(),
       context,
+      mapRounds,
       output,
       diagnostic,
       message: playerIsKnownOutsideGame ? 'Current account is not a player in this duel' : message,
@@ -317,6 +321,7 @@ export function createPlayerTieRangeController(
     if (gameId === nextGameId) return true;
     gameId = nextGameId;
     context = null;
+    mapRounds = [];
     output = null;
     diagnostic = null;
     schemaBlocked = false;
@@ -351,6 +356,7 @@ export function createPlayerTieRangeController(
       } else {
         gameId = null;
         context = null;
+        mapRounds = [];
         output = null;
         diagnostic = null;
         schemaBlocked = false;
@@ -363,6 +369,7 @@ export function createPlayerTieRangeController(
     if (active.partyId !== null && currentPartyId !== null && active.partyId !== currentPartyId) {
       gameId = null;
       context = null;
+      mapRounds = [];
       output = null;
       diagnostic = null;
       schemaBlocked = false;
@@ -375,6 +382,7 @@ export function createPlayerTieRangeController(
       } else {
         gameId = null;
         context = null;
+        mapRounds = [];
         output = null;
         diagnostic = null;
         schemaBlocked = false;
@@ -388,6 +396,7 @@ export function createPlayerTieRangeController(
     if (active.gameMaster && owner?.userId === dependencies.getUserId()) {
       gameId = active.gameId;
       context = null;
+      mapRounds = [];
       output = null;
       diagnostic = null;
       schemaBlocked = true;
@@ -478,6 +487,7 @@ export function createPlayerTieRangeController(
       }
       const accepted = acceptPlayerSnapshot(context, raw, configuredMode());
       context = accepted.context;
+      mapRounds = accepted.accepted && context ? decodePlayerMapRounds(raw, context) : [];
       output = accepted.output;
       diagnostic = accepted.diagnostic;
       failureCount = 0;
@@ -517,6 +527,7 @@ export function createPlayerTieRangeController(
     currentRouteKey = nextKey;
     gameId = null;
     context = null;
+    mapRounds = [];
     output = null;
     diagnostic = null;
     schemaBlocked = false;
@@ -550,6 +561,7 @@ export function createPlayerTieRangeController(
       currentRouteKey = null;
       gameId = null;
       context = null;
+      mapRounds = [];
       output = null;
       diagnostic = null;
       schemaBlocked = false;

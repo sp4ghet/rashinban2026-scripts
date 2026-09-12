@@ -555,3 +555,40 @@ test('an old party discovery response cannot clear a newer direct duel', async (
   assert.equal(h.views.at(-1)?.status, 'ready');
   h.controller.dispose();
 });
+test('retains a same-party terminal Finished with no lobby ID but clears it for a different party', async () => {
+  let activeCalls = 0;
+  const h = harness(async url => {
+    if (url.endsWith('/api/v4/parties/v2/active')) {
+      activeCalls += 1;
+      if (activeCalls === 1) {
+        return response({
+          partyId: 'party-1',
+          lobbyId: 'player-rest-full',
+          gameState: 'Ongoing',
+          gameType: 'Duels',
+          owner: { userId: 'host-user' },
+        });
+      }
+      return response({
+        partyId: activeCalls === 2 ? 'party-1' : 'party-2',
+        gameState: 'Finished', lobbyId: null,
+      });
+    }
+    if (url.startsWith(PHONEBOOK_PREFIX)) {
+      return response({ gameId: 'player-rest-full', gameServerNodeId: 'node-1', status: 'Active' });
+    }
+    return response(game());
+  }, { path: '/party/lobby' });
+
+  h.controller.start();
+  await flush();
+  await h.clock.advance(2500);
+  assert.equal(h.views.at(-1)?.status, 'ended');
+  assert.equal(h.views.at(-1)?.gameId, 'player-rest-full');
+  assert.ok(h.views.at(-1)?.output?.terminal);
+
+  await h.clock.advance(2500);
+  assert.equal(h.views.at(-1)?.status, 'waiting');
+  assert.equal(h.views.at(-1)?.gameId, null);
+  assert.equal(h.views.at(-1)?.output, null);
+});

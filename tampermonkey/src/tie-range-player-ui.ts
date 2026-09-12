@@ -1,3 +1,4 @@
+import { createPlayerMapOverlay } from './tie-range-player-map.ts';
 import type { TieRangeBandMode, TieRangeRoundOutput } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
 import {
@@ -9,6 +10,7 @@ import {
 
 export type PlayerTieRangeUiDependencies = {
   document: Document;
+  getPageWindow?(): Window;
   onModeChange(mode: TieRangeBandMode): void;
   getConfiguredMode(): TieRangeBandMode;
 };
@@ -24,7 +26,7 @@ type StyleProperty = 'display' | 'visibility' | 'position';
 const CLASS_SELECTORS = {
   duelRoot: '[class*="duels_root__"]',
   healthBars: '[class*="hud_healthBars__"]',
-  resultRoot: '[class*="round-score_root__"][class*="round-score_isMounted__"]',
+  resultRoot: '[class*="round-score_root__"]',
   resultRound: '[class*="round-score_roundNumber__"]',
   damage: '[class*="round-score_damageAnimation__"]',
   summary: '[class*="game-summary-2_root__"]',
@@ -44,9 +46,9 @@ function classStartsWith(element: Element, prefix: string): boolean {
 
 function visible(element: Element, document: Document): boolean {
   for (let current: Element | null = element; current; current = current.parentElement) {
-    if ((current as HTMLElement).hidden || current.getAttribute('aria-hidden') === 'true') return false;
+    if ((current as HTMLElement).hidden) return false;
     const style = document.defaultView?.getComputedStyle(current);
-    if (style?.display === 'none' || style?.visibility === 'hidden' || style?.visibility === 'collapse'
+    if (style?.display === 'none' || (current === element && (style?.visibility === 'hidden' || style?.visibility === 'collapse'))
       || Number.parseFloat(style?.opacity ?? '1') === 0) return false;
   }
   return typeof element.getClientRects !== 'function' || element.getClientRects().length > 0;
@@ -68,9 +70,10 @@ function visibleResultRoots(document: Document, roots: HTMLElement[], expectedRo
   if (expectedRound === null) return [];
   return scopedElements(roots, CLASS_SELECTORS.resultRoot)
     .filter(element => {
-      if (!classStartsWith(element, 'round-score_root__')
-        || !classStartsWith(element, 'round-score_isMounted__') || !visible(element, document)) return false;
-      const text = element.querySelector(CLASS_SELECTORS.resultRound)?.textContent ?? '';
+      if (!classStartsWith(element, 'round-score_root__')) return false;
+      const heading = element.querySelector(CLASS_SELECTORS.resultRound);
+      if (!heading || !visible(heading, document)) return false;
+      const text = heading.textContent ?? '';
       const displayedRound = [...text.matchAll(/\d+/g)].at(-1)?.[0];
       return displayedRound !== undefined && Number.parseInt(displayedRound, 10) === expectedRound;
     });
@@ -106,6 +109,7 @@ function userIdFromLink(element: Element, document: Document): string | null {
 
 export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencies): PlayerTieRangeUi {
   const { document } = dependencies;
+  const mapOverlay = createPlayerMapOverlay(() => dependencies.getPageWindow?.() ?? document.defaultView!);
   document.getElementById('rb-tie-range-player')?.remove();
   const host = document.createElement('div');
   host.id = 'rb-tie-range-player';
@@ -124,10 +128,8 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       .teams { display: flex; justify-content: space-between; gap: 180px; }
       .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
       .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
-        background: #35131ff2; color: #ff8492; font-size: 20px; font-variant-numeric: tabular-nums; }
-      .damage-arrival { animation: damage-arrival 450ms ease-out; }
-      @keyframes damage-arrival { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-      @media (prefers-reduced-motion: reduce) { .damage-arrival { animation: none; } .fill { transition: none; } }
+        background: #35131ff2; color: #ff8492; font-size: 32px; font-variant-numeric: tabular-nums; }
+      @media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
       .team[data-side="blue"] { --team: #38a8ff; }
       .team[data-side="red"] { --team: #ff5365; }
       .team-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -137,11 +139,10 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       .multiplier { color: #ffe169; font-size: 16px; font-variant-numeric: tabular-nums; }
       .track { height: 8px; margin-top: 5px; overflow: hidden; border-radius: 999px; background: #ffffff25; }
       .fill { height: 100%; width: 0; border-radius: inherit; background: var(--team); transition: width 220ms ease; }
-      .result { margin: 7px auto 0; width: min(560px, 100%); padding: 6px 10px; border: 1px solid #ffffff2b;
-        border-radius: 7px; background: #111e; text-align: center; font-size: 12px; }
-      .result-title { color: #ffe169; margin-bottom: 3px; }
-      .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-variant-numeric: tabular-nums; }
-      .result-meta { margin-top: 3px; color: #d5d8df; font-size: 11px; }
+      .result { margin: 22px auto 0; width: 76%; text-align: center; font-size: 40px; text-shadow: 0 2px 6px #000; }
+      .result-title { display: none; }
+      .result-grid { display: flex; justify-content: space-between; gap: 100px; font-variant-numeric: tabular-nums; }
+      .result-meta { display: none; }
       .terminal { position: fixed; top: 22%; left: 50%; transform: translateX(-50%); min-width: min(420px, calc(100vw - 32px));
         padding: 13px 22px; border: 1px solid #ffe16999; border-radius: 10px; background: #111e; text-align: center;
         filter: drop-shadow(0 3px 12px #000c); }
@@ -208,6 +209,40 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   let disposed = false;
   let reconcileQueued = false;
   let lastDamageIdentity: string | null = null;
+  let initialResultIdentity: string | null = null;
+  let activeDamage: { identity: string; teamId: string; cancel(): void } | null = null;
+
+  function animateDamage(root: HTMLElement, damage: HTMLElement, identity: string, teamId: string, after: number, maximum: number): void {
+    activeDamage?.cancel();
+    const page = document.defaultView!;
+    if (page.matchMedia?.('(prefers-reduced-motion: reduce)').matches || typeof damage.animate !== 'function') return;
+    const canonicalIndex = lastView!.output!.teamIds.indexOf(teamId);
+    const before = lastView!.output!.rounds.at(-1)!.healthBefore[canonicalIndex];
+    const health = root.querySelector<HTMLElement>('[data-rb="health"]')!;
+    const fill = root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!;
+    const write = (value: number) => { health.textContent = String(value); fill.style.width = `${maximum > 0 ? value / maximum * 100 : 0}%`; };
+    const box = damage.getBoundingClientRect();
+    const x = page.innerWidth * (root.getBoundingClientRect().left < page.innerWidth / 2 ? .24 : .76) - (box.left + box.width / 2);
+    const y = Math.max(150, root.getBoundingClientRect().bottom + 65) - box.top;
+    const animation = damage.animate([
+      { transform: `translate(${x}px, ${y}px) scale(1.5)`, offset: 0 },
+      { transform: `translate(${x}px, ${y}px) scale(1.5)`, offset: .35 },
+      { transform: 'translate(0, 0) scale(1)', offset: 1 },
+    ], { duration: 1200, easing: 'ease-in-out' });
+    let frame = 0;
+    const started = page.performance.now();
+    const cancel = () => { page.cancelAnimationFrame(frame); animation.cancel(); write(after); };
+    activeDamage = { identity, teamId, cancel };
+    write(before);
+    const tick = () => {
+      if (activeDamage?.identity !== identity) return;
+      const progress = Math.max(0, Math.min(1, (page.performance.now() - started - 750) / 450));
+      write(Math.round(before + (after - before) * progress));
+      if (progress < 1) frame = page.requestAnimationFrame(tick);
+      else activeDamage = null;
+    };
+    frame = page.requestAnimationFrame(tick);
+  }
 
   function hideNativeTree(element: HTMLElement, except?: HTMLElement): void {
     // Preserve the boxes used as targets by GeoGuessr's animation calculations.
@@ -269,6 +304,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   }
 
   function renderDisplay(display: PlayerTieRangeDisplay, layoutDiagnostic: string | null): void {
+    if (!display.teams && activeDamage) { activeDamage.cancel(); activeDamage = null; }
     hud.hidden = !display.showHud && !display.showDiagnostic && layoutDiagnostic === null;
     byRb<HTMLElement>('mode').hidden = !display.showHud;
     byRb<HTMLElement>('teams').hidden = !display.showHud;
@@ -280,23 +316,23 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     settingsOpen.hidden = lastView?.status === 'inactive';
     if (display.teams) {
       const damageIdentity = display.result && lastView?.context
-        ? playerRoundIdentity(lastView.context, display.result.round) : null;
+        ? JSON.stringify([playerRoundIdentity(lastView.context, display.result.round), display.result.damageDealt, display.teams.map(team => team.health)]) : null;
+      if (activeDamage && activeDamage.identity !== damageIdentity) { activeDamage.cancel(); activeDamage = null; }
       display.teams.forEach((team, index) => {
         const root = byRb<HTMLElement>(`team-${index}`);
         root.dataset.side = team.side;
         root.querySelector<HTMLElement>('[data-rb="label"]')!.textContent = team.label;
-        root.querySelector<HTMLElement>('[data-rb="health"]')!.textContent = String(team.health);
+        if (activeDamage?.teamId !== team.teamId) root.querySelector<HTMLElement>('[data-rb="health"]')!.textContent = String(team.health);
         root.querySelector<HTMLElement>('[data-rb="multiplier"]')!.textContent = multiplier(team.multiplierTenths);
         const percent = team.maximumHealth <= 0 ? 0 : Math.max(0, Math.min(100, team.health / team.maximumHealth * 100));
-        root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!.style.width = `${percent}%`;
+        if (activeDamage?.teamId !== team.teamId) root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!.style.width = `${percent}%`;
         const damage = root.querySelector<HTMLElement>('[data-rb="damage"]')!;
         const amount = display.result?.damageDealt[index === 0 ? 1 : 0] ?? 0;
         damage.hidden = amount === 0;
         damage.textContent = amount > 0 ? `−${amount}` : '';
-        if (amount > 0 && damageIdentity !== lastDamageIdentity) {
-          damage.classList.remove('damage-arrival');
-          void damage.offsetWidth;
-          damage.classList.add('damage-arrival');
+        if (amount > 0 && damageIdentity !== lastDamageIdentity
+          && playerRoundIdentity(lastView!.context!, display.result!.round) !== initialResultIdentity) {
+          animateDamage(root, damage, damageIdentity!, team.teamId, team.health, team.maximumHealth);
         }
       });
       if (damageIdentity !== null) lastDamageIdentity = damageIdentity;
@@ -306,7 +342,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     if (display.result && display.teams) {
       byRb<HTMLElement>('result-title').textContent = `Round ${display.result.round} result`;
       for (const index of [0, 1] as const) {
-        byRb<HTMLElement>(`result-team-${index}`).textContent = `${display.teams[index].label}: score ${display.result.scores[index]} · damage ${display.result.damageDealt[index]} · used ${multiplier(display.result.usedMultiplierTenths[index])} · next ${multiplier(display.result.nextMultiplierTenths[index])}`;
+        byRb<HTMLElement>(`result-team-${index}`).textContent = String(display.result.scores[index]);
       }
       byRb<HTMLElement>('result-meta').textContent = `Tie band ${display.result.band} · ${display.result.withinBand ? 'inside range' : 'outside range'}`;
     }
@@ -461,6 +497,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     }
     restoreUnusedNativeStyles();
     renderDisplay(display, layoutDiagnostic);
+    mapOverlay.update(lastView, display.result?.round ?? null);
   }
 
   function queueReconcile(): void {
@@ -516,7 +553,13 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
         lastDamageIdentity = null;
       }
       if (lastView?.gameId !== view.gameId || view.status === 'inactive' || view.status === 'off') {
+        activeDamage?.cancel();
+        activeDamage = null;
         restoreNative();
+      }
+      if (view.context && view.context.gameId !== lastView?.context?.gameId) {
+        const latest = view.output?.rounds.at(-1);
+        initialResultIdentity = latest ? playerRoundIdentity(view.context, latest.round) : null;
       }
       lastView = view;
       reconcile();
@@ -528,7 +571,10 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     dispose(): void {
       if (disposed) return;
       disposed = true;
+      activeDamage?.cancel();
+      activeDamage = null;
       observer?.disconnect();
+      mapOverlay.dispose();
       restoreNative();
       host.remove();
       lastView = null;

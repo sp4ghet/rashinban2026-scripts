@@ -31,11 +31,19 @@ appear only after the native result is visible or the game has advanced.
 Tie-range changes the multiplier increment, not whether damage occurs. In Full
 mode, a 2470–0 round at 1.5× deals **3705 damage**, and both players receive the
 individual increment because the difference is within the 2530-point band.
-The result strip labels the multiplier used and the next multiplier separately.
-Damage appears beside the losing HP bar. The breakdown shows custom HP and
+Results show both scores. The calculated damage number travels toward the
+losing HP bar, which counts down on impact. Reopening an existing result does
+not replay the damage. The breakdown shows custom HP and
 damage received; hover a custom HP cell to see the multiplier used. Its rows
 remain clickable.
 The game's delay, mutual increment, initial HP, and round limit still apply.
+
+After the native answer marker appears, the results map shows the closer
+player's distance circle and the tie-band boundary using the presenter's radius
+calculation. A 5K uses one gold boundary. Circles follow native map pan/zoom;
+no description is added. The script reads the existing map through Tampermonkey's
+`unsafeWindow` permission. Unsupported map markup leaves the native map usable.
+Geometry stays in memory and is never saved in Tampermonkey storage.
 
 Custom knockout and round-limit outcomes remain visible while waiting for the
 host. A later native round or abort does not replace a verified custom winner.
@@ -83,7 +91,13 @@ See the [capture notes](../geoguessr/samples/player-tie-range/README.md) for the
 live/archived transport distinction and the
 [presenter guide](tie-range.md) for host operation.
 
-Version 0.1.1 also replays the six score pairs from the reported player
-screenshots: Half round 4 deals 1344 at 2?, leaving the opponent at 350 HP;
+Version 0.1.2 also replays the six score pairs from the reported player
+screenshots: Half round 4 deals 1344 at 2x, leaving the opponent at 350 HP;
 round 6 deals 586 to the local side. This is a screenshot-derived regression,
 not an additional live API capture.
+
+Version 0.1.2 adds browser regressions for result wrappers without layout boxes,
+visible content beneath accessibility-hidden ancestors, damage flight and HP
+countdown, and map circles gated by answer-marker visibility. Circle attachment
+is tested through a controlled Google Maps/React boundary; a live native duel
+with these new circles has not yet been verified.

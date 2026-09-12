@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.1.1
+// @version      0.1.2
 // @description  Player HP and multipliers for RASHINBAN's Full / Half tie-range rules. Set the same mode as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
 // @noframes
+// @grant        unsafeWindow
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_deleteValue
@@ -16,6 +17,8 @@ import type { TieRangeBandMode } from '../../bundles/rashinban/src/presenter/tie
 import { createPlayerTieRangeController } from './tie-range-player-controller.ts';
 import { parsePlayerPageRoute } from './tie-range-player-state.ts';
 import { createPlayerTieRangeUi } from './tie-range-player-ui.ts';
+
+declare const unsafeWindow: Window;
 
 declare function GM_getValue(key: string, defaultValue?: unknown): unknown;
 declare function GM_setValue(key: string, value: unknown): void | Promise<void>;
@@ -46,6 +49,7 @@ async function start(): Promise<void> {
   let disposed = false;
   const ui = createPlayerTieRangeUi({
     document,
+    getPageWindow: () => typeof unsafeWindow === 'undefined' ? window : unsafeWindow,
     getConfiguredMode: () => configuredMode,
     onModeChange: (nextMode) => {
       void (async () => {

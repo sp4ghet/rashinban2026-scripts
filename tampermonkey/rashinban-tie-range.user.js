@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.1.1
+// @version      0.1.2
 // @description  Player HP and multipliers for RASHINBAN's Full / Half tie-range rules. Set the same mode as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
 // @noframes
+// @grant        unsafeWindow
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_deleteValue
@@ -16,6 +17,283 @@
   var __defProp = Object.defineProperty;
   var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  // tampermonkey/src/tie-range-player-view-model.ts
+  function pair(values, order) {
+    return [values[order[0]], values[order[1]]];
+  }
+  function resultIsDisclosed(round, currentRoundNumber, nativeResultVisible) {
+    return nativeResultVisible || currentRoundNumber > round.round;
+  }
+  function terminalLabel(view, order) {
+    const terminal = view.output?.terminal;
+    if (!terminal || terminal.isDraw || terminal.winnerTeamId === null) return "Draw";
+    if (view.localTeamId !== null) return terminal.winnerTeamId === view.localTeamId ? "You win" : "You lose";
+    const winningIndex = view.output?.teamIds.indexOf(terminal.winnerTeamId) ?? -1;
+    if (winningIndex < 0) return "Duel ended";
+    return `${order.indexOf(winningIndex) === 0 ? "Blue" : "Red"} wins`;
+  }
+  function diagnosticText(view) {
+    if (view.diagnostic && view.diagnostic.code !== "source-ended") return view.diagnostic.message;
+    if (view.message) return view.message;
+    if (view.status === "reconnecting") return "Reconnecting";
+    if (view.status === "stale") return "HP may be out of date";
+    if (view.status === "auth-error") return "Sign in to refresh custom HP";
+    if (view.status === "unavailable") return "Custom HP unavailable";
+    return null;
+  }
+  function playerRoundIdentity(context, round) {
+    const startTime = context.roundStarts.find((start2) => start2.round === round)?.startTime;
+    return startTime === void 0 ? null : JSON.stringify([context.gameId, round, startTime]);
+  }
+  function playerDisclosureMustReset(previous, next) {
+    if (previous.gameId !== next.gameId || next.status === "inactive" || next.status === "off") return true;
+    if (previous.context === null) return false;
+    if (next.context === null) return true;
+    if (next.context.currentRoundNumber < previous.context.currentRoundNumber || next.context.input.rounds.length < previous.context.input.rounds.length || next.context.roundStarts.length < previous.context.roundStarts.length) return true;
+    return previous.context.roundStarts.some((previousStart) => {
+      const nextStart = next.context?.roundStarts.find((start2) => start2.round === previousStart.round);
+      return nextStart !== void 0 && nextStart.startTime !== previousStart.startTime;
+    });
+  }
+  function modeLabel(mode2) {
+    if (mode2 === "full") return "Full tie-range";
+    if (mode2 === "half") return "Half tie-range";
+    return "Off";
+  }
+  function derivePlayerTieRangeDisplay(view, nativeResultVisible, revealedRoundIdentity = null) {
+    const mode2 = view.capturedMode ?? view.configuredMode;
+    const accountIsNotAPlayer = view.status === "unavailable" && view.message === "Current account is not a player in this duel";
+    if (mode2 === "off" || view.context === null || view.output === null || accountIsNotAPlayer) {
+      const diagnostic3 = diagnosticText(view);
+      return {
+        showHud: false,
+        showDiagnostic: mode2 !== "off" && view.status !== "inactive" && view.status !== "waiting" && view.status !== "loading" && diagnostic3 !== null,
+        suppressNative: false,
+        mode: mode2,
+        modeLabel: modeLabel(view.configuredMode),
+        appliesToNextDuel: view.appliesToNextDuel,
+        teams: null,
+        result: null,
+        terminal: null,
+        diagnostic: diagnostic3
+      };
+    }
+    const { context, output } = view;
+    const localIndex = view.localTeamId === null ? -1 : output.teamIds.indexOf(view.localTeamId);
+    const order = localIndex === 1 ? [1, 0] : [0, 1];
+    const latest = output.rounds.at(-1) ?? null;
+    const latestIdentity = latest ? playerRoundIdentity(context, latest.round) : null;
+    const retainedDisclosure = latestIdentity !== null && latestIdentity === revealedRoundIdentity;
+    const disclosed = latest === null || view.status === "ended" || retainedDisclosure || resultIsDisclosed(latest, context.currentRoundNumber, nativeResultVisible);
+    const health = latest && !disclosed ? latest.healthBefore : output.currentHealth;
+    const multipliers = latest && !disclosed ? latest.multiplierTenths : output.currentMultiplierTenths;
+    const labels = localIndex >= 0 ? ["You", "Opponent"] : ["Blue", "Red"];
+    const orderedHealth = pair(health, order);
+    const orderedMaximum = pair(output.initialHealth, order);
+    const orderedMultipliers = pair(multipliers, order);
+    const teams = order.map((index, position) => ({
+      teamId: output.teamIds[index],
+      label: labels[position],
+      side: index === 0 ? "blue" : "red",
+      health: orderedHealth[position],
+      maximumHealth: orderedMaximum[position],
+      multiplierTenths: orderedMultipliers[position]
+    }));
+    const result = latest && nativeResultVisible ? {
+      round: latest.round,
+      scores: pair(latest.scores, order),
+      damageDealt: pair(latest.damageDealt, order),
+      usedMultiplierTenths: pair(latest.multiplierTenths, order),
+      nextMultiplierTenths: pair(latest.nextMultiplierTenths, order),
+      band: latest.band,
+      withinBand: latest.withinBand
+    } : null;
+    let terminal = null;
+    const terminalIdentity = output.terminal ? playerRoundIdentity(context, output.terminal.round) : null;
+    if (output.terminal && (view.status === "ended" || terminalIdentity !== null && terminalIdentity === revealedRoundIdentity || context.currentRoundNumber > output.terminal.round || nativeResultVisible && latest?.round === output.terminal.round)) {
+      terminal = {
+        headline: terminalLabel(view, order),
+        detail: "Custom duel finished \u2014 wait for the host",
+        round: output.terminal.round
+      };
+    } else if (view.status === "ended") {
+      terminal = {
+        headline: "Duel ended",
+        detail: "No custom winner was determined",
+        round: null
+      };
+    }
+    const diagnostic2 = diagnosticText(view);
+    return {
+      showHud: true,
+      showDiagnostic: diagnostic2 !== null,
+      suppressNative: true,
+      mode: mode2,
+      modeLabel: modeLabel(mode2),
+      appliesToNextDuel: view.appliesToNextDuel,
+      teams,
+      result,
+      terminal,
+      diagnostic: diagnostic2
+    };
+  }
+
+  // bundles/rashinban/src/presenter/tie-range-geometry.ts
+  var EARTH_RADIUS_M = 6371e3;
+  var HALF_CIRCUMFERENCE_M = Math.PI * EARTH_RADIUS_M;
+  function tieScoreRadius(threshold, maxErrorDistance) {
+    if (!Number.isFinite(threshold) || threshold < 1 || threshold > 5e3 || !Number.isFinite(maxErrorDistance) || maxErrorDistance <= 0) return null;
+    return Math.max(25, -(maxErrorDistance / 10) * Math.log((threshold - 0.5) / 5e3));
+  }
+
+  // tampermonkey/src/tie-range-player-map.ts
+  function object(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
+  }
+  function decodePlayerMapRounds(raw, context) {
+    const source = object(raw);
+    if (!source || source.gameId !== context.gameId || source.version !== context.sourceVersion || !Array.isArray(source.rounds) || !Array.isArray(source.teams)) return [];
+    const scale = source.options?.map?.maxErrorDistance;
+    return context.input.rounds.flatMap((settled) => {
+      const round = source.rounds.find((value) => value?.roundNumber === settled.round);
+      const start2 = context.roundStarts.find((value) => value.round === settled.round)?.startTime;
+      const answer = round?.panorama;
+      if (!start2 || round?.startTime !== start2 || !Number.isFinite(answer?.lat) || Math.abs(answer.lat) > 90 || !Number.isFinite(answer?.lng) || Math.abs(answer.lng) > 180) return [];
+      const results = context.teamIds.map((id) => source.teams.find((team) => team?.id === id)?.roundResults?.find((result) => result?.roundNumber === settled.round));
+      if (results.some((result, i) => result?.score !== settled.scores[i])) return [];
+      const distances = results.map((result) => {
+        const distance = result?.bestGuess?.distance;
+        return Number.isFinite(distance) && distance >= 0 ? distance : null;
+      });
+      return [{
+        round: settled.round,
+        identity: JSON.stringify([context.gameId, settled.round, start2]),
+        answer: { lat: answer.lat, lng: answer.lng },
+        distances,
+        maxErrorDistance: Number.isFinite(scale) && scale > 0 ? scale : null
+      }];
+    });
+  }
+  function playerCircleRadii(round, scores, band) {
+    if (scores.includes(5e3)) {
+      const radius = round.maxErrorDistance === null ? null : tieScoreRadius(5e3, round.maxErrorDistance);
+      return radius !== null && radius < Math.PI * 6371e3 ? [radius] : [];
+    }
+    const index = scores[0] === scores[1] ? (round.distances[0] ?? Infinity) <= (round.distances[1] ?? Infinity) ? 0 : 1 : scores[0] > scores[1] ? 0 : 1;
+    const inner = round.distances[index];
+    const outer = round.maxErrorDistance === null ? null : tieScoreRadius(Math.max(...scores) - band, round.maxErrorDistance);
+    return [inner, outer].filter((radius) => radius !== null && radius < Math.PI * 6371e3);
+  }
+  function findPlayerResultMap(root) {
+    const candidates = [root, ...root.querySelectorAll("*")];
+    const checked = /* @__PURE__ */ new Set();
+    const inspect = (value, depth) => {
+      if (!value || typeof value !== "object" || checked.has(value) || depth > 4) return null;
+      checked.add(value);
+      if (typeof value.getDiv === "function" && typeof value.getProjection === "function") {
+        try {
+          if (root.contains(value.getDiv())) return value;
+        } catch {
+          return null;
+        }
+      }
+      for (const key of ["map", "current", "value", "memoizedState", "state", "next"]) {
+        const found = inspect(value[key], depth + 1);
+        if (found) return found;
+      }
+      if (Array.isArray(value)) for (const item of value.slice(0, 100)) {
+        const found = inspect(item, depth + 1);
+        if (found) return found;
+      }
+      return null;
+    };
+    for (const element of candidates) {
+      const key = Object.getOwnPropertyNames(element).find((name) => name.startsWith("__reactFiber$"));
+      if (!key) continue;
+      let fiber = element[key];
+      for (let depth = 0; fiber && depth < 30; depth++, fiber = fiber.return) {
+        const found = inspect(fiber.memoizedProps, 0) ?? inspect(fiber.memoizedState, 0) ?? inspect(fiber.stateNode, 0);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  function createPlayerMapOverlay(getPage) {
+    let circles = [];
+    let currentMap = null;
+    let currentKey = null;
+    function clear() {
+      for (const circle of circles) {
+        try {
+          circle.setMap(null);
+        } catch {
+        }
+      }
+      circles = [];
+      currentMap = null;
+      currentKey = null;
+    }
+    return {
+      update(view, resultRound) {
+        if (resultRound === null || !view.context || view.capturedMode === "off") {
+          clear();
+          return;
+        }
+        const geometry = view.mapRounds?.find((round) => round.round === resultRound);
+        const result = view.output?.rounds.find((round) => round.round === resultRound);
+        if (!geometry || !result || geometry.identity !== playerRoundIdentity(view.context, resultRound)) {
+          clear();
+          return;
+        }
+        const page = getPage();
+        const Circle = page.google?.maps?.Circle;
+        const root = Array.from(page.document.querySelectorAll('[class*="duels_root__"] [class*="round-score_root__"]')).find((element) => Number(element.querySelector('[class*="round-score_roundNumber__"]')?.textContent?.match(/\d+/)?.[0]) === resultRound);
+        const answerMarker = root?.querySelector('[class*="result-map_correctLocation__"], [data-qa="correct-location"]');
+        if (!Circle || !root || !answerMarker || answerMarker.getClientRects().length === 0) {
+          clear();
+          return;
+        }
+        for (let element = answerMarker; element; element = element.parentElement) {
+          const style = page.getComputedStyle(element);
+          if (style.display === "none" || Number.parseFloat(style.opacity) === 0 || element === answerMarker && style.visibility === "hidden") {
+            clear();
+            return;
+          }
+        }
+        const map = currentMap && root.contains(currentMap.getDiv()) ? currentMap : findPlayerResultMap(root);
+        if (!map) {
+          clear();
+          return;
+        }
+        const radii = playerCircleRadii(geometry, result.scores, result.band);
+        const key = JSON.stringify([geometry.identity, radii, result.scores]);
+        if (map === currentMap && key === currentKey) return;
+        clear();
+        const bestIndex = result.scores[0] === result.scores[1] ? (geometry.distances[0] ?? Infinity) <= (geometry.distances[1] ?? Infinity) ? 0 : 1 : result.scores[0] > result.scores[1] ? 0 : 1;
+        const color = result.scores.includes(5e3) ? "#ffd55a" : bestIndex === 0 ? "#458af2" : "#f05060";
+        try {
+          radii.forEach((radius, index) => circles.push(new Circle({
+            map,
+            center: geometry.answer,
+            radius,
+            strokeColor: color,
+            strokeOpacity: index === 0 ? 1 : 0.7,
+            strokeWeight: 2,
+            fillOpacity: 0,
+            clickable: false,
+            zIndex: 2
+          })));
+        } catch {
+          clear();
+          return;
+        }
+        currentMap = map;
+        currentKey = key;
+      },
+      dispose: clear
+    };
+  }
 
   // bundles/rashinban/src/presenter/tie-range-core.ts
   function tieRangeBand(bestScore, mode2) {
@@ -565,7 +843,7 @@
     const value = raw;
     const partyId = value.partyId === void 0 ? null : value.partyId;
     if (partyId !== null && !validPathId(partyId)) throw new Error("Active party ID is invalid");
-    if (value.gameState === "NoGame") {
+    if (value.gameState === "NoGame" || value.gameState === "Finished" && value.lobbyId === null) {
       return { gameId: null, partyId, waiting: true, gameMaster: false };
     }
     if (value.gameState !== "Ongoing" && value.gameState !== "Finished") {
@@ -593,6 +871,7 @@
     let currentRoute = null;
     let currentRouteKey = null;
     let gameId = null;
+    let mapRounds = [];
     let context = null;
     let output = null;
     let diagnostic2 = null;
@@ -628,6 +907,7 @@
         appliesToNextDuel: context !== null && context.mode !== configured,
         localTeamId: localTeamId(),
         context,
+        mapRounds,
         output,
         diagnostic: diagnostic2,
         message: playerIsKnownOutsideGame ? "Current account is not a player in this duel" : message
@@ -725,6 +1005,7 @@
       if (gameId === nextGameId) return true;
       gameId = nextGameId;
       context = null;
+      mapRounds = [];
       output = null;
       diagnostic2 = null;
       schemaBlocked = false;
@@ -757,6 +1038,7 @@
         } else {
           gameId = null;
           context = null;
+          mapRounds = [];
           output = null;
           diagnostic2 = null;
           schemaBlocked = false;
@@ -769,6 +1051,7 @@
       if (active.partyId !== null && currentPartyId !== null && active.partyId !== currentPartyId) {
         gameId = null;
         context = null;
+        mapRounds = [];
         output = null;
         diagnostic2 = null;
         schemaBlocked = false;
@@ -781,6 +1064,7 @@
         } else {
           gameId = null;
           context = null;
+          mapRounds = [];
           output = null;
           diagnostic2 = null;
           schemaBlocked = false;
@@ -794,6 +1078,7 @@
       if (active.gameMaster && owner?.userId === dependencies.getUserId()) {
         gameId = active.gameId;
         context = null;
+        mapRounds = [];
         output = null;
         diagnostic2 = null;
         schemaBlocked = true;
@@ -873,6 +1158,7 @@
         }
         const accepted = acceptPlayerSnapshot(context, raw, configuredMode());
         context = accepted.context;
+        mapRounds = accepted.accepted && context ? decodePlayerMapRounds(raw, context) : [];
         output = accepted.output;
         diagnostic2 = accepted.diagnostic;
         failureCount = 0;
@@ -910,6 +1196,7 @@
       currentRouteKey = nextKey;
       gameId = null;
       context = null;
+      mapRounds = [];
       output = null;
       diagnostic2 = null;
       schemaBlocked = false;
@@ -942,6 +1229,7 @@
         currentRouteKey = null;
         gameId = null;
         context = null;
+        mapRounds = [];
         output = null;
         diagnostic2 = null;
         schemaBlocked = false;
@@ -951,132 +1239,11 @@
     };
   }
 
-  // tampermonkey/src/tie-range-player-view-model.ts
-  function pair(values, order) {
-    return [values[order[0]], values[order[1]]];
-  }
-  function resultIsDisclosed(round, currentRoundNumber, nativeResultVisible) {
-    return nativeResultVisible || currentRoundNumber > round.round;
-  }
-  function terminalLabel(view, order) {
-    const terminal = view.output?.terminal;
-    if (!terminal || terminal.isDraw || terminal.winnerTeamId === null) return "Draw";
-    if (view.localTeamId !== null) return terminal.winnerTeamId === view.localTeamId ? "You win" : "You lose";
-    const winningIndex = view.output?.teamIds.indexOf(terminal.winnerTeamId) ?? -1;
-    if (winningIndex < 0) return "Duel ended";
-    return `${order.indexOf(winningIndex) === 0 ? "Blue" : "Red"} wins`;
-  }
-  function diagnosticText(view) {
-    if (view.diagnostic && view.diagnostic.code !== "source-ended") return view.diagnostic.message;
-    if (view.message) return view.message;
-    if (view.status === "reconnecting") return "Reconnecting";
-    if (view.status === "stale") return "HP may be out of date";
-    if (view.status === "auth-error") return "Sign in to refresh custom HP";
-    if (view.status === "unavailable") return "Custom HP unavailable";
-    return null;
-  }
-  function playerRoundIdentity(context, round) {
-    const startTime = context.roundStarts.find((start2) => start2.round === round)?.startTime;
-    return startTime === void 0 ? null : JSON.stringify([context.gameId, round, startTime]);
-  }
-  function playerDisclosureMustReset(previous, next) {
-    if (previous.gameId !== next.gameId || next.status === "inactive" || next.status === "off") return true;
-    if (previous.context === null) return false;
-    if (next.context === null) return true;
-    if (next.context.currentRoundNumber < previous.context.currentRoundNumber || next.context.input.rounds.length < previous.context.input.rounds.length || next.context.roundStarts.length < previous.context.roundStarts.length) return true;
-    return previous.context.roundStarts.some((previousStart) => {
-      const nextStart = next.context?.roundStarts.find((start2) => start2.round === previousStart.round);
-      return nextStart !== void 0 && nextStart.startTime !== previousStart.startTime;
-    });
-  }
-  function modeLabel(mode2) {
-    if (mode2 === "full") return "Full tie-range";
-    if (mode2 === "half") return "Half tie-range";
-    return "Off";
-  }
-  function derivePlayerTieRangeDisplay(view, nativeResultVisible, revealedRoundIdentity = null) {
-    const mode2 = view.capturedMode ?? view.configuredMode;
-    const accountIsNotAPlayer = view.status === "unavailable" && view.message === "Current account is not a player in this duel";
-    if (mode2 === "off" || view.context === null || view.output === null || accountIsNotAPlayer) {
-      const diagnostic3 = diagnosticText(view);
-      return {
-        showHud: false,
-        showDiagnostic: mode2 !== "off" && view.status !== "inactive" && view.status !== "waiting" && view.status !== "loading" && diagnostic3 !== null,
-        suppressNative: false,
-        mode: mode2,
-        modeLabel: modeLabel(view.configuredMode),
-        appliesToNextDuel: view.appliesToNextDuel,
-        teams: null,
-        result: null,
-        terminal: null,
-        diagnostic: diagnostic3
-      };
-    }
-    const { context, output } = view;
-    const localIndex = view.localTeamId === null ? -1 : output.teamIds.indexOf(view.localTeamId);
-    const order = localIndex === 1 ? [1, 0] : [0, 1];
-    const latest = output.rounds.at(-1) ?? null;
-    const latestIdentity = latest ? playerRoundIdentity(context, latest.round) : null;
-    const retainedDisclosure = latestIdentity !== null && latestIdentity === revealedRoundIdentity;
-    const disclosed = latest === null || view.status === "ended" || retainedDisclosure || resultIsDisclosed(latest, context.currentRoundNumber, nativeResultVisible);
-    const health = latest && !disclosed ? latest.healthBefore : output.currentHealth;
-    const multipliers = latest && !disclosed ? latest.multiplierTenths : output.currentMultiplierTenths;
-    const labels = localIndex >= 0 ? ["You", "Opponent"] : ["Blue", "Red"];
-    const orderedHealth = pair(health, order);
-    const orderedMaximum = pair(output.initialHealth, order);
-    const orderedMultipliers = pair(multipliers, order);
-    const teams = order.map((index, position) => ({
-      teamId: output.teamIds[index],
-      label: labels[position],
-      side: index === 0 ? "blue" : "red",
-      health: orderedHealth[position],
-      maximumHealth: orderedMaximum[position],
-      multiplierTenths: orderedMultipliers[position]
-    }));
-    const result = latest && nativeResultVisible ? {
-      round: latest.round,
-      scores: pair(latest.scores, order),
-      damageDealt: pair(latest.damageDealt, order),
-      usedMultiplierTenths: pair(latest.multiplierTenths, order),
-      nextMultiplierTenths: pair(latest.nextMultiplierTenths, order),
-      band: latest.band,
-      withinBand: latest.withinBand
-    } : null;
-    let terminal = null;
-    const terminalIdentity = output.terminal ? playerRoundIdentity(context, output.terminal.round) : null;
-    if (output.terminal && (view.status === "ended" || terminalIdentity !== null && terminalIdentity === revealedRoundIdentity || context.currentRoundNumber > output.terminal.round || nativeResultVisible && latest?.round === output.terminal.round)) {
-      terminal = {
-        headline: terminalLabel(view, order),
-        detail: "Custom duel finished \u2014 wait for the host",
-        round: output.terminal.round
-      };
-    } else if (view.status === "ended") {
-      terminal = {
-        headline: "Duel ended",
-        detail: "No custom winner was determined",
-        round: null
-      };
-    }
-    const diagnostic2 = diagnosticText(view);
-    return {
-      showHud: true,
-      showDiagnostic: diagnostic2 !== null,
-      suppressNative: true,
-      mode: mode2,
-      modeLabel: modeLabel(mode2),
-      appliesToNextDuel: view.appliesToNextDuel,
-      teams,
-      result,
-      terminal,
-      diagnostic: diagnostic2
-    };
-  }
-
   // tampermonkey/src/tie-range-player-ui.ts
   var CLASS_SELECTORS = {
     duelRoot: '[class*="duels_root__"]',
     healthBars: '[class*="hud_healthBars__"]',
-    resultRoot: '[class*="round-score_root__"][class*="round-score_isMounted__"]',
+    resultRoot: '[class*="round-score_root__"]',
     resultRound: '[class*="round-score_roundNumber__"]',
     damage: '[class*="round-score_damageAnimation__"]',
     summary: '[class*="game-summary-2_root__"]',
@@ -1093,9 +1260,9 @@
   }
   function visible(element, document2) {
     for (let current = element; current; current = current.parentElement) {
-      if (current.hidden || current.getAttribute("aria-hidden") === "true") return false;
+      if (current.hidden) return false;
       const style = document2.defaultView?.getComputedStyle(current);
-      if (style?.display === "none" || style?.visibility === "hidden" || style?.visibility === "collapse" || Number.parseFloat(style?.opacity ?? "1") === 0) return false;
+      if (style?.display === "none" || current === element && (style?.visibility === "hidden" || style?.visibility === "collapse") || Number.parseFloat(style?.opacity ?? "1") === 0) return false;
     }
     return typeof element.getClientRects !== "function" || element.getClientRects().length > 0;
   }
@@ -1111,8 +1278,10 @@
   function visibleResultRoots(document2, roots, expectedRound) {
     if (expectedRound === null) return [];
     return scopedElements(roots, CLASS_SELECTORS.resultRoot).filter((element) => {
-      if (!classStartsWith(element, "round-score_root__") || !classStartsWith(element, "round-score_isMounted__") || !visible(element, document2)) return false;
-      const text = element.querySelector(CLASS_SELECTORS.resultRound)?.textContent ?? "";
+      if (!classStartsWith(element, "round-score_root__")) return false;
+      const heading = element.querySelector(CLASS_SELECTORS.resultRound);
+      if (!heading || !visible(heading, document2)) return false;
+      const text = heading.textContent ?? "";
       const displayedRound = [...text.matchAll(/\d+/g)].at(-1)?.[0];
       return displayedRound !== void 0 && Number.parseInt(displayedRound, 10) === expectedRound;
     });
@@ -1141,6 +1310,7 @@
   }
   function createPlayerTieRangeUi(dependencies) {
     const { document: document2 } = dependencies;
+    const mapOverlay = createPlayerMapOverlay(() => dependencies.getPageWindow?.() ?? document2.defaultView);
     document2.getElementById("rb-tie-range-player")?.remove();
     const host = document2.createElement("div");
     host.id = "rb-tie-range-player";
@@ -1159,10 +1329,8 @@
       .teams { display: flex; justify-content: space-between; gap: 180px; }
       .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
       .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
-        background: #35131ff2; color: #ff8492; font-size: 20px; font-variant-numeric: tabular-nums; }
-      .damage-arrival { animation: damage-arrival 450ms ease-out; }
-      @keyframes damage-arrival { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-      @media (prefers-reduced-motion: reduce) { .damage-arrival { animation: none; } .fill { transition: none; } }
+        background: #35131ff2; color: #ff8492; font-size: 32px; font-variant-numeric: tabular-nums; }
+      @media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
       .team[data-side="blue"] { --team: #38a8ff; }
       .team[data-side="red"] { --team: #ff5365; }
       .team-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -1172,11 +1340,10 @@
       .multiplier { color: #ffe169; font-size: 16px; font-variant-numeric: tabular-nums; }
       .track { height: 8px; margin-top: 5px; overflow: hidden; border-radius: 999px; background: #ffffff25; }
       .fill { height: 100%; width: 0; border-radius: inherit; background: var(--team); transition: width 220ms ease; }
-      .result { margin: 7px auto 0; width: min(560px, 100%); padding: 6px 10px; border: 1px solid #ffffff2b;
-        border-radius: 7px; background: #111e; text-align: center; font-size: 12px; }
-      .result-title { color: #ffe169; margin-bottom: 3px; }
-      .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-variant-numeric: tabular-nums; }
-      .result-meta { margin-top: 3px; color: #d5d8df; font-size: 11px; }
+      .result { margin: 22px auto 0; width: 76%; text-align: center; font-size: 40px; text-shadow: 0 2px 6px #000; }
+      .result-title { display: none; }
+      .result-grid { display: flex; justify-content: space-between; gap: 100px; font-variant-numeric: tabular-nums; }
+      .result-meta { display: none; }
       .terminal { position: fixed; top: 22%; left: 50%; transform: translateX(-50%); min-width: min(420px, calc(100vw - 32px));
         padding: 13px 22px; border: 1px solid #ffe16999; border-radius: 10px; background: #111e; text-align: center;
         filter: drop-shadow(0 3px 12px #000c); }
@@ -1242,6 +1409,46 @@
     let disposed = false;
     let reconcileQueued = false;
     let lastDamageIdentity = null;
+    let initialResultIdentity = null;
+    let activeDamage = null;
+    function animateDamage(root, damage, identity, teamId, after, maximum) {
+      activeDamage?.cancel();
+      const page = document2.defaultView;
+      if (page.matchMedia?.("(prefers-reduced-motion: reduce)").matches || typeof damage.animate !== "function") return;
+      const canonicalIndex = lastView.output.teamIds.indexOf(teamId);
+      const before = lastView.output.rounds.at(-1).healthBefore[canonicalIndex];
+      const health = root.querySelector('[data-rb="health"]');
+      const fill = root.querySelector('[data-rb="bar-fill"]');
+      const write = (value) => {
+        health.textContent = String(value);
+        fill.style.width = `${maximum > 0 ? value / maximum * 100 : 0}%`;
+      };
+      const box = damage.getBoundingClientRect();
+      const x = page.innerWidth * (root.getBoundingClientRect().left < page.innerWidth / 2 ? 0.24 : 0.76) - (box.left + box.width / 2);
+      const y = Math.max(150, root.getBoundingClientRect().bottom + 65) - box.top;
+      const animation = damage.animate([
+        { transform: `translate(${x}px, ${y}px) scale(1.5)`, offset: 0 },
+        { transform: `translate(${x}px, ${y}px) scale(1.5)`, offset: 0.35 },
+        { transform: "translate(0, 0) scale(1)", offset: 1 }
+      ], { duration: 1200, easing: "ease-in-out" });
+      let frame = 0;
+      const started = page.performance.now();
+      const cancel = () => {
+        page.cancelAnimationFrame(frame);
+        animation.cancel();
+        write(after);
+      };
+      activeDamage = { identity, teamId, cancel };
+      write(before);
+      const tick = () => {
+        if (activeDamage?.identity !== identity) return;
+        const progress = Math.max(0, Math.min(1, (page.performance.now() - started - 750) / 450));
+        write(Math.round(before + (after - before) * progress));
+        if (progress < 1) frame = page.requestAnimationFrame(tick);
+        else activeDamage = null;
+      };
+      frame = page.requestAnimationFrame(tick);
+    }
     function hideNativeTree(element, except) {
       for (const child of [element, ...element.querySelectorAll("*")]) {
         if (child === except || except?.contains(child)) continue;
@@ -1297,6 +1504,10 @@
       summaryReplacements.clear();
     }
     function renderDisplay(display, layoutDiagnostic) {
+      if (!display.teams && activeDamage) {
+        activeDamage.cancel();
+        activeDamage = null;
+      }
       hud.hidden = !display.showHud && !display.showDiagnostic && layoutDiagnostic === null;
       byRb("mode").hidden = !display.showHud;
       byRb("teams").hidden = !display.showHud;
@@ -1305,23 +1516,25 @@
       settingsOpen.textContent = `Tie range settings: ${configured === "off" ? "Off" : configured === "full" ? "Full" : "Half"}`;
       settingsOpen.hidden = lastView?.status === "inactive";
       if (display.teams) {
-        const damageIdentity = display.result && lastView?.context ? playerRoundIdentity(lastView.context, display.result.round) : null;
+        const damageIdentity = display.result && lastView?.context ? JSON.stringify([playerRoundIdentity(lastView.context, display.result.round), display.result.damageDealt, display.teams.map((team) => team.health)]) : null;
+        if (activeDamage && activeDamage.identity !== damageIdentity) {
+          activeDamage.cancel();
+          activeDamage = null;
+        }
         display.teams.forEach((team, index) => {
           const root = byRb(`team-${index}`);
           root.dataset.side = team.side;
           root.querySelector('[data-rb="label"]').textContent = team.label;
-          root.querySelector('[data-rb="health"]').textContent = String(team.health);
+          if (activeDamage?.teamId !== team.teamId) root.querySelector('[data-rb="health"]').textContent = String(team.health);
           root.querySelector('[data-rb="multiplier"]').textContent = multiplier(team.multiplierTenths);
           const percent = team.maximumHealth <= 0 ? 0 : Math.max(0, Math.min(100, team.health / team.maximumHealth * 100));
-          root.querySelector('[data-rb="bar-fill"]').style.width = `${percent}%`;
+          if (activeDamage?.teamId !== team.teamId) root.querySelector('[data-rb="bar-fill"]').style.width = `${percent}%`;
           const damage = root.querySelector('[data-rb="damage"]');
           const amount = display.result?.damageDealt[index === 0 ? 1 : 0] ?? 0;
           damage.hidden = amount === 0;
           damage.textContent = amount > 0 ? `\u2212${amount}` : "";
-          if (amount > 0 && damageIdentity !== lastDamageIdentity) {
-            damage.classList.remove("damage-arrival");
-            void damage.offsetWidth;
-            damage.classList.add("damage-arrival");
+          if (amount > 0 && damageIdentity !== lastDamageIdentity && playerRoundIdentity(lastView.context, display.result.round) !== initialResultIdentity) {
+            animateDamage(root, damage, damageIdentity, team.teamId, team.health, team.maximumHealth);
           }
         });
         if (damageIdentity !== null) lastDamageIdentity = damageIdentity;
@@ -1331,7 +1544,7 @@
       if (display.result && display.teams) {
         byRb("result-title").textContent = `Round ${display.result.round} result`;
         for (const index of [0, 1]) {
-          byRb(`result-team-${index}`).textContent = `${display.teams[index].label}: score ${display.result.scores[index]} \xB7 damage ${display.result.damageDealt[index]} \xB7 used ${multiplier(display.result.usedMultiplierTenths[index])} \xB7 next ${multiplier(display.result.nextMultiplierTenths[index])}`;
+          byRb(`result-team-${index}`).textContent = String(display.result.scores[index]);
         }
         byRb("result-meta").textContent = `Tie band ${display.result.band} \xB7 ${display.result.withinBand ? "inside range" : "outside range"}`;
       }
@@ -1488,6 +1701,7 @@
       }
       restoreUnusedNativeStyles();
       renderDisplay(display, layoutDiagnostic);
+      mapOverlay.update(lastView, display.result?.round ?? null);
     }
     function queueReconcile() {
       if (reconcileQueued || disposed) return;
@@ -1535,7 +1749,13 @@
           lastDamageIdentity = null;
         }
         if (lastView?.gameId !== view.gameId || view.status === "inactive" || view.status === "off") {
+          activeDamage?.cancel();
+          activeDamage = null;
           restoreNative();
+        }
+        if (view.context && view.context.gameId !== lastView?.context?.gameId) {
+          const latest = view.output?.rounds.at(-1);
+          initialResultIdentity = latest ? playerRoundIdentity(view.context, latest.round) : null;
         }
         lastView = view;
         reconcile();
@@ -1547,7 +1767,10 @@
       dispose() {
         if (disposed) return;
         disposed = true;
+        activeDamage?.cancel();
+        activeDamage = null;
         observer?.disconnect();
+        mapOverlay.dispose();
         restoreNative();
         host.remove();
         lastView = null;
@@ -1577,6 +1800,7 @@
     let disposed = false;
     const ui = createPlayerTieRangeUi({
       document,
+      getPageWindow: () => typeof unsafeWindow === "undefined" ? window : unsafeWindow,
       getConfiguredMode: () => configuredMode,
       onModeChange: (nextMode) => {
         void (async () => {
