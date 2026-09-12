@@ -26,6 +26,15 @@ window.fixture = ${JSON.stringify(manual.created)};
 window.manual = ${JSON.stringify(manual)};
 window.full = ${JSON.stringify(full)};
 window.limit = ${JSON.stringify(limit)};
+// Scores transcribed from the reported screenshot, not a captured API payload.
+window.reportedScores = [[4907,4965],[4857,4884],[4026,1155],[4193,3521],[4855,4773],[1933,2226]];
+window.reported = through => {
+  const value=structuredClone(manual.created);
+  value.gameId='reported-half';value.version=through;value.currentRoundNumber=through;value.status='Ongoing';value.options.maxNumberOfRounds=30;
+  value.rounds=reportedScores.slice(0,through).map((_,i)=>({roundNumber:i+1,startTime:'2026-09-12T00:00:0'+i+'Z'}));
+  value.teams.forEach((t,i)=>{t.roundResults=reportedScores.slice(0,through).map((scores,r)=>({roundNumber:r+1,score:scores[i]}));});
+  return value;
+};
 window.native = ${JSON.stringify(native)};
 window.saved = JSON.parse(sessionStorage.getItem('saved') || '{"rb-tie-range:mode":"full"}');
 window.GM_getValue = (key, fallback) => saved[key] ?? fallback;
@@ -117,9 +126,16 @@ try {
   await command('Page.addScriptToEvaluateOnNewDocument',{source:bundle});
   await command('Page.navigate',{url:`http://127.0.0.1:${port}/party/lobby/TEST`});
   await until(`${shadow}?.textContent.includes('6000')`,'initial custom HP');
-  assert.equal(await evaluate(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).display`),'none','native HP suppressed');
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).visibility`),'hidden','native HP suppressed');
+  assert.ok(await evaluate(`document.querySelector('[class*="hud_healthBars__"]').getBoundingClientRect().width>0`),'native animation target keeps its geometry');
+  assert.ok(await evaluate(`(()=>{let a=${shadow}.querySelector('[data-rb="team-0"]').getBoundingClientRect(),b=${shadow}.querySelector('[data-rb="team-1"]').getBoundingClientRect();return a.right<=innerWidth/2-90&&b.left>=innerWidth/2+90})()`),'center compass has unobstructed space');
   assert.notEqual(await evaluate(`getComputedStyle(document.getElementById('native-timer')).visibility`),'hidden','timer remains visible');
   await screenshot('01-playing');
+
+  // Native animation may start before the next polling response is available.
+  await evaluate(`scene('result')`);
+  await until(`getComputedStyle(document.querySelector('[class*="damage-animation_score__"]')).visibility==='hidden'`,'native damage is suppressed before player snapshot arrives');
+  await evaluate(`scene('playing')`);
 
   await evaluate(`fixture=structuredClone(manual.resolvedDamage);refresh()`);
   await until(`requests.filter(r=>r.url.startsWith('https://gs2')).length>=2`,'new round snapshot');
@@ -130,9 +146,11 @@ try {
   const resultText=await evaluate(`${shadow}.textContent`);
   assert.match(resultText,/3705|3,705/,'full damage inside the band');
   await screenshot('02-result');
+  assert.match(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').textContent`),/3705/,'damage is anchored to the losing HP bar');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="damage"]').hidden`),true,'winner does not receive a damage popup');
 
   await evaluate(`scene('playing')`);
-  await until(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).display==='none'`,'React remount suppression');
+  await until(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).visibility==='hidden'`,'React remount suppression');
   await evaluate(`scene('result');openSettings()`);
   await until(`${shadow}?.querySelector('select')`,'settings menu');
   await screenshot('03-settings');
@@ -171,7 +189,7 @@ try {
   await until(`saved['rb-tie-range:mode']==='off'`,'Off saved');
   await evaluate(`noGame=false;fixture=structuredClone(manual.created);fixture.gameId='off-game';scene('playing');refresh()`);
   await until(`saved['rashinban.tie-range.game.off-game'] && ${shadow}.querySelector('[data-rb="hud"]').hidden`,'new Off duel leaves native values');
-  assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).display`),'none');
+  assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).visibility`),'hidden');
 
   // A summary alone discloses the custom round-limit draw and replaces all HP columns.
   await evaluate(`openSettings();var s=${shadow}.querySelector('[data-rb="mode-select"]');s.value='full';s.dispatchEvent(new Event('change'))`);
@@ -184,16 +202,45 @@ try {
   assert.equal(await evaluate(`document.querySelectorAll('[class*="game-summary-2_playedRound__"][role="button"]').length`),3,'summary navigation remains available');
   await screenshot('05-summary-draw');
 
+  // Player summaries can omit profile links and describe the local side as YOUR HEALTH.
+  await evaluate(`fixture=structuredClone(manual.resolvedDamage);fixture.gameId='summary-local';scene('summary');let rows=[...document.querySelectorAll('[class*="game-summary-2_playedRound__"]')];rows[2].remove();rows.slice(0,2).forEach((r,i)=>{r.children[1].textContent=i?'2470 points':'0 points';r.children[2].textContent='0 points';});document.querySelectorAll('[class*="game-summary-2_playedRoundsHeader__"] a').forEach(a=>a.replaceWith(document.createTextNode(a.textContent)));refresh()`);
+  await until(`document.querySelectorAll('[data-rb="summary-health"]').length===4 && [...document.querySelectorAll('[data-rb="summary-health"]')].some(x=>x.textContent.includes('2295'))`,'player-oriented summary with no profile links');
+  assert.ok(await evaluate(`[...document.querySelectorAll('[data-rb="summary-health"]')].some(x=>x.textContent.includes('3705'))`),'summary HP loss uses custom multiplier');
+
   // Retained values must be visibly stale after loss of transport.
   await evaluate(`window.realNow=Date.now;Date.now=()=>realNow()+20000;fetchError=503;refresh()`);
   await until(`${shadow}.querySelector('[data-rb="diagnostic"]').textContent.includes('out of date')`,'stale diagnostic');
   await screenshot('06-stale');
   await evaluate(`Date.now=realNow;fetchError=0;refresh()`);
 
+  await evaluate(`openSettings();var s=${shadow}.querySelector('[data-rb="mode-select"]');s.value='half';s.dispatchEvent(new Event('change'))`);
+  await until(`saved['rb-tie-range:mode']==='half'`,'Half setting for reported game');
+  await evaluate(`fixture=reported(4);scene('result');document.querySelector('[class*="round-score_roundNumber__"]').textContent='Round 4';refresh()`);
+  await until(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent==='350'`,'reported round4 custom HP');
+  assert.match(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').textContent`),/1344/,'reported round4 uses custom2x rather than native1.5x');
+  await screenshot('07-reported-round4');
+  await evaluate(`fixture=reported(6);document.querySelector('[class*="round-score_roundNumber__"]').textContent='Round 6';refresh()`);
+  await until(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="health"]').textContent==='5316'`,'reported round6 custom HP');
+  assert.match(await evaluate(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="damage"]').textContent`),/586/,'opponent win damages the local HP bar');
+  await evaluate(`scene('summary');var container=document.querySelector('[class*="game-summary-2_playedRounds__"]');var template=container.querySelector('[class*="game-summary-2_playedRound__"]').cloneNode(true);container.replaceChildren();reportedScores.forEach((scores,i)=>{let row=template.cloneNode(true);row.querySelector('[class*="game-summary-2_roundNumber__"]').textContent=i+1;row.children[0].querySelector('div').textContent='x1.5';row.children[1].textContent=scores[0]+' points';row.children[2].textContent=scores[1]+' points';container.append(row)});document.querySelectorAll('[class*="game-summary-2_playedRoundsHeader__"] a').forEach(a=>a.replaceWith(document.createTextNode(a.textContent)));`);
+  await until(`document.querySelectorAll('[data-rb="summary-health"]').length===12`,'six reported rounds get custom breakdown values');
+  assert.match(await evaluate(`document.querySelectorAll('[class*="game-summary-2_playedRound__"]')[3].children[4].querySelector('[data-rb="summary-health"]').textContent`),/350.*1344/,'breakdown uses custom HP and damage');
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('[class*="game-summary-2_playedRound__"]').children[0].querySelector('div')).visibility`),'hidden','native multiplier badge does not contradict custom breakdown');
+  await evaluate(`document.querySelectorAll('[class*="summon-glow-text_root__"]').forEach(e=>e.remove())`);
+  assert.ok(await evaluate(`(()=>{let e=document.querySelector('[data-rb="summary-health"]');let b=e.getBoundingClientRect();return document.elementFromPoint(b.x+b.width/2,b.y+b.height/2)===e})()`),'custom multiplier tooltip can be hovered');
+  const cellPoint=await evaluate(`(()=>{let e=document.querySelector('[data-rb="summary-health"]');e.closest('[role="button"]').addEventListener('click',()=>window.summaryClicked=true,{once:true});let b=e.getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2}})()`);
+  await command('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...cellPoint});
+  await command('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...cellPoint});
+  assert.equal(await evaluate('window.summaryClicked'),true,'custom summary cells preserve row navigation');
+  await screenshot('08-reported-breakdown');
+  await evaluate(`document.querySelectorAll('[class*="game-summary-2_playedRound__"]').forEach(row=>{let a=row.children[1].textContent;row.children[1].textContent=row.children[2].textContent;row.children[2].textContent=a;})`);
+  await until(`document.querySelectorAll('[class*="game-summary-2_playedRound__"]')[3].children[3].querySelector('[data-rb="summary-health"]').textContent.includes('350')`,'linkless summary orients reversed score columns by identity');
+
+
   // A known non-player must never get an oriented/custom player HUD.
   await evaluate(`document.getElementById('__NEXT_DATA__').textContent=JSON.stringify({props:{accountProps:{account:{user:{userId:'non-player'}}}}});refresh()`);
-  await until(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).display!=='none'`,'non-player fallback');
-  assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).display`),'none');
+  await until(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).visibility!=='hidden'`,'non-player fallback');
+  assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).visibility`),'hidden');
 
   await evaluate(`document.getElementById('__NEXT_DATA__').textContent=JSON.stringify({props:{accountProps:{account:{user:{userId:'player-blue'}}}}});fixture=structuredClone(manual.created);fixture.gameId='invalid-rules-game';delete fixture.options.roundWinMultiplierIncrement;scene('playing');refresh()`);
   await until(`${shadow}.querySelector('[data-rb="diagnostic"]').textContent.includes('missing')`,'invalid rules diagnostic content');
@@ -201,7 +248,7 @@ try {
 
   // Navigation out must restore every native value and stop requests.
   await evaluate(`history.pushState({},'', '/maps');window.dispatchEvent(new PopStateEvent('popstate'))`);
-  await until(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).display!=='none'`,'teardown restores native HP');
+  await until(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).visibility!=='hidden'`,'teardown restores native HP');
   await delay(600);
   const count=await evaluate('requests.length');
   await delay(2700);

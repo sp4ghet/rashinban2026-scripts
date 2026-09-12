@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.1.0
+// @version      0.1.1
 // @description  Player HP and multipliers for RASHINBAN's Full / Half tie-range rules. Set the same mode as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -1152,12 +1152,17 @@
         color: #fff; font: 600 14px/1.2 Inter, system-ui, sans-serif; }
       *, *::before, *::after { box-sizing: border-box; }
       [hidden] { display: none !important; }
-      .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; width: min(700px, calc(100vw - 144px));
+      .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; width: calc(100vw - 48px);
         transform: translateX(-50%); filter: drop-shadow(0 3px 9px #000b); }
       .mode { margin: 0 auto 6px; width: max-content; padding: 3px 9px; border-radius: 999px;
         background: #111d; color: #f4f4f4; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
-      .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 42px; }
-      .team { min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
+      .teams { display: flex; justify-content: space-between; gap: 180px; }
+      .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
+      .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
+        background: #35131ff2; color: #ff8492; font-size: 20px; font-variant-numeric: tabular-nums; }
+      .damage-arrival { animation: damage-arrival 450ms ease-out; }
+      @keyframes damage-arrival { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { .damage-arrival { animation: none; } .fill { transition: none; } }
       .team[data-side="blue"] { --team: #38a8ff; }
       .team[data-side="red"] { --team: #ff5365; }
       .team-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -1190,8 +1195,9 @@
       .settings select { width: 100%; padding: 8px; border: 1px solid #ffffff45; border-radius: 6px; background: #252b36; color: #fff; }
       .settings p { margin: 11px 0 15px; color: #cbd0da; font-size: 12px; font-weight: 450; line-height: 1.45; }
       .settings button { float: right; padding: 7px 12px; border: 0; border-radius: 6px; background: #e9edf5; color: #111; cursor: pointer; }
-      @media (max-width: 620px) { .hud { width: calc(100vw - 18px); top: 52px; } .teams { gap: 8px; }
-        .team { padding-inline: 7px; } .health { font-size: 17px; } }
+      @media (max-width: 620px) { .hud { width: calc(100vw - 18px); top: 52px; } .teams { gap: 100px; }
+        .team { width: calc((100% - 100px) / 2); padding-inline: 7px; } .health { font-size: 17px; }
+        .numbers { flex-wrap: wrap; gap: 3px; } .team-head { flex-wrap: wrap; } }
     </style>
     <section class="hud" data-rb="hud" aria-live="polite" hidden>
       <div class="mode" data-rb="mode" data-rb-mode-note></div>
@@ -1219,6 +1225,13 @@
     const settingsOpen = byRb("settings-open");
     const settingsPanel = byRb("settings-panel");
     const modeSelect = byRb("mode-select");
+    for (const index of [0, 1]) {
+      const damage = document2.createElement("span");
+      damage.className = "damage";
+      damage.dataset.rb = "damage";
+      damage.hidden = true;
+      byRb(`team-${index}`).append(damage);
+    }
     const originalStyles = /* @__PURE__ */ new Map();
     const originallyMissingStyleAttribute = /* @__PURE__ */ new Set();
     const summaryReplacements = /* @__PURE__ */ new Map();
@@ -1228,6 +1241,13 @@
     let focusBeforeSettings = null;
     let disposed = false;
     let reconcileQueued = false;
+    let lastDamageIdentity = null;
+    function hideNativeTree(element, except) {
+      for (const child of [element, ...element.querySelectorAll("*")]) {
+        if (child === except || except?.contains(child)) continue;
+        setNativeStyle(child, "visibility", "hidden");
+      }
+    }
     function setNativeStyle(element, property, value) {
       let desired = desiredStyles?.get(element);
       if (!desired && desiredStyles) {
@@ -1285,6 +1305,7 @@
       settingsOpen.textContent = `Tie range settings: ${configured === "off" ? "Off" : configured === "full" ? "Full" : "Half"}`;
       settingsOpen.hidden = lastView?.status === "inactive";
       if (display.teams) {
+        const damageIdentity = display.result && lastView?.context ? playerRoundIdentity(lastView.context, display.result.round) : null;
         display.teams.forEach((team, index) => {
           const root = byRb(`team-${index}`);
           root.dataset.side = team.side;
@@ -1293,7 +1314,17 @@
           root.querySelector('[data-rb="multiplier"]').textContent = multiplier(team.multiplierTenths);
           const percent = team.maximumHealth <= 0 ? 0 : Math.max(0, Math.min(100, team.health / team.maximumHealth * 100));
           root.querySelector('[data-rb="bar-fill"]').style.width = `${percent}%`;
+          const damage = root.querySelector('[data-rb="damage"]');
+          const amount = display.result?.damageDealt[index === 0 ? 1 : 0] ?? 0;
+          damage.hidden = amount === 0;
+          damage.textContent = amount > 0 ? `\u2212${amount}` : "";
+          if (amount > 0 && damageIdentity !== lastDamageIdentity) {
+            damage.classList.remove("damage-arrival");
+            void damage.offsetWidth;
+            damage.classList.add("damage-arrival");
+          }
         });
+        if (damageIdentity !== null) lastDamageIdentity = damageIdentity;
       }
       const result = byRb("result");
       result.hidden = display.result === null;
@@ -1326,7 +1357,28 @@
           continue;
         }
         const healthColumns = [3, 4];
-        const columnByTeam = view.context.playerIds.map((playerId) => healthColumns.find((column) => userIdFromLink(headerCells[column], document2) === playerId) ?? -1);
+        let columnByTeam = view.context.playerIds.map((playerId) => healthColumns.find((column) => (userIdFromLink(headerCells[column], document2) ?? userIdFromLink(headerCells[column - 2], document2)) === playerId) ?? -1);
+        if (columnByTeam[0] >= 0 && columnByTeam[1] < 0) columnByTeam[1] = columnByTeam[0] === 3 ? 4 : 3;
+        if (columnByTeam[1] >= 0 && columnByTeam[0] < 0) columnByTeam[0] = columnByTeam[1] === 3 ? 4 : 3;
+        if (columnByTeam.some((column) => column < 0)) {
+          const observations = Array.from(summary.querySelectorAll(CLASS_SELECTORS.summaryRow)).flatMap((row) => {
+            const number = Number.parseInt(row.querySelector(CLASS_SELECTORS.roundNumber)?.textContent ?? "", 10);
+            const folded = view.output.rounds.find((round) => round.round === number);
+            if (!folded || row.children.length !== 5) return [];
+            const scores = [1, 2].map((column) => {
+              const digits = row.children[column].textContent?.trim().match(/^\d[\d,\u00a0 ]*/)?.[0];
+              return digits === void 0 ? NaN : Number(digits.replace(/\D/g, ""));
+            });
+            return [{ folded, scores }];
+          });
+          const orders = [[0, 1], [1, 0]];
+          const matching = orders.filter((order) => observations.length > 0 && observations.every(({ folded, scores }) => scores[0] === folded.scores[order[0]] && scores[1] === folded.scores[order[1]]));
+          if (matching.length === 1) {
+            columnByTeam = matching[0][0] === 0 ? [3, 4] : [4, 3];
+          } else if (matching.length === 2 && view.output.rounds.every((round) => round.scores[0] === round.scores[1])) {
+            columnByTeam = [3, 4];
+          }
+        }
         if (columnByTeam[0] < 0 || columnByTeam[1] < 0 || columnByTeam[0] === columnByTeam[1]) {
           unsupported = true;
           continue;
@@ -1340,6 +1392,11 @@
           if (cells.length !== 5 || !folded && !afterTerminal) {
             unsupported = true;
             continue;
+          }
+          const roundLabel = cells[0].querySelector(CLASS_SELECTORS.roundNumber);
+          if (roundLabel) {
+            hideNativeTree(cells[0], roundLabel);
+            setNativeStyle(roundLabel, "visibility", "visible");
           }
           for (const teamIndex of [0, 1]) {
             const cell = cells[columnByTeam[teamIndex]];
@@ -1362,14 +1419,18 @@
                 background: "#10141c",
                 color: teamIndex === 0 ? "#59b7ff" : "#ff6978",
                 font: "600 14px/1.2 Inter, system-ui, sans-serif",
-                pointerEvents: "none"
+                pointerEvents: "auto"
               });
               cell.append(replacement);
               summaryReplacements.set(cell, replacement);
             }
             const health = String(folded?.healthAfter[teamIndex] ?? view.output.currentHealth[teamIndex]);
-            if (replacement.textContent !== health) replacement.textContent = health;
-            const label = `Custom health ${health}`;
+            const damage = folded?.damageDealt[teamIndex === 0 ? 1 : 0] ?? 0;
+            const text = `${health}${damage > 0 ? ` (\u2212${damage})` : ""}`;
+            if (replacement.textContent !== text) replacement.textContent = text;
+            const used = folded ? multiplier(folded.multiplierTenths[teamIndex]) : "Duel already finished";
+            const label = `Custom health ${health}; damage received ${damage}; used multiplier ${used}`;
+            if (replacement.title !== label) replacement.title = label;
             if (replacement.getAttribute("aria-label") !== label) replacement.setAttribute("aria-label", label);
           }
         }
@@ -1402,7 +1463,7 @@
         let healthBarsFound = false;
         for (const root of roots) {
           for (const healthBars of root.querySelectorAll(CLASS_SELECTORS.healthBars)) {
-            setNativeStyle(healthBars, "display", "none");
+            hideNativeTree(healthBars);
             healthBarsFound = true;
           }
           if (display.terminal) {
@@ -1416,12 +1477,8 @@
         } else if (roots.length === 0 && !display.terminal && lastView.status !== "ended") {
           layoutDiagnostic = "Waiting for a supported duel HUD";
         }
-        if (display.result) {
-          for (const resultRoot of matchingResultRoots) {
-            for (const damage of resultRoot.querySelectorAll(CLASS_SELECTORS.damage)) {
-              setNativeStyle(damage, "visibility", "hidden");
-            }
-          }
+        for (const damage of scopedElements(roots, `${CLASS_SELECTORS.damage}, [class*="damage-animation_root__"]`)) {
+          hideNativeTree(damage);
         }
         const summaryDiagnostic = applySummaryReplacements(lastView, roots);
         if (summaryDiagnostic) layoutDiagnostic = summaryDiagnostic;
@@ -1475,6 +1532,7 @@
         if (disposed) return;
         if (lastView === null || playerDisclosureMustReset(lastView, view)) {
           revealedRoundIdentity = null;
+          lastDamageIdentity = null;
         }
         if (lastView?.gameId !== view.gameId || view.status === "inactive" || view.status === "off") {
           restoreNative();

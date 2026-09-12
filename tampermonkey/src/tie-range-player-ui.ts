@@ -117,12 +117,17 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
         color: #fff; font: 600 14px/1.2 Inter, system-ui, sans-serif; }
       *, *::before, *::after { box-sizing: border-box; }
       [hidden] { display: none !important; }
-      .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; width: min(700px, calc(100vw - 144px));
+      .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; width: calc(100vw - 48px);
         transform: translateX(-50%); filter: drop-shadow(0 3px 9px #000b); }
       .mode { margin: 0 auto 6px; width: max-content; padding: 3px 9px; border-radius: 999px;
         background: #111d; color: #f4f4f4; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
-      .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 42px; }
-      .team { min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
+      .teams { display: flex; justify-content: space-between; gap: 180px; }
+      .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
+      .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
+        background: #35131ff2; color: #ff8492; font-size: 20px; font-variant-numeric: tabular-nums; }
+      .damage-arrival { animation: damage-arrival 450ms ease-out; }
+      @keyframes damage-arrival { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { .damage-arrival { animation: none; } .fill { transition: none; } }
       .team[data-side="blue"] { --team: #38a8ff; }
       .team[data-side="red"] { --team: #ff5365; }
       .team-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -155,8 +160,9 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       .settings select { width: 100%; padding: 8px; border: 1px solid #ffffff45; border-radius: 6px; background: #252b36; color: #fff; }
       .settings p { margin: 11px 0 15px; color: #cbd0da; font-size: 12px; font-weight: 450; line-height: 1.45; }
       .settings button { float: right; padding: 7px 12px; border: 0; border-radius: 6px; background: #e9edf5; color: #111; cursor: pointer; }
-      @media (max-width: 620px) { .hud { width: calc(100vw - 18px); top: 52px; } .teams { gap: 8px; }
-        .team { padding-inline: 7px; } .health { font-size: 17px; } }
+      @media (max-width: 620px) { .hud { width: calc(100vw - 18px); top: 52px; } .teams { gap: 100px; }
+        .team { width: calc((100% - 100px) / 2); padding-inline: 7px; } .health { font-size: 17px; }
+        .numbers { flex-wrap: wrap; gap: 3px; } .team-head { flex-wrap: wrap; } }
     </style>
     <section class="hud" data-rb="hud" aria-live="polite" hidden>
       <div class="mode" data-rb="mode" data-rb-mode-note></div>
@@ -185,6 +191,13 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   const settingsOpen = byRb<HTMLButtonElement>('settings-open');
   const settingsPanel = byRb<HTMLElement>('settings-panel');
   const modeSelect = byRb<HTMLSelectElement>('mode-select');
+  for (const index of [0, 1]) {
+    const damage = document.createElement('span');
+    damage.className = 'damage';
+    damage.dataset.rb = 'damage';
+    damage.hidden = true;
+    byRb<HTMLElement>(`team-${index}`).append(damage);
+  }
   const originalStyles = new Map<HTMLElement, Partial<Record<StyleProperty, string>>>();
   const originallyMissingStyleAttribute = new Set<HTMLElement>();
   const summaryReplacements = new Map<HTMLElement, HTMLElement>();
@@ -194,6 +207,15 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   let focusBeforeSettings: HTMLElement | null = null;
   let disposed = false;
   let reconcileQueued = false;
+  let lastDamageIdentity: string | null = null;
+
+  function hideNativeTree(element: HTMLElement, except?: HTMLElement): void {
+    // Preserve the boxes used as targets by GeoGuessr's animation calculations.
+    for (const child of [element, ...element.querySelectorAll<HTMLElement>('*')]) {
+      if (child === except || except?.contains(child)) continue;
+      setNativeStyle(child, 'visibility', 'hidden');
+    }
+  }
 
   function setNativeStyle(element: HTMLElement, property: StyleProperty, value: string): void {
     let desired = desiredStyles?.get(element);
@@ -257,6 +279,8 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     settingsOpen.textContent = `Tie range settings: ${configured === 'off' ? 'Off' : configured === 'full' ? 'Full' : 'Half'}`;
     settingsOpen.hidden = lastView?.status === 'inactive';
     if (display.teams) {
+      const damageIdentity = display.result && lastView?.context
+        ? playerRoundIdentity(lastView.context, display.result.round) : null;
       display.teams.forEach((team, index) => {
         const root = byRb<HTMLElement>(`team-${index}`);
         root.dataset.side = team.side;
@@ -265,7 +289,17 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
         root.querySelector<HTMLElement>('[data-rb="multiplier"]')!.textContent = multiplier(team.multiplierTenths);
         const percent = team.maximumHealth <= 0 ? 0 : Math.max(0, Math.min(100, team.health / team.maximumHealth * 100));
         root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!.style.width = `${percent}%`;
+        const damage = root.querySelector<HTMLElement>('[data-rb="damage"]')!;
+        const amount = display.result?.damageDealt[index === 0 ? 1 : 0] ?? 0;
+        damage.hidden = amount === 0;
+        damage.textContent = amount > 0 ? `−${amount}` : '';
+        if (amount > 0 && damageIdentity !== lastDamageIdentity) {
+          damage.classList.remove('damage-arrival');
+          void damage.offsetWidth;
+          damage.classList.add('damage-arrival');
+        }
       });
+      if (damageIdentity !== null) lastDamageIdentity = damageIdentity;
     }
     const result = byRb<HTMLElement>('result');
     result.hidden = display.result === null;
@@ -296,9 +330,35 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       const headerCells = header ? Array.from(header.children) : [];
       if (headerCells.length !== 5) { unsupported = true; continue; }
       const healthColumns = [3, 4] as const;
-      const columnByTeam = view.context.playerIds.map(playerId => healthColumns.find(column => (
-        userIdFromLink(headerCells[column], document) === playerId
+      let columnByTeam = view.context.playerIds.map(playerId => healthColumns.find(column => (
+        (userIdFromLink(headerCells[column], document) ?? userIdFromLink(headerCells[column - 2], document)) === playerId
       )) ?? -1) as [number, number];
+      if (columnByTeam[0] >= 0 && columnByTeam[1] < 0) columnByTeam[1] = columnByTeam[0] === 3 ? 4 : 3;
+      if (columnByTeam[1] >= 0 && columnByTeam[0] < 0) columnByTeam[0] = columnByTeam[1] === 3 ? 4 : 3;
+      if (columnByTeam.some(column => column < 0)) {
+        // Ordinary player summaries may have YOUR HEALTH and avatar labels,
+        // without profile links. Match their score columns to verified history.
+        const observations = Array.from(summary.querySelectorAll<HTMLElement>(CLASS_SELECTORS.summaryRow)).flatMap(row => {
+          const number = Number.parseInt(row.querySelector(CLASS_SELECTORS.roundNumber)?.textContent ?? '', 10);
+          const folded = view.output!.rounds.find(round => round.round === number);
+          if (!folded || row.children.length !== 5) return [];
+          const scores = [1, 2].map(column => {
+            const digits = row.children[column].textContent?.trim().match(/^\d[\d,\u00a0 ]*/)?.[0];
+            return digits === undefined ? NaN : Number(digits.replace(/\D/g, ''));
+          });
+          return [{ folded, scores }];
+        });
+        const orders: [number, number][] = [[0, 1], [1, 0]];
+        const matching = orders.filter(order => observations.length > 0 && observations.every(({ folded, scores }) => (
+          scores[0] === folded.scores[order[0]] && scores[1] === folded.scores[order[1]]
+        )));
+        if (matching.length === 1) {
+          columnByTeam = matching[0][0] === 0 ? [3, 4] : [4, 3];
+        } else if (matching.length === 2 && view.output.rounds.every(round => round.scores[0] === round.scores[1])) {
+          // Both histories and HP values are identical, so either mapping is equivalent.
+          columnByTeam = [3, 4];
+        }
+      }
       if (columnByTeam[0] < 0 || columnByTeam[1] < 0 || columnByTeam[0] === columnByTeam[1]) {
         unsupported = true;
         continue;
@@ -310,6 +370,11 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
         const folded = view.output.rounds.find(round => round.round === roundNumber);
         const afterTerminal = view.output.terminal !== null && roundNumber > view.output.terminal.round;
         if (cells.length !== 5 || (!folded && !afterTerminal)) { unsupported = true; continue; }
+        const roundLabel = cells[0].querySelector<HTMLElement>(CLASS_SELECTORS.roundNumber);
+        if (roundLabel) {
+          hideNativeTree(cells[0], roundLabel);
+          setNativeStyle(roundLabel, 'visibility', 'visible');
+        }
         for (const teamIndex of [0, 1] as const) {
           const cell = cells[columnByTeam[teamIndex]];
           if (!cell) { unsupported = true; continue; }
@@ -322,14 +387,18 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
             Object.assign(replacement.style, {
               position: 'absolute', inset: '0', zIndex: '2', display: 'grid', placeItems: 'center',
               background: '#10141c', color: teamIndex === 0 ? '#59b7ff' : '#ff6978',
-              font: '600 14px/1.2 Inter, system-ui, sans-serif', pointerEvents: 'none',
+              font: '600 14px/1.2 Inter, system-ui, sans-serif', pointerEvents: 'auto',
             });
             cell.append(replacement);
             summaryReplacements.set(cell, replacement);
           }
           const health = String(folded?.healthAfter[teamIndex] ?? view.output.currentHealth[teamIndex]);
-          if (replacement.textContent !== health) replacement.textContent = health;
-          const label = `Custom health ${health}`;
+          const damage = folded?.damageDealt[teamIndex === 0 ? 1 : 0] ?? 0;
+          const text = `${health}${damage > 0 ? ` (−${damage})` : ''}`;
+          if (replacement.textContent !== text) replacement.textContent = text;
+          const used = folded ? multiplier(folded.multiplierTenths[teamIndex]) : 'Duel already finished';
+          const label = `Custom health ${health}; damage received ${damage}; used multiplier ${used}`;
+          if (replacement.title !== label) replacement.title = label;
           if (replacement.getAttribute('aria-label') !== label) replacement.setAttribute('aria-label', label);
         }
       }
@@ -365,7 +434,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       let healthBarsFound = false;
       for (const root of roots) {
         for (const healthBars of root.querySelectorAll<HTMLElement>(CLASS_SELECTORS.healthBars)) {
-          setNativeStyle(healthBars, 'display', 'none');
+          hideNativeTree(healthBars);
           healthBarsFound = true;
         }
         if (display.terminal) {
@@ -379,12 +448,10 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       } else if (roots.length === 0 && !display.terminal && lastView.status !== 'ended') {
         layoutDiagnostic = 'Waiting for a supported duel HUD';
       }
-      if (display.result) {
-        for (const resultRoot of matchingResultRoots) {
-          for (const damage of resultRoot.querySelectorAll<HTMLElement>(CLASS_SELECTORS.damage)) {
-            setNativeStyle(damage, 'visibility', 'hidden');
-          }
-        }
+      // Suppress native arithmetic immediately, even while the settled player
+      // snapshot is still in flight. Only our result reveal gate shows damage.
+      for (const damage of scopedElements(roots, `${CLASS_SELECTORS.damage}, [class*="damage-animation_root__"]`)) {
+        hideNativeTree(damage);
       }
       const summaryDiagnostic = applySummaryReplacements(lastView, roots);
       if (summaryDiagnostic) layoutDiagnostic = summaryDiagnostic;
@@ -446,6 +513,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       if (disposed) return;
       if (lastView === null || playerDisclosureMustReset(lastView, view)) {
         revealedRoundIdentity = null;
+        lastDamageIdentity = null;
       }
       if (lastView?.gameId !== view.gameId || view.status === 'inactive' || view.status === 'off') {
         restoreNative();

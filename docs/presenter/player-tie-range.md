@@ -32,6 +32,9 @@ Tie-range changes the multiplier increment, not whether damage occurs. In Full
 mode, a 2470–0 round at 1.5× deals **3705 damage**, and both players receive the
 individual increment because the difference is within the 2530-point band.
 The result strip labels the multiplier used and the next multiplier separately.
+Damage appears beside the losing HP bar. The breakdown shows custom HP and
+damage received; hover a custom HP cell to see the multiplier used. Its rows
+remain clickable.
 The game's delay, mutual increment, initial HP, and round limit still apply.
 
 Custom knockout and round-limit outcomes remain visible while waiting for the
@@ -79,3 +82,8 @@ covered with controlled fixtures rather than claimed as live observations.
 See the [capture notes](../geoguessr/samples/player-tie-range/README.md) for the
 live/archived transport distinction and the
 [presenter guide](tie-range.md) for host operation.
+
+Version 0.1.1 also replays the six score pairs from the reported player
+screenshots: Half round 4 deals 1344 at 2?, leaving the opponent at 350 HP;
+round 6 deals 586 to the local side. This is a screenshot-derived regression,
+not an additional live API capture.
