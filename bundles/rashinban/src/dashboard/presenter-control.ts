@@ -1,4 +1,6 @@
 import { REPLICANTS, type PresenterConnection, type PresenterRenderer, type PresenterClients } from '../types/replicants.ts';
+import type { PresenterPublicConfig } from '../config/types.ts';
+import { bindConfigurationControls, type ConfigurationControls } from './configuration-status.ts';
 import type { DuelState, SeriesState, Timeline } from '../types/presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
 import type { RuleContexts } from '../presenter/tie-range-context.ts';
@@ -15,15 +17,25 @@ const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRendere
 const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
 const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia);
 const mediaStatus = nodecg.Replicant<PresenterMediaStatus>(REPLICANTS.presenterMediaStatus);
+const publicConfig = nodecg.Replicant<PresenterPublicConfig>(REPLICANTS.presenterPublicConfig);
 const inventories = { music: nodecg.Replicant<AssetInventory>('assets:music'), effects: nodecg.Replicant<AssetInventory>('assets:effects'), video: nodecg.Replicant<AssetInventory>('assets:video') };
 const element = (id: string) => document.getElementById(id)!;
 const input = (id: string) => element(id) as HTMLInputElement;
 const select = (id: string) => element(id) as HTMLSelectElement;
+const settingsConfiguration: ConfigurationControls = bindConfigurationControls('presenterSettings', {
+  status: 'settings-configuration-status', reset: 'settings-configuration-reset', importLocal: 'settings-configuration-import', error: 'settings-configuration-error',
+}, () => applySettings(settings.value));
+const mediaConfiguration: ConfigurationControls = bindConfigurationControls('presenterMedia', {
+  status: 'media-configuration-status', reset: 'media-configuration-reset', importLocal: 'media-configuration-import', error: 'media-configuration-error',
+}, () => applyMedia(media.value));
 
-const googleKey = (nodecg.bundleConfig as { presenter?: { googleMapsApiKey?: unknown } }).presenter?.googleMapsApiKey;
-element('google-setup-status').textContent = typeof googleKey === 'string' && googleKey.trim()
-  ? 'Browser key configured.'
-  : 'Browser key missing. Configure below to enable maps and Street View.';
+function showPublicConfig(value?: PresenterPublicConfig) {
+  element('google-setup-status').textContent = value?.googleMapsApiKey.trim()
+    ? 'Browser key configured.'
+    : 'Browser key missing. Set it in the shared installation configuration to enable maps and Street View.';
+}
+publicConfig.on('change', showPublicConfig);
+showPublicConfig(publicConfig.value);
 element('google-referrer').textContent = `${location.origin}/*`;
 function showInputDraft() {
   const replay = select('input-mode').value === 'replay';
@@ -80,7 +92,7 @@ for (const kind of CUE_KINDS) {
 element('stop-cue-preview').onclick = stopCuePreview;
 window.addEventListener('pagehide', stopCuePreview);
 element('add-stem').onclick = () => addStem({ id: `stem-${document.querySelectorAll('.media-stem').length + 1}`, url: '', loopStartS: 0, loopEndS: 8, gains: { idle: 0, round: 0, urgent: 0, results: 0 } });
-media.on('change', value => {
+function applyMedia(value: MediaManifest | undefined) {
   if (!value) return;
   for (const variant of ['single', 'double'] as const) {
     const asset = value.fiveK[variant]; assetOptions(select(`${variant}-video`), 'video', asset?.url ?? '');
@@ -89,7 +101,8 @@ media.on('change', value => {
   element('media-stems').replaceChildren(); value.stems.forEach(addStem);
   for (const context of MUSIC_CONTEXTS) (element('media-fades').querySelector(`[data-field="${context}"]`) as HTMLInputElement).value = String(value.fadeMs[context]);
   for (const kind of CUE_KINDS) assetOptions(element('media-sounds').querySelector(`[data-cue="${kind}"]`) as HTMLSelectElement, 'effects', value.sounds[kind] ?? '');
-});
+}
+media.on('change', value => mediaConfiguration.acceptProjection(() => applyMedia(value)));
 mediaStatus.on('change', value => {
   const labels = { idle: 'No celebration yet', pending: 'Waiting for video completion', missing: 'Video not selected or unavailable; results revealed normally', complete: 'Video completed', failed: 'Video failed or autoplay was blocked; results revealed normally', watchdog: 'Video timed out; results revealed normally' };
   element('media-status').textContent = value ? `${value.effect === 'none' ? '' : value.effect + ' · '}${labels[value.status]}` : labels.idle;
@@ -108,13 +121,16 @@ element('media-form').addEventListener('submit', event => {
   }
   for (const context of MUSIC_CONTEXTS) next.fadeMs[context] = Number((element('media-fades').querySelector(`[data-field="${context}"]`) as HTMLInputElement).value);
   for (const kind of CUE_KINDS) { const url = (element('media-sounds').querySelector(`[data-cue="${kind}"]`) as HTMLSelectElement).value; if (url) next.sounds[kind] = url; }
-  void control('media', next);
+  void control('media', next, 'error', mediaConfiguration);
 });
 
-async function control(action: string, body?: unknown, errorTarget = 'error') {
+async function control(action: string, body?: unknown, errorTarget = 'error', configuration?: ConfigurationControls) {
   element(errorTarget).textContent = '';
-  try { await nodecg.sendMessage('presenter:control', { action, body }); }
-  catch { element(errorTarget).textContent = 'Change rejected. Check the values and NodeCG connection.'; }
+  try {
+    await nodecg.sendMessage('presenter:control', { action, body, revision: configuration?.draft.expectedRevision() });
+    configuration?.saved();
+  }
+  catch (cause) { element(errorTarget).textContent = cause instanceof Error ? cause.message : 'Change rejected. Check the values and NodeCG connection.'; }
 }
 function showSeries(value: SeriesState) { element("current-match-summary").textContent = `${value.left.name} ${value.left.wins} – ${value.right.wins} ${value.right.name}`; }
 function status() {
@@ -160,7 +176,7 @@ function status() {
   element('mapping-warning').textContent = missing.length ? `Player mapping needed: ${missing.join(', ')}. Health and results stay blank until mapped.` : '';
 }
 series.on('change', value => { if (value) showSeries(value); status(); });
-settings.on('change', value => {
+function applySettings(value: PresenterSettings | undefined) {
   if (!value) return;
   select('view-source').value = value.viewSource; select('key-color').value = value.keyColor;
   select('audio-output').value = value.audioOutput; input('muted').checked = value.muted;
@@ -171,8 +187,8 @@ settings.on('change', value => {
   element('audio-launch-help').textContent = value.audioOutput === 'separate'
     ? 'Open Program graphic and Separate audio.'
     : 'Open Program graphic for video and audio.';
-  status();
-});
+}
+settings.on('change', value => { settingsConfiguration.acceptProjection(() => applySettings(value)); status(); });
 ruleContexts.on('change', status);
 input('tie-range-enabled').addEventListener('change', () => { select('tie-range-mode').disabled = !input('tie-range-enabled').checked; });
 duel.on('change', status);
@@ -193,7 +209,7 @@ element('settings-form').addEventListener('submit', event => {
   void control('settings', { ...settings.value, viewSource: select('view-source').value, keyColor: select('key-color').value,
     audioOutput: select('audio-output').value, muted: input('muted').checked,
     musicGain: Number(input('music-gain').value), effectsGain: Number(input('effects-gain').value),
-    tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value } });
+    tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value } }, 'error', settingsConfiguration);
 });
 element('reconnect').addEventListener('click', () => {
   const mode = select('input-mode').value;
@@ -204,3 +220,10 @@ element('reconnect').addEventListener('click', () => {
   }
   void control('reconnect', mode === 'replay' ? { input: mode, fixture: select('replay-fixture').value } : { input: mode, partyId }, 'source-error');
 });
+
+element('settings-form').addEventListener('input', () => settingsConfiguration.draft.markDirty());
+element('settings-form').addEventListener('change', () => settingsConfiguration.draft.markDirty());
+element('media-form').addEventListener('input', () => mediaConfiguration.draft.markDirty());
+element('media-form').addEventListener('change', () => mediaConfiguration.draft.markDirty());
+if (settings.value) settingsConfiguration.acceptProjection(() => applySettings(settings.value));
+if (media.value) mediaConfiguration.acceptProjection(() => applyMedia(media.value));

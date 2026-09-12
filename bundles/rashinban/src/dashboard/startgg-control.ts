@@ -3,6 +3,7 @@
 import { groupSets } from "../startgg/normalize";
 import type { BracketSet, StartggBracket, StartggConfig, StartggStatus } from "../startgg/types";
 import { REPLICANTS, STARTGG_MESSAGES } from "../types/replicants";
+import { bindConfigurationControls } from './configuration-status.ts';
 
 const config = nodecg.Replicant<StartggConfig>(REPLICANTS.startggConfig);
 const bracket = nodecg.Replicant<StartggBracket | null>(REPLICANTS.startggBracket);
@@ -19,6 +20,9 @@ const setsEl = $<HTMLTableSectionElement>("sets");
 
 let cfg: StartggConfig | undefined;
 let data: StartggBracket | null = null;
+const configuration = bindConfigurationControls('startggConfig', {
+  status: 'configuration-status', reset: 'configuration-reset', importLocal: 'configuration-import', error: 'configuration-error',
+}, () => { cfg = config.value; renderConfig(); });
 
 const fmtTime = (t: number | null) => (t ? new Date(t).toLocaleTimeString() : "never");
 
@@ -94,17 +98,26 @@ function renderBracket() {
 const send = async (name: string, payload?: unknown) => {
   try {
     await nodecg.sendMessage(name, payload);
+    return true;
   } catch (err) {
     statusEl.textContent = `ERROR: ${(err as Error).message}`;
     statusEl.classList.add("error");
+    return false;
   }
 };
 
-slugInput.addEventListener("change", () => send(STARTGG_MESSAGES.setConfig, { eventSlug: slugInput.value }));
+const save = async (payload: Record<string, unknown>) => {
+  configuration.draft.markDirty();
+  if (await send(STARTGG_MESSAGES.setConfig, { ...payload, revision: configuration.draft.expectedRevision() })) configuration.saved();
+};
+
+slugInput.addEventListener('input', () => configuration.draft.markDirty());
+intervalInput.addEventListener('input', () => configuration.draft.markDirty());
+slugInput.addEventListener("change", () => save({ eventSlug: slugInput.value }));
 intervalInput.addEventListener("change", () =>
-  send(STARTGG_MESSAGES.setConfig, { pollIntervalMs: Number(intervalInput.value) * 1000 }),
+  save({ pollIntervalMs: Number(intervalInput.value) * 1000 }),
 );
-enabledBtn.addEventListener("click", () => send(STARTGG_MESSAGES.setConfig, { enabled: !cfg?.enabled }));
+enabledBtn.addEventListener("click", () => save({ enabled: !cfg?.enabled }));
 refreshBtn.addEventListener("click", async () => {
   refreshBtn.disabled = true;
   await send(STARTGG_MESSAGES.refresh);
@@ -112,9 +125,9 @@ refreshBtn.addEventListener("click", async () => {
 });
 
 config.on("change", (v) => {
-  cfg = v;
-  renderConfig();
+  configuration.acceptProjection(() => { cfg = v; renderConfig(); });
 });
+if (config.value) configuration.acceptProjection(() => { cfg = config.value; renderConfig(); });
 status.on("change", (v) => renderStatus(v));
 bracket.on("change", (v) => {
   data = v ?? null;

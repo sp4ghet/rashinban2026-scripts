@@ -6,7 +6,7 @@ import type { ConnectionConfig } from './connection.ts';
 export type PublicConnectionConfig = {
   partyId: string | null;
   clientVersion: string;
-  cookieFile: string;
+  cookieFile?: string;
 };
 
 export type ConnectionConfigLoaderOptions = {
@@ -28,8 +28,7 @@ export function loadConnectionConfig(
   }
   if (
     !(publicConfig.partyId === null || nonEmpty(publicConfig.partyId)) ||
-    !nonEmpty(publicConfig.clientVersion) ||
-    !nonEmpty(publicConfig.cookieFile)
+    !nonEmpty(publicConfig.clientVersion)
   ) {
     throw new Error('Invalid public GeoGuessr connection config');
   }
@@ -37,6 +36,7 @@ export function loadConnectionConfig(
   const env = options.env ?? process.env;
   let cookie = env.GEOGUESSR_NCFA?.trim();
   if (!cookie) {
+    if (!nonEmpty(publicConfig.cookieFile)) throw new Error('Set GEOGUESSR_NCFA in the shared installation .env and restart');
     try {
       const readFile = options.readFile ?? ((filePath: string) => readFileSync(filePath, 'utf8'));
       const filePath = path.resolve(options.baseDir ?? process.cwd(), publicConfig.cookieFile);

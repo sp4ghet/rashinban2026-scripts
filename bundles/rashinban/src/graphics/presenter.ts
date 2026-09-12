@@ -11,6 +11,7 @@ import { clientRole, createPresenterClient } from './presenter/client.ts';
 import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
 import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
+import type { PresenterPublicConfig } from '../config/types.ts';
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
@@ -20,6 +21,7 @@ const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews);
 const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
 const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia);
 const videoAssets = nodecg.Replicant<AssetInventory>('assets:video');
+const publicConfig = nodecg.Replicant<PresenterPublicConfig>(REPLICANTS.presenterPublicConfig);
 let selectedMedia = EMPTY_MEDIA;
 const videoPlayer = createVideoPlayer(() => {
   const video = document.createElement('video'); video.className = 'celebration-video'; document.body.append(video); return video;
@@ -63,11 +65,16 @@ function rendererError(message: string) {
   const placeholder = element('results-map').querySelector('span');
   if (placeholder) placeholder.textContent = 'Map unavailable';
 }
-const publicConfig = nodecg.bundleConfig as { presenter?: { googleMapsApiKey?: unknown } };
-const apiKey = publicConfig.presenter?.googleMapsApiKey;
-publishRenderer('loading');
-void createGoogleRenderer(document.body, typeof apiKey === 'string' ? apiKey : '', rendererError, () => publishRenderer('api-ready'))
-  .then(value => { renderer = value; publishRenderer('api-ready'); }).catch(() => {});
+let rendererStarted = false;
+function startRenderer(value?: PresenterPublicConfig) {
+  if (!value || rendererStarted) return;
+  rendererStarted = true;
+  publishRenderer('loading');
+  void createGoogleRenderer(document.body, value.googleMapsApiKey, rendererError, () => publishRenderer('api-ready'))
+    .then(next => { renderer = next; publishRenderer('api-ready'); }).catch(() => {});
+}
+publicConfig.on('change', startRenderer);
+startRenderer(publicConfig.value);
 window.addEventListener('pagehide', () => { clearInterval(mediaGuard); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {

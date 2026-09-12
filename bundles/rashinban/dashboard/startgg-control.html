@@ -75,7 +75,7 @@
         border-radius: 4px;
       }
 
-      #status.error { color: #ff8a80; }
+      #status.error, #configuration-error { color: #ff8a80; }
 
       #summary {
         margin-bottom: 8px;
@@ -119,6 +119,9 @@
       <button id="refresh">Refresh now</button>
     </div>
     <div id="status">waiting for status...</div>
+    <div id="configuration-status">Loading configuration…</div>
+    <div class="row"><button id="configuration-reset">Reset to shared</button><button id="configuration-import">Import local settings</button></div>
+    <div id="configuration-error" class="error"></div>
     <div id="summary">No data fetched yet.</div>
     <div class="wrap">
       <table>

@@ -35,6 +35,11 @@ export type ConfigStatus = {
   error: string | null;
 };
 
+export type PresenterPublicConfig = Pick<
+  ApplicationConfig['presenter'],
+  'googleMapsApiKey' | 'input' | 'replayFixture' | 'partyId' | 'clientVersion'
+>;
+
 export type InstallationRoots = {
   appRoot: string;
   sharedRoot: string;

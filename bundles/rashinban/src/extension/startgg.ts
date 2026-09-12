@@ -4,7 +4,7 @@
 // (loaded from .env by ./env.ts) and never leaves the server.
 import type NodeCG from "@nodecg/types";
 
-import { normalizeEvent, normalizeEntrant } from "../startgg/normalize";
+import { normalizeEvent, normalizeEntrant } from "../startgg/normalize.ts";
 import {
   EVENT_QUERY,
   ENTRANTS_QUERY,
@@ -13,7 +13,7 @@ import {
   STREAM_QUEUE_QUERY,
   normalizeEventSlug,
   tournamentSlugFromEvent,
-} from "../startgg/queries";
+} from "../startgg/queries.ts";
 import type {
   RawEvent,
   RawEntrant,
@@ -22,8 +22,9 @@ import type {
   StartggBracket,
   StartggConfig,
   StartggStatus,
-} from "../startgg/types";
-import { REPLICANTS, STARTGG_MESSAGES } from "../types/replicants";
+} from "../startgg/types.ts";
+import { REPLICANTS, STARTGG_MESSAGES } from "../types/replicants.ts";
+import type { ConfigStore } from '../config/types.ts';
 
 const DEFAULT_CONFIG: StartggConfig = {
   enabled: false,
@@ -34,8 +35,8 @@ const DEFAULT_CONFIG: StartggConfig = {
 
 const MIN_POLL_MS = 10_000;
 
-export function registerStartgg(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeCG.ServerAPI["Router"]>) {
-  const config = nodecg.Replicant<StartggConfig>(REPLICANTS.startggConfig, { defaultValue: DEFAULT_CONFIG });
+export function registerStartgg(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeCG.ServerAPI["Router"]>, store?: ConfigStore) {
+  const config = nodecg.Replicant<StartggConfig>(REPLICANTS.startggConfig, { defaultValue: store ? structuredClone(store.get().startgg) : DEFAULT_CONFIG, persistent: store ? false : true });
   const bracket = nodecg.Replicant<StartggBracket | null>(REPLICANTS.startggBracket, { defaultValue: null });
   const status = nodecg.Replicant<StartggStatus>(REPLICANTS.startggStatus, {
     defaultValue: {
@@ -60,7 +61,7 @@ export function registerStartgg(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
 
   async function gql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
     const t = token();
-    if (!t) throw new Error("STARTGG_TOKEN is not set (copy .env.example to .env and restart)");
+    if (!t) throw new Error("STARTGG_TOKEN is not set in the shared installation .env (restart after changing it)");
     requestTimes.push(Date.now());
     const res = await fetch(STARTGG_ENDPOINT, {
       method: "POST",
@@ -169,9 +170,9 @@ export function registerStartgg(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
     if (ack && !ack.handled) ok ? ack(null, status.value) : ack(new Error(status.value?.lastError ?? "refresh failed"));
   });
 
-  nodecg.listenFor(STARTGG_MESSAGES.setConfig, (data: Partial<StartggConfig>, ack) => {
+  nodecg.listenFor(STARTGG_MESSAGES.setConfig, (data: Partial<StartggConfig> & { revision?: string }, ack) => {
     const cur = config.value ?? DEFAULT_CONFIG;
-    config.value = {
+    const next = {
       enabled: typeof data?.enabled === "boolean" ? data.enabled : cur.enabled,
       eventSlug: typeof data?.eventSlug === "string" ? normalizeEventSlug(data.eventSlug) : cur.eventSlug,
       tournamentSlug: typeof data?.tournamentSlug === "string" ? data.tournamentSlug.trim() : cur.tournamentSlug,
@@ -180,7 +181,13 @@ export function registerStartgg(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
           ? Math.max(MIN_POLL_MS, Math.round(data.pollIntervalMs))
           : cur.pollIntervalMs,
     };
-    if (ack && !ack.handled) ack(null, config.value);
+    try {
+      if (store) store.save('startggConfig', next, data?.revision);
+      else config.value = next;
+      if (ack && !ack.handled) ack(null, store?.get().startgg ?? config.value);
+    } catch (error) {
+      if (ack && !ack.handled) ack(error instanceof Error ? error : new Error('Unable to save start.gg configuration'));
+    }
   });
 
   router.post("/startgg/refresh", async (_req, res) => {

@@ -16,6 +16,7 @@ import { createReplay, loadReplay, REPLAY_FIXTURES, shiftMessageClock } from './
 import { mountPresenterRoutes, PRESENTER_ACTIONS, type PresenterAction } from './routes.ts';
 import { AUDIO_STATES, CUE_KINDS, celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest, type AudioStatus } from '../../presenter/media.ts';
 import type { PresenterMediaStatus } from '../../types/replicants.ts';
+import type { ConfigStore } from '../../config/types.ts';
 
 type Clock = { now(): number; schedule(fn: () => void, delayMs: number): () => void; connection?: ConnectionDeps };
 const clock: Clock = { now: () => Date.now(), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } };
@@ -39,17 +40,20 @@ function parsePartySelection(input: unknown): string | null {
   return broadcast[1];
 }
 
-export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock): void {
-  const config = (nodecg.bundleConfig as { presenter?: Record<string, unknown> }).presenter ?? {};
+export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock, store?: ConfigStore): void {
+  let config: Record<string, unknown> = store?.get().presenter
+    ?? (nodecg.bundleConfig as { presenter?: Record<string, unknown> }).presenter ?? {};
   let input: 'replay' | 'live' = config.input === 'replay' ? 'replay' : 'live';
-  const configuredPartyId = typeof config.partyId === 'string' ? config.partyId.trim() || null : null;
+  let configuredPartyId = typeof config.partyId === 'string' ? config.partyId.trim() || null : null;
+  let selectionUsesDefault = true;
   let selectedPartyId = configuredPartyId;
-  let fixture: unknown = config.replayFixture ?? REPLAY_FIXTURES[0];
-  const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings, { defaultValue: structuredClone(DEFAULT_SETTINGS), persistent: true });
+  let defaultFixture: unknown = config.replayFixture ?? REPLAY_FIXTURES[0];
+  let fixture: unknown = defaultFixture;
+  const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings, { defaultValue: structuredClone(store?.get().presenter.settings ?? DEFAULT_SETTINGS), persistent: store ? false : true });
   const ruleContexts = nodecg.Replicant<RuleContexts>(REPLICANTS.presenterRuleContexts, { defaultValue: { live: null, replay: null }, persistent: true });
   let rawDuel: DuelState | null = null;
   let ruleWarnings: string[] = [];
-  const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia, { defaultValue: structuredClone(EMPTY_MEDIA), persistent: true });
+  const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia, { defaultValue: structuredClone(store?.get().presenter.media ?? EMPTY_MEDIA), persistent: store ? false : true });
   try { media.value = parseMedia(media.value); } catch { media.value = structuredClone(EMPTY_MEDIA); }
   const videoAssets = nodecg.Replicant<AssetInventory>('assets:video', { defaultValue: [], persistent: false });
   const mediaStatus = nodecg.Replicant<PresenterMediaStatus>(REPLICANTS.presenterMediaStatus, { defaultValue: { generation: null, effect: 'none', status: 'idle' }, persistent: false });
@@ -61,6 +65,17 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
     input, replayFixture: input === 'replay' && typeof fixture === 'string' ? fixture : null, warnings: [],
     configuredPartyId, selectedPartyId,
   } });
+  store?.subscribe(() => {
+    const nextConfig = store.get().presenter;
+    const nextPartyId = typeof nextConfig.partyId === 'string' ? nextConfig.partyId.trim() || null : null;
+    config = nextConfig;
+    defaultFixture = nextConfig.replayFixture ?? REPLAY_FIXTURES[0];
+    if (nextPartyId !== configuredPartyId) {
+      configuredPartyId = nextPartyId;
+      if (selectionUsesDefault) selectedPartyId = configuredPartyId;
+      connection.value = { ...connection.value, configuredPartyId, selectedPartyId };
+    }
+  });
   const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel, { persistent: false, defaultValue: null });
   const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRenderer, { persistent: false, defaultValue: { status: 'unreported', updatedAtMs: null } });
   const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients, { persistent: false, defaultValue: { clients: [], program: null } });
@@ -257,12 +272,13 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
     if (nextInput !== 'live' && nextInput !== 'replay') throw new Error('Invalid input mode');
     if (nextInput === 'replay') {
       if ('partyId' in value) throw new Error('Party selection is disabled in replay mode');
-      startReplay(value.fixture ?? fixture, restoreReplay); return;
+      startReplay(value.fixture ?? defaultFixture, restoreReplay); return;
     }
     if ('fixture' in value) throw new Error('Replay is disabled in live mode');
-    const nextPartyId = 'partyId' in value ? parsePartySelection(value.partyId) : selectedPartyId;
+    const nextPartyId = 'partyId' in value ? parsePartySelection(value.partyId) : selectionUsesDefault ? configuredPartyId : selectedPartyId;
     source?.stop(); reset();
     input = 'live'; selectedPartyId = nextPartyId;
+    if ('partyId' in value) selectionUsesDefault = false;
     connection.value = { ...connection.value, input, selectedPartyId, replayFixture: null,
       state: 'disconnected', partyId: null, gameId: null, lastUpdateMs: null, error: null, serverOffsetMs: 0, warnings: [] };
     try {
@@ -270,7 +286,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
         ...config,
         partyId: selectedPartyId,
         clientVersion: typeof config.clientVersion === 'string' ? config.clientVersion : '',
-        cookieFile: typeof config.cookieFile === 'string' ? config.cookieFile : '.secrets/geoguessr.json',
+        ...(store ? {} : { cookieFile: typeof config.cookieFile === 'string' ? config.cookieFile : '.secrets/geoguessr.json' }),
       });
       source = createConnection(credentials, {
         onMessage: ingest,
@@ -283,17 +299,25 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
       }, deps.connection ?? createDefaultConnectionDeps());
       source.start();
     } catch {
-      connection.value = { ...connection.value, state: 'auth-error', error: 'Check server-side GeoGuessr connection configuration' };
+      connection.value = { ...connection.value, state: 'auth-error', error: 'Check GEOGUESSR_NCFA in the shared installation .env and restart' };
     }
   }
   function current() { return { settings: settings.value, series: series.value, connection: connection.value, timeline: timeline.value, clients: clients.value, media: media.value }; }
-  function control(action: PresenterAction, body: unknown): unknown {
+  function control(action: PresenterAction, body: unknown, expectedRevision?: string): unknown {
     if (action === 'series') {
       if (nodecg.Replicant(REPLICANTS.matchState, {defaultValue: null}).value) throw new Error('Edit the series in Current Match');
       series.value = parseSeries(body);
     }
-    else if (action === 'settings') { settings.value = parseSettings(body); publishClients(copyClients()); tick(); }
-    else if (action === 'media') { media.value = parseMedia(body); tick(); }
+    else if (action === 'settings') {
+      const next = parseSettings(body);
+      if (store) store.save('presenterSettings', next, expectedRevision); else settings.value = next;
+      publishClients(copyClients()); tick();
+    }
+    else if (action === 'media') {
+      const next = parseMedia(body);
+      if (store) store.save('presenterMedia', next, expectedRevision); else media.value = next;
+      tick();
+    }
     else if (action === 'reconnect') reconnect(body);
     else if (action === 'program/transfer') {
       const value = record(body); const now = deps.now(); const next = copyClients();
@@ -306,7 +330,8 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
       if (body !== undefined && Object.keys(record(body)).length) throw new Error('Unexpected body');
       const patch = action === 'mute' ? { muted: true } : action === 'unmute' ? { muted: false }
         : { viewSource: action === 'view/chroma' ? 'chroma' : 'rendered' };
-      settings.value = parseSettings({ ...settings.value, ...patch });
+      const next = parseSettings({ ...settings.value, ...patch });
+      if (store) store.save('presenterSettings', next, expectedRevision); else settings.value = next;
     }
     return current();
   }
@@ -315,9 +340,11 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
     try {
       const value = record(request);
       if (!PRESENTER_ACTIONS.includes(value.action as PresenterAction)) throw new Error('Invalid action');
-      const result = control(value.action as PresenterAction, value.body);
+      if (Object.keys(value).some(key => !['action', 'body', 'revision'].includes(key))
+        || (value.revision !== undefined && typeof value.revision !== 'string')) throw new Error('Invalid presenter request');
+      const result = control(value.action as PresenterAction, value.body, value.revision as string | undefined);
       if (ack && !ack.handled) ack(null, result);
-    } catch { if (ack && !ack.handled) ack(new Error('Invalid presenter request')); }
+    } catch (error) { if (ack && !ack.handled) ack(error instanceof Error ? error : new Error('Invalid presenter request')); }
   });
   // Browser clocks only measure NodeCG; no GeoGuessr offset is applied there.
   nodecg.listenFor('presenter:clock', (_request, ack) => { if (ack && !ack.handled) ack(null, deps.now()); });
