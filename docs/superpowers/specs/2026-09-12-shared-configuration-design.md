@@ -2,7 +2,7 @@
 
 Date: 2026-09-12
 
-Status: Proposed. The user selected shared defaults with worktree overrides.
+Status: Approved. The user selected shared defaults with worktree overrides and authorized implementation, including shared credential access for previews.
 
 ## Problem
 
