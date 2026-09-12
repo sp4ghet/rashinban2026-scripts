@@ -32,6 +32,9 @@ The effective configuration is built in this order:
 Objects merge by key; arrays replace as a whole. Explicit nulls clear nullable
 values. Unknown or invalid fields fail validation with a useful diagnostic.
 An invalid file must not silently erase bindings or reset the setup.
+For optional sound-cue bindings, a null value in a file layer clears the
+inherited binding; the effective media manifest omits that cue. Removing the
+override restores inheritance.
 
 The existing cfg/nodecg.json remains NodeCG's server configuration, covering
 its listening address and port. A preview can continue using a separate port.

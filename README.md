@@ -44,6 +44,11 @@ npm run dev     # esbuild watch + NodeCG together
 Other scripts: `npm run build` (one-shot build), `npm start` (NodeCG only,
 requires a prior build), `npm run typecheck`.
 
+Use `npm run preview -- --port 9091` in a worktree for a replay preview, or add
+`--input live` for spectator testing. Worktrees inherit the main checkout's
+configuration, credentials and media. Config workspace saves create local
+overrides. See [configuration and migration](docs/configuration.md).
+
 ## Duels presenter
 
 The custom 1v1 presenter supports MOVE, NM and NMPZ, whole-feed chroma or
@@ -85,10 +90,12 @@ panels.
 
 ## Secrets
 
-Credentials never go in the repo. Copy `.env.example` to `.env` in the repo
-root and fill in what you need; the extension loads it into `process.env` at
-startup (Node's built-in `process.loadEnvFile`, no dotenv). `.env`, `.env.*`,
-and `.secrets/` are gitignored. Restart NodeCG after editing it.
+Credentials never go in the repo. Copy `.env.example` to `.env` in the main
+checkout and fill in what you need; the extension loads this shared file at
+startup for the main checkout and worktrees. Process environment values take
+precedence. `.env`, `.env.*`, and `.secrets/` are gitignored. Restart NodeCG
+after editing credentials. Legacy `.secrets/geoguessr.json` is retained as a
+migration backup; new setup uses `.env` for secrets.
 
 - `STARTGG_TOKEN` — a start.gg **Personal Access Token** from
   https://start.gg/admin/profile/developer (expires after one year; use an

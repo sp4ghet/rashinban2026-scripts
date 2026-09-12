@@ -1,6 +1,7 @@
 import { readdirSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import express from 'express';
+import type NodeCG from '@nodecg/types';
 import type { InstallationRoots } from '../../config/types.ts';
 import { isMediaCategory, isMediaFilename, MEDIA_CATEGORIES, type EffectiveAssetInventory, type MediaCategory } from '../../config/media-url.ts';
 
@@ -68,4 +69,22 @@ export function createMediaRouter(roots: InstallationRoots): express.Router {
     res.sendStatus(404);
   }) as express.ErrorRequestHandler);
   return router;
+}
+
+export function registerSharedAssets(nodecg: NodeCG.ServerAPI, roots: InstallationRoots): void {
+  let inventory = listMediaAssets(roots);
+  const assets = nodecg.Replicant<EffectiveAssetInventory>('presenterAssets', {
+    persistent: false, defaultValue: structuredClone(inventory),
+  });
+  assets.value = structuredClone(inventory);
+  nodecg.mount('/rashinban/media', nodecg.util.authCheck, createMediaRouter(roots));
+  // Polling also detects creation of previously absent category directories.
+  const timer = setInterval(() => {
+    const next = listMediaAssets(roots);
+    if (JSON.stringify(next) === JSON.stringify(inventory)) return;
+    inventory = next;
+    assets.value = structuredClone(next);
+  }, 1000);
+  timer.unref();
+  nodecg.once('serverStopping', () => clearInterval(timer));
 }

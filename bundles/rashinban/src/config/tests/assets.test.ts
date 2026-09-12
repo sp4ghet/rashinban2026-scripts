@@ -4,7 +4,9 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import express from 'express';
-import { listMediaAssets, resolveMediaFile, createMediaRouter } from '../../extension/config/assets.ts';
+import { EventEmitter } from 'node:events';
+import type NodeCG from '@nodecg/types';
+import { listMediaAssets, resolveMediaFile, createMediaRouter, registerSharedAssets } from '../../extension/config/assets.ts';
 import { mediaPlaybackUrl } from '../media-url.ts';
 
 function fixture(t: { after(fn: () => void): void }) {
@@ -66,4 +68,39 @@ test('stored canonical asset references map to delivery URLs without changing ma
   assert.equal(mediaPlaybackUrl('/already-owned/url.mp3'),'/already-owned/url.mp3');
   assert.throws(()=>mediaPlaybackUrl('/assets/rashinban/music/..%2Fsecret.mp3'));
   assert.throws(()=>mediaPlaybackUrl('/assets/rashinban/other/file.mp3'));
+});
+
+test('shared asset registration protects delivery and refreshes inventory after local upload/deletion', async t => {
+  const { roots, file } = fixture(t);
+  file('sharedRoot', 'music', 'track.mp3', 'SHARED');
+  const events = new EventEmitter();
+  const app = express();
+  let authorizationChecks = 0;
+  const rep = { value: { music: [], effects: [], video: [] } as ReturnType<typeof listMediaAssets> };
+  const nodecg = Object.assign(events, {
+    Replicant(name: string, options: { persistent: boolean }) {
+      assert.equal(name, 'presenterAssets'); assert.equal(options.persistent, false); return rep;
+    },
+    util: { authCheck: ((_req, res) => { authorizationChecks++; res.sendStatus(401); }) as express.RequestHandler },
+    mount: app.use.bind(app),
+  });
+  registerSharedAssets(nodecg as unknown as NodeCG.ServerAPI, roots);
+  t.after(() => events.emit('serverStopping'));
+  assert.equal(rep.value.music[0].source, 'shared');
+  const server = app.listen(0, '127.0.0.1'); await new Promise<void>(resolve => server.once('listening', resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const address = server.address(); assert.ok(address && typeof address === 'object');
+  assert.equal((await fetch(`http://127.0.0.1:${address.port}/rashinban/media/music/track.mp3`)).status, 401);
+  assert.equal(authorizationChecks, 1);
+  async function waitForSource(source: string) {
+    const deadline = Date.now() + 3500;
+    while (rep.value.music[0]?.source !== source && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 40));
+    assert.equal(rep.value.music[0]?.source, source);
+  }
+  const inherited = rep.value;
+  const local = file('appRoot', 'music', 'track.mp3', 'LOCAL');
+  await waitForSource('local');
+  assert.equal(inherited.music[0].source, 'shared');
+  rmSync(local);
+  await waitForSource('shared');
 });

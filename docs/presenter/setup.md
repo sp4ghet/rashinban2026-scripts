@@ -4,29 +4,37 @@ The presenter extension reads GeoGuessr spectator state with the signed-in accou
 
 ## Public NodeCG config
 
-Copy `cfg/rashinban.example.json` to `cfg/rashinban.json`, then set:
+For a new installation, copy `cfg/rashinban.example.json` to
+`cfg/rashinban.json` in the main checkout, then set:
 
 - `partyId` to the broadcast party ID, or leave it `null` to use the signed-in account's active party.
 - `clientVersion` to the current GeoGuessr web client version. The checked-in value matches the protocol capture and may need updating when GeoGuessr changes its client.
-- `cookieFile` to the secret file path, resolved from the NodeCG working directory.
 
-`cfg/rashinban.json` is injected into dashboard and graphic pages by NodeCG. It is ignored by Git and must contain only these public settings. Never add the cookie to this file.
+`cfg/rashinban.json` contains public connection defaults, presenter preferences
+and media bindings. It is ignored by Git. Never add a cookie or token to it.
+Worktrees inherit this file and save edits to `cfg/rashinban.local.json`.
+See [configuration and migration](../configuration.md).
 
 ## Server-only credential
 
-Create `.secrets/geoguessr.json` in the repository root with this shape:
+Set the cookie in `.env` in the main/shared checkout:
 
-```json
-{
-  "cookie": ""
-}
+```dotenv
+GEOGUESSR_NCFA=your_ncfa_cookie_value
 ```
 
-Paste only the `_ncfa` cookie value between the quotes. The `.secrets/` directory is ignored by Git, and the extension process reads this file directly. Keep the file local to the NodeCG host and restrict access to the account running NodeCG.
+Use only the `_ncfa` cookie value. The file is ignored by Git and loaded by the
+server for every worktree. A legacy `.secrets/geoguessr.json` is migrated when
+no effective cookie exists and retained as a backup.
 
-As an alternative, set the `GEOGUESSR_NCFA` environment variable for the NodeCG process. That variable takes precedence over `cookieFile`.
+An explicitly supplied nonempty `GEOGUESSR_NCFA` process environment variable
+takes precedence over the shared `.env`.
 
-Restart NodeCG after changing public config. Reconnect reloads the server-only secret file, so a replacement cookie does not require a process restart. If `GEOGUESSR_NCFA` is set, update that process environment and restart because it takes precedence over the file. Authentication failures stop discovery without retrying. Network and game-server interruptions retry with bounded backoff while the extension continues polling the party for lobby changes.
+Restart NodeCG after changing credentials. Public configuration is watched;
+connection defaults take effect on startup or reconnect. Authentication failures
+stop discovery without retrying. Network and game-server interruptions retry
+with bounded backoff while the extension continues polling the party for lobby
+changes.
 
 ## Operator startup and recovery
 
@@ -101,7 +109,7 @@ browser key is configured and shows the current origin's referrer pattern.
 A missing key prevents rendered Street View and maps even when replay data is
 arriving correctly. This is independent of loading a fixture or mapping players.
 
-Set `presenter.googleMapsApiKey` in the public `cfg/rashinban.json`. Enable billing and the **Maps JavaScript API** on its Google Cloud project. This is a browser key: NodeCG publishes it to the graphic and dashboard. Restrict it to the Maps JavaScript API and HTTP referrers for the exact NodeCG origins used by OBS and preview browsers (including the correct hostname and port, with `/*` for paths). Reload the graphic after restarting NodeCG. The GeoGuessr cookie stays in the separate server-only secret file; never put it beside the browser key.
+Set `presenter.googleMapsApiKey` in the public `cfg/rashinban.json`. Enable billing and the **Maps JavaScript API** on its Google Cloud project. This is a browser key: NodeCG publishes it to the graphic and dashboard. Restrict it to the Maps JavaScript API and HTTP referrers for the exact NodeCG origins used by OBS and preview browsers (including the correct hostname and port, with `/*` for paths). Reload the graphic after restarting NodeCG. The GeoGuessr cookie stays in the shared server-only .env; never put it beside the browser key.
 
 The dashboard reports loading, API availability, missing-key and exact-panorama failures. “API loaded” means the script loaded; it does not certify that current imagery loaded. Without a key, the scoreboard and keyed cameras remain usable and map/view placeholders remain visible. Chroma replaces both complete player views, while its results map still requires the Google key after reveal.
 
