@@ -2,6 +2,8 @@
 
 The main checkout supplies shared defaults and media. Each worktree has its own
 optional overrides and its own NodeCG runtime database.
+See [migration and browser validation](configuration-validation.md) for the
+checks performed on the implementation.
 
 | File | Purpose |
 | --- | --- |
