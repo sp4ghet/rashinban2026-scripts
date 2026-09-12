@@ -112,6 +112,39 @@ test('rejects stale revisions and compare-before-write races', () => {
   } finally { rmSync(f.root, { recursive: true, force: true }); }
 });
 
+test('worktree save rejects a concurrent shared edit even without an expected revision', () => {
+  const f = fixture();
+  try {
+    const sharedFile = path.join(f.shared, 'cfg', 'rashinban.json');
+    const localFile = path.join(f.app, 'cfg', 'rashinban.local.json');
+    writeFileSync(sharedFile, JSON.stringify(sharedConfig({ sheet: { enabled: false } })));
+    const store = createConfigStore({ roots: f.roots, watch: false });
+    writeFileSync(sharedFile, JSON.stringify(sharedConfig({ sheet: { enabled: true } })));
+
+    assert.throws(() => store.save('sheetConfig', { ...store.get().sheet, playersGid: '99' }), /changed on disk/);
+    assert.throws(() => readFileSync(localFile, 'utf8'), /ENOENT/);
+    store.dispose();
+  } finally { rmSync(f.root, { recursive: true, force: true }); }
+});
+
+test('worktree reset rejects a concurrent shared edit even without an expected revision', () => {
+  const f = fixture();
+  try {
+    const sharedFile = path.join(f.shared, 'cfg', 'rashinban.json');
+    const localFile = path.join(f.app, 'cfg', 'rashinban.local.json');
+    writeFileSync(sharedFile, JSON.stringify(sharedConfig({ sheet: { enabled: false } })));
+    mkdirSync(path.dirname(localFile));
+    const originalLocal = JSON.stringify({ sheet: { enabled: true } });
+    writeFileSync(localFile, originalLocal);
+    const store = createConfigStore({ roots: f.roots, watch: false });
+    writeFileSync(sharedFile, JSON.stringify(sharedConfig({ sheet: { enabled: false, playersGid: '88' } })));
+
+    assert.throws(() => store.reset('sheetConfig'), /changed on disk/);
+    assert.equal(readFileSync(localFile, 'utf8'), originalLocal);
+    store.dispose();
+  } finally { rmSync(f.root, { recursive: true, force: true }); }
+});
+
 test('rejects an expected revision after another successful save', () => {
   const f = fixture();
   try {
@@ -177,6 +210,40 @@ test('launch overrides remain process-local when a section is saved', () => {
     assert.equal(local.presenter.settings.muted, undefined);
     assert.equal(local.presenter.settings.musicGain, 0.4);
     assert.equal(store.get().presenter.settings.muted, true);
+    store.dispose();
+  } finally { rmSync(f.root, { recursive: true, force: true }); }
+});
+
+test('a worktree cue tombstone survives restart, inherits unrelated shared cues, and reset restores all', () => {
+  const f = fixture();
+  const sharedFile = path.join(f.shared, 'cfg', 'rashinban.json');
+  const localFile = path.join(f.app, 'cfg', 'rashinban.local.json');
+  try {
+    writeFileSync(sharedFile, JSON.stringify(sharedConfig({ presenter: { media: {
+      sounds: { pin: '/assets/rashinban/effects/pin.mp3' },
+    } } })));
+    let store = createConfigStore({ roots: f.roots, watch: false });
+    const media = store.get().presenter.media;
+    delete media.sounds.pin;
+    store.save('presenterMedia', media);
+    assert.equal(JSON.parse(readFileSync(localFile, 'utf8')).presenter.media.sounds.pin, null);
+    assert.equal(store.get().presenter.media.sounds.pin, undefined);
+    store.dispose();
+
+    store = createConfigStore({ roots: f.roots, watch: false });
+    assert.equal(store.get().presenter.media.sounds.pin, undefined);
+    store.dispose();
+
+    writeFileSync(sharedFile, JSON.stringify(sharedConfig({ presenter: { media: { sounds: {
+      pin: '/assets/rashinban/effects/pin.mp3',
+      guess: '/assets/rashinban/effects/guess.mp3',
+    } } } })));
+    store = createConfigStore({ roots: f.roots, watch: false });
+    assert.equal(store.get().presenter.media.sounds.pin, undefined);
+    assert.equal(store.get().presenter.media.sounds.guess, '/assets/rashinban/effects/guess.mp3');
+    store.reset('presenterMedia');
+    assert.equal(store.get().presenter.media.sounds.pin, '/assets/rashinban/effects/pin.mp3');
+    assert.equal(store.get().presenter.media.sounds.guess, '/assets/rashinban/effects/guess.mp3');
     store.dispose();
   } finally { rmSync(f.root, { recursive: true, force: true }); }
 });

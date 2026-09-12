@@ -2,6 +2,7 @@ import type { MediaManifest } from '../presenter/media.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
 import type { SheetConfig } from '../sheet/types.ts';
 import type { StartggConfig } from '../startgg/types.ts';
+import type { CueKind } from '../types/presenter.ts';
 
 export type ApplicationConfig = {
   schemaVersion: 1;
@@ -53,4 +54,12 @@ export type DeepPartial<T> = T extends readonly unknown[] ? T
   : T extends object ? { [K in keyof T]?: DeepPartial<T[K]> }
   : T;
 
-export type ConfigLayer = DeepPartial<ApplicationConfig>;
+export type MediaConfigLayer = Omit<DeepPartial<MediaManifest>, 'sounds'> & {
+  sounds?: Partial<Record<CueKind, string | null>>;
+};
+
+export type ConfigLayer = Omit<DeepPartial<ApplicationConfig>, 'presenter'> & {
+  presenter?: Omit<DeepPartial<ApplicationConfig['presenter']>, 'media'> & {
+    media?: MediaConfigLayer;
+  };
+};

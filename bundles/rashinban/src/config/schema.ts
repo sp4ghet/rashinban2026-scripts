@@ -61,7 +61,10 @@ function validateMediaShape(input: unknown): void {
   const media = validatePartialObject(input, ['stems', 'fadeMs', 'sounds', 'fiveK'], 'presenter.media');
   if (media.fadeMs !== undefined) validatePartialObject(media.fadeMs, ['idle', 'round', 'urgent', 'results'], 'presenter.media.fadeMs');
   if (media.sounds !== undefined) {
-    validatePartialObject(media.sounds, ['pre-round-tick', 'round-start', 'pin', 'opponent-guess', 'guess', 'countdown', 'results', 'count', 'collision', 'tie', 'multiplier', 'damage', 'five-k'], 'presenter.media.sounds');
+    const sounds = validatePartialObject(media.sounds, ['pre-round-tick', 'round-start', 'pin', 'opponent-guess', 'guess', 'countdown', 'results', 'count', 'collision', 'tie', 'multiplier', 'damage', 'five-k'], 'presenter.media.sounds');
+    if (Object.values(sounds).some(sound => sound !== null && typeof sound !== 'string')) {
+      throw new Error('presenter.media.sounds values must be asset URLs or null');
+    }
   }
   if (media.fiveK !== undefined) validatePartialObject(media.fiveK, ['single', 'double'], 'presenter.media.fiveK');
 }
@@ -141,11 +144,18 @@ export function parseApplicationConfig(input: unknown): ApplicationConfig {
       partyId: presenter.partyId,
       clientVersion: presenter.clientVersion.trim(),
       settings: parseSettings(presenter.settings),
-      media: parseMedia(presenter.media),
+      media: parseMedia(withoutSoundTombstones(presenter.media)),
     },
     sheet: parseSheetConfig(value.sheet),
     startgg: parseStartggConfig(value.startgg),
   };
+}
+
+function withoutSoundTombstones(input: unknown): unknown {
+  const media = structuredClone(record(input, 'presenter.media'));
+  const sounds = record(media.sounds, 'presenter.media.sounds');
+  for (const [key, sound] of Object.entries(sounds)) if (sound === null) delete sounds[key];
+  return media;
 }
 
 export function parseConfigSection<K extends ConfigSection>(section: K, input: unknown): ConfigSections[K] {

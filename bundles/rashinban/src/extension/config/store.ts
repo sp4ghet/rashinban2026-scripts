@@ -14,8 +14,10 @@ import type {
 import { readLegacyConfiguration } from './migration.ts';
 
 export type ConfigFileSystem = {
-  writeAtomic(filePath: string, text: string, expectedText: string | null): void;
+  writeAtomic(filePath: string, text: string, expectedText: string | null, comparisons?: readonly ConfigFileExpectation[]): void;
 };
+
+export type ConfigFileExpectation = { filePath: string; expectedText: string | null };
 
 export type CreateConfigStoreOptions = {
   roots: InstallationRoots;
@@ -42,27 +44,39 @@ function readOptional(filePath: string): string | null {
   }
 }
 
-function defaultWriteAtomic(filePath: string, text: string, expectedText: string | null): void {
-  mkdirSync(path.dirname(filePath), { recursive: true });
-  const lockPath = `${filePath}.lock`;
-  let lock: number | undefined;
+function defaultWriteAtomic(
+  filePath: string,
+  text: string,
+  expectedText: string | null,
+  comparisons: readonly ConfigFileExpectation[] = [],
+): void {
+  const expectations = new Map(comparisons.map(item => [item.filePath, item.expectedText]));
+  expectations.set(filePath, expectedText);
+  const files = [...expectations.keys()].sort();
+  const locks: { descriptor: number; lockPath: string }[] = [];
   let temporary: string | undefined;
   try {
-    try { lock = openSync(lockPath, 'wx'); }
-    catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('Configuration is being written by another process');
-      throw error;
+    for (const candidate of files) {
+      mkdirSync(path.dirname(candidate), { recursive: true });
+      const lockPath = `${candidate}.lock`;
+      try { locks.push({ descriptor: openSync(lockPath, 'wx'), lockPath }); }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('Configuration is being written by another process');
+        throw error;
+      }
     }
-    if (readOptional(filePath) !== expectedText) throw new Error('Configuration changed on disk');
+    for (const candidate of files) {
+      if (readOptional(candidate) !== expectations.get(candidate)) throw new Error('Configuration changed on disk');
+    }
     temporary = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
     writeFileSync(temporary, text, { encoding: 'utf8', flag: 'wx' });
     renameSync(temporary, filePath);
     temporary = undefined;
   } finally {
     if (temporary) rmSync(temporary, { force: true });
-    if (lock !== undefined) {
-      closeSync(lock);
-      rmSync(lockPath, { force: true });
+    for (const lock of locks.reverse()) {
+      closeSync(lock.descriptor);
+      rmSync(lock.lockPath, { force: true });
     }
   }
 }
@@ -154,6 +168,22 @@ function sparseDifference(base: unknown, next: unknown): unknown {
     if (child !== undefined) difference[key] = child;
   }
   return Object.keys(difference).length === 0 ? undefined : difference;
+}
+
+function sectionDifference(section: ConfigSection, base: unknown, next: unknown): unknown {
+  const difference = sparseDifference(base, next);
+  if (section !== 'presenterMedia') return difference;
+  const baseSounds = base as { sounds?: Record<string, string> };
+  const nextSounds = next as { sounds?: Record<string, string> };
+  const removed = Object.keys(baseSounds.sounds ?? {}).filter(key => !(key in (nextSounds.sounds ?? {})));
+  if (removed.length === 0) return difference;
+  const output = typeof difference === 'object' && difference !== null && !Array.isArray(difference)
+    ? difference as Record<string, unknown> : {};
+  const sounds = typeof output.sounds === 'object' && output.sounds !== null && !Array.isArray(output.sounds)
+    ? output.sounds as Record<string, unknown> : {};
+  for (const key of removed) sounds[key] = null;
+  output.sounds = sounds;
+  return output;
 }
 
 function withoutLaunchValues(next: unknown, persistent: unknown, launch: unknown): unknown {
@@ -301,8 +331,15 @@ export function createConfigStore(options: CreateConfigStoreOptions): ConfigStor
     if (expectedRevision !== undefined && expectedRevision !== currentStatus.revision) throw new Error('Configuration revision is stale');
   }
 
+  function assertDiskLayersUnchanged(): void {
+    if (readOptional(sharedFile) !== shared.raw) throw new Error('Shared configuration changed on disk');
+    if (roots.isWorktree && readOptional(localFile) !== local.raw) throw new Error('Worktree configuration changed on disk');
+  }
+
   function writeSection(section: ConfigSection, next: unknown | undefined, expectedRevision?: string): void {
     assertWritable(expectedRevision);
+    try { assertDiskLayersUnchanged(); }
+    catch (error) { setError(error); throw error; }
     const targetFile = roots.isWorktree ? localFile : sharedFile;
     const target = roots.isWorktree ? local : shared;
     const targetDocument = structuredClone(target.document);
@@ -314,7 +351,7 @@ export function createConfigStore(options: CreateConfigStoreOptions): ConfigStor
       const validated = parseConfigSection(section, next);
       const launchSection = sectionAt(launch, section);
       const desired = withoutLaunchValues(validated, sectionValue(persistent, section), launchSection);
-      difference = sparseDifference(sectionValue(inherited, section), desired);
+      difference = sectionDifference(section, sectionValue(inherited, section), desired);
     }
     setSection(targetDocument, section, difference);
     if (!roots.isWorktree) targetDocument.schemaVersion = 1;
@@ -325,7 +362,11 @@ export function createConfigStore(options: CreateConfigStoreOptions): ConfigStor
     const nextPersistent = parseApplicationConfig(mergeConfigValues(mergeConfigValues(DEFAULT_APPLICATION_CONFIG, nextSharedLayer), nextLocalLayer));
     const nextEffective = parseApplicationConfig(mergeConfigValues(nextPersistent, launch));
     const text = serialize(targetDocument);
-    try { fileSystem.writeAtomic(targetFile, text, target.raw); }
+    const comparisons = roots.isWorktree ? [
+      { filePath: sharedFile, expectedText: shared.raw },
+      { filePath: localFile, expectedText: local.raw },
+    ] : [{ filePath: sharedFile, expectedText: shared.raw }];
+    try { fileSystem.writeAtomic(targetFile, text, target.raw, comparisons); }
     catch (error) { setError(error); throw error; }
 
     const nextState: LayerState = { raw: text, document: targetDocument, layer: nextLayer };
