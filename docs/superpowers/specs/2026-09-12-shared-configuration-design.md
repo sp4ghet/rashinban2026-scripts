@@ -84,8 +84,11 @@ identified as such, and secret changes require a process restart.
 
 ## Media files across worktrees
 
-Treat `<shared-root>/assets/rashinban` as the shared media library. Preserve the
-existing browser URLs under `/assets/rashinban/{music,effects,video}/...`.
+Treat `<shared-root>/assets/rashinban` as the shared media library. Preserve
+stored references under `/assets/rashinban/{music,effects,video}/...`. Presenter
+playback resolves these references through `/rashinban/media/{category}/{file}`.
+NodeCG's built-in asset route returns a terminal 404 before extension middleware,
+so shared fallback cannot be added to that route through the supported API.
 
 In a worktree, serve its local uploaded file when one exists, otherwise the
 shared file. Expose the merged inventory to the presenter and Config selectors,
@@ -141,7 +144,7 @@ preview explicitly selects replay input rather than inheriting live input.
   database; a new database cannot erase shared settings.
 - Credential migration preserves precedence and never exposes secret values
   through browser configuration, diagnostics or responses.
-- Media inventory and HTTP serving agree on local/shared precedence; local
+- Media inventory and the presenter delivery route agree on local/shared precedence; local
   uploads/deletions never modify shared files.
 - A running duel retains its captured rule and runtime history during saves.
 - Run repository tests, typecheck and build, then inspect main/preview Config
