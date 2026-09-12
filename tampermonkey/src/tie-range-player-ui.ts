@@ -451,6 +451,18 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     if (disposed || !lastView) return;
     desiredStyles = new Map();
     const roots = rootElements(document);
+    // Party lobbies share the duel URL. Retain final scoring state, but only
+    // present it while the native duel or summary is actually on screen.
+    const duelSurfaceVisible = roots.some(root => visible(root, document)
+      && root.querySelector([CLASS_SELECTORS.healthBars, CLASS_SELECTORS.resultRoot, CLASS_SELECTORS.summary].join(', ')));
+    if (!duelSurfaceVisible) {
+      restoreNative();
+      mapOverlay.dispose();
+      const display = derivePlayerTieRangeDisplay(lastView, false, revealedRoundIdentity);
+      renderDisplay({ ...display, showHud: false, showDiagnostic: false,
+        teams: null, result: null, terminal: null, diagnostic: null }, null);
+      return;
+    }
     const expectedRound = lastView.output?.rounds.at(-1)?.round ?? null;
     const matchingResultRoots = visibleResultRoots(document, roots, expectedRound);
     const disclosed = matchingResultRoots.length > 0;

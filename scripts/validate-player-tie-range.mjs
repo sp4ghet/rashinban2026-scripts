@@ -204,8 +204,20 @@ try {
   assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="terminal"]').hidden`),true);
   await evaluate(`scene('result');document.querySelector('[class*="round-score_roundNumber__"]').textContent='Round 5'`);
   await until(`!${shadow}.querySelector('[data-rb="terminal"]').hidden`,'restarted result reveals normally');
-  await evaluate(`noGame=true;document.getElementById('native').replaceChildren();refresh()`);
+  await evaluate(`noGame=true;refresh()`);
   await until(`${shadow}.querySelector('[data-rb="terminal-detail"]').textContent.includes('wait for the host')`,'host abort preserves custom terminal');
+
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="terminal"]').hidden`),false,'terminal stays visible on the duel results screen after host abort');
+  await evaluate(`document.getElementById('native').className='party-lobby';document.getElementById('native').replaceChildren();`);
+  await until(`${shadow}.querySelector('[data-rb="hud"]').hidden && ${shadow}.querySelector('[data-rb="terminal"]').hidden`,'party lobby clears finished HUD and outcome');
+  await evaluate('refresh()');await delay(300);
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="hud"]').hidden`),true,'late ended response cannot restore lobby HP');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="terminal"]').hidden`),true,'late ended response cannot restore lobby outcome');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="settings-open"]').hidden`),false,'lobby settings remain available');
+  await evaluate(`scene('playing');document.getElementById('native').style.display='none'`);
+  await delay(100);
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="hud"]').hidden`),true,'hidden outgoing duel also stays cleared');
+  await evaluate(`document.getElementById('native').style.display=''`);
 
   // Off affects the next game and restores native HP.
   await evaluate(`openSettings();var s=${shadow}.querySelector('[data-rb="mode-select"]');s.value='off';s.dispatchEvent(new Event('change'))`);

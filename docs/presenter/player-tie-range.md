@@ -46,7 +46,9 @@ no description is added. The script reads the existing map through Tampermonkey'
 Geometry stays in memory and is never saved in Tampermonkey storage.
 
 Custom knockout and round-limit outcomes remain visible while waiting for the
-host. A later native round or abort does not replace a verified custom winner.
+host on the duel results screen. Returning to the party lobby hides the HP,
+results, and outcome overlays; the settings button remains available. A later
+native round or abort does not replace a verified custom winner.
 The script sends no guesses or game-control requests. The host still manages
 rounds, aborts, and series scores.
 

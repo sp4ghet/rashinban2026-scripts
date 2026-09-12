@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.1.2
+// @version      0.1.3
 // @description  Player HP and multipliers for RASHINBAN's Full / Half tie-range rules. Set the same mode as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -1659,6 +1659,22 @@
       if (disposed || !lastView) return;
       desiredStyles = /* @__PURE__ */ new Map();
       const roots = rootElements(document2);
+      const duelSurfaceVisible = roots.some((root) => visible(root, document2) && root.querySelector([CLASS_SELECTORS.healthBars, CLASS_SELECTORS.resultRoot, CLASS_SELECTORS.summary].join(", ")));
+      if (!duelSurfaceVisible) {
+        restoreNative();
+        mapOverlay.dispose();
+        const display2 = derivePlayerTieRangeDisplay(lastView, false, revealedRoundIdentity);
+        renderDisplay({
+          ...display2,
+          showHud: false,
+          showDiagnostic: false,
+          teams: null,
+          result: null,
+          terminal: null,
+          diagnostic: null
+        }, null);
+        return;
+      }
       const expectedRound = lastView.output?.rounds.at(-1)?.round ?? null;
       const matchingResultRoots = visibleResultRoots(document2, roots, expectedRound);
       const disclosed = matchingResultRoots.length > 0;
