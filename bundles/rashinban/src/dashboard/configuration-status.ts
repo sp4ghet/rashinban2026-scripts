@@ -23,6 +23,11 @@ export class ConfigurationDraft {
   markDirty(): void { this.dirty = true; }
   isDirty(): boolean { return this.dirty; }
 
+  edit(apply: () => void): void {
+    apply();
+    this.markDirty();
+  }
+
   acceptProjection(apply: () => void): void {
     if (this.dirty) {
       this.pendingProjection = apply;

@@ -78,7 +78,7 @@ function addStem(stem: Stem) {
   const numbers = document.createElement('div'); numbers.className = 'row'; row.append(numbers);
   field(numbers, 'Loop start (s)', 'loopStartS', String(stem.loopStartS), 86400); field(numbers, 'Loop end (s)', 'loopEndS', String(stem.loopEndS), 86400);
   for (const context of MUSIC_CONTEXTS) field(numbers, `${context} gain`, context, String(stem.gains[context]), 1);
-  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove stem'; remove.onclick = () => row.remove(); row.append(remove);
+  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Remove stem'; remove.onclick = () => mediaConfiguration.draft.edit(() => row.remove()); row.append(remove);
   element('media-stems').append(row);
 }
 for (const context of MUSIC_CONTEXTS) field(element('media-fades'), context, context, '0', 120000);
@@ -98,7 +98,7 @@ for (const kind of CUE_KINDS) {
 }
 element('stop-cue-preview').onclick = stopCuePreview;
 window.addEventListener('pagehide', stopCuePreview);
-element('add-stem').onclick = () => addStem({ id: `stem-${document.querySelectorAll('.media-stem').length + 1}`, url: '', loopStartS: 0, loopEndS: 8, gains: { idle: 0, round: 0, urgent: 0, results: 0 } });
+element('add-stem').onclick = () => mediaConfiguration.draft.edit(() => addStem({ id: `stem-${document.querySelectorAll('.media-stem').length + 1}`, url: '', loopStartS: 0, loopEndS: 8, gains: { idle: 0, round: 0, urgent: 0, results: 0 } }));
 function applyMedia(value: MediaManifest | undefined) {
   if (!value) return;
   for (const variant of ['single', 'double'] as const) {

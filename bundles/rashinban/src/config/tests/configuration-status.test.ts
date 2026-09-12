@@ -71,3 +71,20 @@ test('an ignored projection stays pending after a failed save', () => {
   assert.equal(draft.isDirty(), true);
   assert.equal(draft.expectedRevision(), 'revision-one');
 });
+
+test('structural add and remove edits survive an external projection with their loaded revision', () => {
+  const draft = new ConfigurationDraft();
+  let stems = ['base', 'accent'];
+  draft.observeRevision('revision-one');
+  draft.acceptProjection(() => { stems = ['base', 'accent']; });
+
+  draft.edit(() => { stems = stems.filter(stem => stem !== 'accent'); });
+  draft.edit(() => { stems.push('urgent'); });
+
+  draft.observeRevision('revision-two');
+  draft.acceptProjection(() => { stems = ['external']; });
+
+  assert.deepEqual(stems, ['base', 'urgent']);
+  assert.equal(draft.isDirty(), true);
+  assert.equal(draft.expectedRevision(), 'revision-one');
+});
