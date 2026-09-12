@@ -7,7 +7,7 @@ import express from 'express';
 import { EventEmitter } from 'node:events';
 import type NodeCG from '@nodecg/types';
 import { listMediaAssets, resolveMediaFile, createMediaRouter, registerSharedAssets } from '../../extension/config/assets.ts';
-import { mediaPlaybackUrl } from '../media-url.ts';
+import { mediaAssetOptions, mediaAssetsForCategory, mediaPlaybackUrl } from '../media-url.ts';
 
 function fixture(t: { after(fn: () => void): void }) {
   const base = mkdtempSync(path.join(tmpdir(), 'rashinban-assets-'));
@@ -68,6 +68,20 @@ test('stored canonical asset references map to delivery URLs without changing ma
   assert.equal(mediaPlaybackUrl('/already-owned/url.mp3'),'/already-owned/url.mp3');
   assert.throws(()=>mediaPlaybackUrl('/assets/rashinban/music/..%2Fsecret.mp3'));
   assert.throws(()=>mediaPlaybackUrl('/assets/rashinban/other/file.mp3'));
+});
+
+test('merged inventory remains authoritative and selector refreshes preserve dirty choices', () => {
+  const inherited = { base: 'shared cue.wav', url: '/assets/rashinban/effects/shared%20cue.wav', source: 'shared' as const };
+  const merged = { music: [], effects: [inherited], video: [] };
+  const native = [{ base: 'local-only.wav', url: '/assets/rashinban/effects/local-only.wav' }];
+  assert.deepEqual(mediaAssetsForCategory(merged, 'effects', native), [inherited]);
+  assert.deepEqual(mediaAssetsForCategory(undefined, 'effects', native), native);
+  assert.deepEqual(mediaAssetsForCategory({ ...merged, effects: [] }, 'effects', native), []);
+  assert.deepEqual(mediaAssetOptions([inherited], '/assets/rashinban/effects/dirty.wav'), [
+    { label: 'None', value: '' },
+    { label: 'shared cue.wav (inherited)', value: inherited.url },
+    { label: 'Unavailable · dirty.wav', value: '/assets/rashinban/effects/dirty.wav' },
+  ]);
 });
 
 test('shared asset registration protects delivery and refreshes inventory after local upload/deletion', async t => {

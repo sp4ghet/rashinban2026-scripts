@@ -27,6 +27,7 @@ import type { PlayerProfile } from "../sheet/players";
 import type { PlayerCardsState, SheetConfig, SheetStatus } from "../sheet/types";
 import type { CurrentMatchSelection } from "../match/current";
 import type { MatchState, ResolvedMatch } from '../match/state.ts';
+import type { EffectiveAssetInventory } from '../config/media-url.ts';
 
 export const REPLICANTS = {
   banPick: "banPick",
@@ -53,6 +54,7 @@ export const REPLICANTS = {
   presenterMediaStatus: 'presenterMediaStatus',
   configurationStatus: 'configurationStatus',
   presenterPublicConfig: 'presenterPublicConfig',
+  presenterAssets: 'presenterAssets',
 } as const;
 
 export interface ReplicantMap {
@@ -80,6 +82,7 @@ export interface ReplicantMap {
   [REPLICANTS.presenterMediaStatus]: PresenterMediaStatus;
   [REPLICANTS.configurationStatus]: ConfigStatus;
   [REPLICANTS.presenterPublicConfig]: PresenterPublicConfig;
+  [REPLICANTS.presenterAssets]: EffectiveAssetInventory;
 }
 
 /** Messages the ban-pick extension listens for (nodecg.sendMessage). */

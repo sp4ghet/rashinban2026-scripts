@@ -93,15 +93,19 @@ test('audio mode handoff waits for old mute acknowledgement or expiry, and denie
 test('available celebration holds results with its own deadline; missing double skips without substituting single', () => {
   const reps = new Map<string, any>(); const listeners = new Map<string, Function>();
   const tasks: { fn: () => void; at: number; active: boolean }[] = []; let now = 1900000000000;
+  const url = '/assets/rashinban/video/single.webm';
   registerPresenter({ bundleConfig: { presenter: { input: 'replay' } },
-    Replicant(name: string, opts: any) { const rep = Object.assign(new EventEmitter(), { value: opts.defaultValue, opts }); reps.set(name, rep); return rep; },
+    Replicant(name: string, opts: any = {}) {
+      const rep = Object.assign(new EventEmitter(), { value: name === 'presenterAssets'
+        ? { music: [], effects: [], video: [{ url, source: 'shared' }] }
+        : opts.defaultValue, opts });
+      reps.set(name, rep); return rep;
+    },
     Router: express.Router, mount() {}, listenFor: (name: string, fn: Function) => listeners.set(name, fn), log: { info() {}, warn() {} },
   } as unknown as NodeCG.ServerAPI, { now: () => now, schedule(fn, ms) { const task = { fn, at: now + ms, active: true }; tasks.push(task); return () => { task.active = false; }; } });
-  const url = '/assets/rashinban/video/single.webm';
   const media = { ...EMPTY_MEDIA, fiveK: { single: { url, watchdogMs: 5000, soundtrack: 'embedded' }, double: null } };
   let error: unknown; listeners.get('presenter:control')!({ action: 'media', body: media }, (err: unknown) => { error = err; });
   assert.equal(error, null); assert.equal(reps.get('presenterMedia').opts.persistent, true);
-  reps.get('assets:video').value = [{ url }];
   listeners.get('presenter:control')!({ action: 'settings', body: { ...DEFAULT_SETTINGS, timing: { ...DEFAULT_SETTINGS.timing, leadMs: 0, effectWatchdogMs: 0 } } });
   for (let i = 0; i < 10000 && reps.get('presenterTimeline').value.effect !== 'single-5k'; i++) {
     const task = tasks.filter(t => t.active).sort((a, b) => a.at - b.at)[0]; if (!task) break; now = task.at; task.active = false; task.fn();

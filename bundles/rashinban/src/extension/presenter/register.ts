@@ -17,6 +17,7 @@ import { mountPresenterRoutes, PRESENTER_ACTIONS, type PresenterAction } from '.
 import { AUDIO_STATES, CUE_KINDS, celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest, type AudioStatus } from '../../presenter/media.ts';
 import type { PresenterMediaStatus } from '../../types/replicants.ts';
 import type { ConfigStore } from '../../config/types.ts';
+import { mediaAssetsForCategory, type EffectiveAssetInventory } from '../../config/media-url.ts';
 
 type Clock = { now(): number; schedule(fn: () => void, delayMs: number): () => void; connection?: ConnectionDeps };
 const clock: Clock = { now: () => Date.now(), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } };
@@ -55,7 +56,8 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
   let ruleWarnings: string[] = [];
   const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia, { defaultValue: structuredClone(store?.get().presenter.media ?? EMPTY_MEDIA), persistent: store ? false : true });
   try { media.value = parseMedia(media.value); } catch { media.value = structuredClone(EMPTY_MEDIA); }
-  const videoAssets = nodecg.Replicant<AssetInventory>('assets:video', { defaultValue: [], persistent: false });
+  const presenterAssets = nodecg.Replicant<EffectiveAssetInventory>(REPLICANTS.presenterAssets, { persistent: false });
+  const legacyVideoAssets = nodecg.Replicant<AssetInventory>('assets:video', { defaultValue: [], persistent: false });
   const mediaStatus = nodecg.Replicant<PresenterMediaStatus>(REPLICANTS.presenterMediaStatus, { defaultValue: { generation: null, effect: 'none', status: 'idle' }, persistent: false });
   const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries, { defaultValue: structuredClone(DEFAULT_SERIES), persistent: true });
   try { settings.value = parseSettings(settings.value); } catch { settings.value = structuredClone(DEFAULT_SETTINGS); }
@@ -168,7 +170,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
       mediaStatus.value = { generation: next.generation, effect: timeline.value.effect, status: 'watchdog' };
     }
     const effectStart = next.cues.find(cue => cue.kind === 'five-k')?.atMs;
-    const asset = celebrationAsset(media.value, next.effect, videoAssets.value);
+    const asset = celebrationAsset(media.value, next.effect, mediaAssetsForCategory(presenterAssets.value, 'video', legacyVideoAssets.value));
     if (next.effect !== 'none' && effectStart !== undefined && timeline.value.effect === 'none' && asset) {
       mediaStatus.value = { generation: next.generation, effect: next.effect, status: 'pending' };
     }

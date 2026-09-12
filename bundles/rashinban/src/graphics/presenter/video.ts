@@ -1,5 +1,6 @@
 export type VideoPort = { play(): Promise<void>; stop(): void; onEnded(fn: () => void): void; onError(fn: () => void): void };
 import type { EffectAsset, MediaManifest } from '../../presenter/media.ts';
+import { mediaPlaybackUrl } from '../../config/media-url.ts';
 export function createVideoPlayer(makeVideo: () => HTMLVideoElement, schedule: (fn: () => void, ms: number) => () => void) {
   const videos = new Map<string, HTMLVideoElement>();
   let active: { generation: string; asset: EffectAsset; video: HTMLVideoElement; cancel(): void } | null = null;
@@ -12,7 +13,7 @@ export function createVideoPlayer(makeVideo: () => HTMLVideoElement, schedule: (
       for (const [url, video] of videos) if (!urls.has(url)) { remove(video); videos.delete(url); }
       for (const url of urls) if (!videos.has(url)) {
         const video = makeVideo(); video.hidden = true; video.muted = true; video.preload = 'auto'; video.playsInline = true;
-        video.src = url; videos.set(url, video); video.load();
+        video.src = mediaPlaybackUrl(url); videos.set(url, video); video.load();
       }
     },
     play(asset: EffectAsset, generation: string, complete: (generation: string, failed: boolean) => void, muted = false, gain = 1) {

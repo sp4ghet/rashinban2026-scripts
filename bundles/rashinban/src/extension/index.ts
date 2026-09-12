@@ -8,9 +8,11 @@ import { registerPlayerCards } from "./playercards";
 
 import { registerPresenter } from './presenter/register.ts';
 import { initializeConfiguration } from './config/register.ts';
+import { registerSharedAssets } from './config/assets.ts';
 
 export = (nodecg: NodeCG.ServerAPI) => {
-  const { store } = initializeConfiguration(nodecg);
+  const { store, roots } = initializeConfiguration(nodecg);
+  registerSharedAssets(nodecg, roots);
   registerPresenter(nodecg, undefined, store);
 
   // HTTP endpoints for Bitfocus Companion (Generic HTTP module).

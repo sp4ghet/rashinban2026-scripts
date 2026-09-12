@@ -6,6 +6,7 @@ import type { PresenterSettings } from '../presenter/settings.ts';
 import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import { CUE_KINDS, EMPTY_MEDIA, MUSIC_CONTEXTS, type AssetInventory, type MediaManifest, type Stem } from '../presenter/media.ts';
 import type { PresenterMediaStatus } from '../types/replicants.ts';
+import { mediaAssetOptions, mediaAssetsForCategory, mediaPlaybackUrl, type EffectiveAssetInventory, type MediaCategory } from '../config/media-url.ts';
 
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
 const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings);
@@ -18,7 +19,8 @@ const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
 const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia);
 const mediaStatus = nodecg.Replicant<PresenterMediaStatus>(REPLICANTS.presenterMediaStatus);
 const publicConfig = nodecg.Replicant<PresenterPublicConfig>(REPLICANTS.presenterPublicConfig);
-const inventories = { music: nodecg.Replicant<AssetInventory>('assets:music'), effects: nodecg.Replicant<AssetInventory>('assets:effects'), video: nodecg.Replicant<AssetInventory>('assets:video') };
+const presenterAssets = nodecg.Replicant<EffectiveAssetInventory>(REPLICANTS.presenterAssets);
+const legacyInventories = { music: nodecg.Replicant<AssetInventory>('assets:music'), effects: nodecg.Replicant<AssetInventory>('assets:effects'), video: nodecg.Replicant<AssetInventory>('assets:video') };
 const element = (id: string) => document.getElementById(id)!;
 const input = (id: string) => element(id) as HTMLInputElement;
 const select = (id: string) => element(id) as HTMLSelectElement;
@@ -45,14 +47,19 @@ function showInputDraft() {
 }
 select('input-mode').addEventListener('change', showInputDraft);
 
-function assetOptions(menu: HTMLSelectElement, category: keyof typeof inventories, chosen = menu.value) {
-  menu.replaceChildren(new Option('None', ''));
-  for (const item of inventories[category].value ?? []) menu.add(new Option(item.base ?? item.url.split('/').pop()!, item.url));
-  if (chosen && ![...menu.options].some(option => option.value === chosen)) menu.add(new Option(`Unavailable · ${chosen.split('/').pop()}`, chosen));
+function assetOptions(menu: HTMLSelectElement, category: MediaCategory, chosen = menu.value) {
+  const inventory = mediaAssetsForCategory(presenterAssets.value, category, legacyInventories[category].value ?? []);
+  menu.replaceChildren(...mediaAssetOptions(inventory, chosen).map(option => new Option(option.label, option.value)));
   menu.value = chosen;
 }
-for (const category of ['music', 'effects', 'video'] as const) inventories[category].on('change', () => {
-  document.querySelectorAll<HTMLSelectElement>(`select[data-assets="${category}"]`).forEach(menu => assetOptions(menu, category));
+function refreshAssetOptions() {
+  for (const category of ['music', 'effects', 'video'] as const) {
+    document.querySelectorAll<HTMLSelectElement>(`select[data-assets="${category}"]`).forEach(menu => assetOptions(menu, category));
+  }
+}
+presenterAssets.on('change', refreshAssetOptions);
+for (const inventory of Object.values(legacyInventories)) inventory.on('change', () => {
+  if (!presenterAssets.value) refreshAssetOptions();
 });
 function field(parent: HTMLElement, title: string, key: string, value: string, max?: number) {
   const label = document.createElement('label'); label.textContent = title;
@@ -60,7 +67,7 @@ function field(parent: HTMLElement, title: string, key: string, value: string, m
   if (max !== undefined) { el.type = 'number'; el.min = '0'; el.max = String(max); el.step = 'any'; }
   label.append(el); parent.append(label); return el;
 }
-function menuField(parent: HTMLElement, title: string, category: keyof typeof inventories, value: string) {
+function menuField(parent: HTMLElement, title: string, category: MediaCategory, value: string) {
   const label = document.createElement('label'); label.textContent = title;
   const menu = document.createElement('select'); menu.dataset.assets = category; assetOptions(menu, category, value);
   label.append(menu); parent.append(label); return menu;
@@ -83,7 +90,7 @@ for (const kind of CUE_KINDS) {
   const preview = document.createElement('button'); preview.type = 'button'; preview.dataset.previewCue = kind; preview.textContent = 'Preview here';
   preview.onclick = () => {
     stopCuePreview(); if (!menu.value) return;
-    cuePreview.src = menu.value; cuePreview.loop = kind === 'count'; cuePreview.volume = 0.5;
+    cuePreview.src = mediaPlaybackUrl(menu.value); cuePreview.loop = kind === 'count'; cuePreview.volume = 0.5;
     void cuePreview.play().catch(() => { element('error').textContent = 'Preview audio unavailable. Check the selected asset.'; });
     stopPreview = setTimeout(stopCuePreview, kind === 'count' ? 3000 : 10000);
   };

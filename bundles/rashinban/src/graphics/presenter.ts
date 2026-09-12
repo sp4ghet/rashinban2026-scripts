@@ -12,6 +12,7 @@ import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type Me
 import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
 import type { PresenterPublicConfig } from '../config/types.ts';
+import { mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
@@ -20,7 +21,8 @@ const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
 const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews);
 const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
 const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia);
-const videoAssets = nodecg.Replicant<AssetInventory>('assets:video');
+const presenterAssets = nodecg.Replicant<EffectiveAssetInventory>(REPLICANTS.presenterAssets);
+const legacyVideoAssets = nodecg.Replicant<AssetInventory>('assets:video');
 const publicConfig = nodecg.Replicant<PresenterPublicConfig>(REPLICANTS.presenterPublicConfig);
 let selectedMedia = EMPTY_MEDIA;
 const videoPlayer = createVideoPlayer(() => {
@@ -86,7 +88,7 @@ function frame() {
   // Sole graphic cue consumer; sound scheduling belongs to the audio lease engine.
   for (const cue of client.pollCues()) if (cue.kind === 'five-k' && timing) {
     const complete = client.effectCompletion(timing);
-    const asset = celebrationAsset(selectedMedia, timing.effect, videoAssets.value ?? []);
+    const asset = celebrationAsset(selectedMedia, timing.effect, mediaAssetsForCategory(presenterAssets.value, 'video', legacyVideoAssets.value ?? []));
     if (asset) videoPlayer.play(asset, timing.generation, (_generation, failed) => { void complete(failed); }, options.muted, options.effectsGain);
     else void complete(true);
   }

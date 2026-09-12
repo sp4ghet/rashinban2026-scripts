@@ -29,7 +29,7 @@ test('selected video preloads, limits its watchdog by metadata, mutes cues and c
   const single: EffectAsset = { url: '/assets/rashinban/video/single.webm', watchdogMs: 8000, soundtrack: 'embedded' };
   const double: EffectAsset = { ...single, url: '/assets/rashinban/video/double.webm', soundtrack: 'cue' };
   player.preload({ ...EMPTY_MEDIA, fiveK: { single, double } });
-  assert.equal(videos.length, 2); assert.equal(videos[0]!.src, single.url); assert.equal(videos[0]!.preload, 'auto');
+  assert.equal(videos.length, 2); assert.equal(videos[0]!.src, '/rashinban/media/video/single.webm'); assert.equal(videos[0]!.preload, 'auto');
   const calls: unknown[] = []; player.play(single, 'g', (g, failed) => calls.push([g, failed]));
   player.update('g', true, 'single-5k', false, 0.4);
   assert.equal(videos[0]!.hidden, false); assert.equal(videos[0]!.paused, false); assert.equal(videos[0]!.muted, false); assert.equal(videos[0]!.volume, 0.4);

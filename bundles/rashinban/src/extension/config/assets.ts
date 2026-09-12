@@ -4,6 +4,7 @@ import express from 'express';
 import type NodeCG from '@nodecg/types';
 import type { InstallationRoots } from '../../config/types.ts';
 import { isMediaCategory, isMediaFilename, MEDIA_CATEGORIES, type EffectiveAssetInventory, type MediaCategory } from '../../config/media-url.ts';
+import { REPLICANTS } from '../../types/replicants.ts';
 
 const EXTENSIONS: Record<MediaCategory, readonly string[]> = {
   music: ['.wav', '.mp3', '.ogg', '.m4a'],
@@ -73,7 +74,7 @@ export function createMediaRouter(roots: InstallationRoots): express.Router {
 
 export function registerSharedAssets(nodecg: NodeCG.ServerAPI, roots: InstallationRoots): void {
   let inventory = listMediaAssets(roots);
-  const assets = nodecg.Replicant<EffectiveAssetInventory>('presenterAssets', {
+  const assets = nodecg.Replicant<EffectiveAssetInventory>(REPLICANTS.presenterAssets, {
     persistent: false, defaultValue: structuredClone(inventory),
   });
   assets.value = structuredClone(inventory);

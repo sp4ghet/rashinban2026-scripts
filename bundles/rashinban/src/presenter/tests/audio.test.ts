@@ -21,14 +21,15 @@ class Param {
 function port(withHold = true) {
   const gains: { gain: Param; connect(to: unknown): void; disconnect(): void }[] = [];
   const sources: any[] = [];
+  const fetched: string[] = [];
   const context = { currentTime: 10, state: 'running', baseLatency: 0, outputLatency: 0, destination: {},
     createGain() { const gain = { gain: new Param(), connect() {}, disconnect() {} }; if (!withHold) Object.defineProperty(gain.gain, 'cancelAndHoldAtTime', { value: undefined }); gains.push(gain); return gain; },
     createBufferSource() { const source = { buffer: null, loop: false, loopStart: 0, loopEnd: 0, playbackRate: { value: 1 }, starts: [] as number[][], stops: 0,
       connect(to: unknown) { this.output = to; }, output: null as unknown, disconnect() {}, start(...args: number[]) { this.starts.push(args); }, stopTimes: [] as number[], stop(at?: number) { this.stops++; if (at !== undefined) this.stopTimes.push(at); } }; sources.push(source); return source; },
     async decodeAudioData(bytes: ArrayBuffer) { return { duration: new Uint8Array(bytes)[0], sampleRate: 48000 }; },
   };
-  const fetchAsset = async (url: string) => { if (url.endsWith('missing')) throw Error(); return { ok: true, arrayBuffer: async () => new Uint8Array([url.endsWith('short') ? 3 : 12]).buffer }; };
-  return { context, gains, sources, audio: createAudio(context as unknown as AudioContext, fetchAsset as unknown as typeof fetch) };
+  const fetchAsset = async (url: string) => { fetched.push(url); if (url.endsWith('missing')) throw Error(); return { ok: true, arrayBuffer: async () => new Uint8Array([url.endsWith('short') ? 3 : 12]).buffer }; };
+  return { context, gains, sources, fetched, audio: createAudio(context as unknown as AudioContext, fetchAsset as unknown as typeof fetch) };
 }
 const manifest: MediaManifest = { ...EMPTY_MEDIA, fadeMs: { idle: 100, round: 500, urgent: 1000, results: 200 }, stems: [
   { id: 'base', url: '/base', loopStartS: 2, loopEndS: 10, gains: { idle: 0, round: 1, urgent: 1, results: 0.3 } },
@@ -36,6 +37,15 @@ const manifest: MediaManifest = { ...EMPTY_MEDIA, fadeMs: { idle: 100, round: 50
 ] };
 const timeline = { ...advanceTimeline(null, null, 1000, false, DEFAULT_SETTINGS.timing), gameId: 'game', musicEpochMs: 1000, music: 'round' as const, phase: 'live' as const };
 test('reloaded stem rejoins the shared loop phase', () => { assert.equal(stemOffset(1000, 13500, 2, 10), 6.5); assert.equal(stemOffset(2000, 1000, 2, 10), 9); });
+test('audio fetches canonical stored references through the effective media route', async () => {
+  const p = port();
+  const stored = { ...structuredClone(EMPTY_MEDIA), stems: [{
+    ...manifest.stems[0]!, url: '/assets/rashinban/music/shared%20stem.mp3',
+  }], sounds: { 'round-start': '/assets/rashinban/effects/shared%20cue.wav' } };
+  await p.audio.load(stored);
+  assert.deepEqual(p.fetched, ['/rashinban/media/music/shared%20stem.mp3', '/rashinban/media/effects/shared%20cue.wav']);
+  assert.equal(stored.stems[0]!.url, '/assets/rashinban/music/shared%20stem.mp3');
+});
 test('all stems share a scheduled start and muted layers advance through context fades', async () => {
   const p = port(); await p.audio.load(manifest); p.audio.lease(20000, 13500); p.audio.sync(timeline, DEFAULT_SETTINGS, 13500);
   assert.equal(p.sources.length, 2); const [base, urgent] = p.sources;
