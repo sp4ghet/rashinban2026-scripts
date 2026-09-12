@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.1.3
+// @version      0.1.4
 // @description  Player HP and multipliers for RASHINBAN's Full / Half tie-range rules. Set the same mode as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -51,6 +51,7 @@ async function start(): Promise<void> {
     document,
     getPageWindow: () => typeof unsafeWindow === 'undefined' ? window : unsafeWindow,
     getConfiguredMode: () => configuredMode,
+    onResultVisible: () => controller.refresh(),
     onModeChange: (nextMode) => {
       void (async () => {
         try {

@@ -31,8 +31,10 @@ appear only after the native result is visible or the game has advanced.
 Tie-range changes the multiplier increment, not whether damage occurs. In Full
 mode, a 2470–0 round at 1.5× deals **3705 damage**, and both players receive the
 individual increment because the difference is within the 2530-point band.
-Results show both scores. The calculated damage number travels toward the
-losing HP bar, which counts down on impact. Reopening an existing result does
+Results count both scores for 750 ms alongside GeoGuessr's COUNT_DAMAGE cue.
+After a 1-second hold, the winner's score moves into the loser's, subtraction
+produces the difference, and the custom multiplier appears beside the damage.
+Damage then flies to the losing HP bar, which starts counting down at impact. Reopening an existing result does
 not replay the damage. The breakdown shows custom HP and
 damage received; hover a custom HP cell to see the multiplier used. Its rows
 remain clickable.
@@ -60,7 +62,10 @@ same score-based rules. Multi-player teams and special scoring are rejected.
 Party players remain on `/party/lobby`; direct `/duels/<id>` and
 `/team-duels/<id>` pages, locale prefixes, and `/summary` are also recognized.
 
-Polling normally runs every 2.5 seconds. Connection errors retain verified
+Polling normally runs every 2.5 seconds, with an immediate refresh when results
+appear. The native score-count animation anchors the scoring clock, not the
+polling response. Already revealed native counts remain visible while settled
+arithmetic is in flight; a late response joins the current stage. Connection errors retain verified
 numbers and display a warning; after ten seconds they are marked stale. Saved
 numbers are marked stale until a current response verifies them. Missing
 history or incompatible rules produces a diagnostic instead of fabricated HP.
@@ -103,3 +108,11 @@ visible content beneath accessibility-hidden ancestors, damage flight and HP
 countdown, and map circles gated by answer-marker visibility. Circle attachment
 is tested through a controlled Google Maps/React boundary; a live native duel
 with these new circles has not yet been verified.
+
+Version 0.1.4 follows the stages in [scoring-animation.md](../geoguessr/scoring-animation.md)
+and [sfx-timing.md](../geoguessr/sfx-timing.md). The native multiplier marker
+selects the x1 or multiplier sound timeline; damage always uses the custom
+multiplier. No additional sounds are played. Browser tests cover the count,
+collision, difference, multiplier label, flight, impact, and delayed-data
+catch-up. HP interpolates for 800 ms after impact rather than reproducing
+GeoGuessr's exact numeric spring. Speaker latency is not measured.

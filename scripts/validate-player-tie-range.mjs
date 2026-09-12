@@ -22,9 +22,6 @@ for (const candidate of candidates) { try { await access(candidate); chromePath 
 if (!chromePath) throw Error('Chrome was not found. Set CHROME_PATH to its executable.');
 
 const preload = `
-window.animationStarts = [];
-const nativeAnimate = Element.prototype.animate;
-Element.prototype.animate = function(...args) { if(this.dataset.rb==='damage') animationStarts.push(this.parentElement.dataset.rb); return nativeAnimate.apply(this,args); };
 window.unsafeWindow = window;
 window.drawnCircles = [];
 window.google = { maps: { Circle: class {
@@ -68,7 +65,7 @@ window.fetch = async (url, init) => {
   if (String(url).endsWith('/guest-users/id')) value = {id:'player-blue'};
   else if (String(url).endsWith('/parties/v2/active')) value = {partyId:'test-party',lobbyId:fixture.gameId,gameState:noGame?'NoGame':'Ongoing',gameType:'Duels'};
   else if (String(url).includes('/phonebook/')) value = {gameId:fixture.gameId,gameServerNodeId:'test-node',status:'Active'};
-  else if (String(url).startsWith('https://gs2.geoguessr.com/')) value = structuredClone(fixture);
+  else if (String(url).startsWith('https://gs2.geoguessr.com/')) { value = structuredClone(fixture); if(window.snapshotDelay) await new Promise(resolve=>setTimeout(resolve,window.snapshotDelay)); }
   else throw Error('Unexpected request: ' + url);
   return {ok:true,status:200,json:async()=>value};
 };
@@ -77,6 +74,10 @@ window.scene = (kind='playing') => {
   root.className = 'duels_root__A75Oi';
   root.innerHTML = '<div id="native-timer">Timer / compass</div>' + native.playingHud +
     (kind==='result' ? native.damageResult : kind==='summary' ? native.summary + native.terminal.join('') : '');
+  if(kind==='result') {
+    root.querySelectorAll('[class*="damage-animation_score__"]').forEach(e=>e.style.opacity='1');
+    const multiplier=document.createElement('span');multiplier.className='damage-animation_multiplier__fixture';multiplier.textContent='x1.5';root.querySelector('[class*="damage-animation_root__"]').append(multiplier);
+  }
 };
 window.refresh = () => window.dispatchEvent(new Event('focus'));
 window.scene();
@@ -159,11 +160,21 @@ try {
   await delay(150);
   assert.ok(!(await evaluate(`${shadow}.textContent`)).includes('2295'),'result HP is not disclosed before native reveal');
   await evaluate(`scene('result')`);
-  await until(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').getAnimations().length===1`,'damage number travels to opponent');
-  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent`),'6000','HP waits for the flying number');
-  await delay(950);
-  const movingHp=Number(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent`));
-  assert.ok(movingHp>2295 && movingHp<6000,'HP counts down during impact');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='count'`,'scores count with native count start');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent`),'6000','HP waits during count');
+  const counting=Number(await evaluate(`${shadow}.querySelector('[data-rb="result-team-0"]').textContent`));
+  assert.ok(counting>=0&&counting<2470,'score starts below final value');
+  await until(`!${shadow}.querySelector('[data-rb="moving-score-0"]').hidden`,'winning score travels toward losing score at collision');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='difference'`,'difference appears after collision');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').textContent`),'2470','subtraction precedes multiplication');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent`),'6000','collision does not apply HP damage');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='multiplier'`,'multiplier cue changes difference into custom damage');
+  assert.match(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').textContent`),/3705/);
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').dataset.factor`),'\u00d71.5','damage shows the multiplier actually used');
+  await screenshot('02-multiplier');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='flight'`,'damage flies only after multiplier hold');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent`),'6000','HP waits until flight impact');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='health'`,'HP begins with impact');
   await until(`${shadow}?.textContent.includes('2295')`,'revealed custom damage');
   const resultText=await evaluate(`${shadow}.textContent`);
   assert.match(resultText,/3705|3,705/,'full damage inside the band');
@@ -185,7 +196,7 @@ try {
   await until(`${shadow}?.querySelector('[data-rb="mode"]').textContent.includes('Full')`,'captured mode survives real page reload');
   await evaluate(`fixture=structuredClone(manual.resolvedDamage);scene('result');refresh()`);
   await until(`${shadow}?.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent==='2295'`,'saved scores recover after reload');
-  assert.deepEqual(await evaluate('animationStarts'),[],'reloaded results never replay old damage');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="result"]').dataset.phase`),'complete','reloaded results never replay old damage');
 
   // A remount from a prior result must not disclose the next settled round.
   await evaluate(`fixture=structuredClone(full);scene('result');refresh()`);
@@ -266,7 +277,7 @@ try {
   assert.equal(await evaluate('drawnCircles.length'),2,'polling does not recreate circles');
   await screenshot('07-reported-round4');
   await evaluate(`fixture=reported(6);document.querySelector('[class*="round-score_roundNumber__"]').textContent='Round 6';refresh()`);
-  await until(`animationStarts.includes('team-0')`,'opponent win flies toward local HP bar');
+  await until(`!${shadow}.querySelector('[data-rb="moving-score-1"]').hidden`,'opponent win moves right score toward local score');
   await until(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="health"]').textContent==='5316'`,'reported round6 custom HP');
   assert.match(await evaluate(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="damage"]').textContent`),/586/,'opponent win damages the local HP bar');
   await evaluate(`scene('summary');var container=document.querySelector('[class*="game-summary-2_playedRounds__"]');var template=container.querySelector('[class*="game-summary-2_playedRound__"]').cloneNode(true);container.replaceChildren();reportedScores.forEach((scores,i)=>{let row=template.cloneNode(true);row.querySelector('[class*="game-summary-2_roundNumber__"]').textContent=i+1;row.children[0].querySelector('div').textContent='x1.5';row.children[1].textContent=scores[0]+' points';row.children[2].textContent=scores[1]+' points';container.append(row)});document.querySelectorAll('[class*="game-summary-2_playedRoundsHeader__"] a').forEach(a=>a.replaceWith(document.createTextNode(a.textContent)));`);
@@ -284,6 +295,18 @@ try {
   await evaluate(`document.querySelectorAll('[class*="game-summary-2_playedRound__"]').forEach(row=>{let a=row.children[1].textContent;row.children[1].textContent=row.children[2].textContent;row.children[2].textContent=a;})`);
   await until(`document.querySelectorAll('[class*="game-summary-2_playedRound__"]')[3].children[3].querySelector('[data-rb="summary-health"]').textContent.includes('350')`,'linkless summary orients reversed score columns by identity');
 
+
+  // The count is native-driven even when settled arithmetic arrives late.
+  await evaluate(`fixture=structuredClone(manual.created);fixture.gameId='late-results';scene('playing');refresh()`);
+  await until(`saved['rashinban.tie-range.game.late-results']`,'late-results game initialized');
+  const requestsBefore=await evaluate('requests.length');
+  await evaluate(`snapshotDelay=1300;fixture=structuredClone(manual.resolvedDamage);fixture.gameId='late-results';scene('result');document.querySelectorAll('[class*="damage-animation_score__"]').forEach((e,i)=>e.textContent=i?'0':'123')`);
+  await until(`!${shadow}.querySelector('[data-rb="result"]').hidden && ${shadow}.querySelector('[data-rb="result-team-0"]').textContent==='123'`,'already revealed native count is visible before REST settles');
+  assert.ok(await evaluate('requests.length')>requestsBefore,'result entry triggers an immediate fetch');
+  await until(`JSON.parse(saved['rashinban.tie-range.game.late-results']).sourceVersion===fixture.version`,'delayed arithmetic accepted');
+  assert.notEqual(await evaluate(`${shadow}.querySelector('[data-rb="result"]').dataset.phase`),'count','late snapshot joins existing clock rather than restarting count');
+  await evaluate('snapshotDelay=0');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='complete'`,'delayed round settles');
 
   // A known non-player must never get an oriented/custom player HUD.
   await evaluate(`document.getElementById('__NEXT_DATA__').textContent=JSON.stringify({props:{accountProps:{account:{user:{userId:'non-player'}}}}});refresh()`);
@@ -303,7 +326,7 @@ try {
   assert.equal(await evaluate('requests.length'),count,'no requests outside player routes');
   assert.deepEqual(await evaluate(`Array.from(new Set(requests.map(r=>r.method)))`),['GET'],'read-only player transport');
   assert.equal(errors.length,0,'no uncaught browser exceptions');
-  console.log('Player browser validation passed: bootstrap, live routing, disclosure, damage, remount, settings, real reload, next-duel mode, terminal/abort retention, Off, summary draw, stale, non-player, teardown, read-only requests.');
+  console.log('Player browser validation passed: bootstrap, live routing, disclosure, damage, remount, settings, real reload, next-duel mode, terminal/abort retention, Off, summary draw, stale, non-player, teardown, native count/collision/multiplier/impact timing, delayed snapshot catch-up, read-only requests.');
   console.log('Screenshots: '+artifacts);
 } finally {
   if(socket?.readyState===WebSocket.OPEN){try{await command('Browser.close');}catch{}socket.close();}

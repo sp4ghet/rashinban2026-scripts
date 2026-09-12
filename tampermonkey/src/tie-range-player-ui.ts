@@ -1,3 +1,4 @@
+import { createPlayerScoringAnimation } from './tie-range-player-animation.ts';
 import { createPlayerMapOverlay } from './tie-range-player-map.ts';
 import type { TieRangeBandMode, TieRangeRoundOutput } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
@@ -11,6 +12,7 @@ import {
 export type PlayerTieRangeUiDependencies = {
   document: Document;
   getPageWindow?(): Window;
+  onResultVisible?(): void;
   onModeChange(mode: TieRangeBandMode): void;
   getConfiguredMode(): TieRangeBandMode;
 };
@@ -128,7 +130,8 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       .teams { display: flex; justify-content: space-between; gap: 180px; }
       .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
       .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
-        background: #35131ff2; color: #ff8492; font-size: 32px; font-variant-numeric: tabular-nums; }
+        background: #35131f; z-index: 2; color: #ff8492; font-size: 32px; font-variant-numeric: tabular-nums; }
+      .damage::before { content: attr(data-factor); display: block; font-size: 16px; color: #ffe169; text-align: center; }
       @media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
       .team[data-side="blue"] { --team: #38a8ff; }
       .team[data-side="red"] { --team: #ff5365; }
@@ -208,41 +211,9 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   let focusBeforeSettings: HTMLElement | null = null;
   let disposed = false;
   let reconcileQueued = false;
-  let lastDamageIdentity: string | null = null;
   let initialResultIdentity: string | null = null;
-  let activeDamage: { identity: string; teamId: string; cancel(): void } | null = null;
-
-  function animateDamage(root: HTMLElement, damage: HTMLElement, identity: string, teamId: string, after: number, maximum: number): void {
-    activeDamage?.cancel();
-    const page = document.defaultView!;
-    if (page.matchMedia?.('(prefers-reduced-motion: reduce)').matches || typeof damage.animate !== 'function') return;
-    const canonicalIndex = lastView!.output!.teamIds.indexOf(teamId);
-    const before = lastView!.output!.rounds.at(-1)!.healthBefore[canonicalIndex];
-    const health = root.querySelector<HTMLElement>('[data-rb="health"]')!;
-    const fill = root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!;
-    const write = (value: number) => { health.textContent = String(value); fill.style.width = `${maximum > 0 ? value / maximum * 100 : 0}%`; };
-    const box = damage.getBoundingClientRect();
-    const x = page.innerWidth * (root.getBoundingClientRect().left < page.innerWidth / 2 ? .24 : .76) - (box.left + box.width / 2);
-    const y = Math.max(150, root.getBoundingClientRect().bottom + 65) - box.top;
-    const animation = damage.animate([
-      { transform: `translate(${x}px, ${y}px) scale(1.5)`, offset: 0 },
-      { transform: `translate(${x}px, ${y}px) scale(1.5)`, offset: .35 },
-      { transform: 'translate(0, 0) scale(1)', offset: 1 },
-    ], { duration: 1200, easing: 'ease-in-out' });
-    let frame = 0;
-    const started = page.performance.now();
-    const cancel = () => { page.cancelAnimationFrame(frame); animation.cancel(); write(after); };
-    activeDamage = { identity, teamId, cancel };
-    write(before);
-    const tick = () => {
-      if (activeDamage?.identity !== identity) return;
-      const progress = Math.max(0, Math.min(1, (page.performance.now() - started - 750) / 450));
-      write(Math.round(before + (after - before) * progress));
-      if (progress < 1) frame = page.requestAnimationFrame(tick);
-      else activeDamage = null;
-    };
-    frame = page.requestAnimationFrame(tick);
-  }
+  let requestedResultKey: string | null = null;
+  const scoring = createPlayerScoringAnimation(document, shadow);
 
   function hideNativeTree(element: HTMLElement, except?: HTMLElement): void {
     // Preserve the boxes used as targets by GeoGuessr's animation calculations.
@@ -304,7 +275,6 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   }
 
   function renderDisplay(display: PlayerTieRangeDisplay, layoutDiagnostic: string | null): void {
-    if (!display.teams && activeDamage) { activeDamage.cancel(); activeDamage = null; }
     hud.hidden = !display.showHud && !display.showDiagnostic && layoutDiagnostic === null;
     byRb<HTMLElement>('mode').hidden = !display.showHud;
     byRb<HTMLElement>('teams').hidden = !display.showHud;
@@ -315,27 +285,19 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     settingsOpen.textContent = `Tie range settings: ${configured === 'off' ? 'Off' : configured === 'full' ? 'Full' : 'Half'}`;
     settingsOpen.hidden = lastView?.status === 'inactive';
     if (display.teams) {
-      const damageIdentity = display.result && lastView?.context
-        ? JSON.stringify([playerRoundIdentity(lastView.context, display.result.round), display.result.damageDealt, display.teams.map(team => team.health)]) : null;
-      if (activeDamage && activeDamage.identity !== damageIdentity) { activeDamage.cancel(); activeDamage = null; }
       display.teams.forEach((team, index) => {
         const root = byRb<HTMLElement>(`team-${index}`);
         root.dataset.side = team.side;
         root.querySelector<HTMLElement>('[data-rb="label"]')!.textContent = team.label;
-        if (activeDamage?.teamId !== team.teamId) root.querySelector<HTMLElement>('[data-rb="health"]')!.textContent = String(team.health);
+        root.querySelector<HTMLElement>('[data-rb="health"]')!.textContent = String(team.health);
         root.querySelector<HTMLElement>('[data-rb="multiplier"]')!.textContent = multiplier(team.multiplierTenths);
         const percent = team.maximumHealth <= 0 ? 0 : Math.max(0, Math.min(100, team.health / team.maximumHealth * 100));
-        if (activeDamage?.teamId !== team.teamId) root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!.style.width = `${percent}%`;
+        root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!.style.width = `${percent}%`;
         const damage = root.querySelector<HTMLElement>('[data-rb="damage"]')!;
         const amount = display.result?.damageDealt[index === 0 ? 1 : 0] ?? 0;
         damage.hidden = amount === 0;
         damage.textContent = amount > 0 ? `−${amount}` : '';
-        if (amount > 0 && damageIdentity !== lastDamageIdentity
-          && playerRoundIdentity(lastView!.context!, display.result!.round) !== initialResultIdentity) {
-          animateDamage(root, damage, damageIdentity!, team.teamId, team.health, team.maximumHealth);
-        }
       });
-      if (damageIdentity !== null) lastDamageIdentity = damageIdentity;
     }
     const result = byRb<HTMLElement>('result');
     result.hidden = display.result === null;
@@ -458,10 +420,23 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     if (!duelSurfaceVisible) {
       restoreNative();
       mapOverlay.dispose();
+      scoring.stop();
       const display = derivePlayerTieRangeDisplay(lastView, false, revealedRoundIdentity);
       renderDisplay({ ...display, showHud: false, showDiagnostic: false,
         teams: null, result: null, terminal: null, diagnostic: null }, null);
       return;
+    }
+    const nativeResult = scopedElements(roots, CLASS_SELECTORS.resultRoot).find(root => {
+      const heading = root.querySelector(CLASS_SELECTORS.resultRound);
+      return heading && visible(heading, document);
+    }) ?? null;
+    const nativeRound = Number(nativeResult?.querySelector(CLASS_SELECTORS.resultRound)?.textContent?.match(/\d+/)?.[0]);
+    const nativeKey = lastView.context && nativeResult && Number.isInteger(nativeRound)
+      ? playerRoundIdentity(lastView.context, nativeRound) ?? JSON.stringify([lastView.gameId, nativeRound]) : null;
+    if (nativeKey && requestedResultKey !== nativeKey) {
+      requestedResultKey = nativeKey;
+      // Ask for settled results at entry instead of waiting up to 2.5 seconds.
+      queueMicrotask(() => { if (!disposed) dependencies.onResultVisible?.(); });
     }
     const expectedRound = lastView.output?.rounds.at(-1)?.round ?? null;
     const matchingResultRoots = visibleResultRoots(document, roots, expectedRound);
@@ -509,6 +484,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     }
     restoreUnusedNativeStyles();
     renderDisplay(display, layoutDiagnostic);
+    scoring.update(lastView, display, nativeResult, nativeKey, nativeKey === initialResultIdentity);
     mapOverlay.update(lastView, display.result?.round ?? null);
   }
 
@@ -562,11 +538,11 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       if (disposed) return;
       if (lastView === null || playerDisclosureMustReset(lastView, view)) {
         revealedRoundIdentity = null;
-        lastDamageIdentity = null;
+        scoring.reset();
+        requestedResultKey = null;
       }
       if (lastView?.gameId !== view.gameId || view.status === 'inactive' || view.status === 'off') {
-        activeDamage?.cancel();
-        activeDamage = null;
+        scoring.stop();
         restoreNative();
       }
       if (view.context && view.context.gameId !== lastView?.context?.gameId) {
@@ -583,8 +559,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     dispose(): void {
       if (disposed) return;
       disposed = true;
-      activeDamage?.cancel();
-      activeDamage = null;
+      scoring.dispose();
       observer?.disconnect();
       mapOverlay.dispose();
       restoreNative();

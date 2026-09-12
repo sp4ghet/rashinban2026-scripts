@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.1.3
+// @version      0.1.4
 // @description  Player HP and multipliers for RASHINBAN's Full / Half tie-range rules. Set the same mode as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -1239,6 +1239,154 @@
     };
   }
 
+  // tampermonkey/src/tie-range-player-animation.ts
+  var progress = (elapsed, start2, duration) => Math.max(0, Math.min(1, (elapsed - start2) / duration));
+  function scoringPhase(elapsed, nativeMultiplier, tie) {
+    const impact = nativeMultiplier ? 4100 : 3600;
+    return {
+      count: progress(elapsed, 0, 750),
+      collision: progress(elapsed, 1750, 400),
+      difference: !tie && elapsed >= 2100,
+      multiplied: !tie && nativeMultiplier && elapsed >= 2750,
+      flight: tie ? 0 : progress(elapsed, impact - 350, 400),
+      health: tie ? 0 : progress(elapsed, impact, 800),
+      done: elapsed >= (tie ? 2450 : impact + 800)
+    };
+  }
+  function createPlayerScoringAnimation(document2, shadow) {
+    const page = document2.defaultView;
+    const node = (name) => shadow.querySelector(`[data-rb="${name}"]`);
+    const moving = [0, 1].map((index) => {
+      const element = document2.createElement("span");
+      element.dataset.rb = `moving-score-${index}`;
+      element.style.cssText = "position:fixed;font-size:40px;font-weight:700;color:white;text-shadow:0 2px 6px #000;pointer-events:none;z-index:2";
+      element.hidden = true;
+      shadow.append(element);
+      return element;
+    });
+    let session = null;
+    let view = null;
+    let display = null;
+    let frame = 0;
+    const completed = /* @__PURE__ */ new Set();
+    function hideMoving() {
+      moving.forEach((element) => {
+        element.hidden = true;
+      });
+    }
+    function draw() {
+      if (!session || !view || !display?.teams || !session.root.isConnected) {
+        hideMoving();
+        return;
+      }
+      const natives = [...session.root.querySelectorAll('[class*="damage-animation_score__"]')];
+      const now = page.performance.now();
+      if (session.start === null && natives.some((element) => Number.parseFloat(page.getComputedStyle(element).opacity) > 0)) session.start = now;
+      session.multiplier || (session.multiplier = !!session.root.querySelector('[class*="damage-animation_multiplier__"]'));
+      const elapsed = session.settled ? Infinity : session.start === null ? -1 : now - session.start;
+      if (elapsed >= 0 && elapsed < 1750) natives.slice(0, 2).forEach((element, i) => {
+        if (/^\d+$/.test(element.textContent?.trim() ?? "")) session.scores[i] = element.textContent.trim();
+      });
+      const result = display.result;
+      node("result").hidden = elapsed < 0 || !result && (session.settled || view.localTeamId === null || Number(JSON.parse(session.key)[1]) < (view.context?.currentRoundNumber ?? 0));
+      if (elapsed < 0) hideMoving();
+      const tie = !!result && result.scores[0] === result.scores[1];
+      const phase = scoringPhase(elapsed, session.multiplier, tie);
+      node("result").dataset.phase = elapsed < 0 ? "entry" : phase.done ? "complete" : phase.health > 0 ? "health" : phase.flight > 0 ? "flight" : phase.multiplied ? "multiplier" : phase.difference ? "difference" : phase.collision > 0 ? "collision" : phase.count < 1 ? "count" : "hold";
+      const reduced = page.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      const scores = [node("result-team-0"), node("result-team-1")];
+      scores.forEach((element, i) => {
+        element.textContent = result ? String(Math.round(result.scores[i] * phase.count)) : session.scores[i];
+        element.style.opacity = phase.collision > 0 && !phase.done ? ".65" : "1";
+        moving[i].hidden = true;
+      });
+      display.teams.forEach((team, i) => {
+        const root = node(`team-${i}`);
+        const damage = root.querySelector('[data-rb="damage"]');
+        damage.hidden = true;
+        damage.style.transform = "";
+        damage.style.opacity = "";
+        damage.dataset.factor = "";
+        const canonicalIndex = view.output?.teamIds.indexOf(team.teamId) ?? -1;
+        const settled = result ? view.output?.rounds.find((round) => round.round === result.round) : null;
+        if (!settled || canonicalIndex < 0) return;
+        const health = Math.round(settled.healthBefore[canonicalIndex] + (team.health - settled.healthBefore[canonicalIndex]) * (tie ? 1 : phase.health));
+        root.querySelector('[data-rb="health"]').textContent = String(health);
+        const fill = root.querySelector('[data-rb="bar-fill"]');
+        fill.style.transition = "none";
+        fill.style.width = `${team.maximumHealth > 0 ? health / team.maximumHealth * 100 : 0}%`;
+        const used = result.usedMultiplierTenths[i];
+        const mult = phase.done || phase.health > 0 ? team.multiplierTenths : used;
+        root.querySelector('[data-rb="multiplier"]').textContent = `${mult / 10}\xD7`;
+        const amount = result.damageDealt[i === 0 ? 1 : 0];
+        if (!amount || !phase.difference) return;
+        damage.hidden = false;
+        const multiplied = elapsed >= 2750;
+        const factor = result.usedMultiplierTenths[i === 0 ? 1 : 0] / 10;
+        damage.dataset.factor = multiplied && !phase.done && factor !== 1 ? `\xD7${factor}` : "";
+        damage.textContent = multiplied ? `\u2212${amount}` : String(Math.abs(result.scores[0] - result.scores[1]));
+        damage.title = `${Math.abs(result.scores[0] - result.scores[1])} \xD7 ${result.usedMultiplierTenths[i === 0 ? 1 : 0] / 10} = ${amount}`;
+        if (!reduced && !phase.done) {
+          const target = damage.getBoundingClientRect(), origin = scores[i].getBoundingClientRect();
+          const flight = phase.flight;
+          damage.style.transform = `translate(${(origin.left + origin.width / 2 - target.left - target.width / 2) * (1 - flight)}px, ${(origin.top - target.top) * (1 - flight)}px) scale(${multiplied && flight === 0 ? 1.3 : 1})`;
+          if (phase.health > 0 && phase.health < 1) damage.style.opacity = String(Math.max(0.2, 1 - phase.health));
+        }
+      });
+      if (result && elapsed >= 1750 && elapsed < 2100 && !reduced) {
+        const winner = result.scores[0] >= result.scores[1] ? 0 : 1;
+        const boxes = scores.map((element) => element.getBoundingClientRect());
+        for (const i of tie ? [0, 1] : [winner]) {
+          const element = moving[i], origin = boxes[i], other = boxes[i === 0 ? 1 : 0];
+          element.hidden = false;
+          element.textContent = String(result.scores[i]);
+          element.style.left = `${origin.left + (other.left - origin.left) * phase.collision * (tie ? 0.5 : 1)}px`;
+          element.style.top = `${origin.top}px`;
+        }
+      }
+      if (display.terminal && result) node("terminal").hidden = !phase.done;
+      if (phase.done) completed.add(session.key);
+    }
+    function tick() {
+      frame = 0;
+      draw();
+      if (session && node("result").dataset.phase !== "complete") frame = page.requestAnimationFrame(tick);
+    }
+    return {
+      update(nextView, nextDisplay, root, key, skip) {
+        view = nextView;
+        display = nextDisplay;
+        if (!root || !key || !nextDisplay.teams || !nextDisplay.suppressNative) {
+          this.stop();
+          return;
+        }
+        if (session && session.key !== key && session.root === root) {
+          const previous = JSON.parse(session.key), next = JSON.parse(key);
+          if (previous.length === 2 && previous[0] === next[0] && previous[1] === next[1]) session.key = key;
+        }
+        if (session?.key !== key) session = { key, root, start: null, multiplier: false, settled: skip || completed.has(key), scores: ["0", "0"] };
+        else session.root = root;
+        draw();
+        if (!frame) frame = page.requestAnimationFrame(tick);
+      },
+      stop() {
+        if (session) completed.add(session.key);
+        if (frame) page.cancelAnimationFrame(frame);
+        frame = 0;
+        session = null;
+        hideMoving();
+      },
+      reset() {
+        this.stop();
+        completed.clear();
+      },
+      dispose() {
+        this.reset();
+        moving.forEach((element) => element.remove());
+      }
+    };
+  }
+
   // tampermonkey/src/tie-range-player-ui.ts
   var CLASS_SELECTORS = {
     duelRoot: '[class*="duels_root__"]',
@@ -1329,7 +1477,8 @@
       .teams { display: flex; justify-content: space-between; gap: 180px; }
       .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
       .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
-        background: #35131ff2; color: #ff8492; font-size: 32px; font-variant-numeric: tabular-nums; }
+        background: #35131f; z-index: 2; color: #ff8492; font-size: 32px; font-variant-numeric: tabular-nums; }
+      .damage::before { content: attr(data-factor); display: block; font-size: 16px; color: #ffe169; text-align: center; }
       @media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
       .team[data-side="blue"] { --team: #38a8ff; }
       .team[data-side="red"] { --team: #ff5365; }
@@ -1408,47 +1557,9 @@
     let focusBeforeSettings = null;
     let disposed = false;
     let reconcileQueued = false;
-    let lastDamageIdentity = null;
     let initialResultIdentity = null;
-    let activeDamage = null;
-    function animateDamage(root, damage, identity, teamId, after, maximum) {
-      activeDamage?.cancel();
-      const page = document2.defaultView;
-      if (page.matchMedia?.("(prefers-reduced-motion: reduce)").matches || typeof damage.animate !== "function") return;
-      const canonicalIndex = lastView.output.teamIds.indexOf(teamId);
-      const before = lastView.output.rounds.at(-1).healthBefore[canonicalIndex];
-      const health = root.querySelector('[data-rb="health"]');
-      const fill = root.querySelector('[data-rb="bar-fill"]');
-      const write = (value) => {
-        health.textContent = String(value);
-        fill.style.width = `${maximum > 0 ? value / maximum * 100 : 0}%`;
-      };
-      const box = damage.getBoundingClientRect();
-      const x = page.innerWidth * (root.getBoundingClientRect().left < page.innerWidth / 2 ? 0.24 : 0.76) - (box.left + box.width / 2);
-      const y = Math.max(150, root.getBoundingClientRect().bottom + 65) - box.top;
-      const animation = damage.animate([
-        { transform: `translate(${x}px, ${y}px) scale(1.5)`, offset: 0 },
-        { transform: `translate(${x}px, ${y}px) scale(1.5)`, offset: 0.35 },
-        { transform: "translate(0, 0) scale(1)", offset: 1 }
-      ], { duration: 1200, easing: "ease-in-out" });
-      let frame = 0;
-      const started = page.performance.now();
-      const cancel = () => {
-        page.cancelAnimationFrame(frame);
-        animation.cancel();
-        write(after);
-      };
-      activeDamage = { identity, teamId, cancel };
-      write(before);
-      const tick = () => {
-        if (activeDamage?.identity !== identity) return;
-        const progress = Math.max(0, Math.min(1, (page.performance.now() - started - 750) / 450));
-        write(Math.round(before + (after - before) * progress));
-        if (progress < 1) frame = page.requestAnimationFrame(tick);
-        else activeDamage = null;
-      };
-      frame = page.requestAnimationFrame(tick);
-    }
+    let requestedResultKey = null;
+    const scoring = createPlayerScoringAnimation(document2, shadow);
     function hideNativeTree(element, except) {
       for (const child of [element, ...element.querySelectorAll("*")]) {
         if (child === except || except?.contains(child)) continue;
@@ -1504,10 +1615,6 @@
       summaryReplacements.clear();
     }
     function renderDisplay(display, layoutDiagnostic) {
-      if (!display.teams && activeDamage) {
-        activeDamage.cancel();
-        activeDamage = null;
-      }
       hud.hidden = !display.showHud && !display.showDiagnostic && layoutDiagnostic === null;
       byRb("mode").hidden = !display.showHud;
       byRb("teams").hidden = !display.showHud;
@@ -1516,28 +1623,19 @@
       settingsOpen.textContent = `Tie range settings: ${configured === "off" ? "Off" : configured === "full" ? "Full" : "Half"}`;
       settingsOpen.hidden = lastView?.status === "inactive";
       if (display.teams) {
-        const damageIdentity = display.result && lastView?.context ? JSON.stringify([playerRoundIdentity(lastView.context, display.result.round), display.result.damageDealt, display.teams.map((team) => team.health)]) : null;
-        if (activeDamage && activeDamage.identity !== damageIdentity) {
-          activeDamage.cancel();
-          activeDamage = null;
-        }
         display.teams.forEach((team, index) => {
           const root = byRb(`team-${index}`);
           root.dataset.side = team.side;
           root.querySelector('[data-rb="label"]').textContent = team.label;
-          if (activeDamage?.teamId !== team.teamId) root.querySelector('[data-rb="health"]').textContent = String(team.health);
+          root.querySelector('[data-rb="health"]').textContent = String(team.health);
           root.querySelector('[data-rb="multiplier"]').textContent = multiplier(team.multiplierTenths);
           const percent = team.maximumHealth <= 0 ? 0 : Math.max(0, Math.min(100, team.health / team.maximumHealth * 100));
-          if (activeDamage?.teamId !== team.teamId) root.querySelector('[data-rb="bar-fill"]').style.width = `${percent}%`;
+          root.querySelector('[data-rb="bar-fill"]').style.width = `${percent}%`;
           const damage = root.querySelector('[data-rb="damage"]');
           const amount = display.result?.damageDealt[index === 0 ? 1 : 0] ?? 0;
           damage.hidden = amount === 0;
           damage.textContent = amount > 0 ? `\u2212${amount}` : "";
-          if (amount > 0 && damageIdentity !== lastDamageIdentity && playerRoundIdentity(lastView.context, display.result.round) !== initialResultIdentity) {
-            animateDamage(root, damage, damageIdentity, team.teamId, team.health, team.maximumHealth);
-          }
         });
-        if (damageIdentity !== null) lastDamageIdentity = damageIdentity;
       }
       const result = byRb("result");
       result.hidden = display.result === null;
@@ -1663,6 +1761,7 @@
       if (!duelSurfaceVisible) {
         restoreNative();
         mapOverlay.dispose();
+        scoring.stop();
         const display2 = derivePlayerTieRangeDisplay(lastView, false, revealedRoundIdentity);
         renderDisplay({
           ...display2,
@@ -1674,6 +1773,18 @@
           diagnostic: null
         }, null);
         return;
+      }
+      const nativeResult = scopedElements(roots, CLASS_SELECTORS.resultRoot).find((root) => {
+        const heading = root.querySelector(CLASS_SELECTORS.resultRound);
+        return heading && visible(heading, document2);
+      }) ?? null;
+      const nativeRound = Number(nativeResult?.querySelector(CLASS_SELECTORS.resultRound)?.textContent?.match(/\d+/)?.[0]);
+      const nativeKey = lastView.context && nativeResult && Number.isInteger(nativeRound) ? playerRoundIdentity(lastView.context, nativeRound) ?? JSON.stringify([lastView.gameId, nativeRound]) : null;
+      if (nativeKey && requestedResultKey !== nativeKey) {
+        requestedResultKey = nativeKey;
+        queueMicrotask(() => {
+          if (!disposed) dependencies.onResultVisible?.();
+        });
       }
       const expectedRound = lastView.output?.rounds.at(-1)?.round ?? null;
       const matchingResultRoots = visibleResultRoots(document2, roots, expectedRound);
@@ -1717,6 +1828,7 @@
       }
       restoreUnusedNativeStyles();
       renderDisplay(display, layoutDiagnostic);
+      scoring.update(lastView, display, nativeResult, nativeKey, nativeKey === initialResultIdentity);
       mapOverlay.update(lastView, display.result?.round ?? null);
     }
     function queueReconcile() {
@@ -1762,11 +1874,11 @@
         if (disposed) return;
         if (lastView === null || playerDisclosureMustReset(lastView, view)) {
           revealedRoundIdentity = null;
-          lastDamageIdentity = null;
+          scoring.reset();
+          requestedResultKey = null;
         }
         if (lastView?.gameId !== view.gameId || view.status === "inactive" || view.status === "off") {
-          activeDamage?.cancel();
-          activeDamage = null;
+          scoring.stop();
           restoreNative();
         }
         if (view.context && view.context.gameId !== lastView?.context?.gameId) {
@@ -1783,8 +1895,7 @@
       dispose() {
         if (disposed) return;
         disposed = true;
-        activeDamage?.cancel();
-        activeDamage = null;
+        scoring.dispose();
         observer?.disconnect();
         mapOverlay.dispose();
         restoreNative();
@@ -1818,6 +1929,7 @@
       document,
       getPageWindow: () => typeof unsafeWindow === "undefined" ? window : unsafeWindow,
       getConfiguredMode: () => configuredMode,
+      onResultVisible: () => controller.refresh(),
       onModeChange: (nextMode) => {
         void (async () => {
           try {
