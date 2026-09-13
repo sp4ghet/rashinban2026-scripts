@@ -64,6 +64,11 @@
         "file": "player-cards.html",
         "width": 1920,
         "height": 1080
+      },
+      {
+        "file": "brackets-finals.html",
+        "width": 1920,
+        "height": 1080
       }
     ],
     "dashboardPanels": [
@@ -114,6 +119,14 @@
         "file": "player-cards-control.html",
         "width": 4,
         "headerColor": "#6a1b9a"
+      },
+      {
+        "name": "bracket-control",
+        "workspace": "broadcast",
+        "title": "Bracket",
+        "file": "bracket-control.html",
+        "width": 3,
+        "headerColor": "#b71c1c"
       }
     ]
   }

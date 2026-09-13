@@ -1,0 +1,1126 @@
+{
+  "fetchedAt": "2026-09-13T00:17:40.818Z",
+  "kind": "phase-group",
+  "variables": {
+    "id": "3439270"
+  },
+  "data": {
+    "phaseGroup": {
+      "id": 3439270,
+      "displayIdentifier": "1",
+      "bracketType": "DOUBLE_ELIMINATION",
+      "state": 3,
+      "numRounds": null,
+      "phase": {
+        "id": 2384239,
+        "name": "Top 8",
+        "phaseOrder": 2,
+        "bracketType": "DOUBLE_ELIMINATION",
+        "groupCount": 1,
+        "numSeeds": 8
+      },
+      "progressionsOut": null,
+      "seeds": {
+        "nodes": [
+          {
+            "id": 41590616,
+            "seedNum": 1,
+            "placement": 1,
+            "isBye": false,
+            "entrant": {
+              "id": 24675352,
+              "name": "Gordrack"
+            },
+            "progressionSource": {
+              "id": 14384571,
+              "originPlacement": 5,
+              "originPhaseGroup": {
+                "id": 3439269,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2384238,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41590617,
+            "seedNum": 2,
+            "placement": 2,
+            "isBye": false,
+            "entrant": {
+              "id": 24673233,
+              "name": "OOF | | SiX"
+            },
+            "progressionSource": {
+              "id": 14384572,
+              "originPlacement": 5,
+              "originPhaseGroup": {
+                "id": 3439269,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2384238,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41590619,
+            "seedNum": 4,
+            "placement": 3,
+            "isBye": false,
+            "entrant": {
+              "id": 24673724,
+              "name": "Geo"
+            },
+            "progressionSource": {
+              "id": 14384574,
+              "originPlacement": 5,
+              "originPhaseGroup": {
+                "id": 3439269,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2384238,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41590618,
+            "seedNum": 3,
+            "placement": 4,
+            "isBye": false,
+            "entrant": {
+              "id": 24668522,
+              "name": "Syn!/LBE | Klutzy"
+            },
+            "progressionSource": {
+              "id": 14384573,
+              "originPlacement": 5,
+              "originPhaseGroup": {
+                "id": 3439269,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2384238,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41590622,
+            "seedNum": 7,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 24675684,
+              "name": "Jujuace"
+            },
+            "progressionSource": {
+              "id": 14384577,
+              "originPlacement": 7,
+              "originPhaseGroup": {
+                "id": 3439269,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2384238,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41590623,
+            "seedNum": 8,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 24675538,
+              "name": "Rayne"
+            },
+            "progressionSource": {
+              "id": 14384578,
+              "originPlacement": 7,
+              "originPhaseGroup": {
+                "id": 3439269,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2384238,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41590620,
+            "seedNum": 5,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 24668968,
+              "name": "bill"
+            },
+            "progressionSource": {
+              "id": 14384575,
+              "originPlacement": 7,
+              "originPhaseGroup": {
+                "id": 3439269,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2384238,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41590621,
+            "seedNum": 6,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 24676020,
+              "name": "Catyak"
+            },
+            "progressionSource": {
+              "id": 14384576,
+              "originPlacement": 7,
+              "originPhaseGroup": {
+                "id": 3439269,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2384238,
+                "name": "Bracket"
+              }
+            }
+          }
+        ]
+      },
+      "sets": {
+        "pageInfo": {
+          "total": 11,
+          "totalPages": 1
+        },
+        "nodes": [
+          {
+            "id": 107673904,
+            "identifier": "K",
+            "round": -6,
+            "fullRoundText": "Losers Final",
+            "state": 3,
+            "winnerId": 24675352,
+            "displayScore": "Geo 1 - Gordrack 3",
+            "totalGames": 5,
+            "startedAt": 1789252686,
+            "completedAt": 1789253650,
+            "wPlacement": 2,
+            "lPlacement": 3,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "codename_unown",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673904-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107673888",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 24673724,
+                  "name": "Geo",
+                  "initialSeedNum": 4,
+                  "participants": [
+                    {
+                      "id": 22579114,
+                      "gamerTag": "Geo",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590619,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673904-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107673903",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24675352,
+                  "name": "Gordrack",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 22580307,
+                      "gamerTag": "Gordrack",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590616,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673903,
+            "identifier": "J",
+            "round": -5,
+            "fullRoundText": "Losers Semi-Final",
+            "state": 3,
+            "winnerId": 24675352,
+            "displayScore": "Syn!/LBE | Klutzy 0 - Gordrack 3",
+            "totalGames": 5,
+            "startedAt": 1789252077,
+            "completedAt": 1789252673,
+            "wPlacement": 3,
+            "lPlacement": 4,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "codename_unown",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673903-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107673901",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24668522,
+                  "name": "Syn!/LBE | Klutzy",
+                  "initialSeedNum": 3,
+                  "participants": [
+                    {
+                      "id": 22574919,
+                      "gamerTag": "Klutzy",
+                      "prefix": "Syn!/LBE"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590618,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673903-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107673902",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24675352,
+                  "name": "Gordrack",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 22580307,
+                      "gamerTag": "Gordrack",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590616,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673901,
+            "identifier": "H",
+            "round": -4,
+            "fullRoundText": "Losers Quarter-Final",
+            "state": 3,
+            "winnerId": 24668522,
+            "displayScore": "Syn!/LBE | Klutzy 3 - Rayne 0",
+            "totalGames": 5,
+            "startedAt": 1789250373,
+            "completedAt": 1789251224,
+            "wPlacement": 4,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "magmaboy_x8",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673901-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107673887",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 24668522,
+                  "name": "Syn!/LBE | Klutzy",
+                  "initialSeedNum": 3,
+                  "participants": [
+                    {
+                      "id": 22574919,
+                      "gamerTag": "Klutzy",
+                      "prefix": "Syn!/LBE"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590618,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673901-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107673899",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24675538,
+                  "name": "Rayne",
+                  "initialSeedNum": 7,
+                  "participants": [
+                    {
+                      "id": 22580464,
+                      "gamerTag": "Rayne",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590623,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673902,
+            "identifier": "I",
+            "round": -4,
+            "fullRoundText": "Losers Quarter-Final",
+            "state": 3,
+            "winnerId": 24675352,
+            "displayScore": "Gordrack 3 - Jujuace 0",
+            "totalGames": 5,
+            "startedAt": 1789250387,
+            "completedAt": 1789251183,
+            "wPlacement": 4,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "codename_unown",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673902-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107673886",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 24675352,
+                  "name": "Gordrack",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 22580307,
+                      "gamerTag": "Gordrack",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590616,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673902-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107673900",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24675684,
+                  "name": "Jujuace",
+                  "initialSeedNum": 10,
+                  "participants": [
+                    {
+                      "id": 22580577,
+                      "gamerTag": "Jujuace",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590622,
+                  "seedNum": 7
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673899,
+            "identifier": "F",
+            "round": -3,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 24675538,
+            "displayScore": "Rayne 3 - bill 2",
+            "totalGames": 5,
+            "startedAt": 1789247812,
+            "completedAt": 1789249170,
+            "wPlacement": 5,
+            "lPlacement": 7,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "magmaboy_x8",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673899-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107673895",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24675538,
+                  "name": "Rayne",
+                  "initialSeedNum": 7,
+                  "participants": [
+                    {
+                      "id": 22580464,
+                      "gamerTag": "Rayne",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590623,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673899-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107673896",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24668968,
+                  "name": "bill",
+                  "initialSeedNum": 12,
+                  "participants": [
+                    {
+                      "id": 22575245,
+                      "gamerTag": "bill",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590620,
+                  "seedNum": 5
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673900,
+            "identifier": "G",
+            "round": -3,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 24675684,
+            "displayScore": "Jujuace 3 - Catyak 0",
+            "totalGames": 5,
+            "startedAt": 1789249014,
+            "completedAt": 1789249928,
+            "wPlacement": 5,
+            "lPlacement": 7,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "magmaboy_x8",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673900-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107673897",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24675684,
+                  "name": "Jujuace",
+                  "initialSeedNum": 10,
+                  "participants": [
+                    {
+                      "id": 22580577,
+                      "gamerTag": "Jujuace",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590622,
+                  "seedNum": 7
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673900-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107673898",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24676020,
+                  "name": "Catyak",
+                  "initialSeedNum": 5,
+                  "participants": [
+                    {
+                      "id": 22580851,
+                      "gamerTag": "Catyak",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590621,
+                  "seedNum": 6
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673886,
+            "identifier": "A",
+            "round": 1,
+            "fullRoundText": "Winners Semi-Final",
+            "state": 3,
+            "winnerId": 24673724,
+            "displayScore": "Gordrack 2 - Geo 3",
+            "totalGames": 5,
+            "startedAt": 1789247634,
+            "completedAt": 1789248967,
+            "wPlacement": 3,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "codename_unown",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673886-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "41590616",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 24675352,
+                  "name": "Gordrack",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 22580307,
+                      "gamerTag": "Gordrack",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590616,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673886-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "41590619",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 24673724,
+                  "name": "Geo",
+                  "initialSeedNum": 4,
+                  "participants": [
+                    {
+                      "id": 22579114,
+                      "gamerTag": "Geo",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590619,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673887,
+            "identifier": "B",
+            "round": 1,
+            "fullRoundText": "Winners Semi-Final",
+            "state": 3,
+            "winnerId": 24673233,
+            "displayScore": "OOF | | SiX 3 - Syn!/LBE | Klutzy 2",
+            "totalGames": 5,
+            "startedAt": 1789247691,
+            "completedAt": 1789250348,
+            "wPlacement": 3,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "codename_unown",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673887-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "41590617",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 24673233,
+                  "name": "OOF | | SiX",
+                  "initialSeedNum": 2,
+                  "participants": [
+                    {
+                      "id": 22578750,
+                      "gamerTag": "SiX",
+                      "prefix": "OOF |"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590617,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673887-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "41590618",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 24668522,
+                  "name": "Syn!/LBE | Klutzy",
+                  "initialSeedNum": 3,
+                  "participants": [
+                    {
+                      "id": 22574919,
+                      "gamerTag": "Klutzy",
+                      "prefix": "Syn!/LBE"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590618,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673888,
+            "identifier": "C",
+            "round": 2,
+            "fullRoundText": "Winners Final",
+            "state": 3,
+            "winnerId": 24673233,
+            "displayScore": "Geo 0 - OOF | | SiX 3",
+            "totalGames": 5,
+            "startedAt": 1789251190,
+            "completedAt": 1789252072,
+            "wPlacement": 2,
+            "lPlacement": 3,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "codename_unown",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673888-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107673886",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24673724,
+                  "name": "Geo",
+                  "initialSeedNum": 4,
+                  "participants": [
+                    {
+                      "id": 22579114,
+                      "gamerTag": "Geo",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590619,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673888-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107673887",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24673233,
+                  "name": "OOF | | SiX",
+                  "initialSeedNum": 2,
+                  "participants": [
+                    {
+                      "id": 22578750,
+                      "gamerTag": "SiX",
+                      "prefix": "OOF |"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590617,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673889,
+            "identifier": "D",
+            "round": 3,
+            "fullRoundText": "Grand Final",
+            "state": 3,
+            "winnerId": 24675352,
+            "displayScore": "OOF | | SiX 0 - Gordrack 3",
+            "totalGames": 5,
+            "startedAt": 1789253656,
+            "completedAt": 1789254272,
+            "wPlacement": 1,
+            "lPlacement": 2,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "codename_unown",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673889-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107673888",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24673233,
+                  "name": "OOF | | SiX",
+                  "initialSeedNum": 2,
+                  "participants": [
+                    {
+                      "id": 22578750,
+                      "gamerTag": "SiX",
+                      "prefix": "OOF |"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590617,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673889-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107673904",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24675352,
+                  "name": "Gordrack",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 22580307,
+                      "gamerTag": "Gordrack",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590616,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107673890,
+            "identifier": "E",
+            "round": 3,
+            "fullRoundText": "Grand Final Reset",
+            "state": 3,
+            "winnerId": 24675352,
+            "displayScore": "Gordrack 3 - OOF | | SiX 1",
+            "totalGames": 5,
+            "startedAt": 1789254280,
+            "completedAt": 1789255072,
+            "wPlacement": 1,
+            "lPlacement": 2,
+            "hasPlaceholder": false,
+            "stream": {
+              "streamName": "codename_unown",
+              "streamSource": "TWITCH"
+            },
+            "slots": [
+              {
+                "id": "107673890-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107673889",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24675352,
+                  "name": "Gordrack",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 22580307,
+                      "gamerTag": "Gordrack",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590616,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107673890-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107673889",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 24673233,
+                  "name": "OOF | | SiX",
+                  "initialSeedNum": 2,
+                  "participants": [
+                    {
+                      "id": 22578750,
+                      "gamerTag": "SiX",
+                      "prefix": "OOF |"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41590617,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
