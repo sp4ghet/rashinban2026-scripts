@@ -3,6 +3,7 @@
 // instead of retyping names/shapes.
 import type { DuelState, SeriesState, Timeline, Views } from './presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
+import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import type { ConnectionStatus } from '../extension/presenter/connection.ts';
 import type { ClientReady, Lease } from '../presenter/clock.ts';
 import type { MediaManifest, AudioStatus } from '../presenter/media.ts';
@@ -46,6 +47,7 @@ export const REPLICANTS = {
   presenterViews: 'presenterViews',
   presenterSeries: 'presenterSeries',
   presenterSettings: 'presenterSettings',
+  presenterRuleContexts: 'presenterRuleContexts',
   presenterTimeline: 'presenterTimeline',
   presenterRenderer: 'presenterRenderer',
   presenterClients: 'presenterClients',
@@ -72,6 +74,7 @@ export interface ReplicantMap {
   [REPLICANTS.presenterViews]: Views | null;
   [REPLICANTS.presenterSeries]: SeriesState;
   [REPLICANTS.presenterSettings]: PresenterSettings;
+  [REPLICANTS.presenterRuleContexts]: RuleContexts;
   [REPLICANTS.presenterTimeline]: Timeline;
   [REPLICANTS.presenterRenderer]: PresenterRenderer;
   [REPLICANTS.presenterClients]: PresenterClients;

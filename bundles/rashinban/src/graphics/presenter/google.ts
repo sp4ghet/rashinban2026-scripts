@@ -135,7 +135,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
         streetViewControl: false, mapTypeControl: false, fullscreenControl: false, tilt: 0 }));
       dom.status.hidden = true;
       let previous = ''; let fit = ''; let visible = false; let prepared = false; let inactive = false; let disposed = false; let size = ''; let padding = -1;
-      const overlays: (google.maps.Marker | google.maps.Polyline)[] = [];
+      const overlays: (google.maps.Marker | google.maps.Polyline | google.maps.Polygon)[] = [];
       function clearOverlays() { overlays.splice(0).forEach(item => { item.setMap(null); release(item); }); }
       return {
         render(frame) {
@@ -156,17 +156,29 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
           visible = frame.visible;
           prepared = frame.visible || frame.prepare === true;
           inactive = !!frame.inactive;
-          const content = JSON.stringify([frame.pins, frame.lines]);
+          const content = JSON.stringify([frame.tieRange, frame.lines, frame.pins]);
           if (content === previous) return;
           previous = content; clearOverlays();
+          if (frame.tieRange?.annulus) overlays.push(new maps.Polygon({ map, paths: frame.tieRange.annulus,
+            clickable: false, geodesic: true, fillColor: '#f5f7fc', fillOpacity: 0.14,
+            strokeOpacity: 0, strokeWeight: 0, zIndex: 1 }));
+          if (frame.tieRange?.outerPath) overlays.push(new maps.Polyline({ map, path: frame.tieRange.outerPath,
+            geodesic: true, clickable: false, strokeColor: '#f5f7fc', strokeOpacity: 0, strokeWeight: 2, zIndex: 8,
+            icons: [{ icon: { path: 'M 0,-1 0,1', strokeColor: '#f5f7fc', strokeOpacity: 0.9, strokeWeight: 2, scale: 3 },
+              offset: '0', repeat: '14px' }] }));
+          for (let index = 0; index < (frame.tieRange?.circles.length ?? 0); index++) {
+            const circle = frame.tieRange!.circles[index]; const path = frame.tieRange!.circlePaths[index];
+            if (path) overlays.push(new maps.Polyline({ map, path, geodesic: true, clickable: false,
+              strokeColor: circle.color, strokeOpacity: 0.95, strokeWeight: circle.kind === 'five-k' ? 4 : 3, zIndex: 10 }));
+          }
+          for (const line of frame.lines) overlays.push(new maps.Polyline({ map, path: [line.from, line.to], geodesic: true,
+            clickable: false, strokeColor: line.color, strokeOpacity: 0.9, strokeWeight: 3, zIndex: 50 }));
           for (const pin of frame.pins) overlays.push(new maps.Marker({ map, position: pin.point, title: pin.label,
-            clickable: false, zIndex: pin.kind === 'answer' ? 1000 : 1,
+            clickable: false, zIndex: pin.kind === 'answer' ? 1000 : 100,
             icon: pin.kind === 'answer'
               // Authentic circular summary flag: center anchor, unlike the newer teardrop pin.
               ? { url: 'assets/geoguessr-correct-location-flag.png', scaledSize: new maps.Size(40, 40), anchor: new maps.Point(20, 20) }
               : { path: maps.SymbolPath.CIRCLE, scale: 8, fillColor: pin.color, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 } }));
-          for (const line of frame.lines) overlays.push(new maps.Polyline({ map, path: [line.from, line.to], geodesic: true,
-            clickable: false, strokeColor: line.color, strokeOpacity: 0.9, strokeWeight: 3 }));
         },
         dispose() { disposed = true; clearOverlays(); release(map); dom.clear(); },
       };

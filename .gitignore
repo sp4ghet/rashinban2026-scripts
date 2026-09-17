@@ -26,3 +26,5 @@ bundles/rashinban/graphics/*.js.map
 bundles/rashinban/dashboard/*.js
 bundles/rashinban/dashboard/*.js.map
 bundles/rashinban/extension/
+
+/artifacts/player-tie-range/

@@ -5,10 +5,12 @@ export type PresenterSettings = {
   viewSource: 'rendered' | 'chroma'; keyColor: '#00ff00' | '#ff00ff';
   audioOutput: 'separate' | 'embedded'; muted: boolean;
   musicGain: number; effectsGain: number; timing: Timing;
+  tieRange: { enabled: boolean; mode: 'full' | 'half' };
 };
 export const DEFAULT_SETTINGS: PresenterSettings = {
   viewSource: 'chroma', keyColor: '#ff00ff', audioOutput: 'separate', muted: false,
   musicGain: 0.7, effectsGain: 1, timing: { ...DEFAULT_TIMING },
+  tieRange: { enabled: false, mode: 'full' },
 };
 export function parseSettings(input: unknown): PresenterSettings {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('Settings must be an object');
@@ -18,6 +20,11 @@ export function parseSettings(input: unknown): PresenterSettings {
   if (value.keyColor !== '#00ff00' && value.keyColor !== '#ff00ff') throw new Error('Invalid key color');
   if (value.audioOutput !== 'separate' && value.audioOutput !== 'embedded') throw new Error('Invalid audio output');
   if (typeof value.muted !== 'boolean') throw new Error('Mute must be boolean');
+  const tie = value.tieRange === undefined ? DEFAULT_SETTINGS.tieRange : value.tieRange;
+  if (typeof tie !== 'object' || tie === null || Array.isArray(tie)) throw new Error('Invalid tie range');
+  const rule = tie as Record<string, unknown>;
+  if (Object.keys(rule).some(key => !['enabled', 'mode'].includes(key)) || typeof rule.enabled !== 'boolean'
+    || (rule.mode !== 'full' && rule.mode !== 'half')) throw new Error('Invalid tie range');
   const bounded = (input: unknown, max: number): number => {
     if (typeof input !== 'number' || !Number.isFinite(input) || input < 0 || input > max) throw new Error('Invalid gain or duration');
     return input;
@@ -31,5 +38,6 @@ export function parseSettings(input: unknown): PresenterSettings {
   };
   if (raw.pinRateLimitMs !== undefined) timing.pinRateLimitMs = bounded(raw.pinRateLimitMs, 120000);
   return { viewSource: value.viewSource, keyColor: value.keyColor, audioOutput: value.audioOutput, muted: value.muted,
-    musicGain: bounded(value.musicGain, 1), effectsGain: bounded(value.effectsGain, 1), timing };
+    musicGain: bounded(value.musicGain, 1), effectsGain: bounded(value.effectsGain, 1), timing,
+    tieRange: { enabled: rule.enabled, mode: rule.mode } };
 }

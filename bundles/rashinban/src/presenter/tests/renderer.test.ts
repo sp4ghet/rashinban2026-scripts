@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createRenderer, rendererPlan, resultBounds, resultMapFrame, type MapFrame, type RendererAdapter, type RenderFrame } from '../../graphics/presenter/renderer.ts';
+import { createRenderer, paintResultMapLabel, rendererPlan, resultBounds, resultMapFrame, type MapFrame, type RendererAdapter, type RenderFrame } from '../../graphics/presenter/renderer.ts';
 import type { Panorama } from '../../types/presenter.ts';
 import { applySnapshot } from '../normalize.ts';
 import { seedViews } from '../telemetry.ts';
@@ -173,6 +173,46 @@ test('reveal gates answer and actual best guesses; no-pin player gets no invente
   assert.deepEqual(visible.bounds, { north: 1, south: 0, west: 179, east: -179 });
   f.projection.answer = null; renderer.render(f); assert.equal(fake.maps[0].disposed, false); assert.equal(fake.maps[0].frames.at(-1)?.visible, false);
 });
+test('tie-range result frames include complete ring extents and request explicit polar or world framing', () => {
+  const f = frame(); const answer = { lat: 0, lng: 179.8 };
+  f.state.ruleOptions = { individual: 5, mutual: 0, delay: 1, maxErrorDistance: 14_999_250 };
+  f.state.tieRange = { mode: 'full', rounds: [{ round: 1, band: 1000, withinBand: true }] };
+  f.state.players.forEach((player, index) => { player.results = [{ round: 1, score: index ? 3500 : 4000,
+    bestGuess: { lat: index + 1, lng: index ? 179.7 : -179.7, round: 1, score: index ? 3500 : 4000,
+      distanceM: index ? 200_000 : 100_000, createdAtMs: 1 },
+    healthBefore: 6000, healthAfter: 6000, damageDealt: 0, multiplier: 1 }]; });
+  const ordinary = resultMapFrame(f.state, 1, f.playerIds, answer)!;
+  assert.equal(ordinary.tieRange?.outerPath?.length, 129);
+  assert.ok(ordinary.bounds!.west > ordinary.bounds!.east, 'dateline ring uses wrapped bounds');
+  assert.equal(ordinary.padding, 64);
+
+  const polar = resultMapFrame(f.state, 1, f.playerIds, { lat: 89, lng: 45 })!;
+  assert.deepEqual({ west: polar.bounds?.west, east: polar.bounds?.east }, { west: -180, east: 180 });
+
+  f.state.tieRange!.rounds[0].band = 2500;
+  f.state.players[0].results[0].score = 2500;
+  f.state.players[1].results[0].score = 100;
+  const world = resultMapFrame(f.state, 1, f.playerIds, answer)!;
+  assert.equal(world.tieRange?.world, true);
+  assert.equal(world.bounds, null);
+});
+test('tie-range label paint remains hidden until the answer gate and clears disabled rounds', () => {
+  const label = { hidden: false, textContent: 'stale' };
+  const root = { querySelector: (selector: string) => selector === '#tie-range-label' ? label : null } as unknown as ParentNode;
+  const mapFrame = { visible: false, bounds: null, pins: [], lines: [], tieRange: {
+    circles: [], circlePaths: [], framePoints: [], fullLongitude: false, world: false, label: 'Tie band: 1,000 points · Both multipliers increase',
+  } } satisfies MapFrame;
+
+  paintResultMapLabel(root, mapFrame, false);
+  assert.equal(label.hidden, true);
+  assert.equal(label.textContent, '');
+  paintResultMapLabel(root, mapFrame, true);
+  assert.equal(label.hidden, false);
+  assert.equal(label.textContent, mapFrame.tieRange.label);
+  paintResultMapLabel(root, null, true);
+  assert.equal(label.hidden, true);
+  assert.equal(label.textContent, '');
+});
 test('map construction failure is sanitized, disposes partial resources and does not throw per frame', () => {
   const f = frame(); const fake = surfaces(); const errors: string[] = [];
   fake.adapter.map = () => { throw new Error('private raw error'); };
@@ -279,7 +319,8 @@ function googleBoundary() {
     options: any; map: any; constructor(options: any) { this.options = options; this.map = options.map; overlays.push(this); }
     setMap(map: any) { this.map = map; } unbindAll() {}
   }
-  const api = { Map: GMap, StreetViewPanorama: Pano, Marker: Overlay, Polyline: Overlay, SymbolPath: { CIRCLE: 0 },
+  class Marker extends Overlay {} class Polyline extends Overlay {} class Polygon extends Overlay {}
+  const api = { Map: GMap, StreetViewPanorama: Pano, Marker, Polyline, Polygon, SymbolPath: { CIRCLE: 0 },
     Size: class { width: number; height: number; constructor(width: number, height: number) { this.width = width; this.height = height; } },
     Point: class { x: number; y: number; constructor(x: number, y: number) { this.x = x; this.y = y; } },
     StreetViewService: class { getPanorama(request: any, callback: Function) { requests.push({ request, callback }); } },
@@ -474,6 +515,35 @@ test('Google map adapter fits visible bounds once and refits on expansion, and d
   assert.equal(fake.overlays[0].map, null); assert.deepEqual(fake.overlays.at(-1).options.path, [{ lat: 0, lng: 170 }, { lat: 1, lng: -170 }]);
   surface.render({ ...f, bounds: null }); assert.deepEqual(fake.maps[0].center, { lat: 0, lng: 0 }); assert.equal(fake.maps[0].zoom, 1);
   surface.dispose(); assert.ok(fake.overlays.every(overlay => overlay.map === null)); assert.ok(fake.cleared.includes(fake.maps[0]));
+});
+test('Google map adapter draws annular fill and sampled circle outlines below lines and pins, and refreshes changed geometry', () => {
+  const fake = googleBoundary(); const surface = googleAdapter(fake.root, fake.api, assert.fail).map('results-map');
+  const outer = [{ lat: 1, lng: 179 }, { lat: -1, lng: -179 }, { lat: 1, lng: 179 }];
+  const inner = [{ lat: .5, lng: 179.5 }, { lat: -.5, lng: -179.5 }, { lat: .5, lng: 179.5 }];
+  const frame: MapFrame = { visible: true, bounds: { north: 1, south: -1, west: 179, east: -179 },
+    tieRange: { circles: [{ kind: 'inner', center: { lat: 0, lng: 180 }, radiusM: 100, color: '#458af2' }], circlePaths: [inner],
+      outerRadiusM: 200, outerPath: outer, annulus: [outer, inner], framePoints: outer,
+      fullLongitude: false, world: false, label: 'Tie range' },
+    lines: [{ from: { lat: 0, lng: 180 }, to: { lat: .25, lng: 179.75 }, color: '#458af2' }],
+    pins: [{ kind: 'answer', point: { lat: 0, lng: 180 }, color: '#ffd55a', label: 'Answer' }] };
+  surface.render(frame);
+
+  assert.deepEqual(fake.overlays.map(value => value.constructor.name), ['Polygon', 'Polyline', 'Polyline', 'Polyline', 'Marker']);
+  assert.equal(fake.overlays[0].options.fillOpacity, 0.14);
+  assert.deepEqual(fake.overlays[0].options.paths, [outer, inner]);
+  assert.equal(fake.overlays[1].options.geodesic, true);
+  assert.equal(fake.overlays[1].options.strokeOpacity, 0);
+  assert.equal(fake.overlays[1].options.icons[0].repeat, '14px');
+  assert.deepEqual(fake.overlays[2].options.path, inner);
+  assert.equal(fake.overlays[2].options.strokeColor, '#458af2');
+  assert.ok(fake.overlays[3].options.zIndex > fake.overlays[2].options.zIndex);
+  assert.ok(fake.overlays[4].options.zIndex > fake.overlays[3].options.zIndex);
+
+  const changedInner = inner.map(point => ({ ...point, lat: point.lat * 1.5 }));
+  surface.render({ ...frame, tieRange: { ...frame.tieRange!, circles: [{ ...frame.tieRange!.circles[0], radiusM: 150 }], circlePaths: [changedInner] } });
+  assert.ok(fake.overlays.slice(0, 5).every(value => value.map === null));
+  assert.deepEqual(fake.overlays.at(-3).options.path, changedInner);
+  surface.dispose(); assert.ok(fake.overlays.every(value => value.map === null));
 });
 test('empty exact panorama ID reports unavailable', () => {
   const fake = googleBoundary(); const errors: string[] = [];

@@ -5,7 +5,9 @@ import { eligibleCompletion, type ClientRole } from '../../presenter/clock.ts';
 import type { DuelState, SeriesState, Timeline, Views } from '../../types/presenter.ts';
 import { DEFAULT_SETTINGS, parseSettings, type PresenterSettings } from '../../presenter/settings.ts';
 import { parseSeries } from '../../presenter/series.ts';
-import { applySnapshot } from '../../presenter/normalize.ts';
+import { applySnapshot, rollbackRound } from '../../presenter/normalize.ts';
+import { updateRuleContext, type RuleContexts } from '../../presenter/tie-range-context.ts';
+import { deriveTieRange } from '../../presenter/tie-range.ts';
 import { applyTelemetry, seedViews } from '../../presenter/telemetry.ts';
 import { advanceTimeline, finishEffect, nextTimelineWakeAtMs } from '../../presenter/timeline.ts';
 import { createConnection, createDefaultConnectionDeps, type ConnectionDeps } from './connection.ts';
@@ -44,6 +46,9 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   let selectedPartyId = configuredPartyId;
   let fixture: unknown = config.replayFixture ?? REPLAY_FIXTURES[0];
   const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings, { defaultValue: structuredClone(DEFAULT_SETTINGS), persistent: true });
+  const ruleContexts = nodecg.Replicant<RuleContexts>(REPLICANTS.presenterRuleContexts, { defaultValue: { live: null, replay: null }, persistent: true });
+  let rawDuel: DuelState | null = null;
+  let ruleWarnings: string[] = [];
   const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia, { defaultValue: structuredClone(EMPTY_MEDIA), persistent: true });
   try { media.value = parseMedia(media.value); } catch { media.value = structuredClone(EMPTY_MEDIA); }
   const videoAssets = nodecg.Replicant<AssetInventory>('assets:video', { defaultValue: [], persistent: false });
@@ -165,7 +170,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
     const at = wake === null ? skipAt : skipAt === null ? wake : Math.min(wake, skipAt);
     if (at !== null) cancelWake = deps.schedule(() => tick(), at - now);
   }
-  function reset(): void { duel.value = null; views.value = null; mediaStatus.value = { generation: null, effect: 'none', status: 'idle' }; tick(true); }
+  function reset(): void { rawDuel = null; ruleWarnings = []; duel.value = null; views.value = null; mediaStatus.value = { generation: null, effect: 'none', status: 'idle' }; tick(true); }
   nodecg.listenFor('presenter:effect-ended', (request: unknown, ack) => {
     let accepted = false;
     try {
@@ -188,46 +193,71 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   });
   function ingest(message: unknown, at: number, bootstrap: boolean, offset = 0): void {
     const adjusted = offset === 0 ? message : shiftMessageClock(message, -offset);
-    const accepted = applySnapshot(duel.value, adjusted);
+    // The source owns protocol versioning and rollback even after our game finishes.
+    const previous = bootstrap && input === 'replay' ? null : rawDuel ?? ruleContexts.value[input]?.source ?? null;
+    const accepted = applySnapshot(previous, adjusted);
+    function present(state: DuelState, restore: boolean): void {
+      const configured = settings.value.tieRange.enabled ? settings.value.tieRange.mode : 'off';
+      const context = updateRuleContext(ruleContexts.value[input], state, configured, rollbackRound(previous, state, adjusted));
+      // Publication recursively proxies nested objects. Keep our calculation input detached.
+      ruleContexts.value = JSON.parse(JSON.stringify({ ...ruleContexts.value, [input]: context })) as RuleContexts;
+      rawDuel = state;
+      try {
+        const derived = deriveTieRange(context.source, context.mode);
+        const nextViews = restore || !views.value || views.value.gameId !== derived.gameId || views.value.round !== derived.round
+          ? seedViews(derived) : views.value;
+        // NodeCG values can have only one Replicant owner.
+        duel.value = JSON.parse(JSON.stringify(derived)) as DuelState;
+        views.value = nextViews;
+        ruleWarnings = [];
+        tick(restore);
+      } catch {
+        ruleWarnings = ['Tie-range calculation unavailable: check multiplier settings and complete round history.'];
+        duel.value = null; views.value = null; tick(true);
+      }
+    }
     if (accepted.accepted && accepted.state) {
-      const state = accepted.state;
-      const nextViews = bootstrap || !views.value || views.value.gameId !== state.gameId || views.value.round !== state.round
-        ? seedViews(state) : views.value;
-      duel.value = state;
-      views.value = nextViews;
-      tick(bootstrap);
+      present(accepted.state, bootstrap);
     } else if (bootstrap && accepted.state && accepted.warnings.length === 0) {
       // Reconnect can return the same version. Restore its current presentation
       // without replaying an in-flight historical result or retaining old POV.
-      views.value = seedViews(accepted.state);
-      tick(true);
-    } else if (duel.value && views.value) {
+      present(accepted.state, true);
+    } else if (rawDuel && duel.value && views.value && duel.value.status !== 'Finished') {
       const previous = views.value;
-      const next = applyTelemetry(previous, duel.value, adjusted);
+      const next = applyTelemetry(previous, rawDuel, adjusted);
       views.value = next;
       const pins = Object.fromEntries(Object.entries(next.players).filter(([id, view]) => !samePin(previous.players[id]?.pin, view.pin)).map(([id, view]) => [id, view.pin]));
       if (Object.keys(pins).length) timeline.value = JSON.parse(JSON.stringify(applyPinCues(timeline.value, pins, deps.now(), settings.value.timing))) as Timeline;
     }
     connection.value = { ...connection.value, lastUpdateMs: at,
-      gameId: duel.value?.gameId ?? connection.value.gameId, warnings: accepted.warnings };
+      gameId: rawDuel?.gameId ?? connection.value.gameId, warnings: [...accepted.warnings, ...ruleWarnings] };
   }
-  function startReplay(name: unknown): void {
+  function startReplay(name: unknown, restore = false): void {
     // Validate and read before canceling an active replay.
-    const rows = loadReplay(name);
+    let rows = loadReplay(name);
+    const saved = restore && ruleContexts.value.replayFixture === name ? ruleContexts.value.replay : null;
+    const position = saved ? rows.reduce((found, row, index) => {
+      const state = (row.message as { duel?: { state?: { gameId?: string; version?: number } } }).duel?.state;
+      return state?.gameId === saved.source.gameId && state?.version === saved.source.version ? index : found;
+    }, -1) : -1;
+    const resuming = position >= 0;
+    if (resuming) rows = rows.slice(position);
     source?.stop(); reset(); fixture = name; input = 'replay';
+    ruleContexts.value = { ...ruleContexts.value, replay: resuming ? saved : null, replayFixture: String(name) };
     connection.value = { ...connection.value, state: 'live', input, error: null, replayFixture: String(name), serverOffsetMs: 0,
       partyId: null, gameId: null, lastUpdateMs: null, warnings: [] };
-    source = createReplay(rows, (message, at) => ingest(message, at, false), deps);
+    let bootstrap = resuming;
+    source = createReplay(rows, (message, at) => { ingest(message, at, bootstrap); bootstrap = false; }, deps);
     source.start();
   }
-  function reconnect(body: unknown): void {
+  function reconnect(body: unknown, restoreReplay = false): void {
     const value = body === undefined ? {} : record(body);
     if (Object.keys(value).some(key => !['input', 'fixture', 'partyId'].includes(key))) throw new Error('Invalid reconnect');
     const nextInput = 'input' in value ? value.input : input;
     if (nextInput !== 'live' && nextInput !== 'replay') throw new Error('Invalid input mode');
     if (nextInput === 'replay') {
       if ('partyId' in value) throw new Error('Party selection is disabled in replay mode');
-      startReplay(value.fixture ?? fixture); return;
+      startReplay(value.fixture ?? fixture, restoreReplay); return;
     }
     if ('fixture' in value) throw new Error('Replay is disabled in live mode');
     const nextPartyId = 'partyId' in value ? parsePartySelection(value.partyId) : selectedPartyId;
@@ -293,6 +323,6 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock)
   nodecg.listenFor('presenter:clock', (_request, ack) => { if (ack && !ack.handled) ack(null, deps.now()); });
   try {
     if (config.input !== undefined && config.input !== 'live' && config.input !== 'replay') throw new Error('Invalid input mode');
-    reconnect(undefined);
+    reconnect(undefined, true);
   } catch { connection.value = { ...connection.value, state: 'disconnected', error: 'Invalid presenter input or replay fixture' }; }
 }

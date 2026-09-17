@@ -184,6 +184,26 @@ function status(value: unknown): DuelState['status'] {
   return decoded;
 }
 
+function ruleOptions(value: RecordValue): DuelState['ruleOptions'] {
+  const individual = value.roundWinMultiplierIncrement;
+  const mutual = value.multiplierIncrement;
+  const delay = value.roundsWithoutDamageMultiplier;
+  if (
+    !Number.isInteger(individual) || (individual as number) < 0
+    || !Number.isInteger(mutual) || (mutual as number) < 0
+    || !Number.isInteger(delay) || (delay as number) < 0
+  ) return undefined;
+
+  const map = isRecord(value.map) ? value.map : null;
+  const scale = map?.maxErrorDistance;
+  return {
+    individual: individual as number,
+    mutual: mutual as number,
+    delay: delay as number,
+    maxErrorDistance: typeof scale === 'number' && Number.isFinite(scale) && scale > 0 ? scale : null,
+  };
+}
+
 function decodeState(message: RecordValue, code: string): DuelState {
   const duel = record(message.duel);
   const source = record(duel.state);
@@ -206,6 +226,7 @@ function decodeState(message: RecordValue, code: string): DuelState {
     : behavior as DuelState['roundStartingBehavior'];
   const maxRounds = options.maxNumberOfRounds == null ? null : integer(options.maxNumberOfRounds);
   const roundTime = options.maxRoundTime == null ? null : number(options.maxRoundTime);
+  const decodedRuleOptions = ruleOptions(options);
   if ((maxRounds !== null && maxRounds < 0) || (roundTime !== null && roundTime < 0)) invalid();
 
   return {
@@ -220,6 +241,7 @@ function decodeState(message: RecordValue, code: string): DuelState {
     ...(options.maxNumberOfRounds === undefined ? {} : { maxRounds: maxRounds === 0 ? null : maxRounds }),
     ...(options.maxRoundTime === undefined ? {} : { roundTimeMs: roundTime === null || roundTime === 0 ? null : roundTime * 1000 }),
     initialHealth: number(options.initialHealth),
+    ...(decodedRuleOptions === undefined ? {} : { ruleOptions: decodedRuleOptions }),
     players,
     rounds,
     aborted: code === 'DuelAborted',

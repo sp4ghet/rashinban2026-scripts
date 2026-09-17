@@ -1,11 +1,13 @@
 import { REPLICANTS, type PresenterConnection, type PresenterRenderer, type PresenterClients } from '../types/replicants.ts';
 import type { DuelState, SeriesState, Timeline } from '../types/presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
+import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import { CUE_KINDS, EMPTY_MEDIA, MUSIC_CONTEXTS, type AssetInventory, type MediaManifest, type Stem } from '../presenter/media.ts';
 import type { PresenterMediaStatus } from '../types/replicants.ts';
 
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
 const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings);
+const ruleContexts = nodecg.Replicant<RuleContexts>(REPLICANTS.presenterRuleContexts);
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const connection = nodecg.Replicant<PresenterConnection>(REPLICANTS.presenterConnection);
 const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
@@ -116,6 +118,14 @@ async function control(action: string, body?: unknown, errorTarget = 'error') {
 }
 function showSeries(value: SeriesState) { element("current-match-summary").textContent = `${value.left.name} ${value.left.wins} – ${value.right.wins} ${value.right.name}`; }
 function status() {
+  const context = ruleContexts.value?.[connection.value?.input ?? 'live'];
+  const modeLabel = (mode: string) => mode === 'off' ? 'Off' : mode === 'full' ? 'Full' : 'Half';
+  const configured = settings.value?.tieRange;
+  const configuredMode = configured?.enabled ? configured.mode : 'off';
+  const active = context && context.source.gameId === connection.value?.gameId ? context : null;
+  element('tie-range-status').textContent = active
+    ? `Active duel: ${modeLabel(active.mode)}${active.mode !== configuredMode ? ` · Next duel: ${modeLabel(configuredMode)}` : ''}`
+    : `Next duel: ${modeLabel(configuredMode)}`;
   const labels = { unreported: 'No graphic report', loading: 'Loading Google Maps', 'api-ready': 'Google Maps API loaded',
     'missing-key': 'Google Maps browser key missing', 'api-error': 'Google Maps API unavailable', 'view-error': 'Google Maps view unavailable', 'pano-error': 'Exact Street View panorama unavailable' };
   element('renderer-status').textContent = labels[renderer.value?.status ?? 'unreported'];
@@ -155,10 +165,16 @@ settings.on('change', value => {
   select('view-source').value = value.viewSource; select('key-color').value = value.keyColor;
   select('audio-output').value = value.audioOutput; input('muted').checked = value.muted;
   input('music-gain').value = String(value.musicGain); input('effects-gain').value = String(value.effectsGain);
+  input('tie-range-enabled').checked = value.tieRange?.enabled ?? false;
+  select('tie-range-mode').value = value.tieRange?.mode ?? 'full';
+  select('tie-range-mode').disabled = !input('tie-range-enabled').checked;
   element('audio-launch-help').textContent = value.audioOutput === 'separate'
     ? 'Open Program graphic and Separate audio.'
     : 'Open Program graphic for video and audio.';
+  status();
 });
+ruleContexts.on('change', status);
+input('tie-range-enabled').addEventListener('change', () => { select('tie-range-mode').disabled = !input('tie-range-enabled').checked; });
 duel.on('change', status);
 let partyInitialized = false;
 connection.on('change', (value, previous) => {
@@ -176,7 +192,8 @@ element('settings-form').addEventListener('submit', event => {
   event.preventDefault(); if (!settings.value) return;
   void control('settings', { ...settings.value, viewSource: select('view-source').value, keyColor: select('key-color').value,
     audioOutput: select('audio-output').value, muted: input('muted').checked,
-    musicGain: Number(input('music-gain').value), effectsGain: Number(input('effects-gain').value) });
+    musicGain: Number(input('music-gain').value), effectsGain: Number(input('effects-gain').value),
+    tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value } });
 });
 element('reconnect').addEventListener('click', () => {
   const mode = select('input-mode').value;

@@ -1,4 +1,6 @@
 export type Mode = 'MOVE' | 'NM' | 'NMPZ';
+export type TieRangeMode = 'off' | 'full' | 'half';
+export type TieRangeRound = { round: number; band: number; withinBand: boolean };
 
 export type Point = { lat: number; lng: number };
 
@@ -58,6 +60,8 @@ export type DuelState = {
   maxRounds?: number | null;
   roundTimeMs?: number | null;
   initialHealth: number;
+  ruleOptions?: { individual: number; mutual: number; delay: number; maxErrorDistance: number | null };
+  tieRange?: { mode: Exclude<TieRangeMode, 'off'>; rounds: TieRangeRound[] };
   players: [DuelPlayer, DuelPlayer];
   rounds: Round[];
   aborted: boolean;
