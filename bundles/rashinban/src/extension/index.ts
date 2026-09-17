@@ -2,6 +2,7 @@ import type NodeCG from "@nodecg/types";
 import { registerMatch } from './match';
 
 import { registerBanPick } from "./banpick";
+import { registerBracket } from "./bracket";
 import { loadLocalEnv } from "./env";
 import { registerStartgg } from "./startgg";
 import { registerSheet } from "./sheet";
@@ -19,6 +20,7 @@ export = (nodecg: NodeCG.ServerAPI) => {
 
   registerBanPick(nodecg, router);
   registerStartgg(nodecg, router);
+  registerBracket(nodecg, router);
   registerSheet(nodecg, router);
   registerMatch(nodecg);
   registerPlayerCards(nodecg, router);

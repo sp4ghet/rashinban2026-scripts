@@ -36,6 +36,12 @@ npm run dev     # esbuild watch + NodeCG together
   (`node scripts/fetch-fonts.mjs`). The heading font kaneda-gothic loads from
   the 2025 Adobe Fonts kit (its licence forbids self-hosting); Oswald is the
   offline fallback.
+- DAY2 bracket (1920×1080): `graphics/brackets-finals.html`, the top-8 layout
+  ported from [rashinban2026](https://github.com/Zashness/rashinban2026). The
+  "Bracket" panel picks the data: live start.gg (DAY2 group, auto-detected) or,
+  for testing, a recorded phase-group sample from `docs/startgg/samples/`
+  (record one with `npm run startgg:fetch`), mapped the same way.
+  `POST /rashinban/bracket/refresh` re-reads it.
 - Ban & Pick player tablet: `graphics/banpick-player.html` (append
   `?player=A` or `?player=B` to lock a tablet to one player). Operator panel
   "Ban & Pick" on the dashboard. Design notes in
