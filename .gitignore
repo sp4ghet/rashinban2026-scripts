@@ -11,6 +11,7 @@ node_modules/
 /logs/
 /assets/
 /cfg/rashinban.json
+/cfg/rashinban.local.json
 /.secrets/
 
 # Local secrets and per-machine config (see README "Secrets")

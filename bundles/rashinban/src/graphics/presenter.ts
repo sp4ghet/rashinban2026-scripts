@@ -11,6 +11,8 @@ import { clientRole, createPresenterClient } from './presenter/client.ts';
 import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
 import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
+import type { PresenterPublicConfig } from '../config/types.ts';
+import { boundMediaState, changedVideoBindings, mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
@@ -19,21 +21,32 @@ const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
 const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews);
 const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
 const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia);
-const videoAssets = nodecg.Replicant<AssetInventory>('assets:video');
+const presenterAssets = nodecg.Replicant<EffectiveAssetInventory>(REPLICANTS.presenterAssets);
+const legacyVideoAssets = nodecg.Replicant<AssetInventory>('assets:video');
+const publicConfig = nodecg.Replicant<PresenterPublicConfig>(REPLICANTS.presenterPublicConfig);
 let selectedMedia = EMPTY_MEDIA;
 const videoPlayer = createVideoPlayer(() => {
   const video = document.createElement('video'); video.className = 'celebration-video'; document.body.append(video); return video;
 }, (fn, ms) => { const id = setTimeout(fn, ms); return () => clearTimeout(id); });
-media.on('change', value => {
-  try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
-  videoPlayer.preload(selectedMedia);
-  void audioOutput.load(selectedMedia);
-});
 const role = clientRole(location.search);
 const clientId = crypto.randomUUID();
 const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
   send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });
 const audioOutput = createAudioOutput(client);
+let boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
+media.on('change', value => {
+  try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
+  boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
+  videoPlayer.preload(selectedMedia, boundAssets.versions);
+  void audioOutput.load(selectedMedia, boundAssets.versions);
+});
+presenterAssets.on('change', inventory => {
+  const next = boundMediaState(selectedMedia, inventory);
+  const changedVideos = changedVideoBindings(boundAssets, next);
+  if (next.audioSignature !== boundAssets.audioSignature) void audioOutput.load(selectedMedia, next.versions);
+  boundAssets = next;
+  if (changedVideos.length) { videoPlayer.invalidate(changedVideos); videoPlayer.preload(selectedMedia, next.versions); }
+});
 document.body.dataset.clientId = clientId; document.body.dataset.role = role;
 function reconcileVideo() {
   const options = settings.value ?? DEFAULT_SETTINGS;
@@ -63,11 +76,16 @@ function rendererError(message: string) {
   const placeholder = element('results-map').querySelector('span');
   if (placeholder) placeholder.textContent = 'Map unavailable';
 }
-const publicConfig = nodecg.bundleConfig as { presenter?: { googleMapsApiKey?: unknown } };
-const apiKey = publicConfig.presenter?.googleMapsApiKey;
-publishRenderer('loading');
-void createGoogleRenderer(document.body, typeof apiKey === 'string' ? apiKey : '', rendererError, () => publishRenderer('api-ready'))
-  .then(value => { renderer = value; publishRenderer('api-ready'); }).catch(() => {});
+let rendererStarted = false;
+function startRenderer(value?: PresenterPublicConfig) {
+  if (!value || rendererStarted) return;
+  rendererStarted = true;
+  publishRenderer('loading');
+  void createGoogleRenderer(document.body, value.googleMapsApiKey, rendererError, () => publishRenderer('api-ready'))
+    .then(next => { renderer = next; publishRenderer('api-ready'); }).catch(() => {});
+}
+publicConfig.on('change', startRenderer);
+startRenderer(publicConfig.value);
 window.addEventListener('pagehide', () => { clearInterval(mediaGuard); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {
@@ -79,7 +97,7 @@ function frame() {
   // Sole graphic cue consumer; sound scheduling belongs to the audio lease engine.
   for (const cue of client.pollCues()) if (cue.kind === 'five-k' && timing) {
     const complete = client.effectCompletion(timing);
-    const asset = celebrationAsset(selectedMedia, timing.effect, videoAssets.value ?? []);
+    const asset = celebrationAsset(selectedMedia, timing.effect, mediaAssetsForCategory(presenterAssets.value, 'video', legacyVideoAssets.value ?? []));
     if (asset) videoPlayer.play(asset, timing.generation, (_generation, failed) => { void complete(failed); }, options.muted, options.effectsGain);
     else void complete(true);
   }
@@ -116,10 +134,10 @@ function frame() {
     write('mode', state?.mode ?? '—');
     // Series wins count completed games; the active game is the next one.
     write('game-number', String(match.left.wins + match.right.wins + 1));
-    const multiplier = scene.kind === 'preview' ? state?.roundTimeMs ? `${state.roundTimeMs / 1000}s` : '—'
-      : multiplierLabel(state ?? null, timing, { left: match.left.playerId, right: match.right.playerId });
-    write('multiplier-label', scene.kind === 'preview' ? 'ROUND TIME' : 'DAMAGE');
-    write('right-multiplier-label', scene.kind === 'preview' ? 'ROUND TIME' : 'DAMAGE');
+    const multiplier = multiplierLabel(state ?? null, scene.kind === 'preview' ? { ...timing, phase: 'pre-round' } : timing,
+      { left: match.left.playerId, right: match.right.playerId });
+    write('multiplier-label', 'DAMAGE');
+    write('right-multiplier-label', 'DAMAGE');
     const sideMultipliers = multiplier.startsWith('L ') ? multiplier.slice(2).split(' · R ') : [multiplier, multiplier];
     write('multiplier', sideMultipliers[0]);
     write('right-multiplier', sideMultipliers[1]);

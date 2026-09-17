@@ -1,6 +1,6 @@
 # Presenter media
 
-Upload files in NodeCG's **Assets** tab, under **Presenter music**, **Presenter cue sounds**, or **Presenter celebrations**. Select them in **Duels Presenter → Celebration media**, then **Apply media**. The menus use NodeCG's public `assets:music`, `assets:effects`, and `assets:video` inventories. An unavailable saved selection stays visible so the operator can replace it.
+Upload files in NodeCG's **Assets** tab, under **Presenter music**, **Presenter cue sounds**, or **Presenter celebrations**. Select them in **Duels Presenter → Celebration media**, then **Apply media**. The menus use the merged `presenterAssets` inventory and identify inherited files. Upload shared media from the main checkout; worktree uploads override a shared file with the same category and filename. Deleting a local file reveals the shared file again. See [configuration and media inheritance](../configuration.md). An unavailable saved selection stays visible so the operator can replace it.
 
 Single and double 5K use independent videos. Two perfect scores select exactly one double video. If that selection is empty or missing, results reveal normally; the presenter never substitutes two single videos. The media status shows missing files, playback failures, natural completion, and watchdog expiry.
 
@@ -40,7 +40,7 @@ Cues use the same AudioContext and ownership gate as music. Expired one-shots ar
 
 ## Manifest API
 
-`presenterMedia` persists separately from presentation settings. Submit a complete value with `presenter:control { action: 'media', body: manifest }`, or `POST /rashinban/presenter/media`. Invalid input is rejected without replacing the previous value. Invalid persisted data resets to the silent empty manifest on startup.
+`presenterMedia` is a nonpersistent projection of file configuration, saved separately from presentation settings. Submit a complete value with `presenter:control { action: 'media', body: manifest }`, or `POST /rashinban/presenter/media`. Invalid input is rejected without replacing the previous value. Invalid file edits report an error and retain the last valid configuration.
 
 ```json
 {

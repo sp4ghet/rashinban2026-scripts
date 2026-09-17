@@ -7,6 +7,7 @@ import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import type { ConnectionStatus } from '../extension/presenter/connection.ts';
 import type { ClientReady, Lease } from '../presenter/clock.ts';
 import type { MediaManifest, AudioStatus } from '../presenter/media.ts';
+import type { ConfigStatus, PresenterPublicConfig } from '../config/types.ts';
 export type PresenterMediaStatus = { generation: string | null; effect: string; status: 'idle' | 'pending' | 'missing' | 'complete' | 'failed' | 'watchdog' };
 
 export type PresenterConnection = ConnectionStatus & {
@@ -26,6 +27,7 @@ import type { PlayerProfile } from "../sheet/players";
 import type { PlayerCardsState, SheetConfig, SheetStatus } from "../sheet/types";
 import type { CurrentMatchSelection } from "../match/current";
 import type { MatchState, ResolvedMatch } from '../match/state.ts';
+import type { EffectiveAssetInventory } from '../config/media-url.ts';
 import type { BracketConfig, BracketFinals } from "../bracket/finals";
 
 export const REPLICANTS = {
@@ -53,6 +55,9 @@ export const REPLICANTS = {
   presenterClients: 'presenterClients',
   presenterMedia: 'presenterMedia',
   presenterMediaStatus: 'presenterMediaStatus',
+  configurationStatus: 'configurationStatus',
+  presenterPublicConfig: 'presenterPublicConfig',
+  presenterAssets: 'presenterAssets',
 } as const;
 
 export interface ReplicantMap {
@@ -80,6 +85,9 @@ export interface ReplicantMap {
   [REPLICANTS.presenterClients]: PresenterClients;
   [REPLICANTS.presenterMedia]: MediaManifest;
   [REPLICANTS.presenterMediaStatus]: PresenterMediaStatus;
+  [REPLICANTS.configurationStatus]: ConfigStatus;
+  [REPLICANTS.presenterPublicConfig]: PresenterPublicConfig;
+  [REPLICANTS.presenterAssets]: EffectiveAssetInventory;
 }
 
 /** Messages the ban-pick extension listens for (nodecg.sendMessage). */
@@ -105,6 +113,11 @@ export const SHEET_MESSAGES = {
   refresh: "sheet:refresh",
   /** Partial<SheetConfig> plus optional sheetUrl (full URL, parsed into id/gid). */
   setConfig: "sheet:setConfig",
+} as const;
+
+export const CONFIGURATION_MESSAGES = {
+  reset: 'configuration:reset',
+  importLocal: 'configuration:importLocal',
 } as const;
 
 /** Authoritative current match; edits include the last observed revision. */

@@ -15,7 +15,7 @@
 
 <h2>Google Maps &amp; Street View</h2><details><summary>API key setup</summary>
 <div id="google-setup-status" class="status"></div>
-<p class="help">Set <code>presenter.googleMapsApiKey</code> in <code>cfg/rashinban.json</code> in this NodeCG working directory. Use your own Google browser key with billing and Maps JavaScript API enabled. Restrict HTTP referrers to your browser-source origins, including <code id="google-referrer"></code>. Restart this NodeCG instance, then reload its graphics and dashboard. <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank" rel="noopener">Google key setup</a></p>
+<p class="help">Set <code>presenter.googleMapsApiKey</code> in the shared installation's <code>cfg/rashinban.json</code>. A worktree may override it in <code>cfg/rashinban.local.json</code>. Use your own Google browser key with billing and Maps JavaScript API enabled. Restrict HTTP referrers to your browser-source origins, including <code id="google-referrer"></code>. Reload graphics after changing this startup configuration. <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank" rel="noopener">Google key setup</a></p>
 </details><div id="renderer-status" class="status">No graphic report</div>
 <h2>Browser sources</h2><div class="status"><strong id="program-status">No active program</strong><details><summary>Source details</summary><div id="client-list"></div></details></div>
 <nav class="launch-links" aria-label="Open presenter sources"><a href="/bundles/rashinban/graphics/presenter.html?role=preview" target="_blank" rel="noopener">Silent preview</a><a href="/bundles/rashinban/graphics/presenter.html?role=program&amp;audioUnlock=1" target="_blank" rel="noopener">Program graphic</a><a href="/bundles/rashinban/graphics/presenter-audio.html?role=audio&amp;audioUnlock=1" target="_blank" rel="noopener">Separate audio</a></nav>
@@ -33,11 +33,17 @@
 <div id="tie-range-status" class="status">Next duel: Off</div>
 <p class="help">Damage still applies. Rounds within the tie range increase both multipliers. Changes apply to the next duel.</p>
 </fieldset>
-<button class="primary" type="submit">Apply presentation</button></form>
+<button class="primary" type="submit">Apply presentation</button>
+<div id="settings-configuration-status" class="status">Loading configuration…</div>
+<div class="row"><button id="settings-configuration-reset" type="button">Reset to shared</button><button id="settings-configuration-import" type="button">Import local settings</button></div>
+<div id="settings-configuration-error" class="warning" role="status"></div></form>
 <form id="media-form"><h2>Celebration media</h2><div id="media-status" class="status">No celebration yet</div>
 <p class="help">Upload clips in NodeCG Assets, then select below.</p>
 <div class="row"><fieldset><label>Single 5K<select id="single-video" data-assets="video"></select></label><label>Soundtrack<select id="single-soundtrack"><option value="embedded">Embedded in video</option><option value="cue">Separate five-k cue</option><option value="silent">Silent</option></select></label><label>Maximum wait (ms)<input id="single-watchdog" type="number" min="500" max="120000" value="10000"></label></fieldset>
 <fieldset><label>Double 5K<select id="double-video" data-assets="video"></select></label><label>Soundtrack<select id="double-soundtrack"><option value="embedded">Embedded in video</option><option value="cue">Separate five-k cue</option><option value="silent">Silent</option></select></label><label>Maximum wait (ms)<input id="double-watchdog" type="number" min="500" max="120000" value="10000"></label></fieldset></div>
 <details><summary>Music stems and cue sounds</summary><div id="media-stems"></div><button id="add-stem" type="button">Add music stem</button><h2>Context fade (ms)</h2><div id="media-fades" class="row"></div><h2>Cue sounds</h2><p class="help">Local preview: 50% volume, up to 10 seconds.</p><audio id="cue-preview-audio"></audio><button id="stop-cue-preview" type="button">Stop local preview</button><div id="media-sounds" class="row"></div></details>
-<button class="primary wide" type="submit">Apply media</button></form>
+<button class="primary wide" type="submit">Apply media</button>
+<div id="media-configuration-status" class="status">Loading configuration…</div>
+<div class="row"><button id="media-configuration-reset" type="button">Reset to shared</button><button id="media-configuration-import" type="button">Import local settings</button></div>
+<div id="media-configuration-error" class="warning" role="status"></div></form>
 <div id="error" role="status"></div><script src="presenter-control.js"></script></body></html>

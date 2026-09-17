@@ -173,28 +173,29 @@ test('reveal gates answer and actual best guesses; no-pin player gets no invente
   assert.deepEqual(visible.bounds, { north: 1, south: 0, west: 179, east: -179 });
   f.projection.answer = null; renderer.render(f); assert.equal(fake.maps[0].disposed, false); assert.equal(fake.maps[0].frames.at(-1)?.visible, false);
 });
-test('tie-range result frames include complete ring extents and request explicit polar or world framing', () => {
+test('tie-range results frame the markers even when rings cross the dateline, poles, or cover the world', () => {
   const f = frame(); const answer = { lat: 0, lng: 179.8 };
   f.state.ruleOptions = { individual: 5, mutual: 0, delay: 1, maxErrorDistance: 14_999_250 };
   f.state.tieRange = { mode: 'full', rounds: [{ round: 1, band: 1000, withinBand: true }] };
   f.state.players.forEach((player, index) => { player.results = [{ round: 1, score: index ? 3500 : 4000,
-    bestGuess: { lat: index + 1, lng: index ? 179.7 : -179.7, round: 1, score: index ? 3500 : 4000,
+    bestGuess: { lat: index + 1, lng: index ? 179 : -179, round: 1, score: index ? 3500 : 4000,
       distanceM: index ? 200_000 : 100_000, createdAtMs: 1 },
     healthBefore: 6000, healthAfter: 6000, damageDealt: 0, multiplier: 1 }]; });
   const ordinary = resultMapFrame(f.state, 1, f.playerIds, answer)!;
   assert.equal(ordinary.tieRange?.outerPath?.length, 129);
-  assert.ok(ordinary.bounds!.west > ordinary.bounds!.east, 'dateline ring uses wrapped bounds');
-  assert.equal(ordinary.padding, 64);
+  assert.deepEqual(ordinary.bounds, { north: 2, south: 0, west: 179, east: -179 });
+  assert.equal(ordinary.padding ?? 45, 45);
 
   const polar = resultMapFrame(f.state, 1, f.playerIds, { lat: 89, lng: 45 })!;
-  assert.deepEqual({ west: polar.bounds?.west, east: polar.bounds?.east }, { west: -180, east: 180 });
+  assert.equal(polar.tieRange?.fullLongitude, true);
+  assert.deepEqual(polar.bounds, { north: 89, south: 1, west: 45, east: -179 });
 
   f.state.tieRange!.rounds[0].band = 2500;
   f.state.players[0].results[0].score = 2500;
   f.state.players[1].results[0].score = 100;
   const world = resultMapFrame(f.state, 1, f.playerIds, answer)!;
   assert.equal(world.tieRange?.world, true);
-  assert.equal(world.bounds, null);
+  assert.deepEqual(world.bounds, ordinary.bounds);
 });
 test('tie-range label paint remains hidden until the answer gate and clears disabled rounds', () => {
   const label = { hidden: false, textContent: 'stale' };
@@ -529,7 +530,7 @@ test('Google map adapter draws annular fill and sampled circle outlines below li
   surface.render(frame);
 
   assert.deepEqual(fake.overlays.map(value => value.constructor.name), ['Polygon', 'Polyline', 'Polyline', 'Polyline', 'Marker']);
-  assert.equal(fake.overlays[0].options.fillOpacity, 0.14);
+  assert.equal(fake.overlays[0].options.fillOpacity, 0.18);
   assert.deepEqual(fake.overlays[0].options.paths, [outer, inner]);
   assert.equal(fake.overlays[1].options.geodesic, true);
   assert.equal(fake.overlays[1].options.strokeOpacity, 0);

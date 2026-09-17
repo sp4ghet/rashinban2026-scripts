@@ -4,7 +4,6 @@
     "input": "live",
     "replayFixture": "gs2-ws-full-duel-sequence.json",
     "partyId": null,
-    "clientVersion": "1.7695-a61479c",
-    "cookieFile": ".secrets/geoguessr.json"
+    "clientVersion": "1.7695-a61479c"
   }
 }

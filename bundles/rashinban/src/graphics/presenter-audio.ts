@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.
 import { EMPTY_MEDIA, parseMedia, type MediaManifest } from '../presenter/media.ts';
 import { createPresenterClient } from './presenter/client.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
+import { boundMediaState, type EffectiveAssetInventory } from '../config/media-url.ts';
 
 const role = new URLSearchParams(location.search).get('role') === 'audio' ? 'audio' : 'preview';
 const clientId = crypto.randomUUID();
@@ -16,11 +17,23 @@ const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients);
 const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
 const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings);
 const media = nodecg.Replicant<MediaManifest>(REPLICANTS.presenterMedia);
+const presenterAssets = nodecg.Replicant<EffectiveAssetInventory>(REPLICANTS.presenterAssets);
+let selectedMedia = EMPTY_MEDIA;
+let boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
 function sync() { output.sync(timeline.value, settings.value ?? DEFAULT_SETTINGS); }
 clients.on('change', value => { if (value) client.updateClients(value); sync(); });
 timeline.on('change', value => { if (value) client.updateTimeline(value); sync(); });
 settings.on('change', sync);
-media.on('change', value => { let parsed = EMPTY_MEDIA; try { parsed = parseMedia(value); } catch {} void output.load(parsed); });
+media.on('change', value => {
+  try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
+  boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
+  void output.load(selectedMedia, boundAssets.versions);
+});
+presenterAssets.on('change', inventory => {
+  const next = boundMediaState(selectedMedia, inventory);
+  if (next.audioSignature !== boundAssets.audioSignature) void output.load(selectedMedia, next.versions);
+  boundAssets = next;
+});
 const guard = setInterval(sync, 100);
 void client.start();
 window.addEventListener('pagehide', () => { clearInterval(guard); output.dispose(); client.dispose(); });

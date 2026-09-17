@@ -2,12 +2,13 @@ import { EMPTY_MEDIA, type MediaManifest, type Stem, type AudioStatus } from '..
 import { canPlayCue } from '../../presenter/cues.ts';
 import type { Cue, CueKind, Timeline } from '../../types/presenter.ts';
 import type { PresenterSettings } from '../../presenter/settings.ts';
+import { mediaPlaybackUrl } from '../../config/media-url.ts';
 export function stemOffset(epoch: number, now: number, start: number, end: number): number {
   const length = end - start;
   return start + (((now - epoch) / 1000 % length) + length) % length;
 }
 export interface PresenterAudio {
-  load(manifest: MediaManifest): Promise<void>;
+  load(manifest: MediaManifest, versions?: Readonly<Record<string, string>>): Promise<void>;
   sync(timeline: Timeline, settings: PresenterSettings, serverNowMs: number, programOwner?: string | null): void;
   /** Mandatory audible lease. Closes independently of the browser's JS thread. */
   lease(expiresAtMs: number, serverNowMs: number): void;
@@ -111,11 +112,11 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
   }
   function stop() { gate.gain.cancelScheduledValues(context.currentTime); gate.gain.setValueAtTime(0, context.currentTime); cutoff = -Infinity; cleanup(); }
   return {
-    async load(value) {
+    async load(value, versions) {
       const token = ++version; cleanup(); media = value; buffers = []; sounds = {}; missing = []; loading = true;
       const decoded = await Promise.all(value.stems.map(async stem => {
         try {
-          const response = await fetchAsset(stem.url); if (!response.ok) throw Error();
+          const response = await fetchAsset(mediaPlaybackUrl(stem.url, versions?.[stem.url])); if (!response.ok) throw Error();
           const buffer = await context.decodeAudioData(await response.arrayBuffer());
           if (![stem.loopStartS, stem.loopEndS, buffer.duration].every(Number.isFinite)
             || stem.loopStartS < 0 || stem.loopEndS <= stem.loopStartS || stem.loopEndS > buffer.duration) throw Error();
@@ -130,7 +131,7 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       }
       const decodedSounds = await Promise.all(Object.entries(value.sounds).map(async ([kind, url]) => {
         try {
-          const response = await fetchAsset(url); if (!response.ok) throw Error();
+          const response = await fetchAsset(mediaPlaybackUrl(url, versions?.[url])); if (!response.ok) throw Error();
           const buffer = await context.decodeAudioData(await response.arrayBuffer());
           if (!Number.isFinite(buffer.duration) || buffer.duration <= 0) throw Error();
           return { kind: kind as CueKind, buffer };

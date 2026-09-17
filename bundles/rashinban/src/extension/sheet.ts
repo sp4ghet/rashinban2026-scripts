@@ -3,10 +3,11 @@
 // polling on its own).
 import type NodeCG from "@nodecg/types";
 
-import { csvToObjects } from "../sheet/csv";
-import { parsePlayers, type PlayerProfile } from "../sheet/players";
-import type { SheetConfig, SheetStatus } from "../sheet/types";
-import { REPLICANTS, SHEET_MESSAGES } from "../types/replicants";
+import { csvToObjects } from "../sheet/csv.ts";
+import { parsePlayers, type PlayerProfile } from "../sheet/players.ts";
+import type { SheetConfig, SheetStatus } from "../sheet/types.ts";
+import { REPLICANTS, SHEET_MESSAGES } from "../types/replicants.ts";
+import type { ConfigStore } from '../config/types.ts';
 
 const DEFAULT_CONFIG: SheetConfig = { enabled: false, sheetId: "1xozkRDAEeRLqVPzvpqqDFAcpC3vcbTrd9xekrQ28B50", playersGid: "0", pollIntervalMs: 15_000 };
 const MIN_POLL_MS = 5_000;
@@ -26,8 +27,8 @@ export function parseSheetRef(input: string): { sheetId: string; gid: string | n
   return { sheetId: m?.[1] ?? s, gid };
 }
 
-export function registerSheet(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeCG.ServerAPI["Router"]>) {
-  const config = nodecg.Replicant<SheetConfig>(REPLICANTS.sheetConfig, { defaultValue: DEFAULT_CONFIG });
+export function registerSheet(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeCG.ServerAPI["Router"]>, store?: ConfigStore) {
+  const config = nodecg.Replicant<SheetConfig>(REPLICANTS.sheetConfig, { defaultValue: store ? structuredClone(store.get().sheet) : DEFAULT_CONFIG, persistent: store ? false : true });
   const players = nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players, { defaultValue: [] });
   const status = nodecg.Replicant<SheetStatus>(REPLICANTS.sheetStatus, {
     defaultValue: { polling: false, lastFetchAt: null, lastSuccessAt: null, lastError: null, playerCount: 0, missingColumns: [], skippedRows: 0 },
@@ -102,7 +103,7 @@ export function registerSheet(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeC
     if (ack && !ack.handled) ok ? ack(null, status.value) : ack(new Error(status.value?.lastError ?? "refresh failed"));
   });
 
-  nodecg.listenFor(SHEET_MESSAGES.setConfig, (data: Partial<SheetConfig> & { sheetUrl?: string }, ack) => {
+  nodecg.listenFor(SHEET_MESSAGES.setConfig, (data: Partial<SheetConfig> & { sheetUrl?: string; revision?: string }, ack) => {
     const cur = config.value ?? DEFAULT_CONFIG;
     let sheetId = typeof data?.sheetId === "string" ? data.sheetId.trim() : cur.sheetId;
     let playersGid = typeof data?.playersGid === "string" ? data.playersGid.trim() : cur.playersGid;
@@ -111,7 +112,7 @@ export function registerSheet(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeC
       sheetId = ref.sheetId;
       if (ref.gid) playersGid = ref.gid;
     }
-    config.value = {
+    const next = {
       enabled: typeof data?.enabled === "boolean" ? data.enabled : cur.enabled,
       sheetId,
       playersGid: playersGid || "0",
@@ -120,7 +121,13 @@ export function registerSheet(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeC
           ? Math.max(MIN_POLL_MS, Math.round(data.pollIntervalMs))
           : cur.pollIntervalMs,
     };
-    if (ack && !ack.handled) ack(null, config.value);
+    try {
+      if (store) store.save('sheetConfig', next, data?.revision);
+      else config.value = next;
+      if (ack && !ack.handled) ack(null, store?.get().sheet ?? config.value);
+    } catch (error) {
+      if (ack && !ack.handled) ack(error instanceof Error ? error : new Error('Unable to save sheet configuration'));
+    }
   });
 
   router.post("/sheet/refresh", async (_req, res) => {

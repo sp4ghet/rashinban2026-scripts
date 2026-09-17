@@ -3,25 +3,27 @@ import { registerMatch } from './match';
 
 import { registerBanPick } from "./banpick";
 import { registerBracket } from "./bracket";
-import { loadLocalEnv } from "./env";
 import { registerStartgg } from "./startgg";
 import { registerSheet } from "./sheet";
 import { registerPlayerCards } from "./playercards";
 
 import { registerPresenter } from './presenter/register.ts';
+import { initializeConfiguration } from './config/register.ts';
+import { registerSharedAssets } from './config/assets.ts';
 
 export = (nodecg: NodeCG.ServerAPI) => {
-  loadLocalEnv(nodecg);
-  registerPresenter(nodecg);
+  const { store, roots } = initializeConfiguration(nodecg);
+  registerSharedAssets(nodecg, roots);
+  registerPresenter(nodecg, undefined, store);
 
   // HTTP endpoints for Bitfocus Companion (Generic HTTP module).
   // Mounted at http://<host>:9090/rashinban/...
   const router = nodecg.Router();
 
   registerBanPick(nodecg, router);
-  registerStartgg(nodecg, router);
+  registerStartgg(nodecg, router, store);
   registerBracket(nodecg, router);
-  registerSheet(nodecg, router);
+  registerSheet(nodecg, router, store);
   registerMatch(nodecg);
   registerPlayerCards(nodecg, router);
 
