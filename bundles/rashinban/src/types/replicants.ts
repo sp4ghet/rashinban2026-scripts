@@ -26,6 +26,7 @@ import type { PlayerProfile } from "../sheet/players";
 import type { PlayerCardsState, SheetConfig, SheetStatus } from "../sheet/types";
 import type { CurrentMatchSelection } from "../match/current";
 import type { MatchState, ResolvedMatch } from '../match/state.ts';
+import type { BracketConfig, BracketFinals } from "../bracket/finals";
 
 export const REPLICANTS = {
   banPick: "banPick",
@@ -39,6 +40,8 @@ export const REPLICANTS = {
   matchState: 'matchState',
   matchResolved: 'matchResolved',
   playerCards: "playerCards",
+  bracketConfig: "bracketConfig",
+  bracketFinals: "bracketFinals",
   presenterConnection: 'presenterConnection',
   presenterDuel: 'presenterDuel',
   presenterViews: 'presenterViews',
@@ -64,6 +67,8 @@ export interface ReplicantMap {
   [REPLICANTS.matchState]: MatchState;
   [REPLICANTS.matchResolved]: ResolvedMatch;
   [REPLICANTS.playerCards]: PlayerCardsState;
+  [REPLICANTS.bracketConfig]: BracketConfig;
+  [REPLICANTS.bracketFinals]: BracketFinals;
   [REPLICANTS.presenterConnection]: PresenterConnection;
   [REPLICANTS.presenterDuel]: DuelState | null;
   [REPLICANTS.presenterViews]: Views | null;
@@ -112,4 +117,12 @@ export const MATCH_MESSAGES = {
 /** Player cards presentation. Partial<PlayerCardsState>. */
 export const PLAYERCARDS_MESSAGES = {
   set: "playercards:set",
+} as const;
+
+/** DAY2 bracket data source. */
+export const BRACKET_MESSAGES = {
+  /** Partial<BracketConfig> */
+  setConfig: "bracket:setConfig",
+  /** Re-read the current source now. */
+  refresh: "bracket:refresh",
 } as const;

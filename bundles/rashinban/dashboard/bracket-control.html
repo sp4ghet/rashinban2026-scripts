@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      /* NodeCG panels sit on a white card; paint our own dark surface and keep labels readable. */
+      html { background: #1b232b; }
+      body {
+        margin: 0;
+        padding: 12px;
+        font-family: "Segoe UI", sans-serif;
+        font-size: 13px;
+        color: #efefef;
+        background: #1b232b;
+      }
+      h4 {
+        margin: 12px 0 6px;
+        font-size: 11px;
+        letter-spacing: 0.15em;
+        color: #90a4ae;
+        text-transform: uppercase;
+      }
+      h4:first-child { margin-top: 0; }
+      .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+      .row label { display: flex; gap: 6px; align-items: center; flex: 1; color: #efefef; }
+      .row[hidden] { display: none; }
+      input[type="text"],
+      select {
+        flex: 1;
+        min-width: 0;
+        padding: 6px 8px;
+        font-size: 13px;
+        color: #fff;
+        background: #37474f;
+        border: 1px solid #546e7a;
+        border-radius: 4px;
+      }
+      button {
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        background: #37474f;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      button:hover { filter: brightness(1.2); }
+      .status,
+      #rows {
+        white-space: pre-wrap;
+        padding: 6px 8px;
+        margin-bottom: 8px;
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        background: #1c2a33;
+        border-radius: 4px;
+      }
+      .status.error { color: #ff8a80; }
+      #error { color: #ff8a80; min-height: 1.2em; font-size: 12px; }
+      .help { margin: 0 0 8px; font-size: 12px; color: #90a4ae; }
+    </style>
+  </head>
+  <body>
+    <h4>Data source</h4>
+    <div class="row">
+      <label>Source
+        <select id="source">
+          <option value="startgg">start.gg (live)</option>
+          <option value="sample">start.gg sample file (testing)</option>
+        </select>
+      </label>
+    </div>
+    <div class="row" id="group-row">
+      <label>Phase group <input type="text" id="group-id" placeholder="auto (DAY2)" /></label>
+    </div>
+    <div class="row" id="sample-row" hidden>
+      <label>Sample <input type="text" id="sample-path" /></label>
+    </div>
+    <p class="help">Sample: a recorded phase group under docs/startgg/samples (npm run startgg:fetch). Re-read every 5 s.</p>
+    <div class="row">
+      <button id="apply">Apply</button>
+      <button id="refresh">Refresh now</button>
+    </div>
+    <div id="error"></div>
+    <h4>Status</h4>
+    <div id="status" class="status">Connecting to NodeCG…</div>
+    <h4>Matches</h4>
+    <div id="rows"></div>
+    <script src="bracket-control.js"></script>
+  </body>
+</html>

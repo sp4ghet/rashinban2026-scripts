@@ -35,8 +35,10 @@ overlays render from. Nothing is written back to start.gg.
 
 - `Set.round` is positive on the winners side and negative on the losers
   side; `fullRoundText` is "Winners Semi-Final", "Losers Round 1",
-  "Grand Final", "Grand Final Reset", and so on. A reset set only exists
-  when it is needed.
+  "Grand Final", "Grand Final Reset", and so on. A reset set can exist
+  before it is needed, with empty slots (seen live 2026-09-12 in group
+  3401321, `samples/top8-in-progress.json`); it only gets entrants if the
+  losers-side player wins the first grand final.
 - `Set.state`: 1 created, 2 active, 3 completed, 4 ready, 5 invalid,
   6 called, 7 queued.
 - `slots[].prereqType`/`prereqId`/`prereqPlacement` wire the bracket: a
