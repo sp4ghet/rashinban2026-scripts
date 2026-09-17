@@ -1,9 +1,7 @@
 import type { DuelState, RoundResult, TieRangeMode, TieRangeRound } from '../types/presenter.ts';
+import { foldTieRange, tieRangeBand } from './tie-range-core.ts';
 
-export function tieRangeBand(bestScore: number, mode: TieRangeMode): number {
-  if (mode === 'off') return 0;
-  return Math.floor((5000 - bestScore) / (mode === 'full' ? 1 : 2));
-}
+export { tieRangeBand };
 
 export function deriveTieRange(state: DuelState, mode: TieRangeMode): DuelState {
   if (mode === 'off') return state;
@@ -20,13 +18,6 @@ function validRuleOptions(options: DuelState['ruleOptions']): options is NonNull
     && Number.isInteger(options.individual) && options.individual >= 0
     && Number.isInteger(options.mutual) && options.mutual >= 0
     && Number.isInteger(options.delay) && options.delay >= 0;
-}
-
-function roundHalfEven(difference: number, multiplierTenths: number): number {
-  const scaled = difference * multiplierTenths;
-  const integer = Math.floor(scaled / 10);
-  const remainder = scaled % 10;
-  return integer + (remainder > 5 || (remainder === 5 && integer % 2 !== 0) ? 1 : 0);
 }
 
 /** Validate lazily: server rounds after our terminal round do not belong to this game. */
@@ -73,101 +64,74 @@ function deriveHealth(state: DuelState, mode: Exclude<TieRangeMode, 'off'> | nul
     throw new Error('Tie-range maximum rounds is invalid');
   }
 
-  const completed = validatedCompletedRounds(state);
+  const input = {
+    initialHealth: state.initialHealth,
+    individual: state.ruleOptions.individual,
+    mutual: state.ruleOptions.mutual,
+    delay: state.ruleOptions.delay,
+    maxRounds: state.maxRounds ?? null,
+    teamIds: [state.players[0].teamId, state.players[1].teamId] as [string, string],
+    rounds: [] as Array<{ round: number; scores: [number, number] }>,
+  };
+  let folded = foldTieRange(input, mode);
+  // Validate only the history belonging to the custom duel. Later native rounds
+  // can be incomplete after an earlier custom knockout.
+  for (const [blue, red] of validatedCompletedRounds(state)) {
+    input.rounds.push({ round: blue.round, scores: [blue.score, red.score] });
+    folded = foldTieRange(input, mode);
+    if (folded.terminal !== null) break;
+  }
   const derived = structuredClone(state);
-  const health = [state.initialHealth, state.initialHealth];
-  const multiplierTenths = [10, 10];
-  let mutualTenths = 10;
-  let terminalRound: number | null = null;
-  let terminalWinner: string | null = null;
-  let terminalDraw = false;
   const metadata: TieRangeRound[] = [];
-  let lastCompleted = 0;
 
-  for (const [blueSource, redSource] of completed) {
-    const roundNumber = blueSource.round;
-    lastCompleted = roundNumber;
-    const scores = [blueSource.score, redSource.score];
-    const bestScore = Math.max(scores[0], scores[1]);
-    const band = mode === null ? 0 : tieRangeBand(bestScore, mode);
-    const difference = Math.abs(scores[0] - scores[1]);
-    const withinBand = difference <= band;
-    if (mode !== null) metadata.push({ round: roundNumber, band, withinBand });
+  for (const foldedRound of folded.rounds) {
+    if (mode !== null) metadata.push({
+      round: foldedRound.round,
+      band: foldedRound.band,
+      withinBand: foldedRound.withinBand,
+    });
 
-    const round = derived.rounds.find(candidate => candidate.number === roundNumber)!;
-    round.multiplier = mutualTenths / 10;
+    const round = derived.rounds.find(candidate => candidate.number === foldedRound.round)!;
+    round.multiplier = foldedRound.mutualMultiplierTenths / 10;
     const derivedResults: [RoundResult, RoundResult] = [
-      derived.players[0].results.find(candidate => candidate.round === roundNumber)!,
-      derived.players[1].results.find(candidate => candidate.round === roundNumber)!,
+      derived.players[0].results.find(candidate => candidate.round === foldedRound.round)!,
+      derived.players[1].results.find(candidate => candidate.round === foldedRound.round)!,
     ];
     for (let index = 0; index < 2; index += 1) {
-      derivedResults[index].healthBefore = health[index];
-      derivedResults[index].damageDealt = 0;
-      derivedResults[index].multiplier = multiplierTenths[index] / 10;
-    }
-
-    let winner: number | null = null;
-    if (difference > 0) {
-      winner = scores[0] > scores[1] ? 0 : 1;
-      const loser = winner === 0 ? 1 : 0;
-      const damage = roundHalfEven(difference, multiplierTenths[winner]);
-      derivedResults[winner].damageDealt = damage;
-      health[loser] = Math.max(0, health[loser] - damage);
-    }
-    for (let index = 0; index < 2; index += 1) {
-      derivedResults[index].healthAfter = health[index];
-    }
-
-    const knockout = health[0] === 0 || health[1] === 0;
-    const roundLimit = state.maxRounds != null && roundNumber >= state.maxRounds;
-    if (knockout || roundLimit) {
-      terminalRound = roundNumber;
-      if (health[0] === health[1]) {
-        terminalDraw = true;
-      } else {
-        terminalWinner = derived.players[health[0] > health[1] ? 0 : 1].teamId;
-      }
-      break;
-    }
-
-    if (roundNumber >= state.ruleOptions.delay) {
-      multiplierTenths[0] += state.ruleOptions.mutual;
-      multiplierTenths[1] += state.ruleOptions.mutual;
-      mutualTenths += state.ruleOptions.mutual;
-      if (withinBand) {
-        multiplierTenths[0] += state.ruleOptions.individual;
-        multiplierTenths[1] += state.ruleOptions.individual;
-      } else if (winner !== null) {
-        multiplierTenths[winner] += state.ruleOptions.individual;
-      }
+      derivedResults[index].healthBefore = foldedRound.healthBefore[index];
+      derivedResults[index].healthAfter = foldedRound.healthAfter[index];
+      derivedResults[index].damageDealt = foldedRound.damageDealt[index];
+      derivedResults[index].multiplier = foldedRound.multiplierTenths[index] / 10;
     }
   }
 
   for (let index = 0; index < 2; index += 1) {
-    derived.players[index].health = health[index];
-    derived.players[index].multiplier = multiplierTenths[index] / 10;
+    derived.players[index].health = folded.currentHealth[index];
+    derived.players[index].multiplier = folded.currentMultiplierTenths[index] / 10;
   }
   if (mode !== null) derived.tieRange = { mode, rounds: metadata };
 
-  if (mode !== null && state.status === 'Finished' && !state.aborted && terminalRound === null) {
+  if (mode !== null && state.status === 'Finished' && !state.aborted && folded.terminal === null) {
     throw new Error('Server game finished before a custom outcome could be verified');
   }
 
-  if (terminalRound !== null) {
+  if (folded.terminal !== null) {
+    const terminalRound = folded.terminal.round;
     derived.round = terminalRound;
     derived.status = 'Finished';
     derived.aborted = false;
-    derived.winnerTeamId = terminalWinner;
-    derived.isDraw = terminalDraw;
-    derived.rounds = derived.rounds.filter(round => round.number <= terminalRound!);
+    derived.winnerTeamId = folded.terminal.winnerTeamId;
+    derived.isDraw = folded.terminal.isDraw;
+    derived.rounds = derived.rounds.filter(round => round.number <= terminalRound);
     for (const player of derived.players) {
       player.pin = null;
-      player.guesses = player.guesses.filter(guess => guess.round <= terminalRound!);
-      player.results = player.results.filter(result => result.round <= terminalRound!);
+      player.guesses = player.guesses.filter(guess => guess.round <= terminalRound);
+      player.results = player.results.filter(result => result.round <= terminalRound);
     }
-  } else if (lastCompleted > 0) {
+  } else if (folded.rounds.length > 0) {
+    const lastCompleted = folded.rounds.at(-1)!.round;
     const nextRound = derived.rounds.find(round => round.number > lastCompleted);
-    if (nextRound) nextRound.multiplier = mutualTenths / 10;
+    if (nextRound) nextRound.multiplier = folded.currentMutualMultiplierTenths / 10;
   }
 
   return derived;

@@ -1,0 +1,1031 @@
+{
+  "fetchedAt": "2026-09-13T00:18:51.965Z",
+  "kind": "phase-group (edited)",
+  "variables": {
+    "id": "3401321"
+  },
+  "data": {
+    "phaseGroup": {
+      "id": 3401321,
+      "displayIdentifier": "1",
+      "bracketType": "DOUBLE_ELIMINATION",
+      "state": 2,
+      "numRounds": null,
+      "phase": {
+        "id": 2355101,
+        "name": "Top 8",
+        "phaseOrder": 2,
+        "bracketType": "DOUBLE_ELIMINATION",
+        "groupCount": 1,
+        "numSeeds": 8
+      },
+      "progressionsOut": null,
+      "seeds": {
+        "nodes": [
+          {
+            "id": 41124439,
+            "seedNum": 1,
+            "placement": 4,
+            "isBye": false,
+            "entrant": {
+              "id": 24598184,
+              "name": "CowOfBunga"
+            },
+            "progressionSource": {
+              "id": 14243834,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3401319,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2355100,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41124440,
+            "seedNum": 2,
+            "placement": 2,
+            "isBye": false,
+            "entrant": {
+              "id": 24670019,
+              "name": "Docmorales24"
+            },
+            "progressionSource": {
+              "id": 14243835,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3401320,
+                "displayIdentifier": "B1"
+              },
+              "originPhase": {
+                "id": 2355100,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41124442,
+            "seedNum": 3,
+            "placement": 3,
+            "isBye": false,
+            "entrant": {
+              "id": 24673663,
+              "name": "THG | | UncleWreck"
+            },
+            "progressionSource": {
+              "id": 14243837,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3401320,
+                "displayIdentifier": "B1"
+              },
+              "originPhase": {
+                "id": 2355100,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41124441,
+            "seedNum": 4,
+            "placement": 3,
+            "isBye": false,
+            "entrant": {
+              "id": 24672704,
+              "name": "sugar bear"
+            },
+            "progressionSource": {
+              "id": 14243836,
+              "originPlacement": 3,
+              "originPhaseGroup": {
+                "id": 3401319,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2355100,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41124443,
+            "seedNum": 5,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 24554882,
+              "name": "THG | Shinku 101"
+            },
+            "progressionSource": {
+              "id": 14243838,
+              "originPlacement": 4,
+              "originPhaseGroup": {
+                "id": 3401319,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2355100,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41124444,
+            "seedNum": 6,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 24669702,
+              "name": "Shiroworst"
+            },
+            "progressionSource": {
+              "id": 14243839,
+              "originPlacement": 4,
+              "originPhaseGroup": {
+                "id": 3401320,
+                "displayIdentifier": "B1"
+              },
+              "originPhase": {
+                "id": 2355100,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41124446,
+            "seedNum": 7,
+            "placement": 7,
+            "isBye": false,
+            "entrant": {
+              "id": 24377478,
+              "name": "Dynamike"
+            },
+            "progressionSource": {
+              "id": 14243841,
+              "originPlacement": 4,
+              "originPhaseGroup": {
+                "id": 3401320,
+                "displayIdentifier": "B1"
+              },
+              "originPhase": {
+                "id": 2355100,
+                "name": "Bracket"
+              }
+            }
+          },
+          {
+            "id": 41124445,
+            "seedNum": 8,
+            "placement": 5,
+            "isBye": false,
+            "entrant": {
+              "id": 24499241,
+              "name": "THG | TropicTrickster"
+            },
+            "progressionSource": {
+              "id": 14243840,
+              "originPlacement": 4,
+              "originPhaseGroup": {
+                "id": 3401319,
+                "displayIdentifier": "A1"
+              },
+              "originPhase": {
+                "id": 2355100,
+                "name": "Bracket"
+              }
+            }
+          }
+        ]
+      },
+      "sets": {
+        "pageInfo": {
+          "total": 11,
+          "totalPages": 1
+        },
+        "nodes": [
+          {
+            "id": 107680725,
+            "identifier": "K",
+            "round": -6,
+            "fullRoundText": "Losers Final",
+            "state": 2,
+            "winnerId": null,
+            "displayScore": null,
+            "totalGames": 5,
+            "startedAt": 1789258731,
+            "completedAt": null,
+            "wPlacement": 2,
+            "lPlacement": 3,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680725-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107680709",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 24672704,
+                  "name": "sugar bear",
+                  "initialSeedNum": 12,
+                  "participants": [
+                    {
+                      "id": 22578352,
+                      "gamerTag": "sugar bear",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124441,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": null
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680725-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107680724",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24673663,
+                  "name": "THG | | UncleWreck",
+                  "initialSeedNum": 3,
+                  "participants": [
+                    {
+                      "id": 22579057,
+                      "gamerTag": "UncleWreck",
+                      "prefix": "THG |"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124442,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": null
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107680724,
+            "identifier": "J",
+            "round": -5,
+            "fullRoundText": "Losers Semi-Final",
+            "state": 3,
+            "winnerId": 24673663,
+            "displayScore": "THG | | UncleWreck 3 - CowOfBunga 0",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1789254890,
+            "wPlacement": 3,
+            "lPlacement": 4,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680724-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107680722",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24673663,
+                  "name": "THG | | UncleWreck",
+                  "initialSeedNum": 3,
+                  "participants": [
+                    {
+                      "id": 22579057,
+                      "gamerTag": "UncleWreck",
+                      "prefix": "THG |"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124442,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680724-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107680723",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24598184,
+                  "name": "CowOfBunga",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 22517521,
+                      "gamerTag": "CowOfBunga",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124439,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107680722,
+            "identifier": "H",
+            "round": -4,
+            "fullRoundText": "Losers Quarter-Final",
+            "state": 3,
+            "winnerId": 24673663,
+            "displayScore": "THG | | UncleWreck 3 - THG | Shinku 101 0",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1789254260,
+            "wPlacement": 4,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680722-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107680708",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 24673663,
+                  "name": "THG | | UncleWreck",
+                  "initialSeedNum": 3,
+                  "participants": [
+                    {
+                      "id": 22579057,
+                      "gamerTag": "UncleWreck",
+                      "prefix": "THG |"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124442,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680722-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107680720",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24554882,
+                  "name": "THG | Shinku 101",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 22481669,
+                      "gamerTag": "Shinku 101",
+                      "prefix": "THG"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124443,
+                  "seedNum": 5
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107680723,
+            "identifier": "I",
+            "round": -4,
+            "fullRoundText": "Losers Quarter-Final",
+            "state": 3,
+            "winnerId": 24598184,
+            "displayScore": "CowOfBunga 3 - THG | TropicTrickster 2",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1789254247,
+            "wPlacement": 4,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680723-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107680707",
+                "prereqPlacement": 2,
+                "entrant": {
+                  "id": 24598184,
+                  "name": "CowOfBunga",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 22517521,
+                      "gamerTag": "CowOfBunga",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124439,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680723-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107680721",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24499241,
+                  "name": "THG | TropicTrickster",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 22435213,
+                      "gamerTag": "TropicTrickster",
+                      "prefix": "THG"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124445,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107680720,
+            "identifier": "F",
+            "round": -3,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 24554882,
+            "displayScore": "THG | Shinku 101 3 - Dynamike 0",
+            "totalGames": 5,
+            "startedAt": 1789252850,
+            "completedAt": 1789253379,
+            "wPlacement": 5,
+            "lPlacement": 7,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680720-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107680716",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24554882,
+                  "name": "THG | Shinku 101",
+                  "initialSeedNum": 9,
+                  "participants": [
+                    {
+                      "id": 22481669,
+                      "gamerTag": "Shinku 101",
+                      "prefix": "THG"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124443,
+                  "seedNum": 5
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680720-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107680717",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24377478,
+                  "name": "Dynamike",
+                  "initialSeedNum": 10,
+                  "participants": [
+                    {
+                      "id": 22331299,
+                      "gamerTag": "Dynamike",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124446,
+                  "seedNum": 7
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107680721,
+            "identifier": "G",
+            "round": -3,
+            "fullRoundText": "Losers Round 1",
+            "state": 3,
+            "winnerId": 24499241,
+            "displayScore": "Shiroworst 0 - THG | TropicTrickster 3",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1789252831,
+            "wPlacement": 5,
+            "lPlacement": 7,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680721-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107680718",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24669702,
+                  "name": "Shiroworst",
+                  "initialSeedNum": 30,
+                  "participants": [
+                    {
+                      "id": 22575868,
+                      "gamerTag": "Shiroworst",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124444,
+                  "seedNum": 6
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680721-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107680719",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24499241,
+                  "name": "THG | TropicTrickster",
+                  "initialSeedNum": 1,
+                  "participants": [
+                    {
+                      "id": 22435213,
+                      "gamerTag": "TropicTrickster",
+                      "prefix": "THG"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124445,
+                  "seedNum": 8
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107680707,
+            "identifier": "A",
+            "round": 1,
+            "fullRoundText": "Winners Semi-Final",
+            "state": 3,
+            "winnerId": 24672704,
+            "displayScore": "CowOfBunga 2 - sugar bear 3",
+            "totalGames": 5,
+            "startedAt": 1789252182,
+            "completedAt": 1789253323,
+            "wPlacement": 3,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680707-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "41124439",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 24598184,
+                  "name": "CowOfBunga",
+                  "initialSeedNum": 8,
+                  "participants": [
+                    {
+                      "id": 22517521,
+                      "gamerTag": "CowOfBunga",
+                      "prefix": null
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124439,
+                  "seedNum": 1
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 2
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680707-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "41124441",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 24672704,
+                  "name": "sugar bear",
+                  "initialSeedNum": 12,
+                  "participants": [
+                    {
+                      "id": 22578352,
+                      "gamerTag": "sugar bear",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124441,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107680708,
+            "identifier": "B",
+            "round": 1,
+            "fullRoundText": "Winners Semi-Final",
+            "state": 3,
+            "winnerId": 24670019,
+            "displayScore": "Docmorales24 3 - THG | | UncleWreck 1",
+            "totalGames": 5,
+            "startedAt": 1789252186,
+            "completedAt": 1789253134,
+            "wPlacement": 3,
+            "lPlacement": 5,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680708-0",
+                "slotIndex": 0,
+                "prereqType": "seed",
+                "prereqId": "41124440",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 24670019,
+                  "name": "Docmorales24",
+                  "initialSeedNum": 2,
+                  "participants": [
+                    {
+                      "id": 22576110,
+                      "gamerTag": "Docmorales24",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124440,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680708-1",
+                "slotIndex": 1,
+                "prereqType": "seed",
+                "prereqId": "41124442",
+                "prereqPlacement": null,
+                "entrant": {
+                  "id": 24673663,
+                  "name": "THG | | UncleWreck",
+                  "initialSeedNum": 3,
+                  "participants": [
+                    {
+                      "id": 22579057,
+                      "gamerTag": "UncleWreck",
+                      "prefix": "THG |"
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124442,
+                  "seedNum": 3
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 1
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107680709,
+            "identifier": "C",
+            "round": 2,
+            "fullRoundText": "Winners Final",
+            "state": 3,
+            "winnerId": 24670019,
+            "displayScore": "sugar bear 0 - Docmorales24 3",
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": 1789254679,
+            "wPlacement": 2,
+            "lPlacement": 3,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680709-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107680707",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24672704,
+                  "name": "sugar bear",
+                  "initialSeedNum": 12,
+                  "participants": [
+                    {
+                      "id": 22578352,
+                      "gamerTag": "sugar bear",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124441,
+                  "seedNum": 4
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680709-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107680708",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24670019,
+                  "name": "Docmorales24",
+                  "initialSeedNum": 2,
+                  "participants": [
+                    {
+                      "id": 22576110,
+                      "gamerTag": "Docmorales24",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124440,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 1,
+                  "stats": {
+                    "score": {
+                      "value": 3
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": 107680710,
+            "identifier": "D",
+            "round": 3,
+            "fullRoundText": "Grand Final",
+            "state": 1,
+            "winnerId": null,
+            "displayScore": null,
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": null,
+            "wPlacement": 1,
+            "lPlacement": 2,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680710-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107680709",
+                "prereqPlacement": 1,
+                "entrant": {
+                  "id": 24670019,
+                  "name": "Docmorales24",
+                  "initialSeedNum": 2,
+                  "participants": [
+                    {
+                      "id": 22576110,
+                      "gamerTag": "Docmorales24",
+                      "prefix": ""
+                    }
+                  ]
+                },
+                "seed": {
+                  "id": 41124440,
+                  "seedNum": 2
+                },
+                "standing": {
+                  "placement": 2,
+                  "stats": {
+                    "score": {
+                      "value": null
+                    }
+                  }
+                }
+              },
+              {
+                "id": "107680710-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107680725",
+                "prereqPlacement": 1,
+                "entrant": null,
+                "seed": null,
+                "standing": null
+              }
+            ]
+          },
+          {
+            "id": 107680711,
+            "identifier": "E",
+            "round": 3,
+            "fullRoundText": "Grand Final Reset",
+            "state": 1,
+            "winnerId": null,
+            "displayScore": null,
+            "totalGames": 5,
+            "startedAt": null,
+            "completedAt": null,
+            "wPlacement": 1,
+            "lPlacement": 2,
+            "hasPlaceholder": false,
+            "stream": null,
+            "slots": [
+              {
+                "id": "107680711-0",
+                "slotIndex": 0,
+                "prereqType": "set",
+                "prereqId": "107680710",
+                "prereqPlacement": 1,
+                "entrant": null,
+                "seed": null,
+                "standing": null
+              },
+              {
+                "id": "107680711-1",
+                "slotIndex": 1,
+                "prereqType": "set",
+                "prereqId": "107680710",
+                "prereqPlacement": 2,
+                "entrant": null,
+                "seed": null,
+                "standing": null
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "note": "Copy of top8-in-progress.json with the Losers Final (K) marked in progress (state 2, startedAt), matching the shape of a live in-progress set seen in group 3401795."
+}

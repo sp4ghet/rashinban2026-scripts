@@ -1,0 +1,116 @@
+/* DAY2 bracket (brackets-finals.html). Trimmed from rashinban2026's assets/brackets.css
+   to the classes the page and src/graphics/bracket/svg.ts actually use. */
+
+body {
+  width: 1920px;
+  height: 1080px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.bracket-wrapper {
+  position: relative;
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: url('presenter-kv.jpg');
+  background-size: cover;
+  background-position: center;
+}
+
+/* blur the key visual... */
+.bracket-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  filter: blur(1.5px);
+  z-index: 0;
+}
+
+/* ...and darken it with a semi-transparent scrim */
+.bracket-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+/* Red (upper) / blue (lower) bands behind the bracket. */
+.filter {
+  opacity: 0.1;
+}
+
+.filter-bright {
+  mix-blend-mode: multiply;
+  opacity: 0.8;
+  filter: blur(30px);
+}
+
+svg.bracket-svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  z-index: 3;
+}
+
+.bracket-line {
+  fill: none;
+  stroke: #f0f0f0;
+  stroke-width: 3px;
+}
+
+.match {
+  overflow: visible;
+  font-family: 'Noto Sans JP';
+  font-weight: bold;
+}
+
+/* Red "on now" border, shown for the set start.gg marks in progress. */
+.match-border {
+  display: none;
+}
+
+.match-border.active {
+  display: block;
+}
+
+/* Each player row is a nested <svg>; let text run past its box. */
+svg.match--player {
+  overflow: visible;
+}
+
+.match--player-background {
+  fill: #cfcfcf;
+}
+
+.match--player-name {
+  fill: #000;
+  font-size: 24px;
+}
+
+.match--player-divider {
+  stroke: #fff;
+  stroke-width: 2px;
+}
+
+.match--seed-background {
+  fill: #646464;
+}
+
+.match--player.winner .match--seed-background {
+  fill: #ff3030;
+}
+
+/* The score. ("seed" is the 2025 class name.) */
+.match--seed {
+  fill: white;
+  font-size: 42px;
+  font-family: 'kaneda-gothic', sans-serif;
+  font-weight: 900;
+  font-style: normal;
+}
