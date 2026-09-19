@@ -69,6 +69,11 @@
         "file": "brackets-finals.html",
         "width": 1920,
         "height": 1080
+      },
+      {
+        "file": "casters.html",
+        "width": 1920,
+        "height": 1080
       }
     ],
     "dashboardPanels": [
@@ -127,6 +132,14 @@
         "file": "bracket-control.html",
         "width": 3,
         "headerColor": "#b71c1c"
+      },
+      {
+        "name": "casters-control",
+        "workspace": "broadcast",
+        "title": "Casters",
+        "file": "casters-control.html",
+        "width": 3,
+        "headerColor": "#ad1457"
       }
     ]
   }

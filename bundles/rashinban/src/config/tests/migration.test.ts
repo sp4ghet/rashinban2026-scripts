@@ -33,7 +33,8 @@ test('reads only the four rashinban settings rows from one legacy database', () 
 
     assert.deepEqual(readLegacyConfiguration(databasePath), {
       presenterSettings: { ...DEFAULT_SETTINGS, muted: true },
-      sheetConfig: { enabled: true, sheetId: 'sheet', playersGid: '42', pollIntervalMs: 5000 },
+      // castersGid postdates this row; parseSheetConfig backfills the default.
+      sheetConfig: { enabled: true, sheetId: 'sheet', playersGid: '42', castersGid: '247806508', pollIntervalMs: 5000 },
     });
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

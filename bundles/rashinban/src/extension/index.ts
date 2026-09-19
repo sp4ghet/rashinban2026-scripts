@@ -3,6 +3,7 @@ import { registerMatch } from './match';
 
 import { registerBanPick } from "./banpick";
 import { registerBracket } from "./bracket";
+import { registerCasters } from "./casters";
 import { registerStartgg } from "./startgg";
 import { registerSheet } from "./sheet";
 import { registerPlayerCards } from "./playercards";
@@ -24,6 +25,7 @@ export = (nodecg: NodeCG.ServerAPI) => {
   registerStartgg(nodecg, router, store);
   registerBracket(nodecg, router);
   registerSheet(nodecg, router, store);
+  registerCasters(nodecg, router);
   registerMatch(nodecg);
   registerPlayerCards(nodecg, router);
 

@@ -29,15 +29,22 @@ function applySheet(v: SheetConfig | undefined) {
   input("sheet-url").value = v.sheetId
     ? `https://docs.google.com/spreadsheets/d/${v.sheetId}/edit#gid=${v.playersGid}`
     : "";
+  // Both tabs are in the same spreadsheet; only the gid differs.
+  input("casters-url").value = v.sheetId && v.castersGid
+    ? `https://docs.google.com/spreadsheets/d/${v.sheetId}/edit#gid=${v.castersGid}`
+    : "";
   input("sheet-interval").value = String(v.pollIntervalMs / 1000);
   el("sheet-enabled").textContent = v.enabled ? "Polling ON" : "Polling OFF";
 }
 sheet.on("change", (v) => configuration.acceptProjection(() => applySheet(v)));
 if (sheet.value) configuration.acceptProjection(() => applySheet(sheet.value));
 input('sheet-url').addEventListener('input', () => configuration.draft.markDirty());
+input('casters-url').addEventListener('input', () => configuration.draft.markDirty());
 input('sheet-interval').addEventListener('input', () => configuration.draft.markDirty());
 input("sheet-url").onchange = () =>
   save({ sheetUrl: input("sheet-url").value });
+input("casters-url").onchange = () =>
+  save({ castersUrl: input("casters-url").value });
 input("sheet-interval").onchange = () =>
   save({
     pollIntervalMs: Number(input("sheet-interval").value) * 1000,
@@ -47,6 +54,6 @@ el("sheet-enabled").onclick = () =>
 el("sheet-refresh").onclick = () => send(SHEET_MESSAGES.refresh);
 sheetStatus.on("change", (v) => {
   el("sheet-status").textContent = v
-    ? `${v.playerCount} players · ${v.skippedRows} skipped rows${v.missingColumns.length ? " · Missing identity column: geoguessr_player_uid (or legacy startgg_tag)" : ""}${v.lastError ? "\n" + v.lastError : ""}`
+    ? `${v.playerCount} players · ${v.casterCount} casters · ${v.skippedRows} skipped rows${v.missingColumns.length ? " · Missing identity column: geoguessr_player_uid (or legacy startgg_tag)" : ""}${v.lastError ? "\n" + v.lastError : ""}`
     : "";
 });

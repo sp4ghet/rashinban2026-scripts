@@ -29,6 +29,7 @@ import type { CurrentMatchSelection } from "../match/current";
 import type { MatchState, ResolvedMatch } from '../match/state.ts';
 import type { EffectiveAssetInventory } from '../config/media-url.ts';
 import type { BracketConfig, BracketFinals } from "../bracket/finals";
+import type { Caster, CastersState } from "../casters/casters";
 
 export const REPLICANTS = {
   banPick: "banPick",
@@ -38,6 +39,8 @@ export const REPLICANTS = {
   sheetConfig: "sheetConfig",
   sheetStatus: "sheetStatus",
   players: "players",
+  casters: "casters",
+  castersState: "castersState",
   currentMatch: "currentMatch",
   matchState: 'matchState',
   matchResolved: 'matchResolved',
@@ -68,6 +71,8 @@ export interface ReplicantMap {
   [REPLICANTS.sheetConfig]: SheetConfig;
   [REPLICANTS.sheetStatus]: SheetStatus;
   [REPLICANTS.players]: PlayerProfile[];
+  [REPLICANTS.casters]: Caster[];
+  [REPLICANTS.castersState]: CastersState;
   [REPLICANTS.currentMatch]: CurrentMatchSelection;
   [REPLICANTS.matchState]: MatchState;
   [REPLICANTS.matchResolved]: ResolvedMatch;
@@ -130,6 +135,11 @@ export const MATCH_MESSAGES = {
 /** Player cards presentation. Partial<PlayerCardsState>. */
 export const PLAYERCARDS_MESSAGES = {
   set: "playercards:set",
+} as const;
+
+/** Caster cards. { slot: 0 | 1, name?: string, enabled?: boolean } */
+export const CASTERS_MESSAGES = {
+  setSlot: "casters:setSlot",
 } as const;
 
 /** DAY2 bracket data source. */

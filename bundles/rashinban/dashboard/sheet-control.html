@@ -17,8 +17,9 @@
 </head>
 <body>
   <label>Players tab URL<input id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/…/edit#gid=0"></label>
+  <label>Casters tab URL<input id="casters-url" placeholder="same spreadsheet, …#gid=247806508 — blank to skip"></label>
   <label>Refresh seconds<input id="sheet-interval" type="number" min="5" step="5"></label>
-  <div class="row"><button id="sheet-enabled">Polling OFF</button><button id="sheet-refresh">Refresh players</button></div>
+  <div class="row"><button id="sheet-enabled">Polling OFF</button><button id="sheet-refresh">Refresh now</button></div>
   <div id="configuration-status" class="status">Loading configuration…</div>
   <div class="row"><button id="configuration-reset">Reset to shared</button><button id="configuration-import">Import local settings</button></div>
   <p id="configuration-error" role="status"></p>

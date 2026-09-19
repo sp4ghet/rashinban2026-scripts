@@ -6,7 +6,9 @@ can view". The NodeCG extension polls each tab's CSV export
 and publishes the rows as replicants. Overlays never fetch from Google
 directly (in 2025 every overlay polled on its own; now there is one poller).
 
-Configure the players tab URL and refresh interval in **Config → Google Sheets**.
+Configure the players tab URL, the casters tab URL and the refresh interval in
+**Config → Google Sheets**. Both tabs must live in the same spreadsheet; only
+the `gid` is read from the casters URL. Clearing it skips the casters fetch.
 Settings remain stored in the `sheetConfig` replicant. Choose players in
 **Broadcast → Current Match**.
 
@@ -33,6 +35,22 @@ as text so the sheet controls formatting ("71.4%", "1st").
 
 `samples/players-sample.csv` shows the expected shape and is used by the
 unit tests.
+
+## `casters` tab
+
+One row per caster (gid 247806508). The sheet is the directory of who could be
+on air; which two are actually shown is operator state, chosen in
+**Broadcast → Casters**.
+
+| Column | Card field | Notes |
+| --- | --- | --- |
+| `role` | header strip | Free text, shown above the name (`解説`, `実況`). |
+| `name` | display name | Also the key a card slot refers to, so it must be unique. |
+| `twitter` | handle | With or without `@`. |
+
+`samples/casters-sample.csv` shows the expected shape. Renaming a caster in the
+sheet leaves any card pointing at the old name showing "not in sheet" in the
+panel and blank on air, rather than silently switching to someone else.
 
 ## Current match
 

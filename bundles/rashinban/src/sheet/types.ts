@@ -6,6 +6,8 @@ export interface SheetConfig {
   sheetId: string;
   /** gid of the players tab (from #gid= in the URL). */
   playersGid: string;
+  /** gid of the casters tab. Empty disables the casters fetch. */
+  castersGid: string;
   pollIntervalMs: number;
 }
 
@@ -15,6 +17,7 @@ export interface SheetStatus {
   lastSuccessAt: number | null;
   lastError: string | null;
   playerCount: number;
+  casterCount: number;
   missingColumns: string[];
   skippedRows: number;
 }

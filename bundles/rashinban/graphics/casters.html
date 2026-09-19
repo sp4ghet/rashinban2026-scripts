@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>RASHINBAN 2026 &mdash; Casters</title>
+    <!-- kaneda-gothic comes from the same Adobe Fonts kit as the 2025 overlays; its licence forbids self-hosting.
+         Vendored OFL fonts (scripts/fetch-fonts.mjs) provide Oswald as the offline fallback and Noto Sans JP for body text. -->
+    <link rel="stylesheet" href="https://use.typekit.net/ljs6bhu.css" />
+    <link rel="stylesheet" href="assets/fonts/fonts.css" />
+    <style>
+      /* Caster desk overlay: red title bar, two name cards over the camera feed,
+         red sponsor banner. Geometry follows the 2025 interval overlay
+         (assets/interval.css .topbar/.bottombar) and casters.png. */
+      :root {
+        --red: #ff3030;
+        --red-dark: #cc2626;
+        --ink: #fff;
+        --topbar-h: 77px;
+        --banner-h: 200px;
+        --card-w: 390px;
+        --card-top: 182px;
+        --heading: "kaneda-gothic", "Oswald", "Bahnschrift Condensed", "Arial Narrow", sans-serif;
+        --jp: "Noto Sans JP", "Hiragino Sans", "Segoe UI", sans-serif;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        /* Chroma key green, as the 2025 overlays used (assets/interview.css).
+           OBS keys this out and composites the camera feed behind. */
+        background: #00ff00;
+        color: var(--ink);
+        font-family: var(--jp);
+      }
+
+      #stage {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* ---- Title bar ---------------------------------------------------- */
+
+      .topbar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: var(--topbar-h);
+        background: var(--red);
+        z-index: 1;
+      }
+
+      /* Straddles the bar's bottom edge: centred on it, so the lower half of
+         the compass and wordmark hangs below the red onto the key colour. */
+      .mark {
+        position: absolute;
+        top: var(--topbar-h);
+        left: 0;
+        width: 1920px;
+        transform: translateY(-50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        z-index: 3;
+      }
+
+      .mark .compass {
+        width: 62px;
+        height: 62px;
+        flex: 0 0 auto;
+      }
+
+      .mark .wordmark {
+        font-family: var(--heading);
+        font-size: 58px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      /* ---- Caster cards -------------------------------------------------- */
+
+      .card {
+        position: absolute;
+        top: var(--card-top);
+        width: var(--card-w);
+        z-index: 2;
+        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+        opacity: 1;
+        transition: opacity 250ms ease;
+      }
+
+      /* Left and right of the two seats, clear of the middle of frame. */
+      #caster-1 { left: 330px; }
+      #caster-2 { left: 1200px; }
+
+      .card[hidden] { display: none; }
+
+      .card .role {
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--red-dark);
+        font-family: var(--jp);
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        line-height: 1;
+      }
+
+      .card .role:empty { display: none; }
+
+      .card .name {
+        height: 104px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 16px;
+        box-sizing: border-box;
+        background: var(--red);
+        font-family: var(--heading);
+        font-size: 72px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* Japanese names need a different face and sit better a touch smaller. */
+      .card .name.kana {
+        font-family: var(--jp);
+        font-weight: 900;
+        font-size: 58px;
+      }
+
+      .card .handle {
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f0f0f0;
+        color: #3a3a3a;
+        font-family: var(--heading);
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        line-height: 1;
+      }
+
+      .card .handle:empty { display: none; }
+
+      /* ---- Sponsor banner ------------------------------------------------ */
+
+      .banner {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 1920px;
+        height: var(--banner-h);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 120px;
+        background: var(--red);
+        z-index: 1;
+      }
+
+      /* Per-logo scaling, carried over from the 2025 assets/sponsors.css so the
+         logos read as the same optical size despite different artwork heights. */
+      .banner img {
+        height: 84px;
+        object-fit: contain;
+        flex: 0 0 auto;
+      }
+
+      .banner .logo-red-tokyo { height: 118px; }
+      .banner .logo-geoguessr-record { height: 42px; }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div class="topbar"></div>
+      <div class="mark">
+        <img class="compass" src="assets/images/icon.svg" alt="" />
+        <span class="wordmark">RASHINBAN 2026</span>
+      </div>
+
+      <div class="card" id="caster-1" hidden>
+        <div class="role"></div>
+        <div class="name"></div>
+        <div class="handle"></div>
+      </div>
+      <div class="card" id="caster-2" hidden>
+        <div class="role"></div>
+        <div class="name"></div>
+        <div class="handle"></div>
+      </div>
+
+      <!-- Static for now: three confirmed sponsors, no rotation. The 2025 page
+           rotated a fourth+ logo through the right slot; add that back when the
+           2026 sponsor list is final. -->
+      <div class="banner">
+        <img class="logo-red-tokyo" src="assets/logos/red-tokyo-logo.svg" alt="RED° Tokyo Tower" />
+        <img src="assets/logos/tamura-builds-white.svg" alt="TAMURA BUILDS" />
+        <img class="logo-geoguessr-record" src="assets/logos/geoguessr-record.svg" alt="GeoGuessr Record" />
+      </div>
+    </div>
+    <script src="casters.js"></script>
+  </body>
+</html>
