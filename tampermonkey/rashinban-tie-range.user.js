@@ -1587,6 +1587,25 @@
     };
   }
 
+  // bundles/rashinban/src/graphics/presenter/layout.ts
+  function pointPips(points, firstTo) {
+    const filled = Math.max(0, Math.min(firstTo, points ?? 0));
+    return Array.from({ length: firstTo }, (_, index) => index < filled);
+  }
+
+  // tampermonkey/src/tie-range-player-pips.ts
+  function renderPointPips(container, points, firstTo) {
+    const states = pointPips(points, firstTo);
+    const document2 = container.ownerDocument;
+    while (container.children.length < states.length) {
+      const pip = document2.createElement("i");
+      pip.className = "pip";
+      container.append(pip);
+    }
+    while (container.children.length > states.length) container.lastElementChild.remove();
+    states.forEach((filled, index) => container.children[index].classList.toggle("filled", filled));
+  }
+
   // tampermonkey/src/tie-range-player-animation.ts
   var progress = (elapsed, start2, duration) => Math.max(0, Math.min(1, (elapsed - start2) / duration));
   function scoringPhase(elapsed, nativeMultiplier, tie) {
@@ -1669,9 +1688,7 @@
           if (!settled || canonicalIndex < 0 || team.firstTo === void 0) return;
           const total = points.verdict ? settled.totalsAfter[canonicalIndex] : settled.totalsBefore[canonicalIndex];
           root.querySelector('[data-rb="health"]').textContent = `${total} / ${team.firstTo}`;
-          const fill = root.querySelector('[data-rb="bar-fill"]');
-          fill.style.transition = "none";
-          fill.style.width = `${total / team.firstTo * 100}%`;
+          renderPointPips(root.querySelector('[data-rb="pips"]'), total, team.firstTo);
           root.querySelector('[data-rb="multiplier"]').textContent = total >= team.firstTo - 2 && total < team.firstTo ? "MATCH POINT" : "";
         });
         if (display.terminal && result) node("terminal").hidden = !points.done;
@@ -1888,6 +1905,11 @@
       .result-meta { display: none; }
       .result-verdict { margin-top: 10px; font-size: 26px; color: #ffe169; letter-spacing: .03em; }
       .team[data-rb-rules="pinpointing"] .multiplier { color: #ffe169; font-size: 13px; letter-spacing: .06em; }
+      .team[data-rb-rules="pinpointing"] .track { display: none; }
+      .pips { display: flex; gap: 7px; margin-top: 7px; }
+      .team[data-side="red"] .pips { flex-direction: row-reverse; }
+      .pip { width: 16px; height: 16px; border-radius: 50%; background: #ffffff1f; border: 2px solid #ffffff3a; box-sizing: border-box; }
+      .pip.filled { background: var(--team); border-color: #ffffffb0; box-shadow: 0 0 8px var(--team); }
       .terminal { position: fixed; top: 22%; left: 50%; transform: translateX(-50%); min-width: min(420px, calc(100vw - 32px));
         padding: 13px 22px; border: 1px solid #ffe16999; border-radius: 10px; background: #111e; text-align: center;
         filter: drop-shadow(0 3px 12px #000c); }
@@ -1913,8 +1935,8 @@
     <section class="hud" data-rb="hud" aria-live="polite" hidden>
       <div class="mode" data-rb="mode" data-rb-mode-note></div>
       <div class="teams" data-rb="teams">
-        <article class="team" data-rb="team-0"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div></article>
-        <article class="team" data-rb="team-1"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div></article>
+        <article class="team" data-rb="team-0"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div><div class="pips" data-rb="pips" hidden></div></article>
+        <article class="team" data-rb="team-1"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div><div class="pips" data-rb="pips" hidden></div></article>
       </div>
       <div class="result" data-rb="result" hidden><div class="result-title" data-rb="result-title"></div><div class="result-grid"><span data-rb="result-team-0"></span><span data-rb="result-team-1"></span></div><div class="result-verdict" data-rb="result-verdict" hidden></div><div class="result-meta" data-rb="result-meta"></div></div>
       <div class="diagnostic" data-rb="diagnostic" hidden></div>
@@ -2027,10 +2049,12 @@
           root.dataset.rbRules = display.pinpointing ? "pinpointing" : "health";
           root.querySelector('[data-rb="label"]').textContent = team.label;
           const damage = root.querySelector('[data-rb="damage"]');
+          const pips = root.querySelector('[data-rb="pips"]');
+          pips.hidden = !display.pinpointing;
           if (display.pinpointing) {
             root.querySelector('[data-rb="health"]').textContent = `${team.points ?? 0} / ${team.firstTo ?? 7}`;
             root.querySelector('[data-rb="multiplier"]').textContent = team.matchPoint ? "MATCH POINT" : "";
-            root.querySelector('[data-rb="bar-fill"]').style.width = `${Math.max(0, Math.min(100, (team.points ?? 0) / (team.firstTo ?? 7) * 100))}%`;
+            renderPointPips(pips, team.points, team.firstTo ?? 7);
             damage.hidden = true;
             damage.textContent = "";
             return;

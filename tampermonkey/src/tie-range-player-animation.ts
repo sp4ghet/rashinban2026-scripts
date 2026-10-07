@@ -1,4 +1,5 @@
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
+import { renderPointPips } from './tie-range-player-pips.ts';
 import type { PlayerTieRangeDisplay } from './tie-range-player-view-model.ts';
 
 const progress = (elapsed: number, start: number, duration: number) => Math.max(0, Math.min(1, (elapsed - start) / duration));
@@ -79,8 +80,7 @@ export function createPlayerScoringAnimation(document: Document, shadow: ShadowR
         if (!settled || canonicalIndex < 0 || team.firstTo === undefined) return;
         const total = points.verdict ? settled.totalsAfter[canonicalIndex] : settled.totalsBefore[canonicalIndex];
         root.querySelector<HTMLElement>('[data-rb="health"]')!.textContent = `${total} / ${team.firstTo}`;
-        const fill = root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!;
-        fill.style.transition = 'none'; fill.style.width = `${total / team.firstTo * 100}%`;
+        renderPointPips(root.querySelector<HTMLElement>('[data-rb="pips"]')!, total, team.firstTo);
         root.querySelector<HTMLElement>('[data-rb="multiplier"]')!.textContent = total >= team.firstTo - 2 && total < team.firstTo ? 'MATCH POINT' : '';
       });
       if (display.terminal && result) node('terminal').hidden = !points.done;

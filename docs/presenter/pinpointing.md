@@ -54,7 +54,8 @@ The [player userscript](player-tie-range.md) carries the same rules. Choose
 and tick **Pinpointing Duels**; set tie range to match the host as well. Both
 are captured when the duel begins and changes apply to the next duel.
 
-The HUD shows `You 3 / 7` and `Opponent 2 / 7` with a MATCH POINT badge,
+The HUD shows `You 3 / 7` and `Opponent 2 / 7`, each above its own row of
+seven pips filled in the side's colour, with a MATCH POINT badge,
 hides the native HP bars and damage animation, counts the round scores with
 GeoGuessr's own timing, then shows the verdict text. The native summary's HP
 columns show running points instead. At 7 points the HUD shows
