@@ -18,7 +18,7 @@ export interface CasterSlotEdit {
   name?: string;
 }
 
-export function registerCasters(nodecg: NodeCG.ServerAPI, _router: ReturnType<NodeCG.ServerAPI["Router"]>) {
+export function registerCasters(nodecg: NodeCG.ServerAPI) {
   const state = nodecg.Replicant<CastersState>(REPLICANTS.castersState, {
     defaultValue: structuredClone(DEFAULT_CASTERS_STATE),
   });

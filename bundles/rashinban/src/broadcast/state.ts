@@ -133,7 +133,8 @@ function repair(spec: Spec, value: unknown): Record<string, unknown> {
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-function parseOutput(output: unknown): BroadcastOutput {
+/** Narrow an untrusted value to an output name; throws BroadcastError otherwise. */
+export function parseOutput(output: unknown): BroadcastOutput {
   if (output !== "stream" && output !== "led") throw new BroadcastError("output must be stream or led");
   return output;
 }

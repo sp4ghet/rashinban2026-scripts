@@ -8,8 +8,8 @@ import {
   undo,
   type BanPickState,
   type Player,
-} from "../banpick/rules";
-import { BANPICK_MESSAGES, REPLICANTS } from "../types/replicants";
+} from "../banpick/rules.ts";
+import { BANPICK_MESSAGES, REPLICANTS } from "../types/replicants.ts";
 
 type Ack = NodeCG.Acknowledgement | undefined;
 

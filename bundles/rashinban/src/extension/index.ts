@@ -26,7 +26,7 @@ export = (nodecg: NodeCG.ServerAPI) => {
   registerStartgg(nodecg, router, store);
   registerBracket(nodecg, router);
   registerSheet(nodecg, router, store);
-  registerCasters(nodecg, router);
+  registerCasters(nodecg);
   registerMatch(nodecg);
 
   nodecg.mount("/rashinban", router);

@@ -5,10 +5,10 @@ import type NodeCG from "@nodecg/types";
 import type { Request, Response } from "express";
 
 import {
-  BROADCAST_OUTPUTS,
   BroadcastError,
   createInitialState,
   cutProgram,
+  parseOutput,
   revertPreview,
   setPreview,
   take,
@@ -27,16 +27,24 @@ export function registerBroadcast(nodecg: NodeCG.ServerAPI, router: ReturnType<N
   rep.value = withDefaults(rep.value);
   const current = () => withDefaults(rep.value);
 
-  /** Runs a state transition, reporting BroadcastError via the ack instead of throwing. */
+  /**
+   * Runs a state transition, reporting errors via the ack instead of throwing.
+   * NodeCG runs listenFor handlers inside a socket.io event with no try/catch
+   * and exits on an uncaught exception, so nothing may escape from here.
+   */
   function mutate(ack: Ack, fn: (state: BroadcastState) => BroadcastState): BroadcastState | null {
     try {
       rep.value = fn(current());
       if (ack && !ack.handled) ack(null, rep.value);
       return rep.value;
     } catch (error) {
-      if (!(error instanceof BroadcastError)) throw error;
-      nodecg.log.warn(`broadcast: rejected: ${error.message}`);
-      if (ack && !ack.handled) ack(error);
+      if (error instanceof BroadcastError) {
+        nodecg.log.warn(`broadcast: rejected: ${error.message}`);
+        if (ack && !ack.handled) ack(error);
+      } else {
+        nodecg.log.error("broadcast: handler failed", error);
+        if (ack && !ack.handled) ack(new Error("broadcast: internal error"));
+      }
       return null;
     }
   }
@@ -44,20 +52,16 @@ export function registerBroadcast(nodecg: NodeCG.ServerAPI, router: ReturnType<N
     if (typeof data !== "object" || data === null) throw new BroadcastError("payload must be an object");
     return data as Record<string, unknown>;
   };
-  const output = (value: unknown): BroadcastOutput => {
-    if (!BROADCAST_OUTPUTS.includes(value as BroadcastOutput)) throw new BroadcastError("output must be stream or led");
-    return value as BroadcastOutput;
-  };
-
   nodecg.listenFor(BROADCAST_MESSAGES.setPreview, (data: unknown, ack) =>
     mutate(ack, (s) => {
       const body = record(data);
-      return setPreview(s, output(body.output), body.patch as never);
+      // The reducer validates the patch against the layer spec at runtime.
+      return setPreview(s, parseOutput(body.output), body.patch as never);
     }));
   nodecg.listenFor(BROADCAST_MESSAGES.take, (data: unknown, ack) =>
-    mutate(ack, (s) => take(s, output(record(data).output))));
+    mutate(ack, (s) => take(s, parseOutput(record(data).output))));
   nodecg.listenFor(BROADCAST_MESSAGES.revertPreview, (data: unknown, ack) =>
-    mutate(ack, (s) => revertPreview(s, output(record(data).output))));
+    mutate(ack, (s) => revertPreview(s, parseOutput(record(data).output))));
 
   // ---- Companion (Generic HTTP) ---------------------------------------------
   // Each route answers with the output's program layers after the change.
@@ -67,14 +71,18 @@ export function registerBroadcast(nodecg: NodeCG.ServerAPI, router: ReturnType<N
       res.json(rep.value[out].program);
     } catch (error) {
       if (!(error instanceof BroadcastError)) throw error;
+      nodecg.log.warn(`broadcast: rejected: ${error.message}`);
       res.status(400).json({ error: error.message });
     }
   }
   const outputParam = (req: Request, res: Response): BroadcastOutput | null => {
-    const value = String(req.params.output);
-    if (BROADCAST_OUTPUTS.includes(value as BroadcastOutput)) return value as BroadcastOutput;
-    res.status(400).json({ error: "output must be stream or led" });
-    return null;
+    try {
+      return parseOutput(req.params.output);
+    } catch (error) {
+      if (!(error instanceof BroadcastError)) throw error;
+      res.status(400).json({ error: error.message });
+      return null;
+    }
   };
   router.post("/broadcast/:output/take", (req, res) => {
     const out = outputParam(req, res);
