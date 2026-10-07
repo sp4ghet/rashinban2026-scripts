@@ -10,9 +10,16 @@ remaining external checks.
 | Program | `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program` |
 | Separate audio | `http://localhost:9090/bundles/rashinban/graphics/presenter-audio.html?role=audio` |
 | Silent browser preview | `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=preview` |
+| LED wall presenter | `http://localhost:9090/bundles/rashinban/graphics/presenter-led.html` (the wall shows the top 1920 × 576; silent, no role parameter) |
+| Stream info layers | `http://localhost:9090/bundles/rashinban/graphics/info-stream.html` (replaces the old Ban & Pick, player cards and casters sources) |
+| LED info layers | `http://localhost:9090/bundles/rashinban/graphics/info-led.html` (transparent; composite over the LED wall presenter) |
 
-The dashboard has **Silent preview**, **Program graphic**, and **Separate
-audio** launch links that use the current NodeCG origin. The latter two expose
+Info and presenter layer visibility is driven by the **Stream** and **LED**
+switcher tabs (see [broadcast](../broadcast.md)); the LED info page overlays
+the LED presenter, which the LED bus can blank to black.
+
+The dashboard has **Silent preview**, **Program graphic**, **Separate
+audio** and **LED graphic** launch links that use the current NodeCG origin. The latter two expose
 the local audio activation button for browser testing. In Separate audio mode,
 open both Program graphic and Separate audio; embedded celebration sound stays
 on the program graphic. In Embedded mode, open Program graphic for all audio.
