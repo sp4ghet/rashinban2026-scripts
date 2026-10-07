@@ -2,7 +2,7 @@ import { REPLICANTS, type RendererStatus, type PresenterClients } from '../types
 import type { DuelState, SeriesState, Timeline, Views } from '../types/presenter.ts';
 import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
 import { projectScene, paintScene, type PresenterScene } from './presenter/scene.ts';
-import { layoutKind, multiplierLabel, distanceLabel, lockLayout } from './presenter/layout.ts';
+import { layoutKind, multiplierLabel, distanceLabel, lockLayout, pointsLabel, pointPips } from './presenter/layout.ts';
 import { paintScoring } from './presenter/scoring.ts';
 import { createCelebrationUnderlay } from './presenter/celebration.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
@@ -134,23 +134,41 @@ function frame() {
     write('mode', state?.mode ?? '—');
     // Series wins count completed games; the active game is the next one.
     write('game-number', String(match.left.wins + match.right.wins + 1));
+    const pinpointing = state?.pinpointing ?? null;
+    document.body.dataset.ruleset = pinpointing ? 'pinpointing' : 'health';
     const multiplier = multiplierLabel(state ?? null, scene.kind === 'preview' ? { ...timing, phase: 'pre-round' } : timing,
       { left: match.left.playerId, right: match.right.playerId });
-    write('multiplier-label', 'DAMAGE');
-    write('right-multiplier-label', 'DAMAGE');
+    write('multiplier-label', pinpointing ? 'POINTS' : 'DAMAGE');
+    write('right-multiplier-label', pinpointing ? 'POINTS' : 'DAMAGE');
     const sideMultipliers = multiplier.startsWith('L ') ? multiplier.slice(2).split(' · R ') : [multiplier, multiplier];
-    write('multiplier', sideMultipliers[0]);
-    write('right-multiplier', sideMultipliers[1]);
     for (const side of ['left', 'right'] as const) {
       const competitor = match[side];
       const player = visible.players.find(item => item.id === competitor.playerId);
+      const matchPoint = pinpointing !== null && player?.matchPoint === true;
+      write(side === 'left' ? 'multiplier' : 'right-multiplier', pinpointing
+        ? player ? pointsLabel(matchPoint, pinpointing.firstTo, player.points ?? 0) : '—' : sideMultipliers[side === 'left' ? 0 : 1]);
+      element(side === 'left' ? 'multiplier' : 'right-multiplier').parentElement!.dataset.matchPoint = String(matchPoint);
       write(`${side}-name`, competitor.name);
       write(`${side}-handle`, competitor.handle);
       write(`${side}-wins`, String(competitor.wins));
-      write(`${side}-health`, player ? String(player.health) : '—');
-      const health = Math.max(0, Math.min(1, (player?.healthBar ?? player?.health ?? 0) / (state?.initialHealth || 6000)));
-      element(`${side}-health-fill`).style.transform = `scaleX(${health})`;
-      element(`${side}-health-fill`).style.background = health < 0.25 ? '#e04f66' : health < 0.5 ? '#dbae40' : '#8abb43';
+      const box = element(`${side}-health`).parentElement!;
+      box.dataset.matchPoint = String(matchPoint);
+      const pips = element(`${side}-pips`);
+      pips.hidden = !pinpointing;
+      if (pinpointing) {
+        write(`${side}-health`, player?.points === undefined ? '—' : String(player.points));
+        const states = pointPips(player?.points, pinpointing.firstTo);
+        while (pips.children.length < states.length) { const pip = document.createElement('i'); pip.className = 'pip'; pips.append(pip); }
+        while (pips.children.length > states.length) pips.lastElementChild!.remove();
+        states.forEach((filled, index) => pips.children[index].classList.toggle('filled', filled));
+        element(`${side}-health-fill`).style.transform = 'scaleX(0)';
+        element(`${side}-health-fill`).style.background = '';
+      } else {
+        write(`${side}-health`, player ? String(player.health) : '—');
+        const health = Math.max(0, Math.min(1, (player?.healthBar ?? player?.health ?? 0) / (state?.initialHealth || 6000)));
+        element(`${side}-health-fill`).style.transform = `scaleX(${health})`;
+        element(`${side}-health-fill`).style.background = health < 0.25 ? '#e04f66' : health < 0.5 ? '#dbae40' : '#8abb43';
+      }
       const lockPlayer = underlay ? gameFrame.projection.players.find(item => item.id === competitor.playerId) : player;
       element(`${side}-lock`).hidden = (visible.phase !== 'live' && !underlay) || !lockPlayer?.locked;
       write(`${side}-score`, player?.score == null ? '—' : String(player.score));

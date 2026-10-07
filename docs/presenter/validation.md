@@ -217,6 +217,41 @@ Private local evidence: [browser results](../../artifacts/presenter-validation/t
 These checks use synthetic NodeCG inputs and real map rendering; they do not
 exercise a live host-controlled duel or repeat the OBS audio timing test.
 
+## Pinpointing Duels (2026-10-07)
+
+Implemented on branch `feat/pinpointing-duels`; operator and player
+instructions are in [pinpointing.md](pinpointing.md). The automated suite
+covers the shared rules core, derivation on the recorded duels, settings
+migration, per-duel capture and restart, the verdict choreography (points held
+until the verdict, through the 5K gate and after a restart), the dashboard
+toggle, and the player decoder, controller and display model. Type checking,
+the production build and `npm run validate:player` (the existing tie-range
+browser harness, which still passes with the extended userscript) were run.
+
+### Live validation (2026-10-07, GeoGuessr client web-1.8229)
+
+Five party duels were played in a private party (host `sp4ghet`, two
+isolated guest players driven by the automation bot, worktree NodeCG on
+port 9091 with the live spectator input, the built userscript injected
+with Tampermonkey stubs). Party settings: Duels, Moving, Time After Guess
+90 s, Max Round Time 90 s, host control with auto-start.
+
+| Scenario | Result |
+| --- | --- |
+| Full scripted game (solo 5K, double 5K blue first, closest, tie, red solo 5K, double 5K red first, blue solo 5K to match point, closest to 7) | Presenter scored every round as planned, 7–3, verdict banner and WINNER label shown; both HUDs matched round by round and ended on "You win 7–3" / "You lose 3–7". Played twice. |
+| Opponent guess timing on the player endpoint | Present: the HUD awarded the faster 5K in both double-5K rounds. |
+| Abort after 7 | Presenter kept the winner, not aborted; HUDs kept their result. |
+| Restart NodeCG during results (round 2, 1,000,000 HP game) | Back in 3 s; counters showed the settled 3 / 0, then round 3 proceeded normally. |
+| Server finish before 7 (1,000 HP, ended by health in round 3) | GAME FINISHED without a winner, counters kept, dashboard warning "Server duel finished before a player reached 7 points". With Half tie range also on, round 3 reported band 117. |
+| Server finish on the HUD | Two defects found and fixed: the party reported Finished before the HUD read the final snapshot (duel was dropped to "Waiting for a duel"), and the live node's cancelled pre-announced round was read as a rollback (a round's point was withheld). Re-verified on a fifth game: both HUDs show "Duel ended, no custom winner" with the correct totals. |
+
+Known follow-ups outside this feature (shared HUD code, seen in the HP
+path as well): the native game summary's health columns are reported as an
+"unsupported layout" on the current client and are left unchanged, and the
+native "0" damage figure over the results map is not hidden. Stream
+inspection of the sounds and the final layout on the real overlay is still
+to be done with the production configuration.
+
 ## External checks still required
 
 | Needed input | Required acceptance |

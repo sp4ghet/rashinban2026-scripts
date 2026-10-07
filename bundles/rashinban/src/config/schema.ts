@@ -56,6 +56,7 @@ function validateSettingsShape(input: unknown): void {
     validatePartialObject(settings.timing, ['leadMs', 'countMs', 'damageMs', 'effectWatchdogMs', 'pinRateLimitMs'], 'presenter.settings.timing');
   }
   if (settings.tieRange !== undefined) validatePartialObject(settings.tieRange, ['enabled', 'mode'], 'presenter.settings.tieRange');
+  if (settings.pinpointing !== undefined) validatePartialObject(settings.pinpointing, ['enabled'], 'presenter.settings.pinpointing');
 }
 
 function validateMediaShape(input: unknown): void {

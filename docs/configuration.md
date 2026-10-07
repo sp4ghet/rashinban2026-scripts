@@ -58,7 +58,7 @@ inherited tie sound:
 ```json
 {
   "presenter": {
-    "settings": { "tieRange": { "enabled": true, "mode": "full" } },
+    "settings": { "tieRange": { "enabled": true, "mode": "full" }, "pinpointing": { "enabled": false } },
     "media": { "sounds": { "tie": null } }
   }
 }

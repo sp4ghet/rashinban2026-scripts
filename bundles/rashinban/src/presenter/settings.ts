@@ -6,11 +6,13 @@ export type PresenterSettings = {
   audioOutput: 'separate' | 'embedded'; muted: boolean;
   musicGain: number; effectsGain: number; timing: Timing;
   tieRange: { enabled: boolean; mode: 'full' | 'half' };
+  pinpointing: { enabled: boolean };
 };
 export const DEFAULT_SETTINGS: PresenterSettings = {
   viewSource: 'chroma', keyColor: '#ff00ff', audioOutput: 'separate', muted: false,
   musicGain: 0.7, effectsGain: 1, timing: { ...DEFAULT_TIMING },
   tieRange: { enabled: false, mode: 'full' },
+  pinpointing: { enabled: false },
 };
 export function parseSettings(input: unknown): PresenterSettings {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('Settings must be an object');
@@ -25,6 +27,10 @@ export function parseSettings(input: unknown): PresenterSettings {
   const rule = tie as Record<string, unknown>;
   if (Object.keys(rule).some(key => !['enabled', 'mode'].includes(key)) || typeof rule.enabled !== 'boolean'
     || (rule.mode !== 'full' && rule.mode !== 'half')) throw new Error('Invalid tie range');
+  const pinpointing = value.pinpointing === undefined ? DEFAULT_SETTINGS.pinpointing : value.pinpointing;
+  if (typeof pinpointing !== 'object' || pinpointing === null || Array.isArray(pinpointing)) throw new Error('Invalid Pinpointing Duels setting');
+  const points = pinpointing as Record<string, unknown>;
+  if (Object.keys(points).some(key => key !== 'enabled') || typeof points.enabled !== 'boolean') throw new Error('Invalid Pinpointing Duels setting');
   const bounded = (input: unknown, max: number): number => {
     if (typeof input !== 'number' || !Number.isFinite(input) || input < 0 || input > max) throw new Error('Invalid gain or duration');
     return input;
@@ -39,5 +45,5 @@ export function parseSettings(input: unknown): PresenterSettings {
   if (raw.pinRateLimitMs !== undefined) timing.pinRateLimitMs = bounded(raw.pinRateLimitMs, 120000);
   return { viewSource: value.viewSource, keyColor: value.keyColor, audioOutput: value.audioOutput, muted: value.muted,
     musicGain: bounded(value.musicGain, 1), effectsGain: bounded(value.effectsGain, 1), timing,
-    tieRange: { enabled: rule.enabled, mode: rule.mode } };
+    tieRange: { enabled: rule.enabled, mode: rule.mode }, pinpointing: { enabled: points.enabled } };
 }

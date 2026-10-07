@@ -1,4 +1,5 @@
 import type { Projection, SeriesState } from '../../types/presenter.ts';
+import { verdictLabel } from './layout.ts';
 
 /** Paint the clock-derived choreography; no local timers or animation replay on mount. */
 export function paintScoring(root: HTMLElement, projection: Projection, series: SeriesState): void {
@@ -17,7 +18,7 @@ export function paintScoring(root: HTMLElement, projection: Projection, series: 
   for (const side of sides) {
     const player = projection.players.find(p => p.id === series[side].playerId);
     el(`${side}-score`).textContent = player?.score == null ? '—' : String(player.score);
-    const ghost = active && !['entry', 'count', 'score-hold'].includes(s.stage);
+    const ghost = active && !['entry', 'count', 'score-hold', 'verdict'].includes(s.stage);
     el(`${side}-score`).style.opacity = ghost ? '0.25' : '1';
     const panel = el(`${side}-result`);
     panel.style.opacity = String(active ? s.entryProgress : 1);
@@ -26,7 +27,16 @@ export function paintScoring(root: HTMLElement, projection: Projection, series: 
     el(`${side}-health`).parentElement!.style.setProperty('--score-impact', active && s.stage === 'impact' && s.loserId === player?.id ? String(1 - s.impactProgress) : '0');
   }
   el('score-calculation').hidden = true;
+  el('verdict').hidden = true;
   if (!active) return;
+  if (s.stage === 'verdict' && s.pinpointing) {
+    // Points replace damage: announce the round verdict beside the scoring side.
+    const banner = el('verdict'); banner.hidden = false; banner.textContent = verdictLabel(s.pinpointing);
+    banner.dataset.side = sides.find(side => series[side].playerId === s.winnerId) ?? 'none';
+    banner.style.setProperty('--verdict-scale', String(0.6 + 0.4 * s.verdictProgress));
+    banner.style.opacity = String(Math.min(1, s.verdictProgress * 2));
+    return;
+  }
   const show = (side: 'left' | 'right', value: number, point: { x: number; y: number }, opacity = 1, size = 1) => {
     const token = el(`score-token-${side}`); token.hidden = false; token.textContent = String(value);
     token.style.left = `${point.x}px`; token.style.top = `${point.y}px`; token.style.opacity = String(opacity);

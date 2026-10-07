@@ -1,6 +1,25 @@
-import type { Mode } from '../../types/presenter.ts';
+import type { Mode, PinpointingVerdict } from '../../types/presenter.ts';
 import type { DuelState, Timeline } from '../../types/presenter.ts';
 import type { RenderFrame } from './renderer.ts';
+
+/** Banner text for a Pinpointing Duels round verdict. */
+export function verdictLabel(verdict: PinpointingVerdict): string {
+  const gained = Math.max(...verdict.points);
+  if (verdict.reason === 'solo-5k') return `+${gained} · SOLO 5K`;
+  if (verdict.reason === 'fastest-5k') return gained > 0 ? `+${gained} · FASTEST 5K` : 'DOUBLE 5K · NO POINT';
+  if (verdict.reason === 'closest') return `+${gained} · CLOSEST`;
+  return 'TIE · NO POINT';
+}
+
+/** One flag per pip, filled from the first pip up to the side's points. */
+export function pointPips(points: number | undefined, firstTo: number): boolean[] {
+  const filled = Math.max(0, Math.min(firstTo, points ?? 0));
+  return Array.from({ length: firstTo }, (_, index) => index < filled);
+}
+
+export function pointsLabel(matchPoint: boolean, firstTo: number, points = 0): string {
+  return points >= firstTo ? 'WINNER' : matchPoint ? 'MATCH POINT' : `FIRST TO ${firstTo}`;
+}
 
 export function lockLayout(frame: RenderFrame): 'none' | 'left' | 'right' | 'both' {
   if (frame.source !== 'rendered' || frame.projection.phase !== 'live'

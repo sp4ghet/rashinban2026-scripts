@@ -1,5 +1,6 @@
 import { decodePlayerMapRounds, type PlayerMapRound } from './tie-range-player-map.ts';
 import type { TieRangeBandMode, TieRangeOutput } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
+import type { PinpointingOutput } from '../../bundles/rashinban/src/presenter/pinpointing-core.ts';
 import {
   acceptPlayerSnapshot,
   loadPlayerContext,
@@ -50,10 +51,15 @@ export type PlayerTieRangeView = {
   gameId: string | null;
   configuredMode: TieRangeBandMode;
   capturedMode: TieRangeBandMode | null;
+  configuredPinpointing: boolean;
+  capturedPinpointing: boolean | null;
   appliesToNextDuel: boolean;
   localTeamId: string | null;
   context: PlayerGameContext | null;
+  /** Custom HP; null while Pinpointing Duels is captured. */
   output: TieRangeOutput | null;
+  /** Pinpointing Duels points; null unless captured for this duel. */
+  pinpointing: PinpointingOutput | null;
   diagnostic: PlayerDiagnostic | null;
   message: string | null;
 };
@@ -67,6 +73,7 @@ export type PlayerTieRangeControllerDependencies = {
   getPath(): string;
   getUserId(): string | null;
   getConfiguredMode(): TieRangeBandMode;
+  getConfiguredPinpointing?(): boolean;
   onView(view: PlayerTieRangeView): void;
 };
 
@@ -170,6 +177,7 @@ export function createPlayerTieRangeController(
   let mapRounds: PlayerMapRound[] = [];
   let context: PlayerGameContext | null = null;
   let output: TieRangeOutput | null = null;
+  let pinpointing: PinpointingOutput | null = null;
   let diagnostic: PlayerDiagnostic | null = null;
   let schemaBlocked = false;
   let request: AbortController | null = null;
@@ -182,9 +190,22 @@ export function createPlayerTieRangeController(
   let problem: 'network' | 'auth' | null = null;
   let gameEndpoint: GameEndpoint | null = null;
   let currentPartyId: string | null = null;
+  let finalSnapshotAttempts = 0;
 
   function configuredMode(): TieRangeBandMode {
     return dependencies.getConfiguredMode();
+  }
+
+  function configuredPinpointing(): boolean {
+    return dependencies.getConfiguredPinpointing?.() === true;
+  }
+
+  function customOff(value: PlayerGameContext | null): boolean {
+    return value !== null && value.mode === 'off' && !value.pinpointing;
+  }
+
+  function customTerminal(): boolean {
+    return output?.terminal != null || pinpointing?.terminal != null;
   }
 
   function localTeamId(): string | null {
@@ -198,7 +219,7 @@ export function createPlayerTieRangeController(
     const configured = configuredMode();
     const userId = dependencies.getUserId();
     const playerIsKnownOutsideGame = context !== null
-      && context.mode !== 'off'
+      && !customOff(context)
       && typeof userId === 'string'
       && userId.length > 0
       && localTeamId() === null;
@@ -207,11 +228,14 @@ export function createPlayerTieRangeController(
       gameId,
       configuredMode: configured,
       capturedMode: context?.mode ?? null,
-      appliesToNextDuel: context !== null && context.mode !== configured,
+      configuredPinpointing: configuredPinpointing(),
+      capturedPinpointing: context?.pinpointing ?? null,
+      appliesToNextDuel: context !== null && (context.mode !== configured || context.pinpointing !== configuredPinpointing()),
       localTeamId: localTeamId(),
       context,
       mapRounds,
       output,
+      pinpointing,
       diagnostic,
       message: playerIsKnownOutsideGame ? 'Current account is not a player in this duel' : message,
     });
@@ -246,6 +270,7 @@ export function createPlayerTieRangeController(
     problem = null;
     gameEndpoint = null;
     currentPartyId = null;
+    finalSnapshotAttempts = 0;
   }
 
   function publishProblem(): void {
@@ -320,9 +345,11 @@ export function createPlayerTieRangeController(
   async function restoreGame(nextGameId: string, expectedGeneration: number): Promise<boolean> {
     if (gameId === nextGameId) return true;
     gameId = nextGameId;
+    finalSnapshotAttempts = 0;
     context = null;
     mapRounds = [];
     output = null;
+    pinpointing = null;
     diagnostic = null;
     schemaBlocked = false;
     failureCount = 0;
@@ -334,11 +361,12 @@ export function createPlayerTieRangeController(
     if (!started || expectedGeneration !== generation) return false;
     context = restored.context;
     output = restored.output;
+    pinpointing = restored.pinpointing;
     diagnostic = restored.diagnostic;
     schemaBlocked = restored.diagnostic?.code === 'schema-mismatch';
     if (schemaBlocked) publish('unavailable', 'Custom HP unavailable');
-    else if (context?.mode === 'off') publish('off');
-    else if (output) {
+    else if (customOff(context)) publish('off');
+    else if (output || pinpointing) {
       lastAcceptedAt = dependencies.now() - STALE_MS;
       if (diagnostic?.code === 'source-ended') publish('ended', diagnostic.message);
       else publish('stale', diagnostic?.message ?? 'Checking saved HP against the current duel');
@@ -351,13 +379,14 @@ export function createPlayerTieRangeController(
     const raw = await fetchJson(ACTIVE_PARTY_API, expectedGeneration, true);
     requireCurrent(expectedGeneration);
     if (raw === NO_CONTENT) {
-      if (output?.terminal || context?.sourceStatus === 'Finished') {
+      if (customTerminal() || context?.sourceStatus === 'Finished') {
         publish('ended', diagnostic?.message ?? 'Custom duel finished');
       } else {
         gameId = null;
         context = null;
         mapRounds = [];
         output = null;
+        pinpointing = null;
         diagnostic = null;
         schemaBlocked = false;
         gameEndpoint = null;
@@ -371,19 +400,27 @@ export function createPlayerTieRangeController(
       context = null;
       mapRounds = [];
       output = null;
+      pinpointing = null;
       diagnostic = null;
       schemaBlocked = false;
       gameEndpoint = null;
     }
     if (active.partyId !== null) currentPartyId = active.partyId;
     if (active.waiting) {
-      if (output?.terminal || context?.sourceStatus === 'Finished') {
+      if (customTerminal() || context?.sourceStatus === 'Finished') {
         publish('ended', diagnostic?.message ?? 'Custom duel finished');
+      } else if (gameId !== null && context !== null && finalSnapshotAttempts < 2) {
+        // The party can report Finished before the final game snapshot was read.
+        // Read it from the archive before concluding that there is no duel.
+        finalSnapshotAttempts += 1;
+        gameEndpoint = null;
+        return gameId;
       } else {
         gameId = null;
         context = null;
         mapRounds = [];
         output = null;
+        pinpointing = null;
         diagnostic = null;
         schemaBlocked = false;
         gameEndpoint = null;
@@ -398,6 +435,7 @@ export function createPlayerTieRangeController(
       context = null;
       mapRounds = [];
       output = null;
+      pinpointing = null;
       diagnostic = null;
       schemaBlocked = true;
       publish('unavailable', 'Game master accounts are not player HUD targets');
@@ -485,10 +523,11 @@ export function createPlayerTieRangeController(
       if (typeof raw !== 'object' || raw === null || (raw as { gameId?: unknown }).gameId !== targetGameId) {
         throw new Error('Player response belongs to another game');
       }
-      const accepted = acceptPlayerSnapshot(context, raw, configuredMode());
+      const accepted = acceptPlayerSnapshot(context, raw, { mode: configuredMode(), pinpointing: configuredPinpointing() });
       context = accepted.context;
       mapRounds = accepted.accepted && context ? decodePlayerMapRounds(raw, context) : [];
       output = accepted.output;
+      pinpointing = accepted.pinpointing;
       diagnostic = accepted.diagnostic;
       failureCount = 0;
       problem = null;
@@ -499,9 +538,9 @@ export function createPlayerTieRangeController(
       }
       if (!started || expectedGeneration !== generation || gameId !== targetGameId) return;
       if (!accepted.accepted) publish('unavailable', 'Custom HP unavailable');
-      else if (context?.mode === 'off') publish('off');
+      else if (customOff(context)) publish('off');
       else if (accepted.diagnostic?.code === 'source-ended') publish('ended', accepted.diagnostic.message);
-      else if (output) publish('ready');
+      else if (output || pinpointing) publish('ready');
       else publish('unavailable', 'Custom HP unavailable');
       scheduleWake();
     } catch (error) {
@@ -529,6 +568,7 @@ export function createPlayerTieRangeController(
     context = null;
     mapRounds = [];
     output = null;
+    pinpointing = null;
     diagnostic = null;
     schemaBlocked = false;
     currentPartyId = null;
@@ -563,6 +603,7 @@ export function createPlayerTieRangeController(
       context = null;
       mapRounds = [];
       output = null;
+      pinpointing = null;
       diagnostic = null;
       schemaBlocked = false;
       currentPartyId = null;

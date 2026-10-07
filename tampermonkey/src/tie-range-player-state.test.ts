@@ -72,13 +72,15 @@ test('decodes the captured player response to literal custom health without serv
     maxRounds: 30,
     teamIds: ['team-blue', 'team-red'],
     rounds: [
-      { round: 1, scores: [4240, 4164] },
-      { round: 2, scores: [4465, 4278] },
-      { round: 3, scores: [4533, 5000] },
-      { round: 4, scores: [251, 251] },
-      { round: 5, scores: [1, 4226] },
+      { round: 1, scores: [4240, 4164], guessedAtMs: [null, null] },
+      { round: 2, scores: [4465, 4278], guessedAtMs: [null, null] },
+      { round: 3, scores: [4533, 5000], guessedAtMs: [null, null] },
+      { round: 4, scores: [251, 251], guessedAtMs: [null, null] },
+      { round: 5, scores: [1, 4226], guessedAtMs: [null, null] },
     ],
   });
+  assert.equal(accepted.context.pinpointing, false);
+  assert.equal(accepted.pinpointing, null);
   assert.deepEqual(accepted.output?.currentHealth, [0, 5644]);
   assert.deepEqual(accepted.output?.currentMultiplierTenths, [25, 30]);
   assert.deepEqual(accepted.output?.terminal, {
@@ -256,7 +258,7 @@ test('accepts captured manual-round live-node snapshots and ignores preloaded fu
   assert.equal(resolved.accepted, true);
   assert.equal(resolved.context?.sourceVersion, 8);
   assert.equal(resolved.context?.mode, 'full');
-  assert.deepEqual(resolved.context?.input.rounds, [{ round: 1, scores: [0, 0] }]);
+  assert.deepEqual(resolved.context?.input.rounds, [{ round: 1, scores: [0, 0], guessedAtMs: [null, null] }]);
   assert.deepEqual(resolved.output?.currentMultiplierTenths, [15, 15]);
 
   const damage = acceptPlayerSnapshot(
@@ -330,7 +332,7 @@ test('serializes compact contexts, reloads derived output, and bounds independen
 
   const rawSaved = [...storage.values.values()].find(value => typeof value === 'string') as string;
   assert.ok(rawSaved);
-  assert.doesNotMatch(rawSaved, /healthAfter|damageDealt|winningTeamId|guess|pano/i);
+  assert.doesNotMatch(rawSaved, /healthAfter|damageDealt|winningTeamId|lat|lng|distance|pano/i);
 
   const restored = await loadPlayerContext(storage, 'player-rest-full');
   assert.deepEqual(restored.context, current);
@@ -459,4 +461,145 @@ test('the completed live manual duel keeps settled HP instead of forced native l
   assert.deepEqual(result.output?.currentHealth, [6000, 2295]);
   assert.deepEqual(result.output?.currentMultiplierTenths, [20, 20]);
   assert.deepEqual(result.output?.terminal, {round:3,winnerTeamId:'team-blue',isDraw:false});
+});
+
+const BLUE_LOCK = '2026-09-10T12:23:20.552+00:00';
+
+function withGuesses(value: any): void {
+  // Blue locks in before the round-1 deadline; red's only guess is the auto-submitted timeout guess.
+  value.teams[0].players[0].guesses = [{ roundNumber: 1, created: BLUE_LOCK, score: 4240 }];
+  value.teams[1].players[0].guesses = [{ roundNumber: 1, created: '2026-09-10T12:23:36.100+00:00', score: 4164 }];
+}
+
+test('captures Pinpointing Duels per duel and decodes deliberate guess times', () => {
+  const first = acceptPlayerSnapshot(null, snapshot(withGuesses), { mode: 'off', pinpointing: true });
+  assert.equal(first.accepted, true);
+  assert.ok(first.context);
+  assert.equal(first.context.pinpointing, true);
+  assert.equal(first.context.mode, 'off');
+  assert.deepEqual(first.context.input.rounds[0].guessedAtMs, [Date.parse(BLUE_LOCK), null]);
+  assert.deepEqual(first.context.input.rounds[1].guessedAtMs, [null, null]);
+  assert.equal(first.output, null, 'HP output is not computed under Pinpointing Duels');
+  assert.deepEqual(first.pinpointing?.totals, [2, 3]);
+  assert.deepEqual(first.pinpointing?.rounds.map(round => round.reason), ['closest', 'closest', 'solo-5k', 'tie', 'closest']);
+  assert.equal(first.pinpointing?.terminal, null);
+  assert.equal(first.diagnostic?.code, 'source-ended');
+
+  const later = acceptPlayerSnapshot(first.context, snapshot(value => { withGuesses(value); value.version = 50; }), { mode: 'full', pinpointing: false });
+  assert.equal(later.context?.pinpointing, true);
+  assert.equal(later.context?.mode, 'off');
+  assert.deepEqual(later.pinpointing?.totals, [2, 3]);
+
+  const banded = acceptPlayerSnapshot(null, snapshot(withGuesses), { mode: 'full', pinpointing: true });
+  assert.deepEqual(banded.pinpointing?.totals, [0, 3]);
+  assert.equal(banded.pinpointing?.rounds[0].band, 760);
+  assert.equal(banded.output, null);
+});
+
+test('Pinpointing Duels pins the seven-point finish across later rounds', () => {
+  const sweep = (value: any) => {
+    for (const result of value.teams[0].roundResults) result.score = 5000;
+    for (const result of value.teams[1].roundResults) result.score = 0;
+  };
+  const first = acceptPlayerSnapshot(null, snapshot(sweep), { mode: 'off', pinpointing: true });
+  assert.deepEqual(first.pinpointing?.terminal, { round: 4, winnerTeamId: 'team-blue' });
+  assert.equal(first.pinpointing?.rounds.length, 4);
+  assert.equal(first.diagnostic, null);
+  const later = acceptPlayerSnapshot(first.context, snapshot(value => {
+    sweep(value); value.version = 50; value.currentRoundNumber = 6;
+    value.rounds[5].startTime = '2026-09-12T00:00:00.000+00:00';
+    value.teams[0].roundResults.push({ roundNumber: 6, score: 0 });
+    value.teams[1].roundResults.push({ roundNumber: 6, score: 5000 });
+  }), { mode: 'off', pinpointing: true });
+  assert.equal(later.accepted, true);
+  assert.deepEqual(later.pinpointing?.terminal, { round: 4, winnerTeamId: 'team-blue' });
+  assert.equal(later.context?.input.rounds.length, 5);
+});
+
+test('schema 1 saved contexts migrate with Pinpointing Duels off and unknown guess times', async () => {
+  const storage = new MemoryStorage();
+  const context = acceptPlayerSnapshot(null, snapshot(withGuesses), 'full').context!;
+  await savePlayerContext(storage, context);
+  const key = [...storage.values.keys()].find(k => k.includes('.game.'))!;
+  const legacy = JSON.parse(storage.values.get(key) as string);
+  legacy.schemaVersion = 1; delete legacy.pinpointing;
+  for (const round of legacy.input.rounds) delete round.guessedAtMs;
+  storage.values.set(key, JSON.stringify(legacy));
+  const restored = await loadPlayerContext(storage, context.gameId);
+  assert.ok(restored.context);
+  assert.equal(restored.context.schemaVersion, PLAYER_TIE_RANGE_RULES_VERSION);
+  assert.equal(restored.context.pinpointing, false);
+  assert.deepEqual(restored.context.input.rounds[0].guessedAtMs, [null, null]);
+  assert.deepEqual(restored.output?.currentHealth, [0, 5644]);
+  assert.equal(restored.pinpointing, null);
+  assert.equal(restored.diagnostic, null);
+});
+
+test('saved Pinpointing Duels contexts restore their points and reject bad guess times', async () => {
+  const storage = new MemoryStorage();
+  const context = acceptPlayerSnapshot(null, snapshot(withGuesses), { mode: 'half', pinpointing: true }).context!;
+  await savePlayerContext(storage, context);
+  const restored = await loadPlayerContext(storage, context.gameId);
+  assert.deepEqual(restored.context, context);
+  assert.deepEqual(restored.pinpointing?.totals, [0, 3]);
+  assert.equal(restored.output, null);
+  const key = [...storage.values.keys()].find(k => k.includes('.game.'))!;
+  const broken = JSON.parse(storage.values.get(key) as string);
+  broken.input.rounds[0].guessedAtMs = ['soon', null];
+  storage.values.set(key, JSON.stringify(broken));
+  assert.equal((await loadPlayerContext(storage, context.gameId)).diagnostic?.code, 'invalid-saved-context');
+});
+
+test('settled guess times stay frozen; only missing ones are backfilled later', () => {
+  const first = acceptPlayerSnapshot(null, snapshot(withGuesses), { mode: 'off', pinpointing: true });
+  const changed = acceptPlayerSnapshot(first.context, snapshot(value => {
+    withGuesses(value); value.version = 50;
+    value.teams[0].players[0].guesses[0].created = '2026-09-10T12:23:21.552+00:00';
+    value.teams[1].players[0].guesses[0].created = '2026-09-10T12:23:30.000+00:00';
+  }), { mode: 'off', pinpointing: true });
+  assert.equal(changed.accepted, true);
+  assert.equal(changed.diagnostic?.code, 'source-ended');
+  assert.deepEqual(changed.context?.input.rounds[0].guessedAtMs, [Date.parse(BLUE_LOCK), Date.parse('2026-09-10T12:23:30.000+00:00')]);
+  const hpOnly = acceptPlayerSnapshot(null, snapshot(), 'full');
+  const timed = acceptPlayerSnapshot(hpOnly.context, snapshot(value => { withGuesses(value); value.version = 50; }), 'full');
+  assert.equal(timed.accepted, true, 'timings never affect the HP ruleset');
+  assert.deepEqual(timed.output?.currentHealth, [0, 5644]);
+});
+
+test('a server finish after the next round was announced is not a rollback', () => {
+  // Live node: round 4 announced (currentRoundNumber 4) with three settled rounds, still Ongoing.
+  const announced = acceptPlayerSnapshot(null, snapshot(value => {
+    value.status = 'Ongoing'; value.version = 20; value.currentRoundNumber = 4;
+    for (const team of value.teams) team.roundResults.splice(3);
+  }), { mode: 'off', pinpointing: true });
+  assert.equal(announced.context?.input.rounds.length, 3);
+  // Health kill: the archive reports Finished at round 3 with the same three results.
+  const finished = acceptPlayerSnapshot(announced.context, snapshot(value => {
+    value.status = 'Finished'; value.version = 29; value.currentRoundNumber = 3;
+    for (const team of value.teams) team.roundResults.splice(3);
+  }), { mode: 'off', pinpointing: true });
+  assert.equal(finished.accepted, true);
+  assert.equal(finished.context?.rollbackPendingFrom ?? null, null);
+  assert.equal(finished.context?.input.rounds.length, 3);
+  assert.deepEqual(finished.pinpointing?.totals, [2, 2]);
+  assert.equal(finished.diagnostic?.code, 'source-ended');
+});
+
+test('a finished archive clears a pending rollback left by the live node cancelling an announced round', () => {
+  const rules = { mode: 'off' as const, pinpointing: true };
+  const base = (value: any, round: number, status: string, version: number) => {
+    value.status = status; value.version = version; value.currentRoundNumber = round;
+    for (const team of value.teams) team.roundResults.splice(1);
+  };
+  const settled = acceptPlayerSnapshot(null, snapshot(v => base(v, 1, 'Ongoing', 10)), rules);
+  const announced = acceptPlayerSnapshot(settled.context, snapshot(v => base(v, 2, 'Ongoing', 11)), rules);
+  assert.equal(announced.context?.input.rounds.length, 1);
+  const cancelled = acceptPlayerSnapshot(announced.context, snapshot(v => base(v, 1, 'Ongoing', 12)), rules);
+  assert.equal(cancelled.context?.rollbackPendingFrom, 1, 'an ongoing drop still looks like a restart');
+  const finished = acceptPlayerSnapshot(cancelled.context, snapshot(v => base(v, 1, 'Finished', 13)), rules);
+  assert.equal(finished.accepted, true);
+  assert.equal(finished.context?.rollbackPendingFrom ?? null, null);
+  assert.equal(finished.context?.input.rounds.length, 1);
+  assert.deepEqual(finished.pinpointing?.totals, [1, 0]);
+  assert.equal(finished.diagnostic?.code, 'source-ended');
 });

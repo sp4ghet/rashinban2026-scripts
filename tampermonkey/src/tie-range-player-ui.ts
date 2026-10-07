@@ -1,4 +1,5 @@
 import { createPlayerScoringAnimation } from './tie-range-player-animation.ts';
+import { renderPointPips } from './tie-range-player-pips.ts';
 import { createPlayerMapOverlay } from './tie-range-player-map.ts';
 import type { TieRangeBandMode, TieRangeRoundOutput } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
@@ -15,7 +16,14 @@ export type PlayerTieRangeUiDependencies = {
   onResultVisible?(): void;
   onModeChange(mode: TieRangeBandMode): void;
   getConfiguredMode(): TieRangeBandMode;
+  onPinpointingChange?(enabled: boolean): void;
+  getConfiguredPinpointing?(): boolean;
 };
+
+function rulesLabel(mode: TieRangeBandMode, pinpointing: boolean): string {
+  const tieRange = mode === 'off' ? 'Off' : mode === 'full' ? 'Full' : 'Half';
+  return pinpointing ? `Pinpointing Duels · Tie range ${tieRange}` : `Tie range ${tieRange}`;
+}
 
 export type PlayerTieRangeUi = {
   update(view: PlayerTieRangeView): void;
@@ -86,7 +94,7 @@ function summaryDisclosesTerminal(
   roots: HTMLElement[],
   view: PlayerTieRangeView,
 ): boolean {
-  const terminalRound = view.output?.terminal?.round;
+  const terminalRound = view.output?.terminal?.round ?? view.pinpointing?.terminal?.round;
   if (terminalRound === undefined) return false;
   return scopedElements(roots, CLASS_SELECTORS.summary).some(summary => {
     if (!classStartsWith(summary, 'game-summary-2_root__') || !visible(summary, document)) return false;
@@ -146,6 +154,13 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       .result-title { display: none; }
       .result-grid { display: flex; justify-content: space-between; gap: 100px; font-variant-numeric: tabular-nums; }
       .result-meta { display: none; }
+      .result-verdict { margin-top: 10px; font-size: 26px; color: #ffe169; letter-spacing: .03em; }
+      .team[data-rb-rules="pinpointing"] .multiplier { color: #ffe169; font-size: 13px; letter-spacing: .06em; }
+      .team[data-rb-rules="pinpointing"] .track { display: none; }
+      .pips { display: flex; gap: 7px; margin-top: 7px; }
+      .team[data-side="red"] .pips { flex-direction: row-reverse; }
+      .pip { width: 16px; height: 16px; border-radius: 50%; background: #ffffff1f; border: 2px solid #ffffff3a; box-sizing: border-box; }
+      .pip.filled { background: var(--team); border-color: #ffffffb0; box-shadow: 0 0 8px var(--team); }
       .terminal { position: fixed; top: 22%; left: 50%; transform: translateX(-50%); min-width: min(420px, calc(100vw - 32px));
         padding: 13px 22px; border: 1px solid #ffe16999; border-radius: 10px; background: #111e; text-align: center;
         filter: drop-shadow(0 3px 12px #000c); }
@@ -171,16 +186,16 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     <section class="hud" data-rb="hud" aria-live="polite" hidden>
       <div class="mode" data-rb="mode" data-rb-mode-note></div>
       <div class="teams" data-rb="teams">
-        <article class="team" data-rb="team-0"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div></article>
-        <article class="team" data-rb="team-1"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div></article>
+        <article class="team" data-rb="team-0"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div><div class="pips" data-rb="pips" hidden></div></article>
+        <article class="team" data-rb="team-1"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div><div class="pips" data-rb="pips" hidden></div></article>
       </div>
-      <div class="result" data-rb="result" hidden><div class="result-title" data-rb="result-title"></div><div class="result-grid"><span data-rb="result-team-0"></span><span data-rb="result-team-1"></span></div><div class="result-meta" data-rb="result-meta"></div></div>
+      <div class="result" data-rb="result" hidden><div class="result-title" data-rb="result-title"></div><div class="result-grid"><span data-rb="result-team-0"></span><span data-rb="result-team-1"></span></div><div class="result-verdict" data-rb="result-verdict" hidden></div><div class="result-meta" data-rb="result-meta"></div></div>
       <div class="diagnostic" data-rb="diagnostic" hidden></div>
     </section>
     <div class="terminal" data-rb="terminal" aria-live="assertive" hidden><strong data-rb="terminal-headline"></strong><span data-rb="terminal-detail"></span></div>
     <button type="button" class="settings-open" data-rb="settings-open"></button>
     <div class="settings" data-rb="settings-panel" role="dialog" aria-modal="true" aria-labelledby="rb-settings-title" hidden>
-      <div class="settings-card"><h2 id="rb-settings-title">Player tie-range</h2><label>Mode<select data-rb="mode-select"><option value="off">Off</option><option value="full">Full</option><option value="half">Half</option></select></label><p>The selected mode is captured when a duel begins. Changes apply to the next duel.</p><button type="button" data-rb="settings-close">Close</button></div>
+      <div class="settings-card"><h2 id="rb-settings-title">RASHINBAN player rules</h2><label>Tie range<select data-rb="mode-select"><option value="off">Off</option><option value="full">Full</option><option value="half">Half</option></select></label><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-rb="pinpointing-check"> Pinpointing Duels</label><p>Pinpointing Duels replaces HP with points: a solo 5K scores 2, the faster of two 5Ks scores 1, otherwise the closer guess scores 1 (inside the tie band, when tie range is on, nothing). First to 7 wins. The selected rules are captured when a duel begins. Changes apply to the next duel.</p><button type="button" data-rb="settings-close">Close</button></div>
     </div>`;
   (document.body ?? document.documentElement).append(host);
 
@@ -195,6 +210,9 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   const settingsOpen = byRb<HTMLButtonElement>('settings-open');
   const settingsPanel = byRb<HTMLElement>('settings-panel');
   const modeSelect = byRb<HTMLSelectElement>('mode-select');
+  const pinpointingCheck = byRb<HTMLInputElement>('pinpointing-check');
+  const configuredPinpointing = () => dependencies.getConfiguredPinpointing?.() === true;
+  const settingsButtonText = (mode: TieRangeBandMode, pinpointing: boolean) => `Settings: ${rulesLabel(mode, pinpointing)}`;
   for (const index of [0, 1]) {
     const damage = document.createElement('span');
     damage.className = 'damage';
@@ -282,18 +300,29 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       ? `${display.modeLabel} · setting applies next duel`
       : display.modeLabel;
     const configured = lastView?.configuredMode ?? dependencies.getConfiguredMode();
-    settingsOpen.textContent = `Tie range settings: ${configured === 'off' ? 'Off' : configured === 'full' ? 'Full' : 'Half'}`;
+    settingsOpen.textContent = settingsButtonText(configured, lastView?.configuredPinpointing ?? configuredPinpointing());
     settingsOpen.hidden = lastView?.status === 'inactive';
     if (display.teams) {
       display.teams.forEach((team, index) => {
         const root = byRb<HTMLElement>(`team-${index}`);
         root.dataset.side = team.side;
+        root.dataset.rbRules = display.pinpointing ? 'pinpointing' : 'health';
         root.querySelector<HTMLElement>('[data-rb="label"]')!.textContent = team.label;
+        const damage = root.querySelector<HTMLElement>('[data-rb="damage"]')!;
+        const pips = root.querySelector<HTMLElement>('[data-rb="pips"]')!;
+        pips.hidden = !display.pinpointing;
+        if (display.pinpointing) {
+          root.querySelector<HTMLElement>('[data-rb="health"]')!.textContent = `${team.points ?? 0} / ${team.firstTo ?? 7}`;
+          root.querySelector<HTMLElement>('[data-rb="multiplier"]')!.textContent = team.matchPoint ? 'MATCH POINT' : '';
+          renderPointPips(pips, team.points, team.firstTo ?? 7);
+          damage.hidden = true;
+          damage.textContent = '';
+          return;
+        }
         root.querySelector<HTMLElement>('[data-rb="health"]')!.textContent = String(team.health);
         root.querySelector<HTMLElement>('[data-rb="multiplier"]')!.textContent = multiplier(team.multiplierTenths);
         const percent = team.maximumHealth <= 0 ? 0 : Math.max(0, Math.min(100, team.health / team.maximumHealth * 100));
         root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!.style.width = `${percent}%`;
-        const damage = root.querySelector<HTMLElement>('[data-rb="damage"]')!;
         const amount = display.result?.damageDealt[index === 0 ? 1 : 0] ?? 0;
         damage.hidden = amount === 0;
         damage.textContent = amount > 0 ? `−${amount}` : '';
@@ -308,6 +337,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       }
       byRb<HTMLElement>('result-meta').textContent = `Tie band ${display.result.band} · ${display.result.withinBand ? 'inside range' : 'outside range'}`;
     }
+    if (!display.pinpointing) byRb<HTMLElement>('result-verdict').hidden = true;
     terminal.hidden = display.terminal === null;
     if (display.terminal) {
       byRb<HTMLElement>('terminal-headline').textContent = display.terminal.headline;
@@ -318,8 +348,14 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     diagnostic.textContent = message;
   }
 
+  function customTerminalRound(view: PlayerTieRangeView): number | null {
+    return view.output?.terminal?.round ?? view.pinpointing?.terminal?.round ?? null;
+  }
+
   function applySummaryReplacements(view: PlayerTieRangeView, roots: HTMLElement[]): string | null {
-    if (!view.context || !view.output) return null;
+    const rounds = view.output?.rounds ?? view.pinpointing?.rounds;
+    if (!view.context || !rounds) return null;
+    const firstTo = view.pinpointing?.firstTo ?? 7;
     let unsupported = false;
     const desired = new Set<HTMLElement>();
     for (const summary of scopedElements(roots, CLASS_SELECTORS.summary)) {
@@ -338,7 +374,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
         // without profile links. Match their score columns to verified history.
         const observations = Array.from(summary.querySelectorAll<HTMLElement>(CLASS_SELECTORS.summaryRow)).flatMap(row => {
           const number = Number.parseInt(row.querySelector(CLASS_SELECTORS.roundNumber)?.textContent ?? '', 10);
-          const folded = view.output!.rounds.find(round => round.round === number);
+          const folded = rounds.find(round => round.round === number);
           if (!folded || row.children.length !== 5) return [];
           const scores = [1, 2].map(column => {
             const digits = row.children[column].textContent?.trim().match(/^\d[\d,\u00a0 ]*/)?.[0];
@@ -352,7 +388,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
         )));
         if (matching.length === 1) {
           columnByTeam = matching[0][0] === 0 ? [3, 4] : [4, 3];
-        } else if (matching.length === 2 && view.output.rounds.every(round => round.scores[0] === round.scores[1])) {
+        } else if (matching.length === 2 && rounds.every(round => round.scores[0] === round.scores[1])) {
           // Both histories and HP values are identical, so either mapping is equivalent.
           columnByTeam = [3, 4];
         }
@@ -365,8 +401,9 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
         if (!classStartsWith(row, 'game-summary-2_playedRound__')) continue;
         const cells = Array.from(row.children) as HTMLElement[];
         const roundNumber = Number.parseInt(row.querySelector(CLASS_SELECTORS.roundNumber)?.textContent ?? '', 10);
-        const folded = view.output.rounds.find(round => round.round === roundNumber);
-        const afterTerminal = view.output.terminal !== null && roundNumber > view.output.terminal.round;
+        const folded = rounds.find(round => round.round === roundNumber);
+        const terminalRound = customTerminalRound(view);
+        const afterTerminal = terminalRound !== null && roundNumber > terminalRound;
         if (cells.length !== 5 || (!folded && !afterTerminal)) { unsupported = true; continue; }
         const roundLabel = cells[0].querySelector<HTMLElement>(CLASS_SELECTORS.roundNumber);
         if (roundLabel) {
@@ -390,12 +427,20 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
             cell.append(replacement);
             summaryReplacements.set(cell, replacement);
           }
-          const health = String(folded?.healthAfter[teamIndex] ?? view.output.currentHealth[teamIndex]);
-          const damage = folded?.damageDealt[teamIndex === 0 ? 1 : 0] ?? 0;
-          const text = `${health}${damage > 0 ? ` (−${damage})` : ''}`;
+          let text: string; let label: string;
+          if (view.pinpointing) {
+            const points = folded && 'totalsAfter' in folded ? folded.totalsAfter[teamIndex] : view.pinpointing.totals[teamIndex];
+            const gained = folded && 'points' in folded ? folded.points[teamIndex] : 0;
+            text = `${points} / ${firstTo}${gained > 0 ? ` (+${gained})` : ''}`;
+            label = `Pinpointing Duels points ${points} of ${firstTo}; gained ${gained} this round`;
+          } else {
+            const health = String(folded && 'healthAfter' in folded ? folded.healthAfter[teamIndex] : view.output!.currentHealth[teamIndex]);
+            const damage = folded && 'damageDealt' in folded ? folded.damageDealt[teamIndex === 0 ? 1 : 0] : 0;
+            text = `${health}${damage > 0 ? ` (−${damage})` : ''}`;
+            const used = folded && 'multiplierTenths' in folded ? multiplier(folded.multiplierTenths[teamIndex]) : 'Duel already finished';
+            label = `Custom health ${health}; damage received ${damage}; used multiplier ${used}`;
+          }
           if (replacement.textContent !== text) replacement.textContent = text;
-          const used = folded ? multiplier(folded.multiplierTenths[teamIndex]) : 'Duel already finished';
-          const label = `Custom health ${health}; damage received ${damage}; used multiplier ${used}`;
           if (replacement.title !== label) replacement.title = label;
           if (replacement.getAttribute('aria-label') !== label) replacement.setAttribute('aria-label', label);
         }
@@ -438,7 +483,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       // Ask for settled results at entry instead of waiting up to 2.5 seconds.
       queueMicrotask(() => { if (!disposed) dependencies.onResultVisible?.(); });
     }
-    const expectedRound = lastView.output?.rounds.at(-1)?.round ?? null;
+    const expectedRound = (lastView.output?.rounds ?? lastView.pinpointing?.rounds)?.at(-1)?.round ?? null;
     const matchingResultRoots = visibleResultRoots(document, roots, expectedRound);
     const disclosed = matchingResultRoots.length > 0;
     if (disclosed && expectedRound !== null && lastView.context) {
@@ -446,10 +491,9 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     }
     const terminalSummaryVisible = summaryDisclosesTerminal(document, roots, lastView);
     terminal.style.top = terminalSummaryVisible ? '100px' : '22%';
-    if (terminalSummaryVisible && lastView.output?.terminal) {
-      revealedRoundIdentity = lastView.context
-        ? playerRoundIdentity(lastView.context, lastView.output.terminal.round)
-        : null;
+    const customTerminal = customTerminalRound(lastView);
+    if (terminalSummaryVisible && customTerminal !== null) {
+      revealedRoundIdentity = lastView.context ? playerRoundIdentity(lastView.context, customTerminal) : null;
     }
     const display = derivePlayerTieRangeDisplay(lastView, disclosed, revealedRoundIdentity);
     let layoutDiagnostic: string | null = null;
@@ -502,6 +546,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       ? shadow.activeElement
       : document.activeElement instanceof HTMLElement ? document.activeElement : null;
     modeSelect.value = dependencies.getConfiguredMode();
+    pinpointingCheck.checked = configuredPinpointing();
     settingsPanel.hidden = false;
     modeSelect.focus();
   }
@@ -523,15 +568,21 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   modeSelect.addEventListener('change', () => {
     const value = modeSelect.value;
     if (value !== 'off' && value !== 'full' && value !== 'half') return;
-    settingsOpen.textContent = `Tie range settings: ${value === 'off' ? 'Off' : value === 'full' ? 'Full' : 'Half'}`;
+    settingsOpen.textContent = settingsButtonText(value, pinpointingCheck.checked);
     closeSettings();
     dependencies.onModeChange(value);
+  });
+  pinpointingCheck.addEventListener('change', () => {
+    const value = modeSelect.value;
+    settingsOpen.textContent = settingsButtonText(value === 'full' || value === 'half' ? value : 'off', pinpointingCheck.checked);
+    closeSettings();
+    dependencies.onPinpointingChange?.(pinpointingCheck.checked);
   });
 
   const MutationObserverConstructor = document.defaultView?.MutationObserver;
   const observer = MutationObserverConstructor ? new MutationObserverConstructor(queueReconcile) : null;
   observer?.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'style', 'aria-hidden'] });
-  settingsOpen.textContent = `Tie range settings: ${dependencies.getConfiguredMode() === 'off' ? 'Off' : dependencies.getConfiguredMode() === 'full' ? 'Full' : 'Half'}`;
+  settingsOpen.textContent = settingsButtonText(dependencies.getConfiguredMode(), configuredPinpointing());
 
   return {
     update(view): void {

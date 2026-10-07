@@ -21,7 +21,7 @@ function validRuleOptions(options: DuelState['ruleOptions']): options is NonNull
 }
 
 /** Validate lazily: server rounds after our terminal round do not belong to this game. */
-function* validatedCompletedRounds(state: DuelState): Generator<[RoundResult, RoundResult]> {
+export function* validatedCompletedRounds(state: DuelState): Generator<[RoundResult, RoundResult]> {
   const all = state.players.flatMap(player => player.results);
   const validRoundNumbers = all.filter(result => Number.isInteger(result.round) && result.round >= 1)
     .map(result => result.round);
