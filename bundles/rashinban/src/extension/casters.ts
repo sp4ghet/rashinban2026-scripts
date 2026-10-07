@@ -1,5 +1,6 @@
 // Caster slot selection. The caster list itself is published by the sheet
-// poller (see ./sheet.ts); this owns which two are on air.
+// poller (see ./sheet.ts); this owns which two casters the cards show.
+// Whether a card is on air lives in the broadcast bus (see ./broadcast.ts).
 import type NodeCG from "@nodecg/types";
 
 import {
@@ -7,17 +8,17 @@ import {
   withDefaults,
   withSheetDefaults,
   type Caster,
-  type CasterSlot,
   type CastersState,
 } from "../casters/casters.ts";
 import { CASTERS_MESSAGES, REPLICANTS } from "../types/replicants.ts";
 
-/** One slot's edit: { slot: 0 | 1, name?: string, enabled?: boolean }. */
-export interface CasterSlotEdit extends Partial<CasterSlot> {
+/** One slot's edit: { slot: 0 | 1, name?: string }. */
+export interface CasterSlotEdit {
   slot: number;
+  name?: string;
 }
 
-export function registerCasters(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeCG.ServerAPI["Router"]>) {
+export function registerCasters(nodecg: NodeCG.ServerAPI, _router: ReturnType<NodeCG.ServerAPI["Router"]>) {
   const state = nodecg.Replicant<CastersState>(REPLICANTS.castersState, {
     defaultValue: structuredClone(DEFAULT_CASTERS_STATE),
   });
@@ -27,7 +28,7 @@ export function registerCasters(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
   state.value = withDefaults(state.value ?? undefined);
 
   // Pre-fill empty slots from sheet order so a fresh install has something to
-  // enable; never overwrites a slot the operator has chosen.
+  // put on air; never overwrites a slot the operator has chosen.
   casters.on("change", (value) => {
     if (!value?.length) return;
     state.value = withSheetDefaults(withDefaults(state.value ?? undefined), value);
@@ -38,10 +39,7 @@ export function registerCasters(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
     const index = edit.slot;
     if (index !== 0 && index !== 1) throw new Error("slot must be 0 or 1");
     const slot = current.slots[index]!;
-    current.slots[index] = {
-      name: typeof edit.name === "string" ? edit.name.trim() : slot.name,
-      enabled: typeof edit.enabled === "boolean" ? edit.enabled : slot.enabled,
-    };
+    current.slots[index] = { name: typeof edit.name === "string" ? edit.name.trim() : slot.name };
     state.value = current;
     return current;
   }
@@ -54,13 +52,4 @@ export function registerCasters(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
       if (ack && !ack.handled) ack(error instanceof Error ? error : new Error("Unable to set caster slot"));
     }
   });
-
-  // Companion: toggle either card without opening the dashboard.
-  for (const index of [0, 1] as const) {
-    router.post(`/casters/${index + 1}/show`, (_req, res) => res.json(setSlot({ slot: index, enabled: true })));
-    router.post(`/casters/${index + 1}/hide`, (_req, res) => res.json(setSlot({ slot: index, enabled: false })));
-    router.post(`/casters/${index + 1}/toggle`, (_req, res) =>
-      res.json(setSlot({ slot: index, enabled: !withDefaults(state.value ?? undefined).slots[index]!.enabled })),
-    );
-  }
 }
