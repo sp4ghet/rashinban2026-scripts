@@ -149,7 +149,8 @@ function terminalRound(context: PlayerGameContext | null): number | null {
 }
 
 function endedWithoutWinner(context: PlayerGameContext | null): boolean {
-  return customActive(context) && context!.sourceStatus === 'Finished' && terminalRound(context) === null;
+  if (context === null || !customActive(context)) return false;
+  return context.sourceStatus === 'Finished' && terminalRound(context) === null;
 }
 
 function retained(
@@ -355,8 +356,18 @@ function sameRules(previous: PlayerGameContext, next: DecodedSnapshot): boolean 
     && previous.input.maxRounds === next.input.maxRounds;
 }
 
+/** Scores identify a settled round; guess times are frozen separately and never block acceptance. */
 function sameRound(left: PlayerSettledRound, right: PlayerSettledRound): boolean {
-  return left.round === right.round && tupleEqual(left.scores, right.scores) && tupleEqual(left.guessedAtMs, right.guessedAtMs);
+  return left.round === right.round && tupleEqual(left.scores, right.scores);
+}
+
+/** Keep captured guess times; a later snapshot may only fill in ones that were unknown. */
+function retainGuessTimes(previous: PlayerGameContext, rounds: PlayerSettledRound[]): PlayerSettledRound[] {
+  return rounds.map(round => {
+    const old = previous.input.rounds.find(value => value.round === round.round);
+    if (!old || !tupleEqual(old.scores, round.scores)) return round;
+    return { ...round, guessedAtMs: [old.guessedAtMs[0] ?? round.guessedAtMs[0], old.guessedAtMs[1] ?? round.guessedAtMs[1]] };
+  });
 }
 
 function rollbackStart(previous: PlayerGameContext, next: DecodedSnapshot): number | null {
@@ -485,6 +496,7 @@ export function acceptPlayerSnapshot(
     }
   }
 
+  if (activePrevious) acceptedRounds = retainGuessTimes(activePrevious, acceptedRounds);
   if (rollback === null && rollbackPendingFrom !== null) {
     if (decoded.input.rounds.some(round => round.round >= rollbackPendingFrom!)) {
       // A newer version alone cannot tie an old score to the restarted round.
@@ -586,10 +598,7 @@ function restoreContext(value: unknown, expectedGameId: string): PlayerContextRe
     if (!parsed.input || !tupleEqual(parsed.teamIds, parsed.input.teamIds)) throw new Error('identity mismatch');
     // Off contexts still need valid inputs: they can be restored before a fetch.
     foldTieRange(parsed.input, parsed.mode === 'off' ? null : parsed.mode);
-    for (const round of parsed.input.rounds) {
-      if (!Array.isArray(round.guessedAtMs) || round.guessedAtMs.length !== 2
-        || round.guessedAtMs.some(at => at !== null && !Number.isFinite(at))) throw new Error('invalid guess time');
-    }
+    // Also validates every round's guess times, whichever ruleset is captured.
     foldPinpointing({ teamIds: parsed.input.teamIds, tieRange: parsed.mode, rounds: parsed.input.rounds });
     const seen = new Set<number>();
     for (const start of parsed.roundStarts) {

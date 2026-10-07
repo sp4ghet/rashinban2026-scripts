@@ -81,7 +81,7 @@ export function createPlayerScoringAnimation(document: Document, shadow: ShadowR
         root.querySelector<HTMLElement>('[data-rb="health"]')!.textContent = `${total} / ${team.firstTo}`;
         const fill = root.querySelector<HTMLElement>('[data-rb="bar-fill"]')!;
         fill.style.transition = 'none'; fill.style.width = `${total / team.firstTo * 100}%`;
-        root.querySelector<HTMLElement>('[data-rb="multiplier"]')!.textContent = total >= team.firstTo - 2 ? 'MATCH POINT' : '';
+        root.querySelector<HTMLElement>('[data-rb="multiplier"]')!.textContent = total >= team.firstTo - 2 && total < team.firstTo ? 'MATCH POINT' : '';
       });
       if (display.terminal && result) node('terminal').hidden = !points.done;
       if (points.done) completed.add(session.key);

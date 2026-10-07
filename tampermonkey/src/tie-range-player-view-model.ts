@@ -134,7 +134,8 @@ function derivePinpointingDisplay(
   const disclosed = latest === null || view.status === 'ended' || retainedDisclosure
     || resultIsDisclosed(latest, context.currentRoundNumber, nativeResultVisible);
   const totals: [number, number] = latest && !disclosed ? latest.totalsBefore : points.totals;
-  const matchPoint: [boolean, boolean] = disclosed ? points.matchPoint : [totals[0] >= points.firstTo - 2, totals[1] >= points.firstTo - 2];
+  const onMatchPoint = (total: number) => total >= points.firstTo - 2 && total < points.firstTo;
+  const matchPoint: [boolean, boolean] = disclosed ? points.matchPoint : [onMatchPoint(totals[0]), onMatchPoint(totals[1])];
   const labels: [string, string] = localIndex >= 0 ? ['You', 'Opponent'] : ['Blue', 'Red'];
   const teams = order.map((index, position) => ({
     teamId: points.teamIds[index],

@@ -373,7 +373,7 @@ test('Pinpointing Duels terminal reads the final score and survives later source
   const won = foldPinpointing({ teamIds: ['blue-team', 'red-team'], tieRange: 'off', rounds });
   const context = { ...pointsContext, currentRoundNumber: 6, input: { ...pointsContext.input, rounds } };
   const display = derivePlayerTieRangeDisplay(pointsView({ context, pinpointing: won }), false);
-  assert.deepEqual(display.teams!.map(team => [team.label, team.points, team.matchPoint]), [['You', 0, false], ['Opponent', 8, true]]);
+  assert.deepEqual(display.teams!.map(team => [team.label, team.points, team.matchPoint]), [['You', 0, false], ['Opponent', 8, false]]);
   assert.deepEqual(display.terminal, { headline: 'You lose 0–8', detail: 'Custom duel finished — wait for the host', round: 4 });
   const neutral = derivePlayerTieRangeDisplay(pointsView({ context, pinpointing: won, localTeamId: null }), false);
   assert.equal(neutral.terminal?.headline, 'Blue wins 8–0');

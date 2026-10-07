@@ -79,7 +79,8 @@
     const retainedDisclosure = latestIdentity !== null && latestIdentity === revealedRoundIdentity;
     const disclosed = latest === null || view.status === "ended" || retainedDisclosure || resultIsDisclosed(latest, context.currentRoundNumber, nativeResultVisible);
     const totals = latest && !disclosed ? latest.totalsBefore : points.totals;
-    const matchPoint = disclosed ? points.matchPoint : [totals[0] >= points.firstTo - 2, totals[1] >= points.firstTo - 2];
+    const onMatchPoint = (total) => total >= points.firstTo - 2 && total < points.firstTo;
+    const matchPoint = disclosed ? points.matchPoint : [onMatchPoint(totals[0]), onMatchPoint(totals[1])];
     const labels = localIndex >= 0 ? ["You", "Opponent"] : ["Blue", "Red"];
     const teams = order.map((index, position) => ({
       teamId: points.teamIds[index],
@@ -637,7 +638,8 @@
       tieRange: input.tieRange,
       rounds,
       totals: [...totals],
-      matchPoint: [totals[0] >= FIRST_TO - 2, totals[1] >= FIRST_TO - 2],
+      // A solo 5K scores 2, so 5 can finish; a side that has already won is not "on match point".
+      matchPoint: [totals[0] >= FIRST_TO - 2 && totals[0] < FIRST_TO, totals[1] >= FIRST_TO - 2 && totals[1] < FIRST_TO],
       terminal
     };
   }
@@ -701,7 +703,8 @@
     return context.pinpointing ? pinpointingFor(context)?.terminal?.round ?? null : outputFor(context)?.terminal?.round ?? null;
   }
   function endedWithoutWinner(context) {
-    return customActive(context) && context.sourceStatus === "Finished" && terminalRound(context) === null;
+    if (context === null || !customActive(context)) return false;
+    return context.sourceStatus === "Finished" && terminalRound(context) === null;
   }
   function retained(previous, code, message) {
     return {
@@ -875,7 +878,14 @@
     return previous.input.initialHealth === next.input.initialHealth && previous.input.individual === next.input.individual && previous.input.mutual === next.input.mutual && previous.input.delay === next.input.delay && previous.input.maxRounds === next.input.maxRounds;
   }
   function sameRound(left, right) {
-    return left.round === right.round && tupleEqual(left.scores, right.scores) && tupleEqual(left.guessedAtMs, right.guessedAtMs);
+    return left.round === right.round && tupleEqual(left.scores, right.scores);
+  }
+  function retainGuessTimes(previous, rounds) {
+    return rounds.map((round) => {
+      const old = previous.input.rounds.find((value) => value.round === round.round);
+      if (!old || !tupleEqual(old.scores, round.scores)) return round;
+      return { ...round, guessedAtMs: [old.guessedAtMs[0] ?? round.guessedAtMs[0], old.guessedAtMs[1] ?? round.guessedAtMs[1]] };
+    });
   }
   function rollbackStart(previous, next) {
     let rollback = next.currentRoundNumber < previous.currentRoundNumber ? next.currentRoundNumber : null;
@@ -975,6 +985,7 @@
         rollbackPendingFrom = decoded.input.rounds.some((round) => round.round >= rollback) ? rollback : null;
       }
     }
+    if (activePrevious) acceptedRounds = retainGuessTimes(activePrevious, acceptedRounds);
     if (rollback === null && rollbackPendingFrom !== null) {
       if (decoded.input.rounds.some((round) => round.round >= rollbackPendingFrom)) {
         acceptedRounds = acceptedRounds.filter((round) => round.round < rollbackPendingFrom);
@@ -1052,9 +1063,6 @@
       }
       if (!parsed.input || !tupleEqual(parsed.teamIds, parsed.input.teamIds)) throw new Error("identity mismatch");
       foldTieRange(parsed.input, parsed.mode === "off" ? null : parsed.mode);
-      for (const round of parsed.input.rounds) {
-        if (!Array.isArray(round.guessedAtMs) || round.guessedAtMs.length !== 2 || round.guessedAtMs.some((at) => at !== null && !Number.isFinite(at))) throw new Error("invalid guess time");
-      }
       foldPinpointing({ teamIds: parsed.input.teamIds, tieRange: parsed.mode, rounds: parsed.input.rounds });
       const seen = /* @__PURE__ */ new Set();
       for (const start2 of parsed.roundStarts) {
@@ -1654,7 +1662,7 @@
           const fill = root.querySelector('[data-rb="bar-fill"]');
           fill.style.transition = "none";
           fill.style.width = `${total / team.firstTo * 100}%`;
-          root.querySelector('[data-rb="multiplier"]').textContent = total >= team.firstTo - 2 ? "MATCH POINT" : "";
+          root.querySelector('[data-rb="multiplier"]').textContent = total >= team.firstTo - 2 && total < team.firstTo ? "MATCH POINT" : "";
         });
         if (display.terminal && result) node("terminal").hidden = !points.done;
         if (points.done) completed.add(session.key);

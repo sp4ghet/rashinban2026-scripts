@@ -148,6 +148,22 @@ userscript name, version 0.2.0) rather than adding a second script.
   HP columns are replaced by running points. Tie-range circles on the results
   map remain when tie range is on.
 
+## Implementation notes (2026-10-07)
+
+- The verdict banner distinguishes a scoreless double 5K (`DOUBLE 5K · NO
+  POINT`) from an ordinary tie (`TIE · NO POINT`).
+- `DuelState.pinpointing` stores the whole core output (including team IDs,
+  tie-range mode and the terminal), a superset of the fields listed above.
+- Match point means 5 or 6 points; a side that has reached 7 is the winner,
+  not "on match point". Projected points hold the pre-round totals until the
+  verdict stage, including through the 5K video gate and after a restart.
+- The userscript freezes a settled round's guess times with its scores but
+  does not compare them when accepting later snapshots; only unknown times
+  may be filled in by a later snapshot. This protects the HP ruleset from an
+  endpoint that reports timings late or not at all.
+- The dashboard toggle landed with the rule-context change rather than as a
+  separate task.
+
 ## Verification
 
 - Core unit tests: every branch, earlier/equal/null timings, solo 5K jumping

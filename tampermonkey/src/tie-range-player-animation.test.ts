@@ -23,7 +23,6 @@ test('tie collision has no multiplier, damage flight, or HP loss', () => {
   assert.equal(tie.health, 0);
 });
 test('Pinpointing Duels counts, announces the verdict at the collision beat, and never deals damage', () => {
-  
   assert.equal(pinpointingPhase(375).count, .5);
   assert.equal(pinpointingPhase(750).count, 1);
   assert.equal(pinpointingPhase(1749).verdict, false);

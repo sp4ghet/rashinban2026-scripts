@@ -217,6 +217,34 @@ Private local evidence: [browser results](../../artifacts/presenter-validation/t
 These checks use synthetic NodeCG inputs and real map rendering; they do not
 exercise a live host-controlled duel or repeat the OBS audio timing test.
 
+## Pinpointing Duels (2026-10-07)
+
+Implemented on branch `feat/pinpointing-duels`; operator and player
+instructions are in [pinpointing.md](pinpointing.md). The automated suite
+covers the shared rules core, derivation on the recorded duels, settings
+migration, per-duel capture and restart, the verdict choreography (points held
+until the verdict, through the 5K gate and after a restart), the dashboard
+toggle, and the player decoder, controller and display model. Type checking,
+the production build and `npm run validate:player` (the existing tie-range
+browser harness, which still passes with the extended userscript) were run.
+
+Not yet exercised and still required before the event:
+
+- **Opponent guess timing on the player endpoint.** No capture shows
+  `teams[].players[].guesses[].created` for the opponent in the player view.
+  On a live duel, confirm that a double 5K awards the earlier guess on both
+  the presenter and the player HUD; if the HUD shows no point while the
+  presenter does, the endpoint omits timings and the HUD note applies.
+- **Server finish before 7 points.** Start a duel with ordinary health and
+  let HP end it: the presenter must show GAME FINISHED without a winner and
+  the dashboard must warn that the server duel finished before 7 points.
+- **Restart during results.** Restart NodeCG while a verdict is on screen:
+  the counters must show the post-round totals, not the pre-round ones.
+- **Abort after 7.** Reach 7, abort the GeoGuessr game, and confirm the
+  presenter keeps NAME WINS and the HUD keeps "You win".
+- Stream inspection of the point counters, match-point highlight, verdict
+  banner placement and the `collision` / `tie` cue sounds in the real layout.
+
 ## External checks still required
 
 | Needed input | Required acceptance |

@@ -550,12 +550,18 @@ test('saved Pinpointing Duels contexts restore their points and reject bad guess
   assert.equal((await loadPlayerContext(storage, context.gameId)).diagnostic?.code, 'invalid-saved-context');
 });
 
-test('a changed guess time on a settled round is treated as changed history', () => {
+test('settled guess times stay frozen; only missing ones are backfilled later', () => {
   const first = acceptPlayerSnapshot(null, snapshot(withGuesses), { mode: 'off', pinpointing: true });
   const changed = acceptPlayerSnapshot(first.context, snapshot(value => {
     withGuesses(value); value.version = 50;
     value.teams[0].players[0].guesses[0].created = '2026-09-10T12:23:21.552+00:00';
+    value.teams[1].players[0].guesses[0].created = '2026-09-10T12:23:30.000+00:00';
   }), { mode: 'off', pinpointing: true });
-  assert.equal(changed.accepted, false);
-  assert.equal(changed.diagnostic?.code, 'recovery');
+  assert.equal(changed.accepted, true);
+  assert.equal(changed.diagnostic?.code, 'source-ended');
+  assert.deepEqual(changed.context?.input.rounds[0].guessedAtMs, [Date.parse(BLUE_LOCK), Date.parse('2026-09-10T12:23:30.000+00:00')]);
+  const hpOnly = acceptPlayerSnapshot(null, snapshot(), 'full');
+  const timed = acceptPlayerSnapshot(hpOnly.context, snapshot(value => { withGuesses(value); value.version = 50; }), 'full');
+  assert.equal(timed.accepted, true, 'timings never affect the HP ruleset');
+  assert.deepEqual(timed.output?.currentHealth, [0, 5644]);
 });
