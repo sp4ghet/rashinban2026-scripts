@@ -10,7 +10,9 @@
     <link rel="stylesheet" href="info.css" />
     <style>
       :root { --accent: #00bcd4; }
-      body { background: #000; }
+      /* Composited over the LED presenter page, which paints its own black
+         outside the 1920x576 band, so this page must not be opaque. */
+      body { background: transparent; }
     </style>
   </head>
   <body data-output="led">

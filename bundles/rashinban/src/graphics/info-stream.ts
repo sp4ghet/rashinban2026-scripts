@@ -9,6 +9,7 @@ import { mountLowerThird } from "./layers/lower-third.ts";
 import { mountPlayerCards } from "./layers/player-cards.ts";
 
 const channel = channelFromSearch(location.search);
+// Not styled: lets a switcher monitor or DevTools tell preview from program.
 document.body.dataset.channel = channel;
 
 const casters = mountCasters(mustQuery(document, "#layer-casters"));
