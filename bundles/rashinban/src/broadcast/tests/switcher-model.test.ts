@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { controlRows, patchAt, rowDirty, valueAt } from "../switcher-model.ts";
+import { controlRows, monitorUrls, patchAt, rowDirty, valueAt } from "../switcher-model.ts";
 import { BROADCAST_OUTPUTS, createInitialState, defaultLayers, mergeLayers, setPreview } from "../state.ts";
 
 test("patchAt builds a nested patch and valueAt reads one", () => {
@@ -66,5 +66,17 @@ test("every control value round-trips through the state validator", () => {
         }
       }
     }
+  }
+});
+
+test("monitorUrls opens the info page on the channel and a presenter that never takes program", () => {
+  for (const channel of ["preview", "program"] as const) {
+    const stream = monitorUrls("stream", channel);
+    assert.equal(stream.info, `/bundles/rashinban/graphics/info-stream.html?channel=${channel}`);
+    assert.equal(stream.presenter, `/bundles/rashinban/graphics/presenter.html?role=preview&channel=${channel}`);
+    const led = monitorUrls("led", channel);
+    assert.equal(led.info, `/bundles/rashinban/graphics/info-led.html?channel=${channel}`);
+    assert.equal(led.presenter, `/bundles/rashinban/graphics/presenter-led.html?channel=${channel}`);
+    assert.ok(!led.presenter.includes("role="), "presenter-led.html implies the led role; no role param");
   }
 });

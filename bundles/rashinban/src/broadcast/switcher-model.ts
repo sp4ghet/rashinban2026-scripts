@@ -101,6 +101,23 @@ export function patchAt(path: readonly string[], value: unknown, layers: unknown
   return keys.reduceRight<unknown>((acc, key) => ({ [key]: acc }), leaf) as Record<string, unknown>;
 }
 
+/**
+ * Graphics pages a switcher monitor opens for one channel. The stream
+ * presenter is opened as a silent preview client so it never takes the
+ * program lease; presenter-led.html implies the led role by itself and
+ * shows exactly what the wall shows.
+ */
+export function monitorUrls(output: BroadcastOutput, channel: "preview" | "program"): { info: string; presenter: string } {
+  const base = "/bundles/rashinban/graphics";
+  return {
+    info: `${base}/info-${output}.html?channel=${channel}`,
+    presenter:
+      output === "led"
+        ? `${base}/presenter-led.html?channel=${channel}`
+        : `${base}/presenter.html?role=preview&channel=${channel}`,
+  };
+}
+
 /** True when any control in the row differs between the two layer sets. */
 export function rowDirty(row: Row, preview: unknown, program: unknown): boolean {
   return row.controls.some((c) => !layersEqual(valueAt(preview, c.path), valueAt(program, c.path)));

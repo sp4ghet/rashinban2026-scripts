@@ -8,7 +8,7 @@ html, body { margin: 0; height: 100%; background: #141a22; color: #edf1f8; font:
 .monitor[data-channel="program"] .screen { border-color: #c62828; }
 .screen iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: 0; pointer-events: none; transform-origin: top left; transform: scale(var(--scale, .25)); }
 .screen iframe[hidden] { display: none; }
-.strip { display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.strip { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; }
 .row { display: grid; grid-template-columns: 160px 1fr; align-items: center; gap: 12px; padding: 8px 12px; background: #1b2333; border-left: 4px solid transparent; border-radius: 4px; }
 .row.dirty { border-left-color: #ffcf78; background: #262d3a; }
 .row h4 { margin: 0; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
