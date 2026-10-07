@@ -1,3 +1,5 @@
+import type { PinpointingOutput } from '../presenter/pinpointing-core.ts';
+
 export type Mode = 'MOVE' | 'NM' | 'NMPZ';
 export type TieRangeMode = 'off' | 'full' | 'half';
 export type TieRangeRound = { round: number; band: number; withinBand: boolean };
@@ -62,6 +64,8 @@ export type DuelState = {
   initialHealth: number;
   ruleOptions?: { individual: number; mutual: number; delay: number; maxErrorDistance: number | null };
   tieRange?: { mode: Exclude<TieRangeMode, 'off'>; rounds: TieRangeRound[] };
+  /** Pinpointing Duels points derived from settled rounds; HP is not shown while present. */
+  pinpointing?: PinpointingOutput;
   players: [DuelPlayer, DuelPlayer];
   rounds: Round[];
   aborted: boolean;
