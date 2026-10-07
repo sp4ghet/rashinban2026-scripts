@@ -561,11 +561,13 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     const value = modeSelect.value;
     if (value !== 'off' && value !== 'full' && value !== 'half') return;
     settingsOpen.textContent = settingsButtonText(value, pinpointingCheck.checked);
+    closeSettings();
     dependencies.onModeChange(value);
   });
   pinpointingCheck.addEventListener('change', () => {
     const value = modeSelect.value;
     settingsOpen.textContent = settingsButtonText(value === 'full' || value === 'half' ? value : 'off', pinpointingCheck.checked);
+    closeSettings();
     dependencies.onPinpointingChange?.(pinpointingCheck.checked);
   });
 
