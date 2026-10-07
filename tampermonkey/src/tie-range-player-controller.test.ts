@@ -635,3 +635,40 @@ test('both rules off reports off while Pinpointing Duels alone is ready', async 
   assert.deepEqual(restored.views.at(-1)?.pinpointing?.totals, [2, 3]);
   restored.controller.dispose();
 });
+
+test('a party that finishes before the final snapshot was read fetches it once instead of dropping the duel', async () => {
+  let activeCalls = 0; const urls: string[] = [];
+  const h = harness(async url => {
+    urls.push(url);
+    if (url.endsWith('/api/v4/parties/v2/active')) {
+      activeCalls += 1;
+      return activeCalls === 1
+        ? response({ partyId: 'party-1', lobbyId: 'player-rest-full', gameState: 'Ongoing', gameType: 'Duels', owner: { userId: 'host-user' } })
+        : response({ partyId: 'party-1', gameState: 'Finished', lobbyId: null });
+    }
+    if (url.startsWith(PHONEBOOK_PREFIX)) {
+      return response(activeCalls === 1
+        ? { gameId: 'player-rest-full', gameServerNodeId: 'node-1', status: 'Active' }
+        : { gameId: 'player-rest-full', gameServerNodeId: null, status: 'Finished' });
+    }
+    const value = game() as any;
+    if (url.includes('gs2.geoguessr.com')) { value.status = 'Ongoing'; value.version = 40; }
+    return response(value);
+  }, { path: '/party/lobby', mode: 'off', pinpointing: true });
+
+  h.controller.start();
+  await flush();
+  assert.equal(h.views.at(-1)?.status, 'ready');
+  assert.deepEqual(h.views.at(-1)?.pinpointing?.totals, [2, 3]);
+
+  await h.clock.advance(2500);
+  assert.equal(h.views.at(-1)?.status, 'ended');
+  assert.deepEqual(h.views.at(-1)?.pinpointing?.totals, [2, 3]);
+  assert.equal(h.views.at(-1)?.diagnostic?.code, 'source-ended');
+  assert.ok(urls.some(url => url.includes('/api/duels/player-rest-full')), 'final archive snapshot fetched');
+
+  await h.clock.advance(2500);
+  assert.equal(h.views.at(-1)?.status, 'ended');
+  assert.equal(urls.filter(url => url.includes('/api/duels/')).length, 1, 'the archive is read once');
+  h.controller.dispose();
+});

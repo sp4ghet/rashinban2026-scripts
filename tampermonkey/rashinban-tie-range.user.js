@@ -888,6 +888,7 @@
     });
   }
   function rollbackStart(previous, next) {
+    if (next.sourceStatus === "Finished") return null;
     let rollback = next.currentRoundNumber < previous.currentRoundNumber ? next.currentRoundNumber : null;
     const previousStarts = new Map(previous.roundStarts.map((start2) => [start2.round, start2.startTime]));
     for (const start2 of next.roundStarts) {
@@ -986,7 +987,9 @@
       }
     }
     if (activePrevious) acceptedRounds = retainGuessTimes(activePrevious, acceptedRounds);
-    if (rollback === null && rollbackPendingFrom !== null) {
+    if (rollback === null && rollbackPendingFrom !== null && decoded.sourceStatus === "Finished") {
+      rollbackPendingFrom = null;
+    } else if (rollback === null && rollbackPendingFrom !== null) {
       if (decoded.input.rounds.some((round) => round.round >= rollbackPendingFrom)) {
         acceptedRounds = acceptedRounds.filter((round) => round.round < rollbackPendingFrom);
       } else {
@@ -1203,6 +1206,7 @@
     let problem = null;
     let gameEndpoint = null;
     let currentPartyId = null;
+    let finalSnapshotAttempts = 0;
     function configuredMode() {
       return dependencies.getConfiguredMode();
     }
@@ -1268,6 +1272,7 @@
       problem = null;
       gameEndpoint = null;
       currentPartyId = null;
+      finalSnapshotAttempts = 0;
     }
     function publishProblem() {
       if (problem === "auth") {
@@ -1333,6 +1338,7 @@
     async function restoreGame(nextGameId, expectedGeneration) {
       if (gameId === nextGameId) return true;
       gameId = nextGameId;
+      finalSnapshotAttempts = 0;
       context = null;
       mapRounds = [];
       output = null;
@@ -1394,6 +1400,10 @@
       if (active.waiting) {
         if (customTerminal() || context?.sourceStatus === "Finished") {
           publish("ended", diagnostic2?.message ?? "Custom duel finished");
+        } else if (gameId !== null && context !== null && finalSnapshotAttempts < 2) {
+          finalSnapshotAttempts += 1;
+          gameEndpoint = null;
+          return gameId;
         } else {
           gameId = null;
           context = null;

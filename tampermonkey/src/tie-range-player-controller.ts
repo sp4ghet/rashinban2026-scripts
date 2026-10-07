@@ -190,6 +190,7 @@ export function createPlayerTieRangeController(
   let problem: 'network' | 'auth' | null = null;
   let gameEndpoint: GameEndpoint | null = null;
   let currentPartyId: string | null = null;
+  let finalSnapshotAttempts = 0;
 
   function configuredMode(): TieRangeBandMode {
     return dependencies.getConfiguredMode();
@@ -269,6 +270,7 @@ export function createPlayerTieRangeController(
     problem = null;
     gameEndpoint = null;
     currentPartyId = null;
+    finalSnapshotAttempts = 0;
   }
 
   function publishProblem(): void {
@@ -343,6 +345,7 @@ export function createPlayerTieRangeController(
   async function restoreGame(nextGameId: string, expectedGeneration: number): Promise<boolean> {
     if (gameId === nextGameId) return true;
     gameId = nextGameId;
+    finalSnapshotAttempts = 0;
     context = null;
     mapRounds = [];
     output = null;
@@ -406,6 +409,12 @@ export function createPlayerTieRangeController(
     if (active.waiting) {
       if (customTerminal() || context?.sourceStatus === 'Finished') {
         publish('ended', diagnostic?.message ?? 'Custom duel finished');
+      } else if (gameId !== null && context !== null && finalSnapshotAttempts < 2) {
+        // The party can report Finished before the final game snapshot was read.
+        // Read it from the archive before concluding that there is no duel.
+        finalSnapshotAttempts += 1;
+        gameEndpoint = null;
+        return gameId;
       } else {
         gameId = null;
         context = null;

@@ -371,6 +371,9 @@ function retainGuessTimes(previous: PlayerGameContext, rounds: PlayerSettledRoun
 }
 
 function rollbackStart(previous: PlayerGameContext, next: DecodedSnapshot): number | null {
+  // A finished duel cannot restart: a lower current round there only means a pre-announced
+  // next round never played (a health kill after auto-start). Its history is final.
+  if (next.sourceStatus === 'Finished') return null;
   let rollback = next.currentRoundNumber < previous.currentRoundNumber
     ? next.currentRoundNumber
     : null;
@@ -497,7 +500,11 @@ export function acceptPlayerSnapshot(
   }
 
   if (activePrevious) acceptedRounds = retainGuessTimes(activePrevious, acceptedRounds);
-  if (rollback === null && rollbackPendingFrom !== null) {
+  if (rollback === null && rollbackPendingFrom !== null && decoded.sourceStatus === 'Finished') {
+    // The live node may drop its round number before it reports the finish; the final
+    // archive is authoritative, so the suffix it carries is settled history, not a restart.
+    rollbackPendingFrom = null;
+  } else if (rollback === null && rollbackPendingFrom !== null) {
     if (decoded.input.rounds.some(round => round.round >= rollbackPendingFrom!)) {
       // A newer version alone cannot tie an old score to the restarted round.
       // Wait until the authoritative history clears before accepting its suffix.

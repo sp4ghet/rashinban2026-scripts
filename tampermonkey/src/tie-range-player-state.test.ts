@@ -565,3 +565,41 @@ test('settled guess times stay frozen; only missing ones are backfilled later', 
   assert.equal(timed.accepted, true, 'timings never affect the HP ruleset');
   assert.deepEqual(timed.output?.currentHealth, [0, 5644]);
 });
+
+test('a server finish after the next round was announced is not a rollback', () => {
+  // Live node: round 4 announced (currentRoundNumber 4) with three settled rounds, still Ongoing.
+  const announced = acceptPlayerSnapshot(null, snapshot(value => {
+    value.status = 'Ongoing'; value.version = 20; value.currentRoundNumber = 4;
+    for (const team of value.teams) team.roundResults.splice(3);
+  }), { mode: 'off', pinpointing: true });
+  assert.equal(announced.context?.input.rounds.length, 3);
+  // Health kill: the archive reports Finished at round 3 with the same three results.
+  const finished = acceptPlayerSnapshot(announced.context, snapshot(value => {
+    value.status = 'Finished'; value.version = 29; value.currentRoundNumber = 3;
+    for (const team of value.teams) team.roundResults.splice(3);
+  }), { mode: 'off', pinpointing: true });
+  assert.equal(finished.accepted, true);
+  assert.equal(finished.context?.rollbackPendingFrom ?? null, null);
+  assert.equal(finished.context?.input.rounds.length, 3);
+  assert.deepEqual(finished.pinpointing?.totals, [2, 2]);
+  assert.equal(finished.diagnostic?.code, 'source-ended');
+});
+
+test('a finished archive clears a pending rollback left by the live node cancelling an announced round', () => {
+  const rules = { mode: 'off' as const, pinpointing: true };
+  const base = (value: any, round: number, status: string, version: number) => {
+    value.status = status; value.version = version; value.currentRoundNumber = round;
+    for (const team of value.teams) team.roundResults.splice(1);
+  };
+  const settled = acceptPlayerSnapshot(null, snapshot(v => base(v, 1, 'Ongoing', 10)), rules);
+  const announced = acceptPlayerSnapshot(settled.context, snapshot(v => base(v, 2, 'Ongoing', 11)), rules);
+  assert.equal(announced.context?.input.rounds.length, 1);
+  const cancelled = acceptPlayerSnapshot(announced.context, snapshot(v => base(v, 1, 'Ongoing', 12)), rules);
+  assert.equal(cancelled.context?.rollbackPendingFrom, 1, 'an ongoing drop still looks like a restart');
+  const finished = acceptPlayerSnapshot(cancelled.context, snapshot(v => base(v, 1, 'Finished', 13)), rules);
+  assert.equal(finished.accepted, true);
+  assert.equal(finished.context?.rollbackPendingFrom ?? null, null);
+  assert.equal(finished.context?.input.rounds.length, 1);
+  assert.deepEqual(finished.pinpointing?.totals, [1, 0]);
+  assert.equal(finished.diagnostic?.code, 'source-ended');
+});
