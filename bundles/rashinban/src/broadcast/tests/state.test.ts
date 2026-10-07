@@ -84,3 +84,38 @@ test("layersEqual compares structurally", () => {
   assert.equal(layersEqual(s.stream.program, s.stream.preview), true);
   assert.equal(layersEqual(s.stream.program, setPreview(s, "stream", { banpick: { visible: true } }).stream.preview), false);
 });
+
+test("patches cannot reach the spec through Object.prototype names", () => {
+  const s = createInitialState();
+  assert.throws(() => setPreview(s, "stream", JSON.parse('{"constructor": {}}')), BroadcastError);
+  assert.throws(() => setPreview(s, "stream", JSON.parse('{"playerCards": {"constructor": {}}}')), BroadcastError);
+  assert.throws(() => setPreview(s, "stream", JSON.parse('{"playerCards": {"toString": true}}')), BroadcastError);
+  assert.throws(() => setPreview(s, "stream", JSON.parse('{"__proto__": {}}')), BroadcastError);
+  assert.throws(() => cutProgram(s, "led", JSON.parse('{"hasOwnProperty": {}}')), BroadcastError);
+});
+
+test("setPreview accepts every enum value and text up to the limit", () => {
+  const s = setPreview(createInitialState(), "stream", { playerCards: { page: "stats" }, lowerThird: { title: "x".repeat(120) } });
+  assert.equal(s.stream.preview.playerCards.page, "stats");
+  assert.equal(s.stream.preview.lowerThird.title.length, 120);
+});
+
+test("setPreview and take never mutate the input state", () => {
+  const before = createInitialState();
+  const snapshot = JSON.stringify(before);
+  const previewed = setPreview(before, "stream", { banpick: { visible: true }, casters: { slots: [true, true] } });
+  take(previewed, "stream");
+  assert.equal(JSON.stringify(before), snapshot);
+  assert.equal(previewed.stream.program.banpick.visible, false);
+});
+
+test("withDefaults treats null and arrays as empty state", () => {
+  assert.deepEqual(withDefaults(null), createInitialState());
+  assert.deepEqual(withDefaults([]), createInitialState());
+});
+
+test("BroadcastError is identifiable by name", () => {
+  const error = new BroadcastError("boom");
+  assert.equal(error.name, "BroadcastError");
+  assert.ok(error instanceof Error);
+});

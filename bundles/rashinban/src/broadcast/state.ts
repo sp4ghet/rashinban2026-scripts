@@ -29,7 +29,9 @@ export type BroadcastState = { stream: OutputBus<StreamLayers>; led: OutputBus<L
 /** Recursive patch type: every leaf optional. */
 export type Patch<L> = { [K in keyof L]?: L[K] extends object ? (L[K] extends readonly unknown[] ? L[K] : Patch<L[K]>) : L[K] };
 
-export class BroadcastError extends Error {}
+export class BroadcastError extends Error {
+  override name = "BroadcastError";
+}
 
 export const MAX_TEXT = 120;
 
@@ -40,15 +42,33 @@ export const MAX_TEXT = 120;
 // whose first entry is the default.
 type Leaf = "boolean" | "boolean:true" | "text" | "booleanPair" | readonly string[];
 type Spec = { [key: string]: Leaf | Spec };
-const CARD_SPEC = { visible: "boolean", page: ["profile", "stats"] } as const satisfies Spec;
-const TOGGLE_SPEC = { visible: "boolean" } as const satisfies Spec;
+
+/**
+ * The spec shape a layer type demands: every field present, each leaf kind
+ * matching the field's TypeScript type. `satisfies SpecOf<...>` below is what
+ * makes the `as LayersFor<O>` casts in the public API trustworthy.
+ */
+type SpecOf<L> = {
+  [K in keyof L]-?: L[K] extends boolean
+    ? "boolean" | "boolean:true"
+    : L[K] extends readonly boolean[]
+      ? "booleanPair"
+      : L[K] extends string
+        ? string extends L[K]
+          ? "text"
+          : readonly L[K][]
+        : SpecOf<L[K]>;
+};
+
+const CARD_SPEC = { visible: "boolean", page: ["profile", "stats"] } as const satisfies SpecOf<PlayerCardsLayer>;
+const TOGGLE_SPEC = { visible: "boolean" } as const satisfies SpecOf<ToggleLayer>;
 const STREAM_SPEC = {
   playerCards: CARD_SPEC,
   lowerThird: { visible: "boolean", mode: ["match", "text"], title: "text", subtitle: "text" },
   casters: { titleBar: "boolean:true", slots: "booleanPair" },
   banpick: TOGGLE_SPEC,
-} as const satisfies Spec;
-const LED_SPEC = { playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC } as const satisfies Spec;
+} as const satisfies SpecOf<StreamLayers>;
+const LED_SPEC = { playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC } as const satisfies SpecOf<LedLayers>;
 const SPECS: Record<BroadcastOutput, Spec> = { stream: STREAM_SPEC, led: LED_SPEC };
 
 function isLeaf(spec: Leaf | Spec): spec is Leaf {
@@ -85,7 +105,9 @@ function merge(spec: Spec, base: Record<string, unknown>, patch: unknown, path =
   }
   const out: Record<string, unknown> = { ...base };
   for (const [key, value] of Object.entries(patch as Record<string, unknown>)) {
-    const child = spec[key];
+    // Own-property lookup only: "constructor", "__proto__", "toString" etc.
+    // must not resolve through Object.prototype into the spec.
+    const child = Object.hasOwn(spec, key) ? spec[key] : undefined;
     const here = path ? `${path}.${key}` : key;
     if (!child) throw new BroadcastError(`unknown field ${here}`);
     if (isLeaf(child)) {
