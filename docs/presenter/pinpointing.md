@@ -60,9 +60,10 @@ columns show running points instead. At 7 points the HUD shows
 host". A duel the server finishes before 7 points shows "Duel ended without a
 custom winner".
 
-The player endpoint has not yet been observed carrying the opponent's guess
-timestamps. If they are absent, a double 5K scores nothing for either side and
-the host's presenter decides; verify this on a live duel before the event.
+The player endpoint carries both players' guess timestamps (confirmed live on
+2026-10-07, client web-1.8229): the HUD awards the faster 5K exactly as the
+presenter does. Should a snapshot ever omit them, a double 5K scores nothing
+for either side and the host's presenter decides.
 
 ## Verification
 
