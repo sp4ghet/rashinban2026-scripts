@@ -2,6 +2,7 @@ import type {
   TieRangeBandMode,
   TieRangeRoundOutput,
 } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
+import type { PinpointingReason, PinpointingRoundOutput } from '../../bundles/rashinban/src/presenter/pinpointing-core.ts';
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
 import type { PlayerGameContext } from './tie-range-player-state.ts';
 
@@ -12,6 +13,10 @@ export type PlayerTieRangeDisplayTeam = {
   health: number;
   maximumHealth: number;
   multiplierTenths: number;
+  /** Pinpointing Duels only. */
+  points?: number;
+  firstTo?: number;
+  matchPoint?: boolean;
 };
 
 export type PlayerTieRangeDisplayResult = {
@@ -22,6 +27,9 @@ export type PlayerTieRangeDisplayResult = {
   nextMultiplierTenths: [number, number];
   band: number;
   withinBand: boolean;
+  /** Pinpointing Duels only. */
+  points?: [number, number];
+  reason?: PinpointingReason;
 };
 
 export type PlayerTieRangeDisplayTerminal = {
@@ -34,6 +42,7 @@ export type PlayerTieRangeDisplay = {
   showHud: boolean;
   showDiagnostic: boolean;
   suppressNative: boolean;
+  pinpointing: boolean;
   mode: TieRangeBandMode;
   modeLabel: string;
   appliesToNextDuel: boolean;
@@ -48,7 +57,7 @@ function pair<T>(values: [T, T], order: [number, number]): [T, T] {
 }
 
 function resultIsDisclosed(
-  round: TieRangeRoundOutput,
+  round: TieRangeRoundOutput | PinpointingRoundOutput,
   currentRoundNumber: number,
   nativeResultVisible: boolean,
 ): boolean {
@@ -95,10 +104,88 @@ export function playerDisclosureMustReset(
   });
 }
 
-function modeLabel(mode: TieRangeBandMode): string {
-  if (mode === 'full') return 'Full tie-range';
-  if (mode === 'half') return 'Half tie-range';
-  return 'Off';
+function modeLabel(mode: TieRangeBandMode, pinpointing = false): string {
+  const tieRange = mode === 'full' ? 'Full tie-range' : mode === 'half' ? 'Half tie-range' : null;
+  if (pinpointing) return tieRange ? `Pinpointing Duels · ${tieRange}` : 'Pinpointing Duels';
+  return tieRange ?? 'Off';
+}
+
+function pointsHeadline(view: PlayerTieRangeView, order: [number, number], totals: [number, number]): string {
+  const terminal = view.pinpointing?.terminal;
+  if (!terminal || !view.pinpointing) return 'Duel ended';
+  const winningIndex = view.pinpointing.teamIds.indexOf(terminal.winnerTeamId);
+  const score = `${totals[order[0]]}–${totals[order[1]]}`;
+  if (view.localTeamId !== null) return `${terminal.winnerTeamId === view.localTeamId ? 'You win' : 'You lose'} ${score}`;
+  return `${winningIndex === 0 ? 'Blue' : 'Red'} wins ${score}`;
+}
+
+function derivePinpointingDisplay(
+  view: PlayerTieRangeView,
+  nativeResultVisible: boolean,
+  revealedRoundIdentity: string | null,
+): PlayerTieRangeDisplay {
+  const context = view.context!;
+  const points = view.pinpointing!;
+  const localIndex = view.localTeamId === null ? -1 : points.teamIds.indexOf(view.localTeamId);
+  const order: [number, number] = localIndex === 1 ? [1, 0] : [0, 1];
+  const latest = points.rounds.at(-1) ?? null;
+  const latestIdentity = latest ? playerRoundIdentity(context, latest.round) : null;
+  const retainedDisclosure = latestIdentity !== null && latestIdentity === revealedRoundIdentity;
+  const disclosed = latest === null || view.status === 'ended' || retainedDisclosure
+    || resultIsDisclosed(latest, context.currentRoundNumber, nativeResultVisible);
+  const totals: [number, number] = latest && !disclosed ? latest.totalsBefore : points.totals;
+  const matchPoint: [boolean, boolean] = disclosed ? points.matchPoint : [totals[0] >= points.firstTo - 2, totals[1] >= points.firstTo - 2];
+  const labels: [string, string] = localIndex >= 0 ? ['You', 'Opponent'] : ['Blue', 'Red'];
+  const teams = order.map((index, position) => ({
+    teamId: points.teamIds[index],
+    label: labels[position],
+    side: index === 0 ? 'blue' : 'red',
+    health: totals[index],
+    maximumHealth: points.firstTo,
+    multiplierTenths: 10,
+    points: totals[index],
+    firstTo: points.firstTo,
+    matchPoint: matchPoint[index],
+  })) as [PlayerTieRangeDisplayTeam, PlayerTieRangeDisplayTeam];
+  const result: PlayerTieRangeDisplayResult | null = latest && nativeResultVisible ? {
+    round: latest.round,
+    scores: pair(latest.scores, order),
+    damageDealt: [0, 0],
+    usedMultiplierTenths: [10, 10],
+    nextMultiplierTenths: [10, 10],
+    band: latest.band,
+    withinBand: latest.withinBand,
+    points: pair(latest.points, order),
+    reason: latest.reason,
+  } : null;
+  let terminal: PlayerTieRangeDisplayTerminal | null = null;
+  const terminalIdentity = points.terminal ? playerRoundIdentity(context, points.terminal.round) : null;
+  if (points.terminal && (view.status === 'ended'
+    || (terminalIdentity !== null && terminalIdentity === revealedRoundIdentity)
+    || context.currentRoundNumber > points.terminal.round
+    || (nativeResultVisible && latest?.round === points.terminal.round))) {
+    terminal = {
+      headline: pointsHeadline(view, order, points.totals),
+      detail: 'Custom duel finished — wait for the host',
+      round: points.terminal.round,
+    };
+  } else if (view.status === 'ended') {
+    terminal = { headline: 'Duel ended', detail: 'No custom winner was determined', round: null };
+  }
+  const diagnostic = diagnosticText(view);
+  return {
+    showHud: true,
+    showDiagnostic: diagnostic !== null,
+    suppressNative: true,
+    pinpointing: true,
+    mode: context.mode,
+    modeLabel: modeLabel(context.mode, true),
+    appliesToNextDuel: view.appliesToNextDuel,
+    teams,
+    result,
+    terminal,
+    diagnostic,
+  };
 }
 
 export function derivePlayerTieRangeDisplay(
@@ -107,17 +194,22 @@ export function derivePlayerTieRangeDisplay(
   revealedRoundIdentity: string | null = null,
 ): PlayerTieRangeDisplay {
   const mode = view.capturedMode ?? view.configuredMode;
+  const pinpointing = view.capturedPinpointing ?? view.configuredPinpointing;
   const accountIsNotAPlayer = view.status === 'unavailable'
     && view.message === 'Current account is not a player in this duel';
+  if (view.context !== null && view.pinpointing !== null && view.context.pinpointing && !accountIsNotAPlayer) {
+    return derivePinpointingDisplay(view, nativeResultVisible, revealedRoundIdentity);
+  }
   if (mode === 'off' || view.context === null || view.output === null || accountIsNotAPlayer) {
     const diagnostic = diagnosticText(view);
     return {
       showHud: false,
-      showDiagnostic: mode !== 'off' && view.status !== 'inactive' && view.status !== 'waiting'
+      showDiagnostic: (mode !== 'off' || pinpointing) && view.status !== 'inactive' && view.status !== 'waiting'
         && view.status !== 'loading' && diagnostic !== null,
       suppressNative: false,
+      pinpointing,
       mode,
-      modeLabel: modeLabel(view.configuredMode),
+      modeLabel: modeLabel(view.configuredMode, view.configuredPinpointing),
       appliesToNextDuel: view.appliesToNextDuel,
       teams: null,
       result: null,
@@ -185,6 +277,7 @@ export function derivePlayerTieRangeDisplay(
     showHud: true,
     showDiagnostic: diagnostic !== null,
     suppressNative: true,
+    pinpointing: false,
     mode,
     modeLabel: modeLabel(mode),
     appliesToNextDuel: view.appliesToNextDuel,
