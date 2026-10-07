@@ -128,3 +128,6 @@ instant). The Duels Presenter panel has an **LED graphic** launch link.
 - The old `playerCards` replicant row may remain in NodeCG's `db/`; it is
   unused and safe to delete. `castersState` entries lose their old `enabled`
   flag automatically, and `banPick.visible` is scrubbed on boot.
+- Companion responses changed: `/banpick/show|hide|toggle` now return the
+  whole stream program layer set, and `/banpick/undo|reset` no longer
+  include `visible`. Update any Companion feedback that parsed those bodies.

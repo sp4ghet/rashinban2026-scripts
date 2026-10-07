@@ -161,7 +161,7 @@ function status() {
   menu.replaceChildren(new Option('Choose program source', ''));
   const list = element('client-list'); list.replaceChildren();
   for (const client of audience?.clients ?? []) {
-    const label = `${client.clientId.slice(0, 8)} · ${client.role}${client.clientId === owner ? ' · active' : ''}`;
+    const label = `${client.clientId.slice(0, 8)} · ${client.role === 'led' ? 'LED' : client.role}${client.clientId === owner ? ' · active' : ''}`;
     const readiness = client.role === 'audio' ? (client.clockFresh ? 'clock ready' : 'clock not ready')
       : `${client.ready ? 'graphics ready' : 'graphics not ready'} · ${labels[client.renderer.status]}`;
     const row = document.createElement('div'); row.textContent = `${label} · ${readiness}`;
