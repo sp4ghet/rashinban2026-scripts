@@ -123,7 +123,7 @@ export type ScoreCalculation = { tied: boolean; winnerId: string | null; loserId
 export type ScoreSequence = ScoreCalculation & {
   countAtMs: number; countEndAtMs: number; subtractAtMs: number; collisionAtMs: number; differenceAtMs: number;
   multiplierAtMs: number | null; flightAtMs: number | null; impactAtMs: number | null; healthEndAtMs: number; completeAtMs: number;
-  verdictAtMs?: number | null;
+  verdictAtMs: number | null;
 };
 export type ScoreStage = 'entry' | 'count' | 'score-hold' | 'subtract' | 'difference' | 'tie' | 'multiplier' | 'flight' | 'impact' | 'verdict' | 'complete';
 export type ScoreProjection = ScoreCalculation & { stage: ScoreStage; entryProgress: number; subtractProgress: number; multiplierProgress: number; flightProgress: number; impactProgress: number; tieProgress: number; verdictProgress: number };

@@ -41,7 +41,7 @@ export function scoreSequence(calculation: ScoreCalculation, revealAtMs: number,
   const healthEndAtMs = (impactAtMs ?? differenceAtMs) + timing.damageMs;
   const completeAtMs = calculation.tied ? subtractAtMs + duration(700)
     : impactAtMs === null ? subtractAtMs + duration(multiplied ? 2000 : 1500) : impactAtMs + Math.max(duration(2000), timing.damageMs);
-  return { ...calculation, countAtMs, countEndAtMs, subtractAtMs, collisionAtMs, differenceAtMs, multiplierAtMs, flightAtMs, impactAtMs, healthEndAtMs, completeAtMs };
+  return { ...calculation, countAtMs, countEndAtMs, subtractAtMs, collisionAtMs, differenceAtMs, multiplierAtMs, flightAtMs, impactAtMs, healthEndAtMs, completeAtMs, verdictAtMs: null };
 }
 
 export function fraction(now: number, from: number | null, to: number | null): number {
@@ -51,7 +51,7 @@ export function fraction(now: number, from: number | null, to: number | null): n
 
 export function scoreProjection(sequence: ScoreSequence, revealAtMs: number, now: number): ScoreProjection {
   const s = sequence;
-  const verdictAtMs = s.verdictAtMs ?? null;
+  const verdictAtMs = s.verdictAtMs;
   const stage = now >= s.completeAtMs ? 'complete' : now < s.countAtMs ? 'entry' : now < s.countEndAtMs ? 'count'
     : now < s.subtractAtMs ? 'score-hold' : verdictAtMs !== null && now >= verdictAtMs ? 'verdict'
     : s.tied ? 'tie' : s.impactAtMs !== null && now >= s.impactAtMs ? 'impact'

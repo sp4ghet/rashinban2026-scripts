@@ -33,7 +33,7 @@ function state(specs: RoundSpec[], overrides: Partial<DuelState> = {}): DuelStat
       if (best) guesses.push(best);
       results.push(result(round, spec.scores[team], best));
     });
-    return guesses.length ? { guesses, results } : { guesses, results };
+    return { guesses, results };
   };
   const blue = side(0); const red = side(1);
   return {

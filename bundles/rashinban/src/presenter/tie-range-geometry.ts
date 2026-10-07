@@ -96,8 +96,8 @@ export function tieRangeMapGeometry(
   }
 
   const verdict = state.pinpointing?.rounds.find(value => value.round === round);
-  const scoringSide = verdict && verdict.winner !== null
-    ? results.find(value => value.player === state.players[verdict.winner!])?.side ?? null : null;
+  const winner = verdict?.winner ?? null;
+  const scoringSide = winner === null ? null : results.find(value => value.player === state.players[winner])?.side ?? null;
   const ordinaryLabel = verdict
     ? pointsLabel(metadata.band, metadata.withinBand, scoringSide)
     : resultLabel(metadata.band, metadata.withinBand, scores, terminal, round, state.ruleOptions);

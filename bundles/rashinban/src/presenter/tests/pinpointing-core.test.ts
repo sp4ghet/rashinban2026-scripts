@@ -117,7 +117,8 @@ test('the opponent can win', () => {
   const specs: RoundSpec[] = Array.from({ length: 7 }, () => [100, 200]);
   const output = foldPinpointing(input(specs));
   assert.deepEqual(output.terminal, { round: 7, winnerTeamId: 'red-team' });
-  assert.deepEqual(output.matchPoint, [false, true]);
+  assert.deepEqual(output.matchPoint, [false, false], 'a winner is no longer on match point');
+  assert.deepEqual(foldPinpointing(input(specs.slice(0, 6))).matchPoint, [false, true]);
 });
 
 test('output copies team ids and tie range', () => {

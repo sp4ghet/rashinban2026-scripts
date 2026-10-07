@@ -1,5 +1,6 @@
 import type { Mode, PinpointingVerdict } from '../../types/presenter.ts';
 import type { DuelState, Timeline } from '../../types/presenter.ts';
+import type { RenderFrame } from './renderer.ts';
 
 /** Banner text for a Pinpointing Duels round verdict. */
 export function verdictLabel(verdict: PinpointingVerdict): string {
@@ -10,10 +11,9 @@ export function verdictLabel(verdict: PinpointingVerdict): string {
   return 'TIE · NO POINT';
 }
 
-export function pointsLabel(matchPoint: boolean, firstTo: number): string {
-  return matchPoint ? 'MATCH POINT' : `FIRST TO ${firstTo}`;
+export function pointsLabel(matchPoint: boolean, firstTo: number, points = 0): string {
+  return points >= firstTo ? 'WINNER' : matchPoint ? 'MATCH POINT' : `FIRST TO ${firstTo}`;
 }
-import type { RenderFrame } from './renderer.ts';
 
 export function lockLayout(frame: RenderFrame): 'none' | 'left' | 'right' | 'both' {
   if (frame.source !== 'rendered' || frame.projection.phase !== 'live'

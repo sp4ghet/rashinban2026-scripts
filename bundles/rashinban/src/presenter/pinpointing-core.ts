@@ -131,7 +131,8 @@ export function foldPinpointing(input: PinpointingInput): PinpointingOutput {
     tieRange: input.tieRange,
     rounds,
     totals: [...totals],
-    matchPoint: [totals[0] >= FIRST_TO - 2, totals[1] >= FIRST_TO - 2],
+    // A solo 5K scores 2, so 5 can finish; a side that has already won is not "on match point".
+    matchPoint: [totals[0] >= FIRST_TO - 2 && totals[0] < FIRST_TO, totals[1] >= FIRST_TO - 2 && totals[1] < FIRST_TO],
     terminal,
   };
 }

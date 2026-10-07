@@ -80,17 +80,42 @@ test('configured count duration is honored without compressing the explanation s
   assert.equal(t.scoring?.countEndAtMs, 12610); assert.equal(t.damageAtMs, 15960);
 });
 
-function pinpointing(tied = false) {
+function pinpointing(tied = false, before: [number, number] = [2, 1], gained: [number, number] = tied ? [0, 0] : [1, 0]) {
   const state = result(1, tied);
+  if (gained[0] === 2) state.players[0].results[0].score = 5000;
   const scores = state.players.map(player => player.results[0].score) as [number, number];
+  const after: [number, number] = [before[0] + gained[0], before[1] + gained[1]];
   state.pinpointing = {
-    teamIds: [state.players[0].teamId, state.players[1].teamId], firstTo: 7, tieRange: 'off', totals: tied ? [2, 1] : [3, 1],
-    matchPoint: [false, false], terminal: null,
-    rounds: [{ round: state.round, scores, guessedAtMs: [1, 2], points: tied ? [0, 0] : [1, 0], totalsBefore: [2, 1],
-      totalsAfter: tied ? [2, 1] : [3, 1], winner: tied ? null : 0, reason: tied ? 'tie' : 'closest', band: 0, withinBand: tied, fiveKs: 0 }],
+    teamIds: [state.players[0].teamId, state.players[1].teamId], firstTo: 7, tieRange: 'off', totals: after,
+    matchPoint: [after[0] >= 5 && after[0] < 7, after[1] >= 5 && after[1] < 7], terminal: after[0] >= 7 ? { round: state.round, winnerTeamId: state.players[0].teamId } : null,
+    rounds: [{ round: state.round, scores, guessedAtMs: [1, 2], points: gained, totalsBefore: before,
+      totalsAfter: after, winner: tied ? null : 0, reason: tied ? 'tie' : gained[0] === 2 ? 'solo-5k' : 'closest', band: 0, withinBand: tied, fiveKs: gained[0] === 2 ? 1 : 0 }],
   };
   return state;
 }
+
+test('points never spoil a round before its verdict, including through the 5K gate and after a restart', () => {
+  const state = pinpointing(false, [4, 1], [2, 0]);
+  const t = advanceTimeline(null, state, 10000, false, DEFAULT_TIMING);
+  assert.equal(t.effect, 'single-5k'); assert.equal(t.revealAtMs, 12000);
+  const at = (now: number) => project(state, advanceTimeline(t, state, now, false, DEFAULT_TIMING), now);
+  for (const now of [10000, 11999, 12000, 13410, 14959]) {
+    assert.deepEqual(at(now).players.map(p => [p.points, p.matchPoint]), [[4, false], [1, false]], `at ${now}`);
+  }
+  assert.deepEqual(at(14960).players.map(p => [p.points, p.matchPoint]), [[6, true], [1, false]]);
+  const restarted = advanceTimeline(null, state, 30000, true, DEFAULT_TIMING);
+  assert.equal(restarted.scoring, null);
+  assert.deepEqual(project(state, restarted, 30000).players.map(p => [p.points, p.matchPoint]), [[6, true], [1, false]]);
+  const plain = pinpointing();
+  const live = advanceTimeline(null, plain, 10000, false, DEFAULT_TIMING);
+  assert.deepEqual(project(plain, live, 10100).players.map(p => p.points), [2, 1], 'ordinary rounds hold totals until the verdict too');
+});
+
+test('a side that has reached seven is the winner, not on match point', () => {
+  const state = pinpointing(false, [6, 1], [2, 0]);
+  const t = advanceTimeline(null, state, 30000, true, DEFAULT_TIMING);
+  assert.deepEqual(project(state, t, 30000).players.map(p => [p.points, p.matchPoint]), [[8, false], [1, false]]);
+});
 
 test('Pinpointing Duels scoring counts, then shows the verdict with the new totals and no damage stages', () => {
   const state = pinpointing(); const t = advanceTimeline(null, state, 10000, false, DEFAULT_TIMING);
@@ -126,10 +151,11 @@ test('a Pinpointing Duels tie keeps the totals and plays the tie cue at the verd
 });
 
 test('points and match point are visible outside results', () => {
-  const state = pinpointing(); state.pinpointing!.matchPoint = [true, false];
+  // The settled round belongs to the previous round number; the current round is still live.
+  const state = pinpointing(false, [4, 1]); state.pinpointing!.rounds[0].round = state.round - 1;
   for (const player of state.players) player.results = [];
   const t = advanceTimeline(null, state, 10000, true, DEFAULT_TIMING);
   const p = project(state, t, 10000);
-  assert.deepEqual(p.players.map(player => [player.points, player.matchPoint]), [[3, true], [1, false]]);
+  assert.deepEqual(p.players.map(player => [player.points, player.matchPoint]), [[5, true], [1, false]]);
   assert.equal(project(result(), advanceTimeline(null, result(), 10000, true, DEFAULT_TIMING), 10000).players[0].points, undefined);
 });

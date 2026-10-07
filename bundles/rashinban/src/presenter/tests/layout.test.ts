@@ -40,4 +40,5 @@ test('Pinpointing Duels verdict and points labels', async () => {
   assert.equal(verdictLabel(verdict('tie', [0, 0])), 'TIE · NO POINT');
   assert.equal(pointsLabel(false, 7), 'FIRST TO 7');
   assert.equal(pointsLabel(true, 7), 'MATCH POINT');
+  assert.equal(pointsLabel(false, 7, 8), 'WINNER');
 });

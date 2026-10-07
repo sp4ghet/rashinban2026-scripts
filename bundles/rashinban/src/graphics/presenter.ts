@@ -146,7 +146,7 @@ function frame() {
       const player = visible.players.find(item => item.id === competitor.playerId);
       const matchPoint = pinpointing !== null && player?.matchPoint === true;
       write(side === 'left' ? 'multiplier' : 'right-multiplier', pinpointing
-        ? player ? pointsLabel(matchPoint, pinpointing.firstTo) : '—' : sideMultipliers[side === 'left' ? 0 : 1]);
+        ? player ? pointsLabel(matchPoint, pinpointing.firstTo, player.points ?? 0) : '—' : sideMultipliers[side === 'left' ? 0 : 1]);
       element(side === 'left' ? 'multiplier' : 'right-multiplier').parentElement!.dataset.matchPoint = String(matchPoint);
       write(`${side}-name`, competitor.name);
       write(`${side}-handle`, competitor.handle);
