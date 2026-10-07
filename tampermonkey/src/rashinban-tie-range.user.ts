@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.1.5
-// @description  Player HP and multipliers for RASHINBAN's Full / Half tie-range rules. Set the same mode as the presenter before joining a duel.
+// @version      0.2.0
+// @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Set the same rules as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
 // @noframes
@@ -26,6 +26,7 @@ declare function GM_deleteValue(key: string): void | Promise<void>;
 declare function GM_registerMenuCommand(name: string, callback: () => void): unknown;
 
 const MODE_KEY = 'rb-tie-range:mode';
+const PINPOINTING_KEY = 'rb-tie-range:pinpointing';
 
 function mode(value: unknown): TieRangeBandMode {
   return value === 'full' || value === 'half' ? value : 'off';
@@ -43,6 +44,7 @@ function accountId(): string | null {
 
 async function start(): Promise<void> {
   let configuredMode = mode(await GM_getValue(MODE_KEY, 'off'));
+  let configuredPinpointing = (await GM_getValue(PINPOINTING_KEY, false)) === true;
   let guestId: string | null = null;
   let identityRequest: AbortController | null = null;
   let lastIdentityAttempt = -Infinity;
@@ -51,7 +53,19 @@ async function start(): Promise<void> {
     document,
     getPageWindow: () => typeof unsafeWindow === 'undefined' ? window : unsafeWindow,
     getConfiguredMode: () => configuredMode,
+    getConfiguredPinpointing: () => configuredPinpointing,
     onResultVisible: () => controller.refresh(),
+    onPinpointingChange: (enabled) => {
+      void (async () => {
+        try {
+          await GM_setValue(PINPOINTING_KEY, enabled);
+          configuredPinpointing = enabled;
+          controller.refresh();
+        } catch {
+          window.alert('Pinpointing Duels setting could not be saved. Please try again from the Tampermonkey menu.');
+        }
+      })();
+    },
     onModeChange: (nextMode) => {
       void (async () => {
         try {
@@ -78,6 +92,7 @@ async function start(): Promise<void> {
     getPath: () => location.pathname,
     getUserId: () => accountId() ?? guestId,
     getConfiguredMode: () => configuredMode,
+    getConfiguredPinpointing: () => configuredPinpointing,
     onView: (view) => ui.update(view),
   });
 
@@ -104,7 +119,7 @@ async function start(): Promise<void> {
     }
   }
 
-  GM_registerMenuCommand('RASHINBAN: Player tie-range settings', () => ui.openSettings());
+  GM_registerMenuCommand('RASHINBAN: Player settings', () => ui.openSettings());
   controller.start();
   void refreshIdentity();
   let previousPath = location.pathname;
@@ -119,7 +134,10 @@ async function start(): Promise<void> {
     if (document.visibilityState === 'hidden') return;
     void refreshIdentity();
     void (async () => {
-      try { configuredMode = mode(await GM_getValue(MODE_KEY, configuredMode)); } catch { /* Keep the last saved preference. */ }
+      try {
+        configuredMode = mode(await GM_getValue(MODE_KEY, configuredMode));
+        configuredPinpointing = (await GM_getValue(PINPOINTING_KEY, configuredPinpointing)) === true;
+      } catch { /* Keep the last saved preference. */ }
       if (!disposed) controller.refresh();
     })();
   };

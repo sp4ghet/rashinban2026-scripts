@@ -1,6 +1,6 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import test from 'node:test';
-import { scoringPhase } from './tie-range-player-animation.ts';
+import { pinpointingPhase, scoringPhase } from './tie-range-player-animation.ts';
 
 test('matches documented cue offsets relative to COUNT_DAMAGE, not REST arrival', () => {
   assert.equal(scoringPhase(0, false, false).count, 0);
@@ -21,4 +21,13 @@ test('tie collision has no multiplier, damage flight, or HP loss', () => {
   assert.equal(tie.multiplied, false);
   assert.equal(tie.flight, 0);
   assert.equal(tie.health, 0);
+});
+test('Pinpointing Duels counts, announces the verdict at the collision beat, and never deals damage', () => {
+  
+  assert.equal(pinpointingPhase(375).count, .5);
+  assert.equal(pinpointingPhase(750).count, 1);
+  assert.equal(pinpointingPhase(1749).verdict, false);
+  assert.equal(pinpointingPhase(1750).verdict, true);
+  assert.equal(pinpointingPhase(2999).done, false);
+  assert.equal(pinpointingPhase(3000).done, true);
 });

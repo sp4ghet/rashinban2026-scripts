@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.1.5
-// @description  Player HP and multipliers for RASHINBAN's Full / Half tie-range rules. Set the same mode as the presenter before joining a duel.
+// @version      0.2.0
+// @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Set the same rules as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
 // @noframes
@@ -56,22 +56,95 @@
       return nextStart !== void 0 && nextStart.startTime !== previousStart.startTime;
     });
   }
-  function modeLabel(mode2) {
-    if (mode2 === "full") return "Full tie-range";
-    if (mode2 === "half") return "Half tie-range";
-    return "Off";
+  function modeLabel(mode2, pinpointing = false) {
+    const tieRange = mode2 === "full" ? "Full tie-range" : mode2 === "half" ? "Half tie-range" : null;
+    if (pinpointing) return tieRange ? `Pinpointing Duels \xB7 ${tieRange}` : "Pinpointing Duels";
+    return tieRange ?? "Off";
+  }
+  function pointsHeadline(view, order, totals) {
+    const terminal = view.pinpointing?.terminal;
+    if (!terminal || !view.pinpointing) return "Duel ended";
+    const winningIndex = view.pinpointing.teamIds.indexOf(terminal.winnerTeamId);
+    const score = `${totals[order[0]]}\u2013${totals[order[1]]}`;
+    if (view.localTeamId !== null) return `${terminal.winnerTeamId === view.localTeamId ? "You win" : "You lose"} ${score}`;
+    return `${winningIndex === 0 ? "Blue" : "Red"} wins ${score}`;
+  }
+  function derivePinpointingDisplay(view, nativeResultVisible, revealedRoundIdentity) {
+    const context = view.context;
+    const points = view.pinpointing;
+    const localIndex = view.localTeamId === null ? -1 : points.teamIds.indexOf(view.localTeamId);
+    const order = localIndex === 1 ? [1, 0] : [0, 1];
+    const latest = points.rounds.at(-1) ?? null;
+    const latestIdentity = latest ? playerRoundIdentity(context, latest.round) : null;
+    const retainedDisclosure = latestIdentity !== null && latestIdentity === revealedRoundIdentity;
+    const disclosed = latest === null || view.status === "ended" || retainedDisclosure || resultIsDisclosed(latest, context.currentRoundNumber, nativeResultVisible);
+    const totals = latest && !disclosed ? latest.totalsBefore : points.totals;
+    const matchPoint = disclosed ? points.matchPoint : [totals[0] >= points.firstTo - 2, totals[1] >= points.firstTo - 2];
+    const labels = localIndex >= 0 ? ["You", "Opponent"] : ["Blue", "Red"];
+    const teams = order.map((index, position) => ({
+      teamId: points.teamIds[index],
+      label: labels[position],
+      side: index === 0 ? "blue" : "red",
+      health: totals[index],
+      maximumHealth: points.firstTo,
+      multiplierTenths: 10,
+      points: totals[index],
+      firstTo: points.firstTo,
+      matchPoint: matchPoint[index]
+    }));
+    const result = latest && nativeResultVisible ? {
+      round: latest.round,
+      scores: pair(latest.scores, order),
+      damageDealt: [0, 0],
+      usedMultiplierTenths: [10, 10],
+      nextMultiplierTenths: [10, 10],
+      band: latest.band,
+      withinBand: latest.withinBand,
+      points: pair(latest.points, order),
+      reason: latest.reason
+    } : null;
+    let terminal = null;
+    const terminalIdentity = points.terminal ? playerRoundIdentity(context, points.terminal.round) : null;
+    if (points.terminal && (view.status === "ended" || terminalIdentity !== null && terminalIdentity === revealedRoundIdentity || context.currentRoundNumber > points.terminal.round || nativeResultVisible && latest?.round === points.terminal.round)) {
+      terminal = {
+        headline: pointsHeadline(view, order, points.totals),
+        detail: "Custom duel finished \u2014 wait for the host",
+        round: points.terminal.round
+      };
+    } else if (view.status === "ended") {
+      terminal = { headline: "Duel ended", detail: "No custom winner was determined", round: null };
+    }
+    const diagnostic2 = diagnosticText(view);
+    return {
+      showHud: true,
+      showDiagnostic: diagnostic2 !== null,
+      suppressNative: true,
+      pinpointing: true,
+      mode: context.mode,
+      modeLabel: modeLabel(context.mode, true),
+      appliesToNextDuel: view.appliesToNextDuel,
+      teams,
+      result,
+      terminal,
+      diagnostic: diagnostic2
+    };
   }
   function derivePlayerTieRangeDisplay(view, nativeResultVisible, revealedRoundIdentity = null) {
     const mode2 = view.capturedMode ?? view.configuredMode;
+    const pinpointing = view.capturedPinpointing ?? view.configuredPinpointing;
     const accountIsNotAPlayer = view.status === "unavailable" && view.message === "Current account is not a player in this duel";
+    if (view.context !== null && view.pinpointing !== null && view.context.pinpointing && !accountIsNotAPlayer) {
+      return derivePinpointingDisplay(view, nativeResultVisible, revealedRoundIdentity);
+    }
     if (mode2 === "off" || view.context === null || view.output === null || accountIsNotAPlayer) {
       const diagnostic3 = diagnosticText(view);
       return {
         showHud: false,
-        showDiagnostic: mode2 !== "off" && view.status !== "inactive" && view.status !== "waiting" && view.status !== "loading" && diagnostic3 !== null,
+        showDiagnostic: (mode2 !== "off" || pinpointing) && view.status !== "inactive" && view.status !== "waiting" && view.status !== "loading" && diagnostic3 !== null,
         suppressNative: false,
+        pinpointing,
         mode: mode2,
-        modeLabel: modeLabel(view.configuredMode),
+        modeLabel: modeLabel(view.configuredMode, view.configuredPinpointing),
         appliesToNextDuel: view.appliesToNextDuel,
         teams: null,
         result: null,
@@ -129,6 +202,7 @@
       showHud: true,
       showDiagnostic: diagnostic2 !== null,
       suppressNative: true,
+      pinpointing: false,
       mode: mode2,
       modeLabel: modeLabel(mode2),
       appliesToNextDuel: view.appliesToNextDuel,
@@ -208,6 +282,10 @@
       }];
     });
   }
+  function playerMapResult(view, round) {
+    const settled = (view.output?.rounds ?? view.pinpointing?.rounds)?.find((value) => value.round === round);
+    return settled ? { scores: settled.scores, band: settled.band } : null;
+  }
   function playerCircleRadii(round, scores, band) {
     if (scores.includes(5e3)) {
       const radius = round.maxErrorDistance === null ? null : tieScoreRadius(5e3, round.maxErrorDistance);
@@ -274,7 +352,7 @@
           return;
         }
         const geometry = view.mapRounds?.find((round) => round.round === resultRound);
-        const result = view.output?.rounds.find((round) => round.round === resultRound);
+        const result = playerMapResult(view, resultRound);
         if (!geometry || !result || geometry.identity !== playerRoundIdentity(view.context, resultRound)) {
           clear();
           return;
@@ -474,11 +552,104 @@
     };
   }
 
+  // bundles/rashinban/src/presenter/pinpointing-core.ts
+  var FIRST_TO = 7;
+  function validateInput2(input) {
+    if (!Array.isArray(input.teamIds) || input.teamIds.length !== 2 || input.teamIds.some((teamId) => typeof teamId !== "string") || input.teamIds[0] === input.teamIds[1]) {
+      throw new Error("Pinpointing team IDs are invalid");
+    }
+    if (input.tieRange !== "off" && input.tieRange !== "full" && input.tieRange !== "half") {
+      throw new Error("Pinpointing tie range mode is invalid");
+    }
+    if (!Array.isArray(input.rounds)) throw new Error("Pinpointing result history is invalid");
+    for (let index = 0; index < input.rounds.length; index += 1) {
+      const settled = input.rounds[index];
+      const expectedRound = index + 1;
+      if (!settled || !Number.isInteger(settled.round) || settled.round < 1) {
+        throw new Error(`Invalid pinpointing result history at round ${expectedRound}`);
+      }
+      if (settled.round !== expectedRound) {
+        throw new Error(`Pinpointing result history has a gap at round ${expectedRound}`);
+      }
+      if (!Array.isArray(settled.scores) || settled.scores.length !== 2 || settled.scores.some((score) => !Number.isInteger(score) || score < 0 || score > 5e3)) {
+        throw new Error(`Invalid pinpointing score at round ${settled.round}`);
+      }
+      if (!Array.isArray(settled.guessedAtMs) || settled.guessedAtMs.length !== 2 || settled.guessedAtMs.some((at) => at !== null && !Number.isFinite(at))) {
+        throw new Error(`Invalid pinpointing guess time at round ${settled.round}`);
+      }
+    }
+  }
+  function foldPinpointing(input) {
+    validateInput2(input);
+    const totals = [0, 0];
+    const rounds = [];
+    let terminal = null;
+    for (const settled of input.rounds) {
+      const [blue, red] = settled.scores;
+      const fiveKs = Number(blue === 5e3) + Number(red === 5e3);
+      const points = [0, 0];
+      let winner = null;
+      let reason;
+      let band = 0;
+      if (fiveKs === 2) {
+        reason = "fastest-5k";
+        const [blueAt, redAt] = settled.guessedAtMs;
+        if (blueAt !== null && redAt !== null && blueAt !== redAt) winner = blueAt < redAt ? 0 : 1;
+        if (winner !== null) points[winner] = 1;
+      } else if (fiveKs === 1) {
+        reason = "solo-5k";
+        winner = blue === 5e3 ? 0 : 1;
+        points[winner] = 2;
+      } else {
+        band = tieRangeBand(Math.max(blue, red), input.tieRange);
+        if (Math.abs(blue - red) > band) {
+          reason = "closest";
+          winner = blue > red ? 0 : 1;
+          points[winner] = 1;
+        } else {
+          reason = "tie";
+        }
+      }
+      const totalsBefore = [...totals];
+      totals[0] += points[0];
+      totals[1] += points[1];
+      rounds.push({
+        round: settled.round,
+        scores: [...settled.scores],
+        guessedAtMs: [...settled.guessedAtMs],
+        points,
+        totalsBefore,
+        totalsAfter: [...totals],
+        winner,
+        reason,
+        band,
+        withinBand: winner === null && fiveKs === 0,
+        fiveKs
+      });
+      if (totals[0] >= FIRST_TO || totals[1] >= FIRST_TO) {
+        terminal = { round: settled.round, winnerTeamId: input.teamIds[totals[0] >= FIRST_TO ? 0 : 1] };
+        break;
+      }
+    }
+    return {
+      teamIds: [...input.teamIds],
+      firstTo: FIRST_TO,
+      tieRange: input.tieRange,
+      rounds,
+      totals: [...totals],
+      matchPoint: [totals[0] >= FIRST_TO - 2, totals[1] >= FIRST_TO - 2],
+      terminal
+    };
+  }
+
   // tampermonkey/src/tie-range-player-state.ts
-  var PLAYER_TIE_RANGE_RULES_VERSION = 1;
+  var PLAYER_TIE_RANGE_RULES_VERSION = 2;
   var STORAGE_PREFIX = "rashinban.tie-range";
   var STORAGE_INDEX_KEY = `${STORAGE_PREFIX}.games`;
   var MAX_SAVED_GAMES = 10;
+  function configuredRules(configured) {
+    return typeof configured === "string" ? { mode: configured, pinpointing: false } : configured;
+  }
   var DecodeError = class extends Error {
     constructor(code, message) {
       super(message);
@@ -511,14 +682,33 @@
     return { code, message };
   }
   function outputFor(context) {
-    if (context === null || context.mode === "off") return null;
+    if (context === null || context.mode === "off" || context.pinpointing) return null;
     return foldTieRange(context.input, context.mode);
+  }
+  function pinpointingFor(context) {
+    if (context === null || !context.pinpointing) return null;
+    return foldPinpointing({
+      teamIds: context.input.teamIds,
+      tieRange: context.mode,
+      rounds: context.input.rounds.map((round) => ({ round: round.round, scores: round.scores, guessedAtMs: round.guessedAtMs }))
+    });
+  }
+  function customActive(context) {
+    return context !== null && (context.mode !== "off" || context.pinpointing);
+  }
+  function terminalRound(context) {
+    if (context === null) return null;
+    return context.pinpointing ? pinpointingFor(context)?.terminal?.round ?? null : outputFor(context)?.terminal?.round ?? null;
+  }
+  function endedWithoutWinner(context) {
+    return customActive(context) && context.sourceStatus === "Finished" && terminalRound(context) === null;
   }
   function retained(previous, code, message) {
     return {
       accepted: false,
       context: previous,
       output: outputFor(previous),
+      pinpointing: pinpointingFor(previous),
       diagnostic: diagnostic(code, message)
     };
   }
@@ -554,7 +744,34 @@
     }
     return { initialHealth, individual, mutual, delay, maxRounds };
   }
+  function decodeDeadlines(raw) {
+    const deadlines = /* @__PURE__ */ new Map();
+    if (!Array.isArray(raw.rounds)) return deadlines;
+    for (const rawRound of raw.rounds) {
+      if (typeof rawRound !== "object" || rawRound === null) continue;
+      const { roundNumber, endTime } = rawRound;
+      const at = typeof endTime === "string" ? Date.parse(endTime) : NaN;
+      if (Number.isInteger(roundNumber) && Number.isFinite(at)) deadlines.set(roundNumber, at);
+    }
+    return deadlines;
+  }
+  function decodeGuessTimes(player, deadlines) {
+    const times = /* @__PURE__ */ new Map();
+    if (!Array.isArray(player.guesses)) return times;
+    for (const rawGuess of player.guesses) {
+      if (typeof rawGuess !== "object" || rawGuess === null) continue;
+      const { roundNumber, created } = rawGuess;
+      const at = typeof created === "string" ? Date.parse(created) : NaN;
+      const deadline = Number.isInteger(roundNumber) ? deadlines.get(roundNumber) : void 0;
+      if (deadline === void 0 || !Number.isFinite(at) || at >= deadline) continue;
+      const round = roundNumber;
+      const previous = times.get(round);
+      if (previous === void 0 || at < previous) times.set(round, at);
+    }
+    return times;
+  }
   function decodeTeams(raw) {
+    const deadlines = decodeDeadlines(raw);
     if (!Array.isArray(raw.teams) || raw.teams.length !== 2) {
       throw new DecodeError("unsupported-game", "Exactly two teams are required");
     }
@@ -570,7 +787,9 @@
       if (!Array.isArray(team.players) || team.players.length !== 1) {
         throw new DecodeError("unsupported-game", "Only one player per team is supported");
       }
-      const playerId = nonemptyString(record(team.players[0], "Player").playerId, "Player ID");
+      const player = record(team.players[0], "Player");
+      const playerId = nonemptyString(player.playerId, "Player ID");
+      const guessTimes = decodeGuessTimes(player, deadlines);
       if (!Array.isArray(team.roundResults)) {
         throw new DecodeError("partial-results", "Team round results are missing");
       }
@@ -583,7 +802,7 @@
         if (results.has(round)) throw new DecodeError("partial-results", `Duplicate result for round ${round}`);
         results.set(round, score);
       }
-      byLabel.set(label, { id, playerId, results });
+      byLabel.set(label, { id, playerId, results, guessTimes });
     }
     const blue = byLabel.get("blue");
     const red = byLabel.get("red");
@@ -598,7 +817,11 @@
       if (round !== index + 1 || !blue.results.has(round) || !red.results.has(round)) {
         throw new DecodeError("partial-results", `Paired contiguous results are required at round ${index + 1}`);
       }
-      rounds.push({ round, scores: [blue.results.get(round), red.results.get(round)] });
+      rounds.push({
+        round,
+        scores: [blue.results.get(round), red.results.get(round)],
+        guessedAtMs: [blue.guessTimes.get(round) ?? null, red.guessTimes.get(round) ?? null]
+      });
     }
     return {
       teamIds: [blue.id, red.id],
@@ -652,7 +875,7 @@
     return previous.input.initialHealth === next.input.initialHealth && previous.input.individual === next.input.individual && previous.input.mutual === next.input.mutual && previous.input.delay === next.input.delay && previous.input.maxRounds === next.input.maxRounds;
   }
   function sameRound(left, right) {
-    return left.round === right.round && tupleEqual(left.scores, right.scores);
+    return left.round === right.round && tupleEqual(left.scores, right.scores) && tupleEqual(left.guessedAtMs, right.guessedAtMs);
   }
   function rollbackStart(previous, next) {
     let rollback = next.currentRoundNumber < previous.currentRoundNumber ? next.currentRoundNumber : null;
@@ -668,6 +891,7 @@
   function freezeContext(context) {
     for (const round of context.input.rounds) {
       Object.freeze(round.scores);
+      Object.freeze(round.guessedAtMs);
       Object.freeze(round);
     }
     for (const start2 of context.roundStarts) Object.freeze(start2);
@@ -694,11 +918,13 @@
     }
     return null;
   }
-  function acceptPlayerSnapshot(previous, raw, configuredMode) {
+  function acceptPlayerSnapshot(previous, raw, configured) {
+    const rules = configuredRules(configured);
+    const configuredMode = rules.mode;
     const rawGameId = typeof raw === "object" && raw !== null && !Array.isArray(raw) ? raw.gameId : void 0;
     const relevantPrevious = previous && typeof rawGameId === "string" && rawGameId !== previous.gameId ? null : previous;
-    if (configuredMode !== "off" && configuredMode !== "full" && configuredMode !== "half") {
-      return retained(relevantPrevious, "invalid-snapshot", "Configured tie-range mode is invalid");
+    if (configuredMode !== "off" && configuredMode !== "full" && configuredMode !== "half" || typeof rules.pinpointing !== "boolean") {
+      return retained(relevantPrevious, "invalid-snapshot", "Configured rules are invalid");
     }
     let decoded;
     try {
@@ -716,7 +942,8 @@
         accepted: true,
         context: activePrevious,
         output: outputFor(activePrevious),
-        diagnostic: activePrevious.rollbackPendingFrom ? diagnostic("recovery", "Waiting for restarted round history to clear") : activePrevious.sourceStatus === "Finished" && outputFor(activePrevious)?.terminal === null ? diagnostic("source-ended", "Duel ended without a custom winner") : null
+        pinpointing: pinpointingFor(activePrevious),
+        diagnostic: activePrevious.rollbackPendingFrom ? diagnostic("recovery", "Waiting for restarted round history to clear") : endedWithoutWinner(activePrevious) ? diagnostic("source-ended", "Duel ended without a custom winner") : null
       };
     }
     if (activePrevious && (!tupleEqual(activePrevious.teamIds, decoded.teamIds) || !tupleEqual(activePrevious.playerIds, decoded.playerIds))) {
@@ -736,8 +963,7 @@
         if (decoded.input.rounds.length < activePrevious.input.rounds.length || activePrevious.input.rounds.some((round, index) => !decoded.input.rounds[index] || !sameRound(round, decoded.input.rounds[index]))) {
           return retained(activePrevious, "recovery", "Settled history is incomplete or changed without rollback evidence");
         }
-        const previousTerminal = outputFor(activePrevious)?.terminal;
-        if (previousTerminal !== null && previousTerminal !== void 0) {
+        if (terminalRound(activePrevious) !== null) {
           acceptedRounds = activePrevious.input.rounds;
         }
       } else {
@@ -760,6 +986,7 @@
       schemaVersion: PLAYER_TIE_RANGE_RULES_VERSION,
       gameId: decoded.gameId,
       mode: activePrevious?.mode ?? configuredMode,
+      pinpointing: activePrevious?.pinpointing ?? rules.pinpointing,
       sourceVersion: decoded.sourceVersion,
       currentRoundNumber: decoded.currentRoundNumber,
       sourceStatus: decoded.sourceStatus,
@@ -771,16 +998,15 @@
       input: {
         ...decoded.input,
         teamIds: [...decoded.teamIds],
-        rounds: acceptedRounds.map((round) => ({ round: round.round, scores: [...round.scores] }))
+        rounds: acceptedRounds.map((round) => ({ round: round.round, scores: [...round.scores], guessedAtMs: [...round.guessedAtMs] }))
       }
     });
-    const output = outputFor(context);
-    const endedWithoutCustomWinner = decoded.sourceStatus === "Finished" && output?.terminal === null;
     return {
       accepted: true,
       context,
-      output,
-      diagnostic: rollbackPendingFrom !== null ? diagnostic("recovery", "Waiting for restarted round history to clear") : endedWithoutCustomWinner ? diagnostic("source-ended", "Duel ended without a custom winner") : null
+      output: outputFor(context),
+      pinpointing: pinpointingFor(context),
+      diagnostic: rollbackPendingFrom !== null ? diagnostic("recovery", "Waiting for restarted round history to clear") : endedWithoutWinner(context) ? diagnostic("source-ended", "Duel ended without a custom winner") : null
     };
   }
   function gameKey(gameId) {
@@ -795,18 +1021,28 @@
       return [];
     }
   }
+  function migrateSavedContext(parsed) {
+    if (parsed.schemaVersion !== 1) return;
+    parsed.schemaVersion = PLAYER_TIE_RANGE_RULES_VERSION;
+    parsed.pinpointing = false;
+    if (parsed.input && Array.isArray(parsed.input.rounds)) {
+      for (const round of parsed.input.rounds) if (round && round.guessedAtMs === void 0) round.guessedAtMs = [null, null];
+    }
+  }
   function restoreContext(value, expectedGameId) {
-    if (typeof value !== "string") return { context: null, output: null, diagnostic: null };
+    if (typeof value !== "string") return { context: null, output: null, pinpointing: null, diagnostic: null };
     try {
       const parsed = record(JSON.parse(value), "Saved tie-range context");
+      migrateSavedContext(parsed);
       if (parsed.schemaVersion !== PLAYER_TIE_RANGE_RULES_VERSION) {
         return {
           context: null,
           output: null,
+          pinpointing: null,
           diagnostic: diagnostic("schema-mismatch", "Saved tie-range rules are from a different version")
         };
       }
-      if (parsed.mode !== "off" && parsed.mode !== "full" && parsed.mode !== "half" || parsed.gameId !== expectedGameId || expectedGameId.length === 0 || !Number.isInteger(parsed.sourceVersion) || parsed.sourceVersion < 0 || !Number.isInteger(parsed.currentRoundNumber) || parsed.currentRoundNumber < 1 || typeof parsed.sourceStatus !== "string" || parsed.sourceStatus.length === 0 || !Array.isArray(parsed.teamIds) || parsed.teamIds.length !== 2 || !Array.isArray(parsed.teamLabels) || !tupleEqual(parsed.teamLabels, ["blue", "red"]) || !Array.isArray(parsed.playerIds) || parsed.playerIds.length !== 2 || !Array.isArray(parsed.roundStarts)) {
+      if (parsed.mode !== "off" && parsed.mode !== "full" && parsed.mode !== "half" || typeof parsed.pinpointing !== "boolean" || parsed.gameId !== expectedGameId || expectedGameId.length === 0 || !Number.isInteger(parsed.sourceVersion) || parsed.sourceVersion < 0 || !Number.isInteger(parsed.currentRoundNumber) || parsed.currentRoundNumber < 1 || typeof parsed.sourceStatus !== "string" || parsed.sourceStatus.length === 0 || !Array.isArray(parsed.teamIds) || parsed.teamIds.length !== 2 || !Array.isArray(parsed.teamLabels) || !tupleEqual(parsed.teamLabels, ["blue", "red"]) || !Array.isArray(parsed.playerIds) || parsed.playerIds.length !== 2 || !Array.isArray(parsed.roundStarts)) {
         throw new Error("invalid context");
       }
       for (const tuple of [parsed.teamIds, parsed.playerIds]) {
@@ -816,6 +1052,10 @@
       }
       if (!parsed.input || !tupleEqual(parsed.teamIds, parsed.input.teamIds)) throw new Error("identity mismatch");
       foldTieRange(parsed.input, parsed.mode === "off" ? null : parsed.mode);
+      for (const round of parsed.input.rounds) {
+        if (!Array.isArray(round.guessedAtMs) || round.guessedAtMs.length !== 2 || round.guessedAtMs.some((at) => at !== null && !Number.isFinite(at))) throw new Error("invalid guess time");
+      }
+      foldPinpointing({ teamIds: parsed.input.teamIds, tieRange: parsed.mode, rounds: parsed.input.rounds });
       const seen = /* @__PURE__ */ new Set();
       for (const start2 of parsed.roundStarts) {
         if (!start2 || !Number.isInteger(start2.round) || start2.round < 1 || seen.has(start2.round) || typeof start2.startTime !== "string" || start2.startTime.length === 0) throw new Error("invalid round identity");
@@ -823,16 +1063,17 @@
       }
       if (parsed.rollbackPendingFrom !== void 0 && parsed.rollbackPendingFrom !== null && (!Number.isInteger(parsed.rollbackPendingFrom) || parsed.rollbackPendingFrom < 1 || parsed.input.rounds.some((round) => round.round >= parsed.rollbackPendingFrom))) throw new Error("invalid rollback");
       const context = freezeContext(parsed);
-      const output = outputFor(context);
       return {
         context,
-        output,
-        diagnostic: context.rollbackPendingFrom ? diagnostic("recovery", "Waiting for restarted round history to clear") : context.sourceStatus === "Finished" && output?.terminal === null ? diagnostic("source-ended", "Duel ended without a custom winner") : null
+        output: outputFor(context),
+        pinpointing: pinpointingFor(context),
+        diagnostic: context.rollbackPendingFrom ? diagnostic("recovery", "Waiting for restarted round history to clear") : endedWithoutWinner(context) ? diagnostic("source-ended", "Duel ended without a custom winner") : null
       };
     } catch {
       return {
         context: null,
         output: null,
+        pinpointing: null,
         diagnostic: diagnostic("invalid-saved-context", "Saved tie-range context is invalid")
       };
     }
@@ -941,6 +1182,7 @@
     let mapRounds = [];
     let context = null;
     let output = null;
+    let pinpointing = null;
     let diagnostic2 = null;
     let schemaBlocked = false;
     let request = null;
@@ -956,6 +1198,15 @@
     function configuredMode() {
       return dependencies.getConfiguredMode();
     }
+    function configuredPinpointing() {
+      return dependencies.getConfiguredPinpointing?.() === true;
+    }
+    function customOff(value) {
+      return value !== null && value.mode === "off" && !value.pinpointing;
+    }
+    function customTerminal() {
+      return output?.terminal != null || pinpointing?.terminal != null;
+    }
     function localTeamId() {
       const userId = dependencies.getUserId();
       if (!context || !userId) return null;
@@ -965,17 +1216,20 @@
     function publish(status, message = null) {
       const configured = configuredMode();
       const userId = dependencies.getUserId();
-      const playerIsKnownOutsideGame = context !== null && context.mode !== "off" && typeof userId === "string" && userId.length > 0 && localTeamId() === null;
+      const playerIsKnownOutsideGame = context !== null && !customOff(context) && typeof userId === "string" && userId.length > 0 && localTeamId() === null;
       dependencies.onView({
         status: playerIsKnownOutsideGame ? "unavailable" : status,
         gameId,
         configuredMode: configured,
         capturedMode: context?.mode ?? null,
-        appliesToNextDuel: context !== null && context.mode !== configured,
+        configuredPinpointing: configuredPinpointing(),
+        capturedPinpointing: context?.pinpointing ?? null,
+        appliesToNextDuel: context !== null && (context.mode !== configured || context.pinpointing !== configuredPinpointing()),
         localTeamId: localTeamId(),
         context,
         mapRounds,
         output,
+        pinpointing,
         diagnostic: diagnostic2,
         message: playerIsKnownOutsideGame ? "Current account is not a player in this duel" : message
       });
@@ -1074,6 +1328,7 @@
       context = null;
       mapRounds = [];
       output = null;
+      pinpointing = null;
       diagnostic2 = null;
       schemaBlocked = false;
       failureCount = 0;
@@ -1085,11 +1340,12 @@
       if (!started || expectedGeneration !== generation) return false;
       context = restored.context;
       output = restored.output;
+      pinpointing = restored.pinpointing;
       diagnostic2 = restored.diagnostic;
       schemaBlocked = restored.diagnostic?.code === "schema-mismatch";
       if (schemaBlocked) publish("unavailable", "Custom HP unavailable");
-      else if (context?.mode === "off") publish("off");
-      else if (output) {
+      else if (customOff(context)) publish("off");
+      else if (output || pinpointing) {
         lastAcceptedAt = dependencies.now() - STALE_MS;
         if (diagnostic2?.code === "source-ended") publish("ended", diagnostic2.message);
         else publish("stale", diagnostic2?.message ?? "Checking saved HP against the current duel");
@@ -1100,13 +1356,14 @@
       const raw = await fetchJson(ACTIVE_PARTY_API, expectedGeneration, true);
       requireCurrent(expectedGeneration);
       if (raw === NO_CONTENT) {
-        if (output?.terminal || context?.sourceStatus === "Finished") {
+        if (customTerminal() || context?.sourceStatus === "Finished") {
           publish("ended", diagnostic2?.message ?? "Custom duel finished");
         } else {
           gameId = null;
           context = null;
           mapRounds = [];
           output = null;
+          pinpointing = null;
           diagnostic2 = null;
           schemaBlocked = false;
           gameEndpoint = null;
@@ -1120,19 +1377,21 @@
         context = null;
         mapRounds = [];
         output = null;
+        pinpointing = null;
         diagnostic2 = null;
         schemaBlocked = false;
         gameEndpoint = null;
       }
       if (active.partyId !== null) currentPartyId = active.partyId;
       if (active.waiting) {
-        if (output?.terminal || context?.sourceStatus === "Finished") {
+        if (customTerminal() || context?.sourceStatus === "Finished") {
           publish("ended", diagnostic2?.message ?? "Custom duel finished");
         } else {
           gameId = null;
           context = null;
           mapRounds = [];
           output = null;
+          pinpointing = null;
           diagnostic2 = null;
           schemaBlocked = false;
           gameEndpoint = null;
@@ -1147,6 +1406,7 @@
         context = null;
         mapRounds = [];
         output = null;
+        pinpointing = null;
         diagnostic2 = null;
         schemaBlocked = true;
         publish("unavailable", "Game master accounts are not player HUD targets");
@@ -1223,10 +1483,11 @@
         if (typeof raw !== "object" || raw === null || raw.gameId !== targetGameId) {
           throw new Error("Player response belongs to another game");
         }
-        const accepted = acceptPlayerSnapshot(context, raw, configuredMode());
+        const accepted = acceptPlayerSnapshot(context, raw, { mode: configuredMode(), pinpointing: configuredPinpointing() });
         context = accepted.context;
         mapRounds = accepted.accepted && context ? decodePlayerMapRounds(raw, context) : [];
         output = accepted.output;
+        pinpointing = accepted.pinpointing;
         diagnostic2 = accepted.diagnostic;
         failureCount = 0;
         problem = null;
@@ -1237,9 +1498,9 @@
         }
         if (!started || expectedGeneration !== generation || gameId !== targetGameId) return;
         if (!accepted.accepted) publish("unavailable", "Custom HP unavailable");
-        else if (context?.mode === "off") publish("off");
+        else if (customOff(context)) publish("off");
         else if (accepted.diagnostic?.code === "source-ended") publish("ended", accepted.diagnostic.message);
-        else if (output) publish("ready");
+        else if (output || pinpointing) publish("ready");
         else publish("unavailable", "Custom HP unavailable");
         scheduleWake();
       } catch (error) {
@@ -1265,6 +1526,7 @@
       context = null;
       mapRounds = [];
       output = null;
+      pinpointing = null;
       diagnostic2 = null;
       schemaBlocked = false;
       currentPartyId = null;
@@ -1298,6 +1560,7 @@
         context = null;
         mapRounds = [];
         output = null;
+        pinpointing = null;
         diagnostic2 = null;
         schemaBlocked = false;
         currentPartyId = null;
@@ -1319,6 +1582,18 @@
       health: tie ? 0 : progress(elapsed, impact, 800),
       done: elapsed >= (tie ? 2450 : impact + 800)
     };
+  }
+  function pinpointingPhase(elapsed) {
+    return { count: progress(elapsed, 0, 750), verdict: elapsed >= 1750, done: elapsed >= 3e3 };
+  }
+  function verdictText(result, teams) {
+    const points = result.points ?? [0, 0];
+    const gained = Math.max(...points);
+    const who = gained > 0 ? `${teams[points[0] > points[1] ? 0 : 1].label} +${gained} \xB7 ` : "";
+    if (result.reason === "solo-5k") return `${who}Solo 5K`;
+    if (result.reason === "fastest-5k") return gained > 0 ? `${who}Fastest 5K` : "Double 5K \xB7 no point";
+    if (result.reason === "closest") return `${who}Closest`;
+    return "Tie \xB7 no point";
   }
   function createPlayerScoringAnimation(document2, shadow) {
     const page = document2.defaultView;
@@ -1357,6 +1632,35 @@
       const result = display.result;
       node("result").hidden = elapsed < 0 || !result && (session.settled || view.localTeamId === null || Number(JSON.parse(session.key)[1]) < (view.context?.currentRoundNumber ?? 0));
       if (elapsed < 0) hideMoving();
+      if (display.pinpointing) {
+        const points = pinpointingPhase(elapsed);
+        node("result").dataset.phase = elapsed < 0 ? "entry" : points.done ? "complete" : points.verdict ? "verdict" : points.count < 1 ? "count" : "hold";
+        [node("result-team-0"), node("result-team-1")].forEach((element, i) => {
+          element.textContent = result ? String(Math.round(result.scores[i] * points.count)) : session.scores[i];
+          element.style.opacity = "1";
+          moving[i].hidden = true;
+        });
+        const verdict = node("result-verdict");
+        verdict.hidden = !result || !points.verdict;
+        if (result && points.verdict) verdict.textContent = verdictText(result, display.teams);
+        const settled = result ? view.pinpointing?.rounds.find((round) => round.round === result.round) : null;
+        display.teams.forEach((team, i) => {
+          const root = node(`team-${i}`);
+          root.querySelector('[data-rb="damage"]').hidden = true;
+          const canonicalIndex = view.pinpointing?.teamIds.indexOf(team.teamId) ?? -1;
+          if (!settled || canonicalIndex < 0 || team.firstTo === void 0) return;
+          const total = points.verdict ? settled.totalsAfter[canonicalIndex] : settled.totalsBefore[canonicalIndex];
+          root.querySelector('[data-rb="health"]').textContent = `${total} / ${team.firstTo}`;
+          const fill = root.querySelector('[data-rb="bar-fill"]');
+          fill.style.transition = "none";
+          fill.style.width = `${total / team.firstTo * 100}%`;
+          root.querySelector('[data-rb="multiplier"]').textContent = total >= team.firstTo - 2 ? "MATCH POINT" : "";
+        });
+        if (display.terminal && result) node("terminal").hidden = !points.done;
+        if (points.done) completed.add(session.key);
+        return;
+      }
+      node("result-verdict").hidden = true;
       const tie = !!result && result.scores[0] === result.scores[1];
       const phase = scoringPhase(elapsed, session.multiplier, tie);
       node("result").dataset.phase = elapsed < 0 ? "entry" : phase.done ? "complete" : phase.health > 0 ? "health" : phase.flight > 0 ? "flight" : phase.multiplied ? "multiplier" : phase.difference ? "difference" : phase.collision > 0 ? "collision" : phase.count < 1 ? "count" : "hold";
@@ -1455,6 +1759,10 @@
   }
 
   // tampermonkey/src/tie-range-player-ui.ts
+  function rulesLabel(mode2, pinpointing) {
+    const tieRange = mode2 === "off" ? "Off" : mode2 === "full" ? "Full" : "Half";
+    return pinpointing ? `Pinpointing Duels \xB7 Tie range ${tieRange}` : `Tie range ${tieRange}`;
+  }
   var CLASS_SELECTORS = {
     duelRoot: '[class*="duels_root__"]',
     healthBars: '[class*="hud_healthBars__"]',
@@ -1502,13 +1810,13 @@
     });
   }
   function summaryDisclosesTerminal(document2, roots, view) {
-    const terminalRound = view.output?.terminal?.round;
-    if (terminalRound === void 0) return false;
+    const terminalRound2 = view.output?.terminal?.round ?? view.pinpointing?.terminal?.round;
+    if (terminalRound2 === void 0) return false;
     return scopedElements(roots, CLASS_SELECTORS.summary).some((summary) => {
       if (!classStartsWith(summary, "game-summary-2_root__") || !visible(summary, document2)) return false;
       return Array.from(summary.querySelectorAll(CLASS_SELECTORS.summaryRow)).some((row) => {
         const round = Number.parseInt(row.querySelector(CLASS_SELECTORS.roundNumber)?.textContent ?? "", 10);
-        return round === terminalRound && visible(row, document2);
+        return round === terminalRound2 && visible(row, document2);
       });
     });
   }
@@ -1560,6 +1868,8 @@
       .result-title { display: none; }
       .result-grid { display: flex; justify-content: space-between; gap: 100px; font-variant-numeric: tabular-nums; }
       .result-meta { display: none; }
+      .result-verdict { margin-top: 10px; font-size: 26px; color: #ffe169; letter-spacing: .03em; }
+      .team[data-rb-rules="pinpointing"] .multiplier { color: #ffe169; font-size: 13px; letter-spacing: .06em; }
       .terminal { position: fixed; top: 22%; left: 50%; transform: translateX(-50%); min-width: min(420px, calc(100vw - 32px));
         padding: 13px 22px; border: 1px solid #ffe16999; border-radius: 10px; background: #111e; text-align: center;
         filter: drop-shadow(0 3px 12px #000c); }
@@ -1588,13 +1898,13 @@
         <article class="team" data-rb="team-0"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div></article>
         <article class="team" data-rb="team-1"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div></article>
       </div>
-      <div class="result" data-rb="result" hidden><div class="result-title" data-rb="result-title"></div><div class="result-grid"><span data-rb="result-team-0"></span><span data-rb="result-team-1"></span></div><div class="result-meta" data-rb="result-meta"></div></div>
+      <div class="result" data-rb="result" hidden><div class="result-title" data-rb="result-title"></div><div class="result-grid"><span data-rb="result-team-0"></span><span data-rb="result-team-1"></span></div><div class="result-verdict" data-rb="result-verdict" hidden></div><div class="result-meta" data-rb="result-meta"></div></div>
       <div class="diagnostic" data-rb="diagnostic" hidden></div>
     </section>
     <div class="terminal" data-rb="terminal" aria-live="assertive" hidden><strong data-rb="terminal-headline"></strong><span data-rb="terminal-detail"></span></div>
     <button type="button" class="settings-open" data-rb="settings-open"></button>
     <div class="settings" data-rb="settings-panel" role="dialog" aria-modal="true" aria-labelledby="rb-settings-title" hidden>
-      <div class="settings-card"><h2 id="rb-settings-title">Player tie-range</h2><label>Mode<select data-rb="mode-select"><option value="off">Off</option><option value="full">Full</option><option value="half">Half</option></select></label><p>The selected mode is captured when a duel begins. Changes apply to the next duel.</p><button type="button" data-rb="settings-close">Close</button></div>
+      <div class="settings-card"><h2 id="rb-settings-title">RASHINBAN player rules</h2><label>Tie range<select data-rb="mode-select"><option value="off">Off</option><option value="full">Full</option><option value="half">Half</option></select></label><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-rb="pinpointing-check"> Pinpointing Duels</label><p>Pinpointing Duels replaces HP with points: a solo 5K scores 2, the faster of two 5Ks scores 1, otherwise the closer guess scores 1 (inside the tie band, when tie range is on, nothing). First to 7 wins. The selected rules are captured when a duel begins. Changes apply to the next duel.</p><button type="button" data-rb="settings-close">Close</button></div>
     </div>`;
     (document2.body ?? document2.documentElement).append(host);
     const byRb = (name) => {
@@ -1608,6 +1918,9 @@
     const settingsOpen = byRb("settings-open");
     const settingsPanel = byRb("settings-panel");
     const modeSelect = byRb("mode-select");
+    const pinpointingCheck = byRb("pinpointing-check");
+    const configuredPinpointing = () => dependencies.getConfiguredPinpointing?.() === true;
+    const settingsButtonText = (mode2, pinpointing) => `Settings: ${rulesLabel(mode2, pinpointing)}`;
     for (const index of [0, 1]) {
       const damage = document2.createElement("span");
       damage.className = "damage";
@@ -1687,18 +2000,27 @@
       byRb("teams").hidden = !display.showHud;
       byRb("mode").textContent = display.appliesToNextDuel ? `${display.modeLabel} \xB7 setting applies next duel` : display.modeLabel;
       const configured = lastView?.configuredMode ?? dependencies.getConfiguredMode();
-      settingsOpen.textContent = `Tie range settings: ${configured === "off" ? "Off" : configured === "full" ? "Full" : "Half"}`;
+      settingsOpen.textContent = settingsButtonText(configured, lastView?.configuredPinpointing ?? configuredPinpointing());
       settingsOpen.hidden = lastView?.status === "inactive";
       if (display.teams) {
         display.teams.forEach((team, index) => {
           const root = byRb(`team-${index}`);
           root.dataset.side = team.side;
+          root.dataset.rbRules = display.pinpointing ? "pinpointing" : "health";
           root.querySelector('[data-rb="label"]').textContent = team.label;
+          const damage = root.querySelector('[data-rb="damage"]');
+          if (display.pinpointing) {
+            root.querySelector('[data-rb="health"]').textContent = `${team.points ?? 0} / ${team.firstTo ?? 7}`;
+            root.querySelector('[data-rb="multiplier"]').textContent = team.matchPoint ? "MATCH POINT" : "";
+            root.querySelector('[data-rb="bar-fill"]').style.width = `${Math.max(0, Math.min(100, (team.points ?? 0) / (team.firstTo ?? 7) * 100))}%`;
+            damage.hidden = true;
+            damage.textContent = "";
+            return;
+          }
           root.querySelector('[data-rb="health"]').textContent = String(team.health);
           root.querySelector('[data-rb="multiplier"]').textContent = multiplier(team.multiplierTenths);
           const percent = team.maximumHealth <= 0 ? 0 : Math.max(0, Math.min(100, team.health / team.maximumHealth * 100));
           root.querySelector('[data-rb="bar-fill"]').style.width = `${percent}%`;
-          const damage = root.querySelector('[data-rb="damage"]');
           const amount = display.result?.damageDealt[index === 0 ? 1 : 0] ?? 0;
           damage.hidden = amount === 0;
           damage.textContent = amount > 0 ? `\u2212${amount}` : "";
@@ -1713,6 +2035,7 @@
         }
         byRb("result-meta").textContent = `Tie band ${display.result.band} \xB7 ${display.result.withinBand ? "inside range" : "outside range"}`;
       }
+      if (!display.pinpointing) byRb("result-verdict").hidden = true;
       terminal.hidden = display.terminal === null;
       if (display.terminal) {
         byRb("terminal-headline").textContent = display.terminal.headline;
@@ -1722,8 +2045,13 @@
       diagnostic2.hidden = message.length === 0 || !display.showDiagnostic && layoutDiagnostic === null;
       diagnostic2.textContent = message;
     }
+    function customTerminalRound(view) {
+      return view.output?.terminal?.round ?? view.pinpointing?.terminal?.round ?? null;
+    }
     function applySummaryReplacements(view, roots) {
-      if (!view.context || !view.output) return null;
+      const rounds = view.output?.rounds ?? view.pinpointing?.rounds;
+      if (!view.context || !rounds) return null;
+      const firstTo = view.pinpointing?.firstTo ?? 7;
       let unsupported = false;
       const desired = /* @__PURE__ */ new Set();
       for (const summary of scopedElements(roots, CLASS_SELECTORS.summary)) {
@@ -1741,7 +2069,7 @@
         if (columnByTeam.some((column) => column < 0)) {
           const observations = Array.from(summary.querySelectorAll(CLASS_SELECTORS.summaryRow)).flatMap((row) => {
             const number = Number.parseInt(row.querySelector(CLASS_SELECTORS.roundNumber)?.textContent ?? "", 10);
-            const folded = view.output.rounds.find((round) => round.round === number);
+            const folded = rounds.find((round) => round.round === number);
             if (!folded || row.children.length !== 5) return [];
             const scores = [1, 2].map((column) => {
               const digits = row.children[column].textContent?.trim().match(/^\d[\d,\u00a0 ]*/)?.[0];
@@ -1753,7 +2081,7 @@
           const matching = orders.filter((order) => observations.length > 0 && observations.every(({ folded, scores }) => scores[0] === folded.scores[order[0]] && scores[1] === folded.scores[order[1]]));
           if (matching.length === 1) {
             columnByTeam = matching[0][0] === 0 ? [3, 4] : [4, 3];
-          } else if (matching.length === 2 && view.output.rounds.every((round) => round.scores[0] === round.scores[1])) {
+          } else if (matching.length === 2 && rounds.every((round) => round.scores[0] === round.scores[1])) {
             columnByTeam = [3, 4];
           }
         }
@@ -1765,8 +2093,9 @@
           if (!classStartsWith(row, "game-summary-2_playedRound__")) continue;
           const cells = Array.from(row.children);
           const roundNumber = Number.parseInt(row.querySelector(CLASS_SELECTORS.roundNumber)?.textContent ?? "", 10);
-          const folded = view.output.rounds.find((round) => round.round === roundNumber);
-          const afterTerminal = view.output.terminal !== null && roundNumber > view.output.terminal.round;
+          const folded = rounds.find((round) => round.round === roundNumber);
+          const terminalRound2 = customTerminalRound(view);
+          const afterTerminal = terminalRound2 !== null && roundNumber > terminalRound2;
           if (cells.length !== 5 || !folded && !afterTerminal) {
             unsupported = true;
             continue;
@@ -1802,12 +2131,21 @@
               cell.append(replacement);
               summaryReplacements.set(cell, replacement);
             }
-            const health = String(folded?.healthAfter[teamIndex] ?? view.output.currentHealth[teamIndex]);
-            const damage = folded?.damageDealt[teamIndex === 0 ? 1 : 0] ?? 0;
-            const text = `${health}${damage > 0 ? ` (\u2212${damage})` : ""}`;
+            let text;
+            let label;
+            if (view.pinpointing) {
+              const points = folded && "totalsAfter" in folded ? folded.totalsAfter[teamIndex] : view.pinpointing.totals[teamIndex];
+              const gained = folded && "points" in folded ? folded.points[teamIndex] : 0;
+              text = `${points} / ${firstTo}${gained > 0 ? ` (+${gained})` : ""}`;
+              label = `Pinpointing Duels points ${points} of ${firstTo}; gained ${gained} this round`;
+            } else {
+              const health = String(folded && "healthAfter" in folded ? folded.healthAfter[teamIndex] : view.output.currentHealth[teamIndex]);
+              const damage = folded && "damageDealt" in folded ? folded.damageDealt[teamIndex === 0 ? 1 : 0] : 0;
+              text = `${health}${damage > 0 ? ` (\u2212${damage})` : ""}`;
+              const used = folded && "multiplierTenths" in folded ? multiplier(folded.multiplierTenths[teamIndex]) : "Duel already finished";
+              label = `Custom health ${health}; damage received ${damage}; used multiplier ${used}`;
+            }
             if (replacement.textContent !== text) replacement.textContent = text;
-            const used = folded ? multiplier(folded.multiplierTenths[teamIndex]) : "Duel already finished";
-            const label = `Custom health ${health}; damage received ${damage}; used multiplier ${used}`;
             if (replacement.title !== label) replacement.title = label;
             if (replacement.getAttribute("aria-label") !== label) replacement.setAttribute("aria-label", label);
           }
@@ -1853,7 +2191,7 @@
           if (!disposed) dependencies.onResultVisible?.();
         });
       }
-      const expectedRound = lastView.output?.rounds.at(-1)?.round ?? null;
+      const expectedRound = (lastView.output?.rounds ?? lastView.pinpointing?.rounds)?.at(-1)?.round ?? null;
       const matchingResultRoots = visibleResultRoots(document2, roots, expectedRound);
       const disclosed = matchingResultRoots.length > 0;
       if (disclosed && expectedRound !== null && lastView.context) {
@@ -1861,8 +2199,9 @@
       }
       const terminalSummaryVisible = summaryDisclosesTerminal(document2, roots, lastView);
       terminal.style.top = terminalSummaryVisible ? "100px" : "22%";
-      if (terminalSummaryVisible && lastView.output?.terminal) {
-        revealedRoundIdentity = lastView.context ? playerRoundIdentity(lastView.context, lastView.output.terminal.round) : null;
+      const customTerminal = customTerminalRound(lastView);
+      if (terminalSummaryVisible && customTerminal !== null) {
+        revealedRoundIdentity = lastView.context ? playerRoundIdentity(lastView.context, customTerminal) : null;
       }
       const display = derivePlayerTieRangeDisplay(lastView, disclosed, revealedRoundIdentity);
       let layoutDiagnostic = null;
@@ -1909,6 +2248,7 @@
     function showSettings() {
       focusBeforeSettings = shadow.activeElement instanceof HTMLElement ? shadow.activeElement : document2.activeElement instanceof HTMLElement ? document2.activeElement : null;
       modeSelect.value = dependencies.getConfiguredMode();
+      pinpointingCheck.checked = configuredPinpointing();
       settingsPanel.hidden = false;
       modeSelect.focus();
     }
@@ -1928,14 +2268,18 @@
     modeSelect.addEventListener("change", () => {
       const value = modeSelect.value;
       if (value !== "off" && value !== "full" && value !== "half") return;
-      settingsOpen.textContent = `Tie range settings: ${value === "off" ? "Off" : value === "full" ? "Full" : "Half"}`;
-      closeSettings();
+      settingsOpen.textContent = settingsButtonText(value, pinpointingCheck.checked);
       dependencies.onModeChange(value);
+    });
+    pinpointingCheck.addEventListener("change", () => {
+      const value = modeSelect.value;
+      settingsOpen.textContent = settingsButtonText(value === "full" || value === "half" ? value : "off", pinpointingCheck.checked);
+      dependencies.onPinpointingChange?.(pinpointingCheck.checked);
     });
     const MutationObserverConstructor = document2.defaultView?.MutationObserver;
     const observer = MutationObserverConstructor ? new MutationObserverConstructor(queueReconcile) : null;
     observer?.observe(document2.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "hidden", "style", "aria-hidden"] });
-    settingsOpen.textContent = `Tie range settings: ${dependencies.getConfiguredMode() === "off" ? "Off" : dependencies.getConfiguredMode() === "full" ? "Full" : "Half"}`;
+    settingsOpen.textContent = settingsButtonText(dependencies.getConfiguredMode(), configuredPinpointing());
     return {
       update(view) {
         if (disposed) return;
@@ -1974,6 +2318,7 @@
 
   // tampermonkey/src/rashinban-tie-range.user.ts
   var MODE_KEY = "rb-tie-range:mode";
+  var PINPOINTING_KEY = "rb-tie-range:pinpointing";
   function mode(value) {
     return value === "full" || value === "half" ? value : "off";
   }
@@ -1988,6 +2333,7 @@
   }
   async function start() {
     let configuredMode = mode(await GM_getValue(MODE_KEY, "off"));
+    let configuredPinpointing = await GM_getValue(PINPOINTING_KEY, false) === true;
     let guestId = null;
     let identityRequest = null;
     let lastIdentityAttempt = -Infinity;
@@ -1996,7 +2342,19 @@
       document,
       getPageWindow: () => typeof unsafeWindow === "undefined" ? window : unsafeWindow,
       getConfiguredMode: () => configuredMode,
+      getConfiguredPinpointing: () => configuredPinpointing,
       onResultVisible: () => controller.refresh(),
+      onPinpointingChange: (enabled) => {
+        void (async () => {
+          try {
+            await GM_setValue(PINPOINTING_KEY, enabled);
+            configuredPinpointing = enabled;
+            controller.refresh();
+          } catch {
+            window.alert("Pinpointing Duels setting could not be saved. Please try again from the Tampermonkey menu.");
+          }
+        })();
+      },
       onModeChange: (nextMode) => {
         void (async () => {
           try {
@@ -2027,6 +2385,7 @@
       getPath: () => location.pathname,
       getUserId: () => accountId() ?? guestId,
       getConfiguredMode: () => configuredMode,
+      getConfiguredPinpointing: () => configuredPinpointing,
       onView: (view) => ui.update(view)
     });
     async function refreshIdentity() {
@@ -2053,7 +2412,7 @@
         if (identityRequest === abort) identityRequest = null;
       }
     }
-    GM_registerMenuCommand("RASHINBAN: Player tie-range settings", () => ui.openSettings());
+    GM_registerMenuCommand("RASHINBAN: Player settings", () => ui.openSettings());
     controller.start();
     void refreshIdentity();
     let previousPath = location.pathname;
@@ -2070,6 +2429,7 @@
       void (async () => {
         try {
           configuredMode = mode(await GM_getValue(MODE_KEY, configuredMode));
+          configuredPinpointing = await GM_getValue(PINPOINTING_KEY, configuredPinpointing) === true;
         } catch {
         }
         if (!disposed) controller.refresh();
