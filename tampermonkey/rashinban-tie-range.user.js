@@ -1794,10 +1794,6 @@
   }
 
   // tampermonkey/src/tie-range-player-ui.ts
-  function rulesLabel(mode2, pinpointing) {
-    const tieRange = mode2 === "off" ? "Off" : mode2 === "full" ? "Full" : "Half";
-    return pinpointing ? `Pinpointing Duels \xB7 Tie range ${tieRange}` : `Tie range ${tieRange}`;
-  }
   var CLASS_SELECTORS = {
     duelRoot: '[class*="duels_root__"]',
     healthBars: '[class*="hud_healthBars__"]',
@@ -1917,9 +1913,6 @@
       .terminal span { display: block; margin-top: 3px; color: #ddd; font-size: 12px; }
       .diagnostic { margin: 6px auto 0; width: max-content; max-width: 100%; padding: 4px 8px; border-radius: 5px;
         background: #5c2b12ed; color: #ffd8bd; text-align: center; font-size: 11px; }
-      .settings-open { position: fixed; top: max(10px, env(safe-area-inset-top)); right: 12px; pointer-events: auto;
-        border: 1px solid #ffffff45; border-radius: 999px; padding: 6px 9px; background: #111d; color: #fff; cursor: pointer;
-        font: 600 11px/1.2 Inter, system-ui, sans-serif; }
       .settings { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px; background: #0008; pointer-events: auto; }
       .settings-card { width: min(390px, 100%); padding: 18px; border: 1px solid #ffffff45; border-radius: 12px; background: #161a22;
         box-shadow: 0 18px 60px #000a; }
@@ -1942,7 +1935,6 @@
       <div class="diagnostic" data-rb="diagnostic" hidden></div>
     </section>
     <div class="terminal" data-rb="terminal" aria-live="assertive" hidden><strong data-rb="terminal-headline"></strong><span data-rb="terminal-detail"></span></div>
-    <button type="button" class="settings-open" data-rb="settings-open"></button>
     <div class="settings" data-rb="settings-panel" role="dialog" aria-modal="true" aria-labelledby="rb-settings-title" hidden>
       <div class="settings-card"><h2 id="rb-settings-title">RASHINBAN player rules</h2><label>Tie range<select data-rb="mode-select"><option value="off">Off</option><option value="full">Full</option><option value="half">Half</option></select></label><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-rb="pinpointing-check"> Pinpointing Duels</label><p>Pinpointing Duels replaces HP with points: a solo 5K scores 2, the faster of two 5Ks scores 1, otherwise the closer guess scores 1 (inside the tie band, when tie range is on, nothing). First to 7 wins. The selected rules are captured when a duel begins. Changes apply to the next duel.</p><button type="button" data-rb="settings-close">Close</button></div>
     </div>`;
@@ -1955,12 +1947,10 @@
     const hud = byRb("hud");
     const terminal = byRb("terminal");
     const diagnostic2 = byRb("diagnostic");
-    const settingsOpen = byRb("settings-open");
     const settingsPanel = byRb("settings-panel");
     const modeSelect = byRb("mode-select");
     const pinpointingCheck = byRb("pinpointing-check");
     const configuredPinpointing = () => dependencies.getConfiguredPinpointing?.() === true;
-    const settingsButtonText = (mode2, pinpointing) => `Settings: ${rulesLabel(mode2, pinpointing)}`;
     for (const index of [0, 1]) {
       const damage = document2.createElement("span");
       damage.className = "damage";
@@ -2039,9 +2029,6 @@
       byRb("mode").hidden = !display.showHud;
       byRb("teams").hidden = !display.showHud;
       byRb("mode").textContent = display.appliesToNextDuel ? `${display.modeLabel} \xB7 setting applies next duel` : display.modeLabel;
-      const configured = lastView?.configuredMode ?? dependencies.getConfiguredMode();
-      settingsOpen.textContent = settingsButtonText(configured, lastView?.configuredPinpointing ?? configuredPinpointing());
-      settingsOpen.hidden = lastView?.status === "inactive";
       if (display.teams) {
         display.teams.forEach((team, index) => {
           const root = byRb(`team-${index}`);
@@ -2299,7 +2286,6 @@
       focusBeforeSettings?.focus();
       focusBeforeSettings = null;
     }
-    settingsOpen.addEventListener("click", showSettings);
     byRb("settings-close").addEventListener("click", closeSettings);
     settingsPanel.addEventListener("click", (event) => {
       if (event.target === settingsPanel) closeSettings();
@@ -2310,20 +2296,16 @@
     modeSelect.addEventListener("change", () => {
       const value = modeSelect.value;
       if (value !== "off" && value !== "full" && value !== "half") return;
-      settingsOpen.textContent = settingsButtonText(value, pinpointingCheck.checked);
       closeSettings();
       dependencies.onModeChange(value);
     });
     pinpointingCheck.addEventListener("change", () => {
-      const value = modeSelect.value;
-      settingsOpen.textContent = settingsButtonText(value === "full" || value === "half" ? value : "off", pinpointingCheck.checked);
       closeSettings();
       dependencies.onPinpointingChange?.(pinpointingCheck.checked);
     });
     const MutationObserverConstructor = document2.defaultView?.MutationObserver;
     const observer = MutationObserverConstructor ? new MutationObserverConstructor(queueReconcile) : null;
     observer?.observe(document2.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "hidden", "style", "aria-hidden"] });
-    settingsOpen.textContent = settingsButtonText(dependencies.getConfiguredMode(), configuredPinpointing());
     return {
       update(view) {
         if (disposed) return;

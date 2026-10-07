@@ -228,7 +228,7 @@ try {
   await evaluate('refresh()');await delay(300);
   assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="hud"]').hidden`),true,'late ended response cannot restore lobby HP');
   assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="terminal"]').hidden`),true,'late ended response cannot restore lobby outcome');
-  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="settings-open"]').hidden`),false,'lobby settings remain available');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="settings-open"]')`),null,'no floating settings button');
   await evaluate(`scene('playing');document.getElementById('native').style.display='none'`);
   await delay(100);
   assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="hud"]').hidden`),true,'hidden outgoing duel also stays cleared');
