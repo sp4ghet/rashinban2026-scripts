@@ -4,6 +4,7 @@ import { createInitialState, type BanPickState } from "../../banpick/rules.ts";
 import type { ToggleLayer } from "../../broadcast/state.ts";
 import { REPLICANTS } from "../../types/replicants.ts";
 import { playerName, renderBoard, renderGames, stepText } from "../banpick/board.ts";
+import { mustQuery, type Layer } from "./layer.ts";
 
 const TEMPLATE = `<div id="banpick">
   <header>
@@ -19,15 +20,14 @@ const TEMPLATE = `<div id="banpick">
   </footer>
 </div>`;
 
-export function mountBanpick(host: HTMLElement) {
+export function mountBanpick(host: HTMLElement): Layer<ToggleLayer> {
   host.innerHTML = TEMPLATE;
-  const q = <T extends HTMLElement>(sel: string) => host.querySelector<T>(sel)!;
-  const root = q("#banpick");
-  const board = q("#board");
-  const games = q("#games");
-  const nameA = q("#name-a");
-  const nameB = q("#name-b");
-  const step = q("#step");
+  const root = mustQuery(host, "#banpick");
+  const board = mustQuery(host, "#board");
+  const games = mustQuery(host, "#games");
+  const nameA = mustQuery(host, "#name-a");
+  const nameB = mustQuery(host, "#name-b");
+  const step = mustQuery(host, "#step");
 
   nodecg.Replicant<BanPickState>(REPLICANTS.banPick).on("change", (raw) => {
     const state = raw ?? createInitialState();
@@ -36,12 +36,11 @@ export function mountBanpick(host: HTMLElement) {
     const view = renderBoard(board, state);
     step.textContent = stepText(state, view);
     root.dataset.turn = view.step?.player ?? "";
-    root.classList.toggle("complete", view.complete);
     renderGames(games, view);
   });
 
   return {
-    apply(layer: ToggleLayer) {
+    apply(layer) {
       root.classList.toggle("visible", layer.visible);
     },
   };

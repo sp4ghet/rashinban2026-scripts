@@ -15,10 +15,13 @@ body {
   color: #fff;
 }
 
+/* Each host is its own stacking context, so a layer's internal z-indexes stay
+   inside it: layer order on screen = DOM order of the hosts in the page. */
 .layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  isolation: isolate;
 }
 
 .layer[hidden] { display: none; }
@@ -238,13 +241,13 @@ body {
    is composited behind the (transparent) page by OBS. */
 
 #casters {
-  --red: #ff3030;
-  --red-dark: #cc2626;
+  --red: var(--p1-light);
+  --red-dark: var(--p1);
   --topbar-h: 77px;
   --banner-h: 200px;
   --card-w: 390px;
   --card-top: 182px;
-  --jp: "Noto Sans JP", "Hiragino Sans", "Segoe UI", sans-serif;
+  --jp: var(--body);
   position: absolute;
   inset: 0;
   color: var(--ink);
@@ -301,8 +304,6 @@ body {
   width: var(--card-w);
   z-index: 2;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
-  opacity: 1;
-  transition: opacity 250ms ease;
 }
 
 /* Left and right of the two seats, clear of the middle of frame. */
@@ -405,7 +406,7 @@ body {
   --player-a: #ff7043;
   --player-b: #42a5f5;
   --panel: rgba(16, 18, 32, 0.92);
-  --text: #fff;
+  --text: var(--ink);
   --muted: #9aa3b5;
   position: absolute;
   inset: 0;

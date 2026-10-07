@@ -6,6 +6,7 @@
 import { findCaster, withDefaults, type Caster, type CastersState } from "../../casters/casters.ts";
 import type { CastersLayer } from "../../broadcast/state.ts";
 import { REPLICANTS } from "../../types/replicants.ts";
+import { mustQuery, type Layer } from "./layer.ts";
 
 const TEMPLATE = `<div id="casters">
   <div class="topbar"></div>
@@ -38,9 +39,9 @@ const TEMPLATE = `<div id="casters">
 /** Kana/kanji need the Noto face; latin names use the condensed heading face. */
 const hasJapanese = (text: string) => /[぀-ヿ㐀-鿿]/.test(text);
 
-export function mountCasters(host: HTMLElement) {
+export function mountCasters(host: HTMLElement): Layer<CastersLayer> {
   host.innerHTML = TEMPLATE;
-  const cardEls = [host.querySelector<HTMLElement>("#caster-1")!, host.querySelector<HTMLElement>("#caster-2")!];
+  const cardEls = [mustQuery(host, "#caster-1"), mustQuery(host, "#caster-2")];
   const chrome = host.querySelectorAll<HTMLElement>(".topbar, .mark, .banner");
 
   let casters: Caster[] = [];
@@ -54,11 +55,11 @@ export function mountCasters(host: HTMLElement) {
       // Off air, or selected someone the sheet no longer lists.
       card.hidden = !layer.slots[index] || !caster;
       if (!caster) continue;
-      card.querySelector(".role")!.textContent = caster.role;
-      const name = card.querySelector(".name")!;
+      mustQuery(card, ".role").textContent = caster.role;
+      const name = mustQuery(card, ".name");
       name.textContent = caster.name;
       name.classList.toggle("kana", hasJapanese(caster.name));
-      card.querySelector(".handle")!.textContent = caster.twitter ? `@${caster.twitter}` : "";
+      mustQuery(card, ".handle").textContent = caster.twitter ? `@${caster.twitter}` : "";
     }
   }
 
@@ -73,7 +74,7 @@ export function mountCasters(host: HTMLElement) {
   });
 
   return {
-    apply(next: CastersLayer) {
+    apply(next) {
       layer = next;
       render();
     },
