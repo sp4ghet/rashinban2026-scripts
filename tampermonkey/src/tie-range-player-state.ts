@@ -4,8 +4,10 @@ import {
   type TieRangeInput,
   type TieRangeOutput,
 } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
+import { foldPinpointing, type PinpointingOutput } from '../../bundles/rashinban/src/presenter/pinpointing-core.ts';
 
-export const PLAYER_TIE_RANGE_RULES_VERSION = 1;
+/** Version 2 adds Pinpointing Duels (`pinpointing`, per-round `guessedAtMs`). */
+export const PLAYER_TIE_RANGE_RULES_VERSION = 2;
 const STORAGE_PREFIX = 'rashinban.tie-range';
 const STORAGE_INDEX_KEY = `${STORAGE_PREFIX}.games`;
 const MAX_SAVED_GAMES = 10;
@@ -33,10 +35,17 @@ export type PlayerRoundStart = {
   startTime: string;
 };
 
+export type PlayerConfiguredRules = { mode: TieRangeBandMode; pinpointing: boolean };
+
+/** Server time of each side's first deliberate guess (before the deadline), else null. */
+export type PlayerSettledRound = TieRangeInput['rounds'][number] & { guessedAtMs: [number | null, number | null] };
+export type PlayerRulesInput = Omit<TieRangeInput, 'rounds'> & { rounds: PlayerSettledRound[] };
+
 export type PlayerGameContext = {
   schemaVersion: number;
   gameId: string;
   mode: TieRangeBandMode;
+  pinpointing: boolean;
   sourceVersion: number;
   currentRoundNumber: number;
   sourceStatus: string;
@@ -45,19 +54,21 @@ export type PlayerGameContext = {
   playerIds: [string, string];
   roundStarts: PlayerRoundStart[];
   rollbackPendingFrom?: number | null;
-  input: TieRangeInput;
+  input: PlayerRulesInput;
 };
 
 export type PlayerSnapshotAcceptance = {
   accepted: boolean;
   context: PlayerGameContext | null;
   output: TieRangeOutput | null;
+  pinpointing: PinpointingOutput | null;
   diagnostic: PlayerDiagnostic | null;
 };
 
 export type PlayerContextRestore = {
   context: PlayerGameContext | null;
   output: TieRangeOutput | null;
+  pinpointing: PinpointingOutput | null;
   diagnostic: PlayerDiagnostic | null;
 };
 
@@ -68,7 +79,11 @@ export interface PlayerTieRangeStorage {
   withLock?<T>(operation: () => Promise<T>): Promise<T>;
 }
 
-type DecodedSnapshot = Omit<PlayerGameContext, 'schemaVersion' | 'mode' | 'rollbackPendingFrom'>;
+type DecodedSnapshot = Omit<PlayerGameContext, 'schemaVersion' | 'mode' | 'pinpointing' | 'rollbackPendingFrom'>;
+
+function configuredRules(configured: TieRangeBandMode | PlayerConfiguredRules): PlayerConfiguredRules {
+  return typeof configured === 'string' ? { mode: configured, pinpointing: false } : configured;
+}
 
 class DecodeError extends Error {
   readonly code: PlayerDiagnosticCode;
@@ -108,9 +123,33 @@ function diagnostic(code: PlayerDiagnosticCode, message: string): PlayerDiagnost
   return { code, message };
 }
 
+/** Custom HP applies only when tie range is on and Pinpointing Duels is off. */
 function outputFor(context: PlayerGameContext | null): TieRangeOutput | null {
-  if (context === null || context.mode === 'off') return null;
+  if (context === null || context.mode === 'off' || context.pinpointing) return null;
   return foldTieRange(context.input, context.mode);
+}
+
+export function pinpointingFor(context: PlayerGameContext | null): PinpointingOutput | null {
+  if (context === null || !context.pinpointing) return null;
+  return foldPinpointing({
+    teamIds: context.input.teamIds,
+    tieRange: context.mode,
+    rounds: context.input.rounds.map(round => ({ round: round.round, scores: round.scores, guessedAtMs: round.guessedAtMs })),
+  });
+}
+
+function customActive(context: PlayerGameContext | null): boolean {
+  return context !== null && (context.mode !== 'off' || context.pinpointing);
+}
+
+/** Round of the custom finish (knockout, round limit, or seven points), else null. */
+function terminalRound(context: PlayerGameContext | null): number | null {
+  if (context === null) return null;
+  return context.pinpointing ? pinpointingFor(context)?.terminal?.round ?? null : outputFor(context)?.terminal?.round ?? null;
+}
+
+function endedWithoutWinner(context: PlayerGameContext | null): boolean {
+  return customActive(context) && context!.sourceStatus === 'Finished' && terminalRound(context) === null;
 }
 
 function retained(
@@ -122,6 +161,7 @@ function retained(
     accepted: false,
     context: previous,
     output: outputFor(previous),
+    pinpointing: pinpointingFor(previous),
     diagnostic: diagnostic(code, message),
   };
 }
@@ -166,11 +206,41 @@ function decodeOptions(raw: Record<string, unknown>): Omit<TieRangeInput, 'teamI
   return { initialHealth, individual, mutual, delay, maxRounds };
 }
 
+function decodeDeadlines(raw: Record<string, unknown>): Map<number, number> {
+  const deadlines = new Map<number, number>();
+  if (!Array.isArray(raw.rounds)) return deadlines;
+  for (const rawRound of raw.rounds) {
+    if (typeof rawRound !== 'object' || rawRound === null) continue;
+    const { roundNumber, endTime } = rawRound as Record<string, unknown>;
+    const at = typeof endTime === 'string' ? Date.parse(endTime) : NaN;
+    if (Number.isInteger(roundNumber) && Number.isFinite(at)) deadlines.set(roundNumber as number, at);
+  }
+  return deadlines;
+}
+
+/** Earliest guess created before the round deadline; a timeout auto-submission never counts. */
+function decodeGuessTimes(player: Record<string, unknown>, deadlines: Map<number, number>): Map<number, number> {
+  const times = new Map<number, number>();
+  if (!Array.isArray(player.guesses)) return times;
+  for (const rawGuess of player.guesses) {
+    if (typeof rawGuess !== 'object' || rawGuess === null) continue;
+    const { roundNumber, created } = rawGuess as Record<string, unknown>;
+    const at = typeof created === 'string' ? Date.parse(created) : NaN;
+    const deadline = Number.isInteger(roundNumber) ? deadlines.get(roundNumber as number) : undefined;
+    if (deadline === undefined || !Number.isFinite(at) || at >= deadline) continue;
+    const round = roundNumber as number;
+    const previous = times.get(round);
+    if (previous === undefined || at < previous) times.set(round, at);
+  }
+  return times;
+}
+
 function decodeTeams(raw: Record<string, unknown>): {
   teamIds: [string, string];
   playerIds: [string, string];
-  rounds: TieRangeInput['rounds'];
+  rounds: PlayerSettledRound[];
 } {
+  const deadlines = decodeDeadlines(raw);
   if (!Array.isArray(raw.teams) || raw.teams.length !== 2) {
     throw new DecodeError('unsupported-game', 'Exactly two teams are required');
   }
@@ -179,6 +249,7 @@ function decodeTeams(raw: Record<string, unknown>): {
     id: string;
     playerId: string;
     results: Map<number, number>;
+    guessTimes: Map<number, number>;
   }>();
   for (const rawTeam of raw.teams) {
     const team = record(rawTeam, 'Team');
@@ -191,7 +262,9 @@ function decodeTeams(raw: Record<string, unknown>): {
     if (!Array.isArray(team.players) || team.players.length !== 1) {
       throw new DecodeError('unsupported-game', 'Only one player per team is supported');
     }
-    const playerId = nonemptyString(record(team.players[0], 'Player').playerId, 'Player ID');
+    const player = record(team.players[0], 'Player');
+    const playerId = nonemptyString(player.playerId, 'Player ID');
+    const guessTimes = decodeGuessTimes(player, deadlines);
     if (!Array.isArray(team.roundResults)) {
       throw new DecodeError('partial-results', 'Team round results are missing');
     }
@@ -204,7 +277,7 @@ function decodeTeams(raw: Record<string, unknown>): {
       if (results.has(round)) throw new DecodeError('partial-results', `Duplicate result for round ${round}`);
       results.set(round, score);
     }
-    byLabel.set(label, { id, playerId, results });
+    byLabel.set(label, { id, playerId, results, guessTimes });
   }
 
   const blue = byLabel.get('blue');
@@ -214,13 +287,14 @@ function decodeTeams(raw: Record<string, unknown>): {
   }
   const allRounds = new Set([...blue.results.keys(), ...red.results.keys()]);
   const ordered = [...allRounds].sort((left, right) => left - right);
-  const rounds: TieRangeInput['rounds'] = [];
+  const rounds: PlayerSettledRound[] = [];
   for (let index = 0; index < ordered.length; index += 1) {
     const round = ordered[index];
     if (round !== index + 1 || !blue.results.has(round) || !red.results.has(round)) {
       throw new DecodeError('partial-results', `Paired contiguous results are required at round ${index + 1}`);
     }
-    rounds.push({ round, scores: [blue.results.get(round)!, red.results.get(round)!] });
+    rounds.push({ round, scores: [blue.results.get(round)!, red.results.get(round)!],
+      guessedAtMs: [blue.guessTimes.get(round) ?? null, red.guessTimes.get(round) ?? null] });
   }
   return {
     teamIds: [blue.id, red.id],
@@ -281,8 +355,8 @@ function sameRules(previous: PlayerGameContext, next: DecodedSnapshot): boolean 
     && previous.input.maxRounds === next.input.maxRounds;
 }
 
-function sameRound(left: TieRangeInput['rounds'][number], right: TieRangeInput['rounds'][number]): boolean {
-  return left.round === right.round && tupleEqual(left.scores, right.scores);
+function sameRound(left: PlayerSettledRound, right: PlayerSettledRound): boolean {
+  return left.round === right.round && tupleEqual(left.scores, right.scores) && tupleEqual(left.guessedAtMs, right.guessedAtMs);
 }
 
 function rollbackStart(previous: PlayerGameContext, next: DecodedSnapshot): number | null {
@@ -303,6 +377,7 @@ function rollbackStart(previous: PlayerGameContext, next: DecodedSnapshot): numb
 function freezeContext(context: PlayerGameContext): PlayerGameContext {
   for (const round of context.input.rounds) {
     Object.freeze(round.scores);
+    Object.freeze(round.guessedAtMs);
     Object.freeze(round);
   }
   for (const start of context.roundStarts) Object.freeze(start);
@@ -339,16 +414,18 @@ export function parsePlayerPageRoute(path: string): PlayerPageRoute | null {
 export function acceptPlayerSnapshot(
   previous: PlayerGameContext | null,
   raw: unknown,
-  configuredMode: TieRangeBandMode,
+  configured: TieRangeBandMode | PlayerConfiguredRules,
 ): PlayerSnapshotAcceptance {
+  const rules = configuredRules(configured);
+  const configuredMode = rules.mode;
   const rawGameId = typeof raw === 'object' && raw !== null && !Array.isArray(raw)
     ? (raw as Record<string, unknown>).gameId
     : undefined;
   const relevantPrevious = previous && typeof rawGameId === 'string' && rawGameId !== previous.gameId
     ? null
     : previous;
-  if (configuredMode !== 'off' && configuredMode !== 'full' && configuredMode !== 'half') {
-    return retained(relevantPrevious, 'invalid-snapshot', 'Configured tie-range mode is invalid');
+  if ((configuredMode !== 'off' && configuredMode !== 'full' && configuredMode !== 'half') || typeof rules.pinpointing !== 'boolean') {
+    return retained(relevantPrevious, 'invalid-snapshot', 'Configured rules are invalid');
   }
 
   let decoded: DecodedSnapshot;
@@ -365,10 +442,10 @@ export function acceptPlayerSnapshot(
   }
   if (activePrevious && decoded.sourceVersion === activePrevious.sourceVersion) {
     return {
-      accepted: true, context: activePrevious, output: outputFor(activePrevious),
+      accepted: true, context: activePrevious, output: outputFor(activePrevious), pinpointing: pinpointingFor(activePrevious),
       diagnostic: activePrevious.rollbackPendingFrom
         ? diagnostic('recovery', 'Waiting for restarted round history to clear')
-        : activePrevious.sourceStatus === 'Finished' && outputFor(activePrevious)?.terminal === null
+        : endedWithoutWinner(activePrevious)
           ? diagnostic('source-ended', 'Duel ended without a custom winner') : null,
     };
   }
@@ -394,8 +471,7 @@ export function acceptPlayerSnapshot(
           || !sameRound(round, decoded.input.rounds[index]))) {
         return retained(activePrevious, 'recovery', 'Settled history is incomplete or changed without rollback evidence');
       }
-      const previousTerminal = outputFor(activePrevious)?.terminal;
-      if (previousTerminal !== null && previousTerminal !== undefined) {
+      if (terminalRound(activePrevious) !== null) {
         acceptedRounds = activePrevious.input.rounds;
       }
     } else {
@@ -423,6 +499,7 @@ export function acceptPlayerSnapshot(
     schemaVersion: PLAYER_TIE_RANGE_RULES_VERSION,
     gameId: decoded.gameId,
     mode: activePrevious?.mode ?? configuredMode,
+    pinpointing: activePrevious?.pinpointing ?? rules.pinpointing,
     sourceVersion: decoded.sourceVersion,
     currentRoundNumber: decoded.currentRoundNumber,
     sourceStatus: decoded.sourceStatus,
@@ -434,18 +511,17 @@ export function acceptPlayerSnapshot(
     input: {
       ...decoded.input,
       teamIds: [...decoded.teamIds],
-      rounds: acceptedRounds.map(round => ({ round: round.round, scores: [...round.scores] })),
+      rounds: acceptedRounds.map(round => ({ round: round.round, scores: [...round.scores], guessedAtMs: [...round.guessedAtMs] })),
     },
   });
-  const output = outputFor(context);
-  const endedWithoutCustomWinner = decoded.sourceStatus === 'Finished' && output?.terminal === null;
   return {
     accepted: true,
     context,
-    output,
+    output: outputFor(context),
+    pinpointing: pinpointingFor(context),
     diagnostic: rollbackPendingFrom !== null
       ? diagnostic('recovery', 'Waiting for restarted round history to clear')
-      : endedWithoutCustomWinner
+      : endedWithoutWinner(context)
         ? diagnostic('source-ended', 'Duel ended without a custom winner')
         : null,
   };
@@ -467,18 +543,31 @@ function parseIndex(value: unknown): string[] {
   }
 }
 
+function migrateSavedContext(parsed: PlayerGameContext): void {
+  if (parsed.schemaVersion !== 1) return;
+  // Version 1 predates Pinpointing Duels: HP-only contexts with no guess times.
+  parsed.schemaVersion = PLAYER_TIE_RANGE_RULES_VERSION;
+  parsed.pinpointing = false;
+  if (parsed.input && Array.isArray(parsed.input.rounds)) {
+    for (const round of parsed.input.rounds) if (round && round.guessedAtMs === undefined) round.guessedAtMs = [null, null];
+  }
+}
+
 function restoreContext(value: unknown, expectedGameId: string): PlayerContextRestore {
-  if (typeof value !== 'string') return { context: null, output: null, diagnostic: null };
+  if (typeof value !== 'string') return { context: null, output: null, pinpointing: null, diagnostic: null };
   try {
     const parsed = record(JSON.parse(value), 'Saved tie-range context') as unknown as PlayerGameContext;
+    migrateSavedContext(parsed);
     if (parsed.schemaVersion !== PLAYER_TIE_RANGE_RULES_VERSION) {
       return {
         context: null,
         output: null,
+        pinpointing: null,
         diagnostic: diagnostic('schema-mismatch', 'Saved tie-range rules are from a different version'),
       };
     }
     if ((parsed.mode !== 'off' && parsed.mode !== 'full' && parsed.mode !== 'half')
+      || typeof parsed.pinpointing !== 'boolean'
       || parsed.gameId !== expectedGameId || expectedGameId.length === 0
       || !Number.isInteger(parsed.sourceVersion) || parsed.sourceVersion < 0
       || !Number.isInteger(parsed.currentRoundNumber) || parsed.currentRoundNumber < 1
@@ -497,6 +586,11 @@ function restoreContext(value: unknown, expectedGameId: string): PlayerContextRe
     if (!parsed.input || !tupleEqual(parsed.teamIds, parsed.input.teamIds)) throw new Error('identity mismatch');
     // Off contexts still need valid inputs: they can be restored before a fetch.
     foldTieRange(parsed.input, parsed.mode === 'off' ? null : parsed.mode);
+    for (const round of parsed.input.rounds) {
+      if (!Array.isArray(round.guessedAtMs) || round.guessedAtMs.length !== 2
+        || round.guessedAtMs.some(at => at !== null && !Number.isFinite(at))) throw new Error('invalid guess time');
+    }
+    foldPinpointing({ teamIds: parsed.input.teamIds, tieRange: parsed.mode, rounds: parsed.input.rounds });
     const seen = new Set<number>();
     for (const start of parsed.roundStarts) {
       if (!start || !Number.isInteger(start.round) || start.round < 1 || seen.has(start.round)
@@ -507,18 +601,18 @@ function restoreContext(value: unknown, expectedGameId: string): PlayerContextRe
       && (!Number.isInteger(parsed.rollbackPendingFrom) || parsed.rollbackPendingFrom < 1
         || parsed.input.rounds.some(round => round.round >= parsed.rollbackPendingFrom!))) throw new Error('invalid rollback');
     const context = freezeContext(parsed);
-    const output = outputFor(context);
     return {
-      context, output,
+      context, output: outputFor(context), pinpointing: pinpointingFor(context),
       diagnostic: context.rollbackPendingFrom
         ? diagnostic('recovery', 'Waiting for restarted round history to clear')
-        : context.sourceStatus === 'Finished' && output?.terminal === null
+        : endedWithoutWinner(context)
           ? diagnostic('source-ended', 'Duel ended without a custom winner') : null,
     };
   } catch {
     return {
       context: null,
       output: null,
+      pinpointing: null,
       diagnostic: diagnostic('invalid-saved-context', 'Saved tie-range context is invalid'),
     };
   }

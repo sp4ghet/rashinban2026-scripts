@@ -10,9 +10,10 @@ import {
 } from './tie-range-player-view-model.ts';
 
 const context: PlayerGameContext = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   gameId: 'game-1',
   mode: 'full',
+  pinpointing: false,
   sourceVersion: 8,
   currentRoundNumber: 2,
   sourceStatus: 'Ongoing',
@@ -30,7 +31,7 @@ const context: PlayerGameContext = {
     delay: 1,
     maxRounds: 10,
     teamIds: ['blue-team', 'red-team'],
-    rounds: [{ round: 1, scores: [0, 0] }, { round: 2, scores: [2470, 0] }],
+    rounds: [{ round: 1, scores: [0, 0], guessedAtMs: [null, null] }, { round: 2, scores: [2470, 0], guessedAtMs: [10, 20] }],
   },
 };
 
