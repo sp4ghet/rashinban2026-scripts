@@ -17,15 +17,19 @@ export function project(state: DuelState | null, timeline: Timeline, nowMs: numb
   const scoreProgress = progress(nowMs, scoring?.countAtMs ?? timeline.revealAtMs, scoring?.countEndAtMs ?? timeline.damageAtMs);
   const damageProgress = scoring ? healthProgress(nowMs, scoring.impactAtMs, scoring.healthEndAtMs) : progress(nowMs, timeline.damageAtMs, timeline.holdAtMs);
   const deadline = timeline.phase === 'pre-round' ? round?.startAtMs : timeline.phase === 'live' ? round?.endAtMs : null;
+  const verdictShown = revealed && scoring?.verdictAtMs != null && nowMs >= scoring.verdictAtMs;
+  const pendingVerdict = revealed && !verdictShown ? state.pinpointing?.rounds.find(item => item.round === timeline.round) : undefined;
+  const points = state.pinpointing ? pendingVerdict?.totalsBefore ?? state.pinpointing.totals : null;
   return {
     phase: timeline.phase,
     remainingMs: deadline == null ? null : Math.max(0, deadline - nowMs),
     answer: revealed ? round?.panorama ?? null : null,
     ...(revealed && scoring ? { scoring: scoreProjection(scoring, timeline.revealAtMs!, nowMs) } : {}),
-    players: state.players.map(player => {
+    players: state.players.map((player, index) => {
       const result = player.results.find(item => item.round === timeline.round);
       return {
         id: player.id,
+        ...(points ? { points: points[index], matchPoint: state.pinpointing!.matchPoint[index] } : {}),
         health: result && timeline.phase !== 'aborted'
           ? Math.round(result.healthBefore + (result.healthAfter - result.healthBefore) * (revealed ? damageProgress : 0))
           : player.health,

@@ -151,7 +151,7 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
       const effect = effectFor(scores);
       timeline = { ...timeline, phase: 'results-transition', music: 'results', cues: timeline.cues.filter(item => item.kind === 'guess'), effect,
         scoringResult: scoreCalculation(state, timeline.round!),
-        hasDamage: state.players.some(player => player.results.some(result => result.round === timeline.round && result.healthAfter < result.healthBefore)) };
+        hasDamage: !state.pinpointing && state.players.some(player => player.results.some(result => result.round === timeline.round && result.healthAfter < result.healthBefore)) };
       if (effect === 'none') timeline = scheduleReveal(timeline, nowMs, timing);
       else {
         const startAtMs = nowMs + timing.leadMs;
