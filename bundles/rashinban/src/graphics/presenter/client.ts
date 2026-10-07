@@ -3,9 +3,10 @@ import type { PresenterClients, RendererStatus } from '../../types/replicants.ts
 import type { Cue, Timeline } from '../../types/presenter.ts';
 import type { AudioStatus } from '../../presenter/media.ts';
 import type { PresenterSettings } from '../../presenter/settings.ts';
-export function clientRole(search: string): ClientRole {
+/** An explicit ?role wins; otherwise an LED page (body[data-output="led"]) implies led and anything else is a silent preview. */
+export function clientRole(search: string, output?: string): ClientRole {
   const role = new URLSearchParams(search).get('role');
-  return role === 'program' ? 'program' : role === 'led' ? 'led' : 'preview';
+  return role === 'program' ? 'program' : role === 'led' ? 'led' : role === 'preview' ? 'preview' : output === 'led' ? 'led' : 'preview';
 }
 export type ClientDeps = { clientId: string; role: ClientRole; wallNow(): number; monotonicNow(): number;
   send(name: string, body?: unknown): Promise<unknown>; schedule(fn: () => void, ms: number): () => void };

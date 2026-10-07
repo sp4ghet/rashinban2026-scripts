@@ -1,11 +1,16 @@
 @import url('presenter.css');
 /* LED wall: only the top 1920x576 is physically shown. Names and HP sit in a
    top band because the players on stage can cover the lower part. */
+:root { --stage-top: 104px; --stage-h: 460px; }
 body { background: #000; }
-body.blanked > * { visibility: hidden; }
+/* Blanking is an opaque cover, not visibility: the renderer and presenter.js set
+   inline visibility on their own elements, and late-appended layers (celebration
+   video z-index 1000, audio unlock 10000) must stay covered too. */
+body.blanked::after { content: ''; position: fixed; inset: 0; background: #000; z-index: 2147483647; }
 .backdrop { inset: auto; top: 0; left: 0; width: 1920px; height: 576px; }
 .celebration-video { height: 576px; }
-.camera, footer { display: none !important; }
+/* No facecams on the wall. <footer> stays in the DOM because presenter.js writes #phase-label. */
+.camera, footer { display: none; }
 /* Row 1: identities and match info (y 0-52). */
 .competitor { bottom: auto; top: 8px; width: 560px; }
 .competitor.left { left: 24px; } .competitor.right { right: 24px; }
@@ -15,28 +20,28 @@ body.blanked > * { visibility: hidden; }
 .match-info .mode-info { width: 150px; }
 .match-info small, .damage small { font-size: 11px; }
 .match-info b { font-size: 22px; margin-top: 0; }
-/* Row 2: damage and HP (y 52-100). */
+/* Row 2: damage, HP and the round timer in the centre gap (y 52-100). */
 .damage { top: 52px; width: 90px; }
 .damage.left { left: 24px; } .damage.right { right: 24px; }
 .damage small { display: none; }
 .damage b { font-size: 30px; line-height: 44px; }
-.health { bottom: auto; top: 52px; width: 600px; height: 44px; border-width: 3px; border-radius: 10px; }
+.health { bottom: auto; top: 52px; width: 580px; height: 44px; border-width: 3px; border-radius: 10px; }
 .health.left { left: 120px; } .health.right { right: 120px; }
 .health b { font-size: 30px; line-height: 36px; }
-/* Stage: two wide POV windows (y 104-564). */
-.player-window { top: 104px; width: 930px; height: 460px; }
+#timer { top: 52px; left: 878px; height: 44px; line-height: 36px; font-size: 30px; border-width: 3px; }
+/* Stage: two wide POV windows. */
+.player-window { top: var(--stage-top); width: 930px; height: var(--stage-h); }
 .player-window.left { left: 16px; } .player-window.right { right: 16px; }
-.shared-view, #transition, #preview-area, #waiting-area, #summary-area { top: 104px; left: 16px; width: 1888px; height: 460px; }
-#timer { top: 488px; left: 878px; height: 80px; line-height: 70px; font-size: 36px; }
-#results-map { top: 104px; left: 460px; width: 1000px; height: 460px; }
+.shared-view, #transition, #preview-area, #waiting-area, #summary-area { top: var(--stage-top); left: 16px; width: 1888px; height: var(--stage-h); }
+#results-map { top: var(--stage-top); left: 460px; width: 1000px; height: var(--stage-h); }
 .result { top: 300px; width: 420px; } .result.left { left: 20px; } .result.right { right: 20px; }
 #tie-range-label { top: 120px; }
 #review-banner { top: 108px; }
 #preview-map { bottom: 18px; }
 /* Lock layouts keep the same band. */
-body[data-lock="left"] .player-window.left, body[data-lock="right"] .player-window.right { top: 104px; width: 460px; height: 460px; }
-body[data-lock="left"] .player-window.right, body[data-lock="right"] .player-window.left { top: 104px; width: 1400px; height: 460px; }
-body[data-layout="shared"][data-lock="left"] .shared-view { top: 104px; left: 504px; width: 1400px; height: 460px; }
-body[data-layout="shared"][data-lock="right"] .shared-view { top: 104px; left: 16px; width: 1400px; height: 460px; }
-body[data-layout="shared"][data-lock="none"] .player-window { top: 104px; height: 460px; }
-body[data-layout="shared"] #timer, body[data-lock="left"] #timer, body[data-lock="right"] #timer { top: 488px; }
+body[data-lock="left"] .player-window.left, body[data-lock="right"] .player-window.right { top: var(--stage-top); width: 460px; height: var(--stage-h); }
+body[data-lock="left"] .player-window.right, body[data-lock="right"] .player-window.left { top: var(--stage-top); width: 1400px; height: var(--stage-h); }
+body[data-layout="shared"][data-lock="left"] .shared-view { top: var(--stage-top); left: 504px; width: 1400px; height: var(--stage-h); }
+body[data-layout="shared"][data-lock="right"] .shared-view { top: var(--stage-top); left: 16px; width: 1400px; height: var(--stage-h); }
+body[data-layout="shared"][data-lock="none"] .player-window { top: var(--stage-top); height: var(--stage-h); }
+body[data-layout="shared"] #timer, body[data-lock="left"] #timer, body[data-lock="right"] #timer { top: 52px; }

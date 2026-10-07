@@ -30,7 +30,7 @@ let selectedMedia = EMPTY_MEDIA;
 const videoPlayer = createVideoPlayer(() => {
   const video = document.createElement('video'); video.className = 'celebration-video'; document.body.append(video); return video;
 }, (fn, ms) => { const id = setTimeout(fn, ms); return () => clearTimeout(id); });
-const role = clientRole(location.search);
+const role = clientRole(location.search, document.body.dataset.output);
 const clientId = crypto.randomUUID();
 const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
   send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });

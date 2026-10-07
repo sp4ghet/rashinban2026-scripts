@@ -127,3 +127,12 @@ test('preview still never plays video', async () => {
   c.advance(100); assert.deepEqual(c.value.pollCues(), []);
   c.value.dispose();
 });
+
+test('an LED page implies the led role unless the URL names a role', () => {
+  assert.equal(clientRole('', 'led'), 'led');
+  assert.equal(clientRole('?channel=preview', 'led'), 'led');
+  assert.equal(clientRole('?role=preview', 'led'), 'preview');
+  assert.equal(clientRole('?role=program', 'led'), 'program');
+  assert.equal(clientRole('', 'stream'), 'preview');
+  assert.equal(clientRole('', undefined), 'preview');
+});
