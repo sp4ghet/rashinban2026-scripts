@@ -214,7 +214,8 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
     const previous = bootstrap && input === 'replay' ? null : rawDuel ?? ruleContexts.value[input]?.source ?? null;
     const accepted = applySnapshot(previous, adjusted);
     function present(state: DuelState, restore: boolean): void {
-      const configured = settings.value.tieRange.enabled ? settings.value.tieRange.mode : 'off';
+      const configured = { mode: settings.value.tieRange.enabled ? settings.value.tieRange.mode : 'off' as const,
+        pinpointing: settings.value.pinpointing.enabled };
       const context = updateRuleContext(ruleContexts.value[input], state, configured, rollbackRound(previous, state, adjusted));
       // Publication recursively proxies nested objects. Keep our calculation input detached.
       ruleContexts.value = JSON.parse(JSON.stringify({ ...ruleContexts.value, [input]: context })) as RuleContexts;
