@@ -42,3 +42,11 @@ test('Pinpointing Duels verdict and points labels', async () => {
   assert.equal(pointsLabel(true, 7), 'MATCH POINT');
   assert.equal(pointsLabel(false, 7, 8), 'WINNER');
 });
+
+test('point pips fill from the first pip and never exceed the target', async () => {
+  const { pointPips } = await import('../../graphics/presenter/layout.ts');
+  assert.deepEqual(pointPips(3, 7), [true, true, true, false, false, false, false]);
+  assert.deepEqual(pointPips(0, 7).filter(Boolean), []);
+  assert.deepEqual(pointPips(8, 7), Array(7).fill(true));
+  assert.deepEqual(pointPips(undefined, 7), Array(7).fill(false));
+});

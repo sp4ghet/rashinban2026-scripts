@@ -26,8 +26,10 @@ shows the active and next-duel rules. Reconnecting or restarting NodeCG keeps
 the current duel's rules. Tie range can be enabled at the same time; its
 results-map circles then explain why a close round scored nothing.
 
-On stream the two HP boxes show each side's points out of seven, with a gold
-highlight at match point (5 points or more, since a solo 5K scores 2). The
+On stream each HP box becomes that side's row of seven pips, filled from the
+outer edge in the side's colour as points come in, with the count beside
+them and a gold highlight at match point (5 or 6 points, since a solo 5K
+scores 2). The
 DAMAGE boxes read POINTS with FIRST TO 7 or MATCH POINT. After the score count
 a banner announces the round verdict (`+2 · SOLO 5K`, `+1 · FASTEST 5K`,
 `+1 · CLOSEST`, `DOUBLE 5K · NO POINT`, or `TIE · NO POINT`) and the scoring

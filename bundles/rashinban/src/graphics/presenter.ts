@@ -2,7 +2,7 @@ import { REPLICANTS, type RendererStatus, type PresenterClients } from '../types
 import type { DuelState, SeriesState, Timeline, Views } from '../types/presenter.ts';
 import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
 import { projectScene, paintScene, type PresenterScene } from './presenter/scene.ts';
-import { layoutKind, multiplierLabel, distanceLabel, lockLayout, pointsLabel } from './presenter/layout.ts';
+import { layoutKind, multiplierLabel, distanceLabel, lockLayout, pointsLabel, pointPips } from './presenter/layout.ts';
 import { paintScoring } from './presenter/scoring.ts';
 import { createCelebrationUnderlay } from './presenter/celebration.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
@@ -153,9 +153,15 @@ function frame() {
       write(`${side}-wins`, String(competitor.wins));
       const box = element(`${side}-health`).parentElement!;
       box.dataset.matchPoint = String(matchPoint);
+      const pips = element(`${side}-pips`);
+      pips.hidden = !pinpointing;
       if (pinpointing) {
         write(`${side}-health`, player?.points === undefined ? '—' : String(player.points));
-        element(`${side}-health-fill`).style.transform = `scaleX(${Math.max(0, Math.min(1, (player?.points ?? 0) / pinpointing.firstTo))})`;
+        const states = pointPips(player?.points, pinpointing.firstTo);
+        while (pips.children.length < states.length) { const pip = document.createElement('i'); pip.className = 'pip'; pips.append(pip); }
+        while (pips.children.length > states.length) pips.lastElementChild!.remove();
+        states.forEach((filled, index) => pips.children[index].classList.toggle('filled', filled));
+        element(`${side}-health-fill`).style.transform = 'scaleX(0)';
         element(`${side}-health-fill`).style.background = '';
       } else {
         write(`${side}-health`, player ? String(player.health) : '—');

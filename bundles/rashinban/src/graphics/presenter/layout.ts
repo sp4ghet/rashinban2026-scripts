@@ -11,6 +11,12 @@ export function verdictLabel(verdict: PinpointingVerdict): string {
   return 'TIE · NO POINT';
 }
 
+/** One flag per pip, filled from the first pip up to the side's points. */
+export function pointPips(points: number | undefined, firstTo: number): boolean[] {
+  const filled = Math.max(0, Math.min(firstTo, points ?? 0));
+  return Array.from({ length: firstTo }, (_, index) => index < filled);
+}
+
 export function pointsLabel(matchPoint: boolean, firstTo: number, points = 0): string {
   return points >= firstTo ? 'WINNER' : matchPoint ? 'MATCH POINT' : `FIRST TO ${firstTo}`;
 }

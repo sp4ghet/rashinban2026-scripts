@@ -62,10 +62,16 @@ footer { position: absolute; left: 800px; right: 800px; bottom: 30px; z-index: 4
 #score-calculation { position: absolute; transform: translateY(-50%); font-size: 32px; line-height: 1; white-space: nowrap; color: #ffd55a; text-shadow: 0 3px 10px #10131f; }
 .health { box-shadow: 0 0 calc(24px * var(--score-impact, 0)) rgba(255, 100, 125, var(--score-impact, 0)); }
 
-/* Pinpointing Duels: the HP boxes count points out of seven; the damage boxes name the target. */
-body[data-ruleset="pinpointing"] .health.left .health-fill { background: #2f5fb3; }
-body[data-ruleset="pinpointing"] .health.right .health-fill { background: #b33a48; }
-body[data-ruleset="pinpointing"] .health b { font-size: 56px; }
+/* Pinpointing Duels: each HP box becomes that side's row of point pips plus the count. */
+body[data-ruleset="pinpointing"] .health-fill { display: none; }
+body[data-ruleset="pinpointing"] .health { background: #10131ff2; }
+.pips { position: absolute; top: 0; bottom: 0; left: 26px; right: 112px; display: flex; align-items: center; gap: 12px; transform: skew(10deg); }
+.health.right .pips { left: 112px; right: 26px; flex-direction: row-reverse; transform: skew(-10deg); }
+.pip { width: 34px; height: 34px; border-radius: 50%; background: #262c3d; border: 3px solid #3b4357; box-sizing: border-box; transition: background 180ms ease, box-shadow 180ms ease; }
+.health.left .pip.filled { background: var(--blue); border-color: #8fbcff; box-shadow: 0 0 14px #458af2aa; }
+.health.right .pip.filled { background: var(--red); border-color: #ff9aa6; box-shadow: 0 0 14px #f05060aa; }
+body[data-ruleset="pinpointing"] .health b { position: absolute; top: 0; right: 24px; width: 80px; font-size: 56px; }
+body[data-ruleset="pinpointing"] .health.right b { right: auto; left: 24px; }
 body[data-ruleset="pinpointing"] .health[data-match-point="true"] { border-color: #ffd55a; box-shadow: 0 0 22px #ffd55a88; }
 body[data-ruleset="pinpointing"] .damage b { font-size: 24px; line-height: 1.3; letter-spacing: .06em; }
 body[data-ruleset="pinpointing"] .damage[data-match-point="true"] b { color: #ffd55a; }
