@@ -3,7 +3,10 @@ import type { PresenterClients, RendererStatus } from '../../types/replicants.ts
 import type { Cue, Timeline } from '../../types/presenter.ts';
 import type { AudioStatus } from '../../presenter/media.ts';
 import type { PresenterSettings } from '../../presenter/settings.ts';
-export function clientRole(search: string): ClientRole { return new URLSearchParams(search).get('role') === 'program' ? 'program' : 'preview'; }
+export function clientRole(search: string): ClientRole {
+  const role = new URLSearchParams(search).get('role');
+  return role === 'program' ? 'program' : role === 'led' ? 'led' : 'preview';
+}
 export type ClientDeps = { clientId: string; role: ClientRole; wallNow(): number; monotonicNow(): number;
   send(name: string, body?: unknown): Promise<unknown>; schedule(fn: () => void, ms: number): () => void };
 export function createPresenterClient(deps: ClientDeps) {
@@ -32,6 +35,8 @@ export function createPresenterClient(deps: ClientDeps) {
     if (next !== active) { active = next; ownership++; adopt = true; }
     return active;
   }
+  /** Program plays celebrations as the lease owner; an LED client plays them too, silently, on a fresh clock. */
+  function playsVideo() { return ownsProgram() || (!disposed && deps.role === 'led' && deps.monotonicNow() - lastSync < 30000); }
   async function sync() {
     const samples: ClockSample[] = [];
     for (let i = 0; i < 5 && !disposed; i++) {
@@ -55,7 +60,7 @@ export function createPresenterClient(deps: ClientDeps) {
   }
   return {
     async start() { if (started || disposed) return; started = true; heartbeat(); await sync(); },
-    now, ownsProgram,
+    now, ownsProgram, playsVideo,
     programOwner() {
       const lease = clients.program;
       return !disposed && deps.monotonicNow() - lastSync < 30000 && lease && eligibleCompletion(lease, lease.clientId, now()) ? lease.clientId : null;
@@ -82,7 +87,7 @@ export function createPresenterClient(deps: ClientDeps) {
       timeline = value;
     },
     pollCues(): Cue[] {
-      const owns = ownsProgram(); if (!timeline || !Number.isFinite(lastSync)) return [];
+      const owns = playsVideo(); if (!timeline || !Number.isFinite(lastSync)) return [];
       const at = now(); const due: Cue[] = [];
       for (const cue of timeline.cues) {
         if (seen.has(cue.id)) continue;
