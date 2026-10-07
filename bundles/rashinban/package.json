@@ -74,13 +74,13 @@
     "dashboardPanels": [
       {
         "name": "switcher-stream",
-        "title": "Stream switcher",
+        "title": "Stream",
         "file": "switcher-stream.html",
         "fullbleed": true
       },
       {
         "name": "switcher-led",
-        "title": "LED switcher",
+        "title": "LED",
         "file": "switcher-led.html",
         "fullbleed": true
       },
