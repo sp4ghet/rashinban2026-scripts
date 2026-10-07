@@ -28,3 +28,16 @@ test('resolved no-pin distance is N/A while unrevealed and unmapped results stay
   assert.equal(distanceLabel(undefined, undefined), '—');
   assert.equal(distanceLabel(12345, 0), '12.3 km');
 });
+
+test('Pinpointing Duels verdict and points labels', async () => {
+  const { verdictLabel, pointsLabel } = await import('../../graphics/presenter/layout.ts');
+  const verdict = (reason: 'fastest-5k' | 'solo-5k' | 'closest' | 'tie', points: [number, number]) =>
+    ({ reason, points, totalsBefore: [0, 0] as [number, number], totalsAfter: points, matchPoint: [false, false] as [boolean, boolean] });
+  assert.equal(verdictLabel(verdict('solo-5k', [2, 0])), '+2 · SOLO 5K');
+  assert.equal(verdictLabel(verdict('fastest-5k', [0, 1])), '+1 · FASTEST 5K');
+  assert.equal(verdictLabel(verdict('fastest-5k', [0, 0])), 'DOUBLE 5K · NO POINT');
+  assert.equal(verdictLabel(verdict('closest', [1, 0])), '+1 · CLOSEST');
+  assert.equal(verdictLabel(verdict('tie', [0, 0])), 'TIE · NO POINT');
+  assert.equal(pointsLabel(false, 7), 'FIRST TO 7');
+  assert.equal(pointsLabel(true, 7), 'MATCH POINT');
+});

@@ -62,6 +62,18 @@ footer { position: absolute; left: 800px; right: 800px; bottom: 30px; z-index: 4
 #score-calculation { position: absolute; transform: translateY(-50%); font-size: 32px; line-height: 1; white-space: nowrap; color: #ffd55a; text-shadow: 0 3px 10px #10131f; }
 .health { box-shadow: 0 0 calc(24px * var(--score-impact, 0)) rgba(255, 100, 125, var(--score-impact, 0)); }
 
+/* Pinpointing Duels: the HP boxes count points out of seven; the damage boxes name the target. */
+body[data-ruleset="pinpointing"] .health.left .health-fill { background: #2f5fb3; }
+body[data-ruleset="pinpointing"] .health.right .health-fill { background: #b33a48; }
+body[data-ruleset="pinpointing"] .health b { font-size: 56px; }
+body[data-ruleset="pinpointing"] .health[data-match-point="true"] { border-color: #ffd55a; box-shadow: 0 0 22px #ffd55a88; }
+body[data-ruleset="pinpointing"] .damage b { font-size: 24px; line-height: 1.3; letter-spacing: .06em; }
+body[data-ruleset="pinpointing"] .damage[data-match-point="true"] b { color: #ffd55a; }
+#verdict { position: absolute; top: 236px; left: 50%; transform: translate(-50%, 0) scale(var(--verdict-scale, 1)); padding: 12px 30px; border-radius: 14px; background: #10131fe6; border: 2px solid #ffd55a; color: #ffd55a; font-size: 44px; font-weight: 900; letter-spacing: .08em; white-space: nowrap; text-shadow: 0 3px 12px #10131fcc; box-shadow: 0 6px 24px #000a; }
+#verdict[data-side="left"] { left: 610px; border-color: #78adff; color: #78adff; }
+#verdict[data-side="right"] { left: 1310px; border-color: #ff8290; color: #ff8290; }
+#verdict[data-side="none"] { color: #e3e7f2; border-color: #8d99b1; }
+
 body[data-lock="left"] .player-window.left, body[data-lock="right"] .player-window.right { top: 218px; width: 574px; height: 574px; }
 body[data-lock="left"] .player-window.right, body[data-lock="right"] .player-window.left { top: 144px; width: 1270px; height: 714px; }
 body[data-lock="left"] .player-window.left .player-map, body[data-lock="right"] .player-window.right .player-map,

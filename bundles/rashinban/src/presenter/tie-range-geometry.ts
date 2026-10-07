@@ -95,7 +95,12 @@ export function tieRangeMapGeometry(
       color: neutral ? COLORS.neutral : COLORS[closer.side] });
   }
 
-  const ordinaryLabel = resultLabel(metadata.band, metadata.withinBand, scores, terminal, round, state.ruleOptions);
+  const verdict = state.pinpointing?.rounds.find(value => value.round === round);
+  const scoringSide = verdict && verdict.winner !== null
+    ? results.find(value => value.player === state.players[verdict.winner!])?.side ?? null : null;
+  const ordinaryLabel = verdict
+    ? pointsLabel(metadata.band, metadata.withinBand, scoringSide)
+    : resultLabel(metadata.band, metadata.withinBand, scores, terminal, round, state.ruleOptions);
   if (threshold <= 0) return { circles, circlePaths, framePoints, fullLongitude, world: true, label: 'All guesses within tie range' };
   const radiusM = state.ruleOptions?.maxErrorDistance == null ? null : tieScoreRadius(threshold, state.ruleOptions.maxErrorDistance);
   if (radiusM == null) return { circles, circlePaths, framePoints, fullLongitude, world: false, label: ordinaryLabel };
@@ -131,6 +136,13 @@ function closerResult<T extends { side: 'left' | 'right'; result: { score: numbe
   const usable = values.filter(value => value.result?.bestGuess && validGuess(value.result.bestGuess));
   return usable.sort((left, right) => left.result!.bestGuess!.distanceM - right.result!.bestGuess!.distanceM)[0];
 }
+/** Pinpointing Duels: the band decides a point, never a multiplier. */
+function pointsLabel(band: number, withinBand: boolean, scoringSide: 'left' | 'right' | null): string {
+  const prefix = `Tie band: ${band.toLocaleString('en-US')} ${band === 1 ? 'point' : 'points'} · `;
+  if (withinBand || scoringSide === null) return `${prefix}Within tie range · No point`;
+  return `${prefix}Outside tie range · ${scoringSide === 'left' ? 'Left' : 'Right'} scores`;
+}
+
 function resultLabel(
   band: number,
   withinBand: boolean,
