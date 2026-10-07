@@ -8,6 +8,7 @@ import { parseSeries } from '../../presenter/series.ts';
 import { applySnapshot, rollbackRound } from '../../presenter/normalize.ts';
 import { updateRuleContext, type RuleContexts } from '../../presenter/tie-range-context.ts';
 import { deriveTieRange } from '../../presenter/tie-range.ts';
+import { derivePinpointing, pinpointingWarning } from '../../presenter/pinpointing.ts';
 import { applyTelemetry, seedViews } from '../../presenter/telemetry.ts';
 import { advanceTimeline, finishEffect, nextTimelineWakeAtMs } from '../../presenter/timeline.ts';
 import { createConnection, createDefaultConnectionDeps, type ConnectionDeps } from './connection.ts';
@@ -221,16 +222,19 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
       ruleContexts.value = JSON.parse(JSON.stringify({ ...ruleContexts.value, [input]: context })) as RuleContexts;
       rawDuel = state;
       try {
-        const derived = deriveTieRange(context.source, context.mode);
+        const derived = context.pinpointing ? derivePinpointing(context.source, context.mode) : deriveTieRange(context.source, context.mode);
         const nextViews = restore || !views.value || views.value.gameId !== derived.gameId || views.value.round !== derived.round
           ? seedViews(derived) : views.value;
         // NodeCG values can have only one Replicant owner.
         duel.value = JSON.parse(JSON.stringify(derived)) as DuelState;
         views.value = nextViews;
-        ruleWarnings = [];
+        const early = pinpointingWarning(derived);
+        ruleWarnings = early === null ? [] : [early];
         tick(restore);
       } catch {
-        ruleWarnings = ['Tie-range calculation unavailable: check multiplier settings and complete round history.'];
+        ruleWarnings = [context.pinpointing
+          ? 'Pinpointing calculation unavailable: check complete round history and deadlines.'
+          : 'Tie-range calculation unavailable: check multiplier settings and complete round history.'];
         duel.value = null; views.value = null; tick(true);
       }
     }
