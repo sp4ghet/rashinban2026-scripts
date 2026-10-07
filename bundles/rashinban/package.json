@@ -46,12 +46,12 @@
         "height": 1080
       },
       {
-        "file": "banpick-stream.html",
+        "file": "info-stream.html",
         "width": 1920,
         "height": 1080
       },
       {
-        "file": "banpick-led.html",
+        "file": "info-led.html",
         "width": 1920,
         "height": 1080
       },
@@ -61,17 +61,7 @@
         "height": 800
       },
       {
-        "file": "player-cards.html",
-        "width": 1920,
-        "height": 1080
-      },
-      {
         "file": "brackets-finals.html",
-        "width": 1920,
-        "height": 1080
-      },
-      {
-        "file": "casters.html",
         "width": 1920,
         "height": 1080
       }
@@ -79,11 +69,35 @@
     "dashboardPanels": [
       {
         "name": "current-match",
-        "workspace": "broadcast",
+        "workspace": "shared",
         "title": "Current Match",
         "file": "current-match.html",
         "width": 6,
         "headerColor": "#256549"
+      },
+      {
+        "name": "banpick-control",
+        "workspace": "shared",
+        "title": "Ban & Pick",
+        "file": "banpick-control.html",
+        "width": 4,
+        "headerColor": "#1565c0"
+      },
+      {
+        "name": "casters-control",
+        "workspace": "shared",
+        "title": "Casters",
+        "file": "casters-control.html",
+        "width": 3,
+        "headerColor": "#ad1457"
+      },
+      {
+        "name": "bracket-control",
+        "workspace": "shared",
+        "title": "Bracket",
+        "file": "bracket-control.html",
+        "width": 3,
+        "headerColor": "#b71c1c"
       },
       {
         "name": "presenter-control",
@@ -92,14 +106,6 @@
         "file": "presenter-control.html",
         "width": 3,
         "headerColor": "#335f9b"
-      },
-      {
-        "name": "banpick-control",
-        "workspace": "broadcast",
-        "title": "Ban & Pick",
-        "file": "banpick-control.html",
-        "width": 4,
-        "headerColor": "#1565c0"
       },
       {
         "name": "startgg-control",
@@ -116,30 +122,6 @@
         "file": "sheet-control.html",
         "width": 3,
         "headerColor": "#256549"
-      },
-      {
-        "name": "player-cards-control",
-        "workspace": "broadcast",
-        "title": "Player Cards",
-        "file": "player-cards-control.html",
-        "width": 4,
-        "headerColor": "#6a1b9a"
-      },
-      {
-        "name": "bracket-control",
-        "workspace": "broadcast",
-        "title": "Bracket",
-        "file": "bracket-control.html",
-        "width": 3,
-        "headerColor": "#b71c1c"
-      },
-      {
-        "name": "casters-control",
-        "workspace": "broadcast",
-        "title": "Casters",
-        "file": "casters-control.html",
-        "width": 3,
-        "headerColor": "#ad1457"
       }
     ]
   }
