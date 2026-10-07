@@ -1,4 +1,5 @@
-﻿import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
+import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
+import { renderPointPips } from './tie-range-player-pips.ts';
 import type { PlayerTieRangeDisplay } from './tie-range-player-view-model.ts';
 
 const progress = (elapsed: number, start: number, duration: number) => Math.max(0, Math.min(1, (elapsed - start) / duration));
@@ -12,6 +13,21 @@ export function scoringPhase(elapsed: number, nativeMultiplier: boolean, tie: bo
     health: tie ? 0 : progress(elapsed, impact, 800),
     done: elapsed >= (tie ? 2450 : impact + 800),
   };
+}
+
+/** Pinpointing Duels: native count, then the verdict where GeoGuessr collides the scores. */
+export function pinpointingPhase(elapsed: number) {
+  return { count: progress(elapsed, 0, 750), verdict: elapsed >= 1750, done: elapsed >= 3000 };
+}
+
+function verdictText(result: NonNullable<PlayerTieRangeDisplay['result']>, teams: NonNullable<PlayerTieRangeDisplay['teams']>): string {
+  const points = result.points ?? [0, 0];
+  const gained = Math.max(...points);
+  const who = gained > 0 ? `${teams[points[0] > points[1] ? 0 : 1].label} +${gained} \u00b7 ` : '';
+  if (result.reason === 'solo-5k') return `${who}Solo 5K`;
+  if (result.reason === 'fastest-5k') return gained > 0 ? `${who}Fastest 5K` : 'Double 5K \u00b7 no point';
+  if (result.reason === 'closest') return `${who}Closest`;
+  return 'Tie \u00b7 no point';
 }
 
 type Session = { key: string; root: HTMLElement; start: number | null; multiplier: boolean; settled: boolean; scores: [string, string] };
@@ -45,6 +61,33 @@ export function createPlayerScoringAnimation(document: Document, shadow: ShadowR
     node('result').hidden = elapsed < 0 || (!result && (session.settled || view.localTeamId === null
       || Number(JSON.parse(session.key)[1]) < (view.context?.currentRoundNumber ?? 0)));
     if (elapsed < 0) hideMoving();
+    if (display.pinpointing) {
+      const points = pinpointingPhase(elapsed);
+      node('result').dataset.phase = elapsed < 0 ? 'entry' : points.done ? 'complete' : points.verdict ? 'verdict' : points.count < 1 ? 'count' : 'hold';
+      [node('result-team-0'), node('result-team-1')].forEach((element, i) => {
+        element.textContent = result ? String(Math.round(result.scores[i] * points.count)) : session!.scores[i];
+        element.style.opacity = '1';
+        moving[i].hidden = true;
+      });
+      const verdict = node('result-verdict');
+      verdict.hidden = !result || !points.verdict;
+      if (result && points.verdict) verdict.textContent = verdictText(result, display.teams);
+      const settled = result ? view.pinpointing?.rounds.find(round => round.round === result.round) : null;
+      display.teams.forEach((team, i) => {
+        const root = node(`team-${i}`);
+        root.querySelector<HTMLElement>('[data-rb="damage"]')!.hidden = true;
+        const canonicalIndex = view!.pinpointing?.teamIds.indexOf(team.teamId) ?? -1;
+        if (!settled || canonicalIndex < 0 || team.firstTo === undefined) return;
+        const total = points.verdict ? settled.totalsAfter[canonicalIndex] : settled.totalsBefore[canonicalIndex];
+        root.querySelector<HTMLElement>('[data-rb="health"]')!.textContent = `${total} / ${team.firstTo}`;
+        renderPointPips(root.querySelector<HTMLElement>('[data-rb="pips"]')!, total, team.firstTo);
+        root.querySelector<HTMLElement>('[data-rb="multiplier"]')!.textContent = total >= team.firstTo - 2 && total < team.firstTo ? 'MATCH POINT' : '';
+      });
+      if (display.terminal && result) node('terminal').hidden = !points.done;
+      if (points.done) completed.add(session.key);
+      return;
+    }
+    node('result-verdict').hidden = true;
     const tie = !!result && result.scores[0] === result.scores[1];
     const phase = scoringPhase(elapsed, session.multiplier, tie);
     node('result').dataset.phase = elapsed < 0 ? 'entry' : phase.done ? 'complete' : phase.health > 0 ? 'health' : phase.flight > 0 ? 'flight' : phase.multiplied ? 'multiplier' : phase.difference ? 'difference' : phase.collision > 0 ? 'collision' : phase.count < 1 ? 'count' : 'hold';

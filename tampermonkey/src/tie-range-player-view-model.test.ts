@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { TieRangeOutput } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
+import { foldPinpointing } from '../../bundles/rashinban/src/presenter/pinpointing-core.ts';
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
 import type { PlayerGameContext } from './tie-range-player-state.ts';
 import {
@@ -10,9 +11,10 @@ import {
 } from './tie-range-player-view-model.ts';
 
 const context: PlayerGameContext = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   gameId: 'game-1',
   mode: 'full',
+  pinpointing: false,
   sourceVersion: 8,
   currentRoundNumber: 2,
   sourceStatus: 'Ongoing',
@@ -30,7 +32,7 @@ const context: PlayerGameContext = {
     delay: 1,
     maxRounds: 10,
     teamIds: ['blue-team', 'red-team'],
-    rounds: [{ round: 1, scores: [0, 0] }, { round: 2, scores: [2470, 0] }],
+    rounds: [{ round: 1, scores: [0, 0], guessedAtMs: [null, null] }, { round: 2, scores: [2470, 0], guessedAtMs: [10, 20] }],
   },
 };
 
@@ -80,6 +82,9 @@ function view(overrides: Partial<PlayerTieRangeView> = {}): PlayerTieRangeView {
     localTeamId: null,
     context,
     output,
+    pinpointing: null,
+    configuredPinpointing: false,
+    capturedPinpointing: false,
     diagnostic: null,
     message: null,
     ...overrides,
@@ -322,4 +327,54 @@ test('shows an unavailable reason without rendering empty HP bars while enabled'
     diagnostic: { code: 'schema-mismatch', message: 'Old saved schema' },
   }), false);
   assert.equal(inactive.showDiagnostic, false);
+});
+
+const pointsContext: PlayerGameContext = { ...context, mode: 'off', pinpointing: true,
+  input: { ...context.input, rounds: [{ round: 1, scores: [5000, 0], guessedAtMs: [1, 2] }, { round: 2, scores: [2470, 0], guessedAtMs: [10, 20] }] } };
+const points = foldPinpointing({ teamIds: ['blue-team', 'red-team'], tieRange: 'off', rounds: pointsContext.input.rounds });
+
+function pointsView(overrides: Partial<PlayerTieRangeView> = {}): PlayerTieRangeView {
+  return view({ capturedMode: 'off', configuredMode: 'off', context: pointsContext, output: null, pinpointing: points,
+    configuredPinpointing: true, capturedPinpointing: true, localTeamId: 'red-team', ...overrides });
+}
+
+test('Pinpointing Duels shows oriented points out of seven and holds the last round until disclosed', () => {
+  const hidden = derivePlayerTieRangeDisplay(pointsView(), false);
+  assert.equal(hidden.pinpointing, true);
+  assert.equal(hidden.showHud, true);
+  assert.equal(hidden.suppressNative, true);
+  assert.equal(hidden.modeLabel, 'Pinpointing Duels');
+  assert.deepEqual(hidden.teams!.map(team => [team.label, team.points, team.firstTo, team.matchPoint]), [
+    ['You', 0, 7, false],
+    ['Opponent', 2, 7, false],
+  ]);
+  assert.equal(hidden.result, null);
+
+  const revealed = derivePlayerTieRangeDisplay(pointsView(), true);
+  assert.deepEqual(revealed.teams!.map(team => team.points), [0, 3]);
+  assert.deepEqual(revealed.result?.scores, [0, 2470]);
+  assert.deepEqual(revealed.result?.points, [0, 1]);
+  assert.equal(revealed.result?.reason, 'closest');
+  assert.equal(revealed.result?.band, 0);
+  assert.equal(revealed.terminal, null);
+});
+
+test('Pinpointing Duels with tie range names both rules and uses the band', () => {
+  const banded = foldPinpointing({ teamIds: ['blue-team', 'red-team'], tieRange: 'full', rounds: pointsContext.input.rounds });
+  const display = derivePlayerTieRangeDisplay(pointsView({ capturedMode: 'full', context: { ...pointsContext, mode: 'full' }, pinpointing: banded }), true);
+  assert.equal(display.modeLabel, 'Pinpointing Duels · Full tie-range');
+  assert.equal(display.result?.reason, 'tie');
+  assert.equal(display.result?.band, 2530);
+  assert.deepEqual(display.teams!.map(team => team.points), [0, 2]);
+});
+
+test('Pinpointing Duels terminal reads the final score and survives later source rounds', () => {
+  const rounds = [1, 2, 3, 4].map(round => ({ round, scores: [5000, 0] as [number, number], guessedAtMs: [1, 2] as [number, number] }));
+  const won = foldPinpointing({ teamIds: ['blue-team', 'red-team'], tieRange: 'off', rounds });
+  const context = { ...pointsContext, currentRoundNumber: 6, input: { ...pointsContext.input, rounds } };
+  const display = derivePlayerTieRangeDisplay(pointsView({ context, pinpointing: won }), false);
+  assert.deepEqual(display.teams!.map(team => [team.label, team.points, team.matchPoint]), [['You', 0, false], ['Opponent', 8, false]]);
+  assert.deepEqual(display.terminal, { headline: 'You lose 0–8', detail: 'Custom duel finished — wait for the host', round: 4 });
+  const neutral = derivePlayerTieRangeDisplay(pointsView({ context, pinpointing: won, localTeamId: null }), false);
+  assert.equal(neutral.terminal?.headline, 'Blue wins 8–0');
 });

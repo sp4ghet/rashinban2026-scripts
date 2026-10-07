@@ -151,7 +151,7 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
       const effect = effectFor(scores);
       timeline = { ...timeline, phase: 'results-transition', music: 'results', cues: timeline.cues.filter(item => item.kind === 'guess'), effect,
         scoringResult: scoreCalculation(state, timeline.round!),
-        hasDamage: state.players.some(player => player.results.some(result => result.round === timeline.round && result.healthAfter < result.healthBefore)) };
+        hasDamage: !state.pinpointing && state.players.some(player => player.results.some(result => result.round === timeline.round && result.healthAfter < result.healthBefore)) };
       if (effect === 'none') timeline = scheduleReveal(timeline, nowMs, timing);
       else {
         const startAtMs = nowMs + timing.leadMs;
@@ -191,7 +191,8 @@ export function advanceTimeline(previous: Timeline | null, state: DuelState | nu
 export function nextTimelineWakeAtMs(timeline: Timeline, state: DuelState | null, nowMs: number): number | null {
   const boundaries = [timeline.effectDeadlineMs, timeline.revealAtMs, timeline.damageAtMs, timeline.holdAtMs];
   if (timeline.scoring) boundaries.push(timeline.scoring.countAtMs, timeline.scoring.countEndAtMs, timeline.scoring.subtractAtMs,
-    timeline.scoring.collisionAtMs, timeline.scoring.differenceAtMs, timeline.scoring.multiplierAtMs, timeline.scoring.flightAtMs, timeline.scoring.healthEndAtMs);
+    timeline.scoring.collisionAtMs, timeline.scoring.differenceAtMs, timeline.scoring.multiplierAtMs, timeline.scoring.flightAtMs, timeline.scoring.healthEndAtMs,
+    timeline.scoring.verdictAtMs);
   if (state?.gameId === timeline.gameId && (timeline.phase === 'pre-round' || timeline.phase === 'live')) {
     const round = state.rounds.find(item => item.number === timeline.round);
     boundaries.push(round?.startAtMs ?? null, round?.endAtMs == null ? null : round.endAtMs - 15000, round?.endAtMs ?? null);

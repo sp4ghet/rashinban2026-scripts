@@ -178,3 +178,15 @@ test('ordinary copy reflects delay, zero increments and mutual increments', () =
   assert.equal(tieRangeMapGeometry(mutualOnly, 1, sides, { lat: 0, lng: 0 })?.label,
     'Tie band: 1,000 points · Both multipliers increase');
 });
+
+test('Pinpointing Duels copy describes points instead of multipliers', () => {
+  const inside = state([4000, 3500]);
+  inside.pinpointing = { teamIds: ['blue-team', 'red-team'], firstTo: 7, tieRange: 'full', totals: [0, 0], matchPoint: [false, false], terminal: null,
+    rounds: [{ round: 1, scores: [4000, 3500], guessedAtMs: [1, 2], points: [0, 0], totalsBefore: [0, 0], totalsAfter: [0, 0], winner: null, reason: 'tie', band: 1000, withinBand: true, fiveKs: 0 }] };
+  assert.equal(tieRangeMapGeometry(inside, 1, sides, { lat: 0, lng: 0 })?.label,
+    'Tie band: 1,000 points · Within tie range · No point');
+  const outside = state([4000, 2999]);
+  outside.pinpointing = { ...inside.pinpointing, rounds: [{ ...inside.pinpointing.rounds[0], scores: [4000, 2999], points: [1, 0], totalsAfter: [1, 0], winner: 0, reason: 'closest', withinBand: false }] };
+  assert.equal(tieRangeMapGeometry(outside, 1, sides, { lat: 0, lng: 0 })?.label,
+    'Tie band: 1,000 points · Outside tie range · Left scores');
+});

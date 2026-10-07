@@ -1,3 +1,5 @@
+import type { PinpointingOutput, PinpointingReason } from '../presenter/pinpointing-core.ts';
+
 export type Mode = 'MOVE' | 'NM' | 'NMPZ';
 export type TieRangeMode = 'off' | 'full' | 'half';
 export type TieRangeRound = { round: number; band: number; withinBand: boolean };
@@ -62,6 +64,8 @@ export type DuelState = {
   initialHealth: number;
   ruleOptions?: { individual: number; mutual: number; delay: number; maxErrorDistance: number | null };
   tieRange?: { mode: Exclude<TieRangeMode, 'off'>; rounds: TieRangeRound[] };
+  /** Pinpointing Duels points derived from settled rounds; HP is not shown while present. */
+  pinpointing?: PinpointingOutput;
   players: [DuelPlayer, DuelPlayer];
   rounds: Round[];
   aborted: boolean;
@@ -113,13 +117,16 @@ export type Phase = 'waiting-game' | 'waiting-host' | 'pre-round' | 'live'
 export type MusicContext = 'idle' | 'round' | 'urgent' | 'results';
 export type EffectKind = 'none' | 'single-5k' | 'double-5k';
 export type CueKind = 'pre-round-tick' | 'round-start' | 'pin' | 'opponent-guess' | 'guess' | 'countdown' | 'results' | 'count' | 'collision' | 'tie' | 'multiplier' | 'damage' | 'five-k';
-export type ScoreCalculation = { tied: boolean; winnerId: string | null; loserId: string | null; difference: number; damage: number; multiplier: number; hasDamage: boolean };
+/** Round verdict shown instead of damage while Pinpointing Duels is active. */
+export type PinpointingVerdict = { points: [number, number]; reason: PinpointingReason; totalsBefore: [number, number]; totalsAfter: [number, number]; matchPoint: [boolean, boolean] };
+export type ScoreCalculation = { tied: boolean; winnerId: string | null; loserId: string | null; difference: number; damage: number; multiplier: number; hasDamage: boolean; pinpointing?: PinpointingVerdict };
 export type ScoreSequence = ScoreCalculation & {
   countAtMs: number; countEndAtMs: number; subtractAtMs: number; collisionAtMs: number; differenceAtMs: number;
   multiplierAtMs: number | null; flightAtMs: number | null; impactAtMs: number | null; healthEndAtMs: number; completeAtMs: number;
+  verdictAtMs: number | null;
 };
-export type ScoreStage = 'entry' | 'count' | 'score-hold' | 'subtract' | 'difference' | 'tie' | 'multiplier' | 'flight' | 'impact' | 'complete';
-export type ScoreProjection = ScoreCalculation & { stage: ScoreStage; entryProgress: number; subtractProgress: number; multiplierProgress: number; flightProgress: number; impactProgress: number; tieProgress: number };
+export type ScoreStage = 'entry' | 'count' | 'score-hold' | 'subtract' | 'difference' | 'tie' | 'multiplier' | 'flight' | 'impact' | 'verdict' | 'complete';
+export type ScoreProjection = ScoreCalculation & { stage: ScoreStage; entryProgress: number; subtractProgress: number; multiplierProgress: number; flightProgress: number; impactProgress: number; tieProgress: number; verdictProgress: number };
 export type Cue = { id: string; kind: CueKind; atMs: number; untilMs: number; playerId: string | null; sound?: 'opponent-guess'; offsetS?: number };
 export type Timeline = {
   generation: string;
@@ -146,5 +153,5 @@ export type Timeline = {
   roundStartAtMs?: number | null;
 };
 export type Timing = { leadMs: number; countMs: number; damageMs: number; effectWatchdogMs: number; pinRateLimitMs?: number };
-export type VisiblePlayer = { id: string; health: number; healthBar?: number; locked: boolean; score: number | null; distanceM: number | null };
+export type VisiblePlayer = { id: string; health: number; healthBar?: number; locked: boolean; score: number | null; distanceM: number | null; points?: number; matchPoint?: boolean };
 export type Projection = { phase: Phase; remainingMs: number | null; answer: Panorama | null; players: VisiblePlayer[]; scoring?: ScoreProjection };

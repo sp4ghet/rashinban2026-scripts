@@ -43,3 +43,16 @@ test('tie-range preferences migrate without resetting existing presentation sett
     assert.throws(() => parseSettings({ ...DEFAULT_SETTINGS, tieRange }));
   }
 });
+
+test('Pinpointing Duels preference migrates, round-trips and rejects bad shapes', () => {
+  const legacy = { ...DEFAULT_SETTINGS, musicGain: 0.25 } as any;
+  delete legacy.pinpointing;
+  const migrated = parseSettings(legacy);
+  assert.deepEqual(migrated.pinpointing, { enabled: false });
+  assert.equal(migrated.musicGain, 0.25);
+  const parsed = parseSettings({ ...DEFAULT_SETTINGS, pinpointing: { enabled: true } });
+  assert.deepEqual(parsed.pinpointing, { enabled: true });
+  for (const pinpointing of [null, [], true, {}, { enabled: 1 }, { enabled: true, firstTo: 7 }]) {
+    assert.throws(() => parseSettings({ ...DEFAULT_SETTINGS, pinpointing }));
+  }
+});

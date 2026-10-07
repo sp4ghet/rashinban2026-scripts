@@ -10,9 +10,11 @@ connection or presenter credential is needed.
    [`rashinban-tie-range.user.js`](../../tampermonkey/rashinban-tie-range.user.js).
 2. In Tampermonkey, create a new script, replace its contents with that file,
    and save. Enable it for `https://www.geoguessr.com/`.
-3. Open GeoGuessr and choose **RASHINBAN: Player tie-range settings** from the
-   Tampermonkey menu. Select the same **Full** or **Half** setting as the host.
-   The default is **Off**. The HUD also provides a settings button.
+3. Open GeoGuessr and choose **RASHINBAN: Player settings** from the
+   Tampermonkey menu. Select the same **Full** or **Half** setting as the host,
+   and tick **Pinpointing Duels** when the host runs that ruleset (see
+   [pinpointing.md](pinpointing.md)). The defaults are **Off** and unticked.
+   The HUD also provides a settings button.
 4. Configure before the duel is created. The first valid attachment captures
    the mode for that game, including a game waiting for its first round.
 

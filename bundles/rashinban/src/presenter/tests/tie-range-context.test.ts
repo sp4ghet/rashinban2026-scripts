@@ -14,24 +14,24 @@ function resolved(): DuelState {
 
 test('mode latches per game, including Created, and survives serialized restoration', () => {
   const state = applySnapshot(null, sample('gs2-ws-DuelStarted-created-not-started.json')).state!;
-  const first = updateRuleContext(null, state, 'full');
+  const first = updateRuleContext(null, state, { mode: 'full', pinpointing: false });
   assert.equal(first.mode, 'full');
   const restored = JSON.parse(JSON.stringify(first));
-  const updated = updateRuleContext(restored, { ...state, version: state.version + 1 }, 'half');
+  const updated = updateRuleContext(restored, { ...state, version: state.version + 1 }, { mode: 'half', pinpointing: false });
   assert.equal(updated.mode, 'full');
-  assert.equal(updateRuleContext(updated, { ...state, gameId: 'next' }, 'half').mode, 'half');
-  assert.equal(updateRuleContext(null, state, 'off').mode, 'off');
-  assert.equal(updateRuleContext(first, state, 'off').mode, 'full');
+  assert.equal(updateRuleContext(updated, { ...state, gameId: 'next' }, { mode: 'half', pinpointing: false }).mode, 'half');
+  assert.equal(updateRuleContext(null, state, { mode: 'off', pinpointing: false }).mode, 'off');
+  assert.equal(updateRuleContext(first, state, { mode: 'off', pinpointing: false }).mode, 'full');
 });
 
 test('paired settled scores, guesses and answers are frozen without mutating source', () => {
   const source = resolved();
-  const first = updateRuleContext(null, source, 'full');
+  const first = updateRuleContext(null, source, { mode: 'full', pinpointing: false });
   const changed = structuredClone(source); changed.version++;
   changed.players[0].results[0].score = 0;
   changed.players[0].results[0].bestGuess = null;
   changed.rounds[0].panorama.lat = 80;
-  const updated = updateRuleContext(first, changed, 'half');
+  const updated = updateRuleContext(first, changed, { mode: 'half', pinpointing: false });
   assert.deepEqual(updated.source.players[0].results[0], first.source.players[0].results[0]);
   assert.deepEqual(updated.source.rounds[0], first.source.rounds[0]);
   assert.equal(changed.players[0].results[0].score, 0);
@@ -41,17 +41,17 @@ test('paired settled scores, guesses and answers are frozen without mutating sou
 
 test('authoritative rollback clears settled input from its target while retaining the mode', () => {
   const source = resolved();
-  const first = updateRuleContext(null, source, 'full');
+  const first = updateRuleContext(null, source, { mode: 'full', pinpointing: false });
   const next = structuredClone(source); next.version++; next.round = 2; next.status = 'Ongoing';
   for (const player of next.players) player.results = player.results.filter(result => result.round < 2);
   const target = rollbackRound(source, next, { code: 'DuelNewRound' });
   assert.equal(target, 2);
-  const rolledBack = updateRuleContext(first, next, 'off', target);
+  const rolledBack = updateRuleContext(first, next, { mode: 'off', pinpointing: false }, target);
   assert.equal(rolledBack.mode, 'full');
   assert.deepEqual(rolledBack.source.players.map(player => player.results.length), [1, 1]);
   const replayed = structuredClone(source); replayed.version += 2;
   replayed.players[0].results.find(result => result.round === 2)!.score = 1234;
-  const updated = updateRuleContext(rolledBack, replayed, 'off');
+  const updated = updateRuleContext(rolledBack, replayed, { mode: 'off', pinpointing: false });
   assert.equal(updated.source.players[0].results.find(result => result.round === 2)!.score, 1234);
 });
 
@@ -78,16 +78,16 @@ test('explicit rollback can reopen an aborted source while generic snapshots can
 
 test('disabled mode preserves incoming server results without freezing corrections', () => {
   const source = resolved();
-  const first = updateRuleContext(null, source, 'off');
+  const first = updateRuleContext(null, source, { mode: 'off', pinpointing: false });
   const corrected = structuredClone(source); corrected.players[0].results[0].score = 42;
-  assert.equal(updateRuleContext(first, corrected, 'full').source.players[0].results[0].score, 42);
+  assert.equal(updateRuleContext(first, corrected, { mode: 'full', pinpointing: false }).source.players[0].results[0].score, 42);
 });
 
 test('snapshot omissions cannot remove frozen historical answers', () => {
   const source = resolved();
-  const first = updateRuleContext(null, source, 'full');
+  const first = updateRuleContext(null, source, { mode: 'full', pinpointing: false });
   const partial = structuredClone(source); partial.version++; partial.rounds = partial.rounds.slice(1);
-  const updated = updateRuleContext(first, partial, 'half');
+  const updated = updateRuleContext(first, partial, { mode: 'half', pinpointing: false });
   assert.deepEqual(updated.source.rounds[0], source.rounds[0]);
 });
 
@@ -95,10 +95,10 @@ test('a newly supplied panorama repairs an initially incomplete settled round wi
   const complete = resolved();
   const incomplete = structuredClone(complete);
   incomplete.rounds = incomplete.rounds.filter(round => round.number !== 1);
-  const first = updateRuleContext(null, incomplete, 'full');
+  const first = updateRuleContext(null, incomplete, { mode: 'full', pinpointing: false });
 
   complete.version++;
-  const repaired = updateRuleContext(first, complete, 'half');
+  const repaired = updateRuleContext(first, complete, { mode: 'half', pinpointing: false });
 
   assert.equal(repaired.mode, 'full');
   assert.deepEqual(repaired.source.rounds.find(round => round.number === 1), complete.rounds[0]);
@@ -109,11 +109,11 @@ test('invalid or duplicate paired scores remain replaceable by a later valid sna
     const bad = resolved();
     if (kind === 'invalid') bad.players[0].results[0].score = 5001;
     else bad.players[0].results.push(structuredClone(bad.players[0].results[0]));
-    const first = updateRuleContext(null, bad, 'full');
+    const first = updateRuleContext(null, bad, { mode: 'full', pinpointing: false });
     const corrected = resolved();
     corrected.version++;
 
-    const repaired = updateRuleContext(first, corrected, 'half');
+    const repaired = updateRuleContext(first, corrected, { mode: 'half', pinpointing: false });
 
     assert.equal(repaired.mode, 'full', kind);
     assert.equal(repaired.source.players[0].results.filter(result => result.round === 1).length, 1, kind);
@@ -130,4 +130,28 @@ test('a higher-version reconnect snapshot can confirm rollback after an abort', 
   restart.code = 'DuelStarted'; restart.duel.state.version = previous.version + 1;
   assert.equal(applySnapshot(previous, restart).state?.aborted, false);
   assert.equal(applySnapshot(previous, restart).state?.round, 2);
+});
+
+test('Pinpointing Duels latches per game and reads false from older saved contexts', () => {
+  const state = applySnapshot(null, sample('gs2-ws-DuelStarted-created-not-started.json')).state!;
+  const first = updateRuleContext(null, state, { mode: 'off', pinpointing: true });
+  assert.equal(first.pinpointing, true);
+  assert.equal(first.mode, 'off');
+  const updated = updateRuleContext(first, { ...state, version: state.version + 1 }, { mode: 'full', pinpointing: false });
+  assert.equal(updated.pinpointing, true);
+  assert.equal(updated.mode, 'off');
+  assert.equal(updateRuleContext(updated, { ...state, gameId: 'next' }, { mode: 'half', pinpointing: false }).pinpointing, false);
+  const legacy = JSON.parse(JSON.stringify(first)); delete legacy.pinpointing;
+  assert.equal(updateRuleContext(legacy, { ...state, version: state.version + 2 }, { mode: 'off', pinpointing: true }).pinpointing, false);
+});
+
+test('Pinpointing Duels freezes settled rounds even when tie range is off', () => {
+  const source = resolved();
+  const first = updateRuleContext(null, source, { mode: 'off', pinpointing: true });
+  const changed = structuredClone(source); changed.version++;
+  changed.players[0].results[0].score = 0;
+  changed.players[0].guesses[0].createdAtMs += 5000;
+  const updated = updateRuleContext(first, changed, { mode: 'off', pinpointing: true });
+  assert.deepEqual(updated.source.players[0].results[0], first.source.players[0].results[0]);
+  assert.deepEqual(updated.source.players[0].guesses[0], first.source.players[0].guesses[0]);
 });

@@ -33,6 +33,11 @@
 <div id="tie-range-status" class="status">Next duel: Off</div>
 <p class="help">Damage still applies. Rounds within the tie range increase both multipliers. Changes apply to the next duel.</p>
 </fieldset>
+<fieldset><h2>Pinpointing Duels</h2>
+<label class="check"><input id="pinpointing-enabled" type="checkbox"> Enable Pinpointing Duels</label>
+<div id="pinpointing-status" class="status">Next duel: Health duel</div>
+<p class="help">Points replace HP: a solo 5K scores 2, the faster of two 5Ks scores 1, otherwise the closer guess scores 1; first to 7 wins. With tie range on, a closer guess inside the band scores nothing. Set a very high initial health in the party and abort the GeoGuessr game once the presenter announces the winner. Changes apply to the next duel.</p>
+</fieldset>
 <button class="primary" type="submit">Apply presentation</button>
 <div id="settings-configuration-status" class="status">Loading configuration…</div>
 <div class="row"><button id="settings-configuration-reset" type="button">Reset to shared</button><button id="settings-configuration-import" type="button">Import local settings</button></div>

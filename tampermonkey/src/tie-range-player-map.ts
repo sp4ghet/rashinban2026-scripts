@@ -40,6 +40,12 @@ export function decodePlayerMapRounds(raw: unknown, context: PlayerGameContext):
   });
 }
 
+/** Scores and band of a settled round under either ruleset, else null. */
+export function playerMapResult(view: Pick<PlayerTieRangeView, 'output' | 'pinpointing'>, round: number): { scores: [number, number]; band: number } | null {
+  const settled = (view.output?.rounds ?? view.pinpointing?.rounds)?.find(value => value.round === round);
+  return settled ? { scores: settled.scores, band: settled.band } : null;
+}
+
 export function playerCircleRadii(round: PlayerMapRound, scores: [number, number], band: number): number[] {
   if (scores.includes(5000)) {
     const radius = round.maxErrorDistance === null ? null : tieScoreRadius(5000, round.maxErrorDistance);
@@ -102,7 +108,7 @@ export function createPlayerMapOverlay(getPage: () => MapsPage) {
     update(view: PlayerTieRangeView, resultRound: number | null): void {
       if (resultRound === null || !view.context || view.capturedMode === 'off') { clear(); return; }
       const geometry = view.mapRounds?.find(round => round.round === resultRound);
-      const result = view.output?.rounds.find(round => round.round === resultRound);
+      const result = playerMapResult(view, resultRound);
       if (!geometry || !result || geometry.identity !== playerRoundIdentity(view.context, resultRound)) { clear(); return; }
       const page = getPage();
       const Circle = page.google?.maps?.Circle;

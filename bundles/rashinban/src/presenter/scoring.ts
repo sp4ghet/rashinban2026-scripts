@@ -2,6 +2,13 @@ import type { DuelState, ScoreCalculation, ScoreProjection, ScoreSequence, Timin
 
 export function scoreCalculation(state: DuelState, round: number): ScoreCalculation {
   const results = state.players.map(player => player.results.find(result => result.round === round)!);
+  const verdict = state.pinpointing?.rounds.find(item => item.round === round);
+  if (verdict) {
+    const { points, reason, totalsBefore, totalsAfter, winner } = verdict;
+    return { tied: winner === null, hasDamage: false, winnerId: winner === null ? null : state.players[winner].id,
+      loserId: winner === null ? null : state.players[1 - winner].id, difference: Math.abs(results[0].score - results[1].score),
+      damage: 0, multiplier: 1, pinpointing: { points, reason, totalsBefore, totalsAfter, matchPoint: state.pinpointing!.matchPoint } };
+  }
   const losses = results.map(result => Math.max(0, result.healthBefore - result.healthAfter));
   const hasDamage = losses.some(loss => loss > 0);
   const tied = results[0].score === results[1].score && !hasDamage;
@@ -19,6 +26,12 @@ export function scoreSequence(calculation: ScoreCalculation, revealAtMs: number,
   const countAtMs = revealAtMs + duration(1210);
   const countEndAtMs = countAtMs + timing.countMs;
   const subtractAtMs = countEndAtMs + duration(1000);
+  if (calculation.pinpointing) {
+    // Points replace damage: the verdict lands where subtraction would start and holds.
+    const verdictAtMs = subtractAtMs;
+    return { ...calculation, countAtMs, countEndAtMs, subtractAtMs, collisionAtMs: verdictAtMs, differenceAtMs: verdictAtMs,
+      multiplierAtMs: null, flightAtMs: null, impactAtMs: null, healthEndAtMs: verdictAtMs, verdictAtMs, completeAtMs: verdictAtMs + duration(2500) };
+  }
   const differenceAtMs = subtractAtMs + duration(350);
   const collisionAtMs = subtractAtMs + duration(calculation.tied ? 350 : 250);
   const multiplied = !calculation.tied && calculation.multiplier !== 1;
@@ -28,7 +41,7 @@ export function scoreSequence(calculation: ScoreCalculation, revealAtMs: number,
   const healthEndAtMs = (impactAtMs ?? differenceAtMs) + timing.damageMs;
   const completeAtMs = calculation.tied ? subtractAtMs + duration(700)
     : impactAtMs === null ? subtractAtMs + duration(multiplied ? 2000 : 1500) : impactAtMs + Math.max(duration(2000), timing.damageMs);
-  return { ...calculation, countAtMs, countEndAtMs, subtractAtMs, collisionAtMs, differenceAtMs, multiplierAtMs, flightAtMs, impactAtMs, healthEndAtMs, completeAtMs };
+  return { ...calculation, countAtMs, countEndAtMs, subtractAtMs, collisionAtMs, differenceAtMs, multiplierAtMs, flightAtMs, impactAtMs, healthEndAtMs, completeAtMs, verdictAtMs: null };
 }
 
 export function fraction(now: number, from: number | null, to: number | null): number {
@@ -38,16 +51,20 @@ export function fraction(now: number, from: number | null, to: number | null): n
 
 export function scoreProjection(sequence: ScoreSequence, revealAtMs: number, now: number): ScoreProjection {
   const s = sequence;
+  const verdictAtMs = s.verdictAtMs;
   const stage = now >= s.completeAtMs ? 'complete' : now < s.countAtMs ? 'entry' : now < s.countEndAtMs ? 'count'
-    : now < s.subtractAtMs ? 'score-hold' : s.tied ? 'tie' : s.impactAtMs !== null && now >= s.impactAtMs ? 'impact'
+    : now < s.subtractAtMs ? 'score-hold' : verdictAtMs !== null && now >= verdictAtMs ? 'verdict'
+    : s.tied ? 'tie' : s.impactAtMs !== null && now >= s.impactAtMs ? 'impact'
     : s.flightAtMs !== null && now >= s.flightAtMs ? 'flight' : s.multiplierAtMs !== null && now >= s.multiplierAtMs ? 'multiplier'
     : now >= s.differenceAtMs ? 'difference' : 'subtract';
   return { tied: s.tied, hasDamage: s.hasDamage, winnerId: s.winnerId, loserId: s.loserId, difference: s.difference, damage: s.damage, multiplier: s.multiplier,
+    ...(s.pinpointing ? { pinpointing: s.pinpointing } : {}),
     stage, entryProgress: fraction(now, revealAtMs, revealAtMs + 700), subtractProgress: fraction(now, s.subtractAtMs, s.subtractAtMs + 400),
     multiplierProgress: fraction(now, s.multiplierAtMs, s.multiplierAtMs === null ? null : s.multiplierAtMs + 1000),
     flightProgress: fraction(now, s.flightAtMs, s.flightAtMs === null ? null : s.flightAtMs + 400),
     impactProgress: fraction(now, s.impactAtMs, s.impactAtMs === null ? null : s.impactAtMs + 350),
-    tieProgress: fraction(now, s.collisionAtMs, s.completeAtMs) };
+    tieProgress: fraction(now, s.collisionAtMs, s.completeAtMs),
+    verdictProgress: fraction(now, verdictAtMs, verdictAtMs === null ? null : verdictAtMs + 400) };
 }
 
 /** Deterministic damped spring; normalize its finite endpoint to the authoritative value. */

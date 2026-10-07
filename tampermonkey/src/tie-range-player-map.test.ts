@@ -35,3 +35,13 @@ test('uses one 5K boundary and omits an unbounded outer circle', () => {
   assert.deepEqual(playerCircleRadii(round, [10, 0], 50), [32800]);
   assert.deepEqual(playerCircleRadii({ ...round, maxErrorDistance: null }, [4892, 4878], 54), [32800]);
 });
+
+test('map results come from Pinpointing Duels rounds when captured', async () => {
+  const { playerMapResult } = await import('./tie-range-player-map.ts');
+  const round = { round: 1, scores: [4000, 3000] as [number, number], band: 1000, withinBand: true };
+  const hp = { output: { rounds: [round] }, pinpointing: null } as any;
+  assert.deepEqual(playerMapResult(hp, 1), { scores: [4000, 3000], band: 1000 });
+  const points = { output: null, pinpointing: { rounds: [{ ...round, band: 500 }] } } as any;
+  assert.deepEqual(playerMapResult(points, 1), { scores: [4000, 3000], band: 500 });
+  assert.equal(playerMapResult(points, 2), null);
+});

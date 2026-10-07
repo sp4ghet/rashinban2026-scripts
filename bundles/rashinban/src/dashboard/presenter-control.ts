@@ -149,6 +149,12 @@ function status() {
   element('tie-range-status').textContent = active
     ? `Active duel: ${modeLabel(active.mode)}${active.mode !== configuredMode ? ` · Next duel: ${modeLabel(configuredMode)}` : ''}`
     : `Next duel: ${modeLabel(configuredMode)}`;
+  const pointsLabel = (enabled: boolean) => enabled ? 'Pinpointing Duels' : 'Health duel';
+  const configuredPinpointing = settings.value?.pinpointing?.enabled ?? false;
+  const activePinpointing = active ? active.pinpointing === true : null;
+  element('pinpointing-status').textContent = activePinpointing !== null
+    ? `Active duel: ${pointsLabel(activePinpointing)}${activePinpointing !== configuredPinpointing ? ` · Next duel: ${pointsLabel(configuredPinpointing)}` : ''}`
+    : `Next duel: ${pointsLabel(configuredPinpointing)}`;
   const labels = { unreported: 'No graphic report', loading: 'Loading Google Maps', 'api-ready': 'Google Maps API loaded',
     'missing-key': 'Google Maps browser key missing', 'api-error': 'Google Maps API unavailable', 'view-error': 'Google Maps view unavailable', 'pano-error': 'Exact Street View panorama unavailable' };
   element('renderer-status').textContent = labels[renderer.value?.status ?? 'unreported'];
@@ -191,6 +197,7 @@ function applySettings(value: PresenterSettings | undefined) {
   input('tie-range-enabled').checked = value.tieRange?.enabled ?? false;
   select('tie-range-mode').value = value.tieRange?.mode ?? 'full';
   select('tie-range-mode').disabled = !input('tie-range-enabled').checked;
+  input('pinpointing-enabled').checked = value.pinpointing?.enabled ?? false;
   element('audio-launch-help').textContent = value.audioOutput === 'separate'
     ? 'Open Program graphic and Separate audio.'
     : 'Open Program graphic for video and audio.';
@@ -216,7 +223,8 @@ element('settings-form').addEventListener('submit', event => {
   void control('settings', { ...settings.value, viewSource: select('view-source').value, keyColor: select('key-color').value,
     audioOutput: select('audio-output').value, muted: input('muted').checked,
     musicGain: Number(input('music-gain').value), effectsGain: Number(input('effects-gain').value),
-    tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value } }, 'error', settingsConfiguration);
+    tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value },
+    pinpointing: { enabled: input('pinpointing-enabled').checked } }, 'error', settingsConfiguration);
 });
 element('reconnect').addEventListener('click', () => {
   const mode = select('input-mode').value;

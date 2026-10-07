@@ -1,6 +1,7 @@
 import type { DuelState, TieRangeMode } from '../types/presenter.ts';
 
-export type RuleContext = { mode: TieRangeMode; source: DuelState };
+export type ConfiguredRules = { mode: TieRangeMode; pinpointing: boolean };
+export type RuleContext = ConfiguredRules & { source: DuelState };
 export type RuleContexts = { live: RuleContext | null; replay: RuleContext | null; replayFixture?: string };
 
 function validScore(score: number): boolean {
@@ -9,11 +10,15 @@ function validScore(score: number): boolean {
 
 /** Capture only uniquely paired valid results. Explicit rollback releases their frozen inputs. */
 export function updateRuleContext(previous: RuleContext | null, source: DuelState,
-  configured: TieRangeMode, rollbackRound?: number): RuleContext {
+  configured: ConfiguredRules, rollbackRound?: number): RuleContext {
   // Replicant values are proxies; structuredClone cannot clone them.
   const next = JSON.parse(JSON.stringify(source)) as DuelState;
-  if (!previous || previous.source.gameId !== source.gameId) return { mode: configured, source: next };
-  if (previous.mode === 'off') return { mode: 'off', source: next };
+  if (!previous || previous.source.gameId !== source.gameId) {
+    return { mode: configured.mode, pinpointing: configured.pinpointing, source: next };
+  }
+  // Contexts saved before Pinpointing Duels existed carry no flag.
+  const pinpointing = previous.pinpointing === true;
+  if (previous.mode === 'off' && !pinpointing) return { mode: 'off', pinpointing: false, source: next };
   const settled = new Set(previous.source.players[0].results
     .filter(result => (rollbackRound === undefined || result.round < rollbackRound)
       && previous.source.players[0].results.filter(other => other.round === result.round).length === 1
@@ -36,5 +41,5 @@ export function updateRuleContext(previous: RuleContext | null, source: DuelStat
   next.rounds = [...next.rounds.filter(round => !frozenRounds.has(round.number)),
     ...previous.source.rounds.filter(round => frozenRounds.has(round.number))].sort((a, b) => a.number - b.number);
   // Detach inherited results/rounds before the next Replicant publication.
-  return JSON.parse(JSON.stringify({ mode: previous.mode, source: next })) as RuleContext;
+  return JSON.parse(JSON.stringify({ mode: previous.mode, pinpointing, source: next })) as RuleContext;
 }
