@@ -305,9 +305,9 @@ function googleBoundary() {
   const root = { querySelector(id: string) { if (!slots.has(id)) slots.set(id, new Element()); return slots.get(id); } } as unknown as HTMLElement;
   const panos: any[] = []; const maps: any[] = []; const overlays: any[] = []; const requests: any[] = []; const cleared: any[] = []; const resized: any[] = [];
   class Pano {
-    options: any; pano = ''; pov: any; zoom = 0; visible = false; listeners = new Map(); povWrites = 0; zoomWrites = 0;
+    options: any; pano = ''; position: any; pov: any; zoom = 0; visible = false; listeners = new Map(); povWrites = 0; zoomWrites = 0;
     constructor(_el: any, options: any) { this.options = options; panos.push(this); }
-    setPano(value: string) { this.pano = value; } setPov(value: any) { this.pov = value; this.povWrites++; } setZoom(value: number) { this.zoom = value; this.zoomWrites++; }
+    setPano(value: string) { this.pano = value; this.position = undefined; } setPosition(value: any) { this.position = value; } getPano() { return this.pano; } setPov(value: any) { this.pov = value; this.povWrites++; } setZoom(value: number) { this.zoom = value; this.zoomWrites++; }
     setVisible(value: boolean) { this.visible = value; } getStatus() { return 'OK'; }
     addListener(name: string, fn: Function) { this.listeners.set(name, fn); return { remove: () => this.listeners.delete(name) }; } unbindAll() {}
   }
@@ -368,6 +368,37 @@ test('Google panorama adapter resolves exact IDs, applies latest POV and ignores
   assert.equal(fake.panos[0].visible, true); assert.equal(fake.panos[0].pano, 'exact-id'); assert.deepEqual(errors, ['Exact Street View panorama unavailable']);
   surface.render({ ...p, panoId: 'later' }); surface.dispose(); fake.requests[2].callback({ location: { pano: 'later' } }, 'OK');
   assert.equal(fake.panos[0].visible, false); assert.ok(fake.cleared.includes(fake.panos[0]));
+});
+const latLng = (lat: number, lng: number) => ({ lat: () => lat, lng: () => lng });
+test('panorama moves from a shown scene by exact-patched position so Street View animates instead of cutting to black', () => {
+  const fake = googleBoundary(); const lookups: any[] = [];
+  // Stand-in for Maps' internal location lookup; the patch is found by its source.
+  function lookup(_a: any, request: any, _c: any, _d: any) { lookups.push(request); return 'g.spherical.computeOffset g.spherical.computeHeading ("geometry") ("streetview")'; }
+  const ns: Record<string, unknown> = { lookup };
+  (fake.api as any).__gjsload__ = (_name: string, code: Function) => code(ns);
+  const surface = googleAdapter(fake.root, fake.api, assert.fail).panorama('left-view');
+  const p = { lat: 1, lng: 2, panoId: 'first', heading: 0, pitch: 0, zoom: 1 };
+  surface.render(p); fake.requests[0].callback({ location: { pano: 'first', latLng: latLng(1, 2) } }, 'OK');
+  assert.equal(fake.panos[0].pano, 'first', 'the first scene of an identity loads directly');
+  surface.render({ ...p, panoId: 'third', lat: 1.5 }); fake.requests[1].callback({ location: { pano: 'third', latLng: latLng(1.5, 2) } }, 'OK');
+  assert.equal(fake.panos[0].position.lat(), 1.5); assert.equal(fake.panos[0].pano, 'first');
+  (ns.lookup as Function)('a', { location: latLng(1.5, 2) }, 'c', 'd');
+  (ns.lookup as Function)('a', { location: latLng(9, 9) }, 'c', 'd');
+  assert.deepEqual(lookups[0], { pano: 'third' }, 'registered coordinates resolve to the exact panorama');
+  assert.equal(lookups[1].location.lat(), 9, 'other lookups pass through unchanged');
+  fake.panos[0].pano = 'third'; fake.panos[0].listeners.get('pano_changed')();
+  assert.equal(fake.panos[0].position.lat(), 1.5, 'the exact panorama is accepted');
+  fake.panos[0].pano = 'nearest-other'; fake.panos[0].listeners.get('pano_changed')();
+  assert.equal(fake.panos[0].pano, 'third', 'a snapped neighbour is replaced by the exact panorama');
+});
+test('panorama moves fall back to setPano when the Maps lookup cannot be patched', () => {
+  const fake = googleBoundary();
+  (fake.api as any).__gjsload__ = (_name: string, code: Function) => code({ unrelated: (_a: any, _b: any, _c: any, _d: any) => {} });
+  const surface = googleAdapter(fake.root, fake.api, assert.fail).panorama('left-view');
+  const p = { lat: 1, lng: 2, panoId: 'first', heading: 0, pitch: 0, zoom: 1 };
+  surface.render(p); fake.requests[0].callback({ location: { pano: 'first', latLng: latLng(1, 2) } }, 'OK');
+  surface.render({ ...p, panoId: 'next' }); fake.requests[1].callback({ location: { pano: 'next', latLng: latLng(1.5, 2) } }, 'OK');
+  assert.equal(fake.panos[0].pano, 'next'); assert.equal(fake.panos[0].position, undefined);
 });
 test('POV interpolation takes the short heading arc and reaches pitch/zoom targets without settled writes', () => {
   const fake = googleBoundary(); let now = 0;

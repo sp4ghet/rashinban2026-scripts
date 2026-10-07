@@ -16,6 +16,50 @@ export function googlePanoId(value: string): string {
   return value;
 }
 
+// setPano to a panorama more than one link away cuts to black until its tiles
+// load; setPosition always plays the smeared movement transition. A location
+// normally resolves to the nearest panorama, so, like GeoGuessr's spectator,
+// patch Maps' internal location lookup to answer registered coordinates with
+// the exact ID. Null when this API version lacks the lookup.
+export type ExactPanoLookup = { register(location: google.maps.LatLng, pano: string): void; has(pano: string): boolean };
+const LOOKUP_SOURCE = ['g.spherical.computeOffset', 'g.spherical.computeHeading', '("geometry")', '("streetview")'];
+const MAX_LOOKUPS = 64;
+const lookups = new WeakMap<object, { lookup: ExactPanoLookup; installed: boolean }>();
+export function exactPanoLookup(maps: typeof google.maps): ExactPanoLookup | null {
+  const existing = lookups.get(maps);
+  if (existing) return existing.installed ? existing.lookup : null;
+  const load = (maps as typeof maps & { __gjsload__?: (name: string, code: (ns: Record<string, unknown>) => void) => void }).__gjsload__;
+  const panos = new Map<string, string>();
+  const key = (location: google.maps.LatLng) => `${location.lat()}_${location.lng()}`;
+  const state = { installed: false, lookup: {
+    register(location, pano) {
+      panos.delete(key(location)); panos.set(key(location), pano);
+      if (panos.size > MAX_LOOKUPS) panos.delete(panos.keys().next().value!);
+    },
+    has: pano => [...panos.values()].includes(pano),
+  } satisfies ExactPanoLookup };
+  lookups.set(maps, state);
+  try {
+    load?.('rashinban-pano-lookup', ns => {
+      const name = Object.keys(ns).find(name => {
+        const fn = ns[name];
+        return typeof fn === 'function' && fn.length === 4 && LOOKUP_SOURCE.every(text => fn.toString().includes(text));
+      });
+      if (!name) return;
+      const original = (ns[name] as (...args: unknown[]) => unknown).bind(ns);
+      ns[name] = (a: unknown, request: { location?: google.maps.LatLng } | undefined, c: unknown, d: unknown) => {
+        try {
+          const pano = request?.location && panos.get(key(request.location));
+          if (pano) return original(a, { pano }, c, d);
+        } catch { /* fall through to the unpatched lookup */ }
+        return original(a, request, c, d);
+      };
+      state.installed = true;
+    });
+  } catch { /* unpatched: callers fall back to setPano */ }
+  return state.installed ? state.lookup : null;
+}
+
 let apiPromise: Promise<typeof google.maps> | undefined;
 const authFailures = new Set<() => void>();
 function loadGoogle(apiKey: string): Promise<typeof google.maps> {
@@ -92,6 +136,11 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
         writtenPov = next;
       }
       pano.addListener('status_changed', () => { if (!disposed && resolved && requested === resolved && pano.getStatus() !== 'OK') unavailable(); });
+      // A position that escaped the exact lookup snaps to its nearest panorama; restore the exact one.
+      pano.addListener('pano_changed', () => {
+        const shown = pano.getPano();
+        if (!disposed && resolved && shown && shown !== resolved && !exactPanoLookup(maps)?.has(shown)) pano.setPano(resolved);
+      });
       return {
         render(value, options) {
           if (disposed) return;
@@ -119,8 +168,11 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
           service.getPanorama({ pano: id }, (data, status) => {
             if (disposed || token !== generation) return;
             if (status !== 'OK' || data?.location?.pano !== id) { unavailable(); return; }
+            // Move from a shown scene by position so Street View animates the step.
+            const lookup = resolved ? exactPanoLookup(maps) : null; const location = data.location.latLng;
             resolved = id; smoothing.reset(); writtenPov = null; snapPov = true;
-            pano.setPano(id); applyPov(); show();
+            if (lookup && location) { lookup.register(location, id); pano.setPosition(location); } else pano.setPano(id);
+            applyPov(); show();
             recovered(surfaceId);
           });
         },
