@@ -21,8 +21,3 @@ export interface SheetStatus {
   missingColumns: string[];
   skippedRows: number;
 }
-
-export interface PlayerCardsState {
-  visible: boolean;
-  page: "profile" | "stats";
-}

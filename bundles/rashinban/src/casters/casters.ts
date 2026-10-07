@@ -1,6 +1,7 @@
 // Casters (解説 / 実況) authored in the Google Sheet "casters" tab.
-// The sheet is the directory of who *could* be on air; which two are actually
-// shown is operator state held in the castersState replicant.
+// The sheet is the directory of who *could* be on air; which two the cards
+// show is operator state held in the castersState replicant. Whether a card
+// is actually on air is a switcher concern, held in the broadcast replicant.
 // See docs/sheet/README.md for the column list.
 
 export interface Caster {
@@ -12,11 +13,13 @@ export interface Caster {
   twitter: string;
 }
 
-/** One on-screen card: which caster it shows, and whether it is on air. */
+/**
+ * One on-screen card: which caster it shows. Whether it is on air now lives
+ * in the broadcast bus, not here.
+ */
 export interface CasterSlot {
   /** Caster.name, or "" for an unassigned slot. */
   name: string;
-  enabled: boolean;
 }
 
 /** Left card, right card. Always exactly two. */
@@ -26,7 +29,7 @@ export interface CastersState {
 
 export const CASTER_SLOT_COUNT = 2;
 
-export const EMPTY_SLOT: CasterSlot = { name: "", enabled: false };
+export const EMPTY_SLOT: CasterSlot = { name: "" };
 
 export const DEFAULT_CASTERS_STATE: CastersState = {
   slots: [{ ...EMPTY_SLOT }, { ...EMPTY_SLOT }],
@@ -68,24 +71,21 @@ export function withDefaults(value: Partial<CastersState> | undefined): CastersS
   const slots = Array.isArray(value?.slots) ? value.slots : [];
   const slot = (index: number): CasterSlot => {
     const raw = slots[index] as Partial<CasterSlot> | undefined;
-    return {
-      name: typeof raw?.name === "string" ? raw.name : "",
-      enabled: typeof raw?.enabled === "boolean" ? raw.enabled : false,
-    };
+    return { name: typeof raw?.name === "string" ? raw.name : "" };
   };
   return { slots: [slot(0), slot(1)] };
 }
 
 /**
  * Fills empty slots from the sheet order (first row left, second right) without
- * disturbing slots the operator has already set. Newly filled slots stay off
- * air until enabled.
+ * disturbing slots the operator has already set. Filling a slot never puts it
+ * on air: visibility is a switcher concern.
  */
 export function withSheetDefaults(state: CastersState, casters: Caster[]): CastersState {
   const slots = state.slots.map((slot, index) => {
     if (slot.name) return { ...slot };
     const fallback = casters[index];
-    return fallback ? { name: fallback.name, enabled: slot.enabled } : { ...slot };
+    return fallback ? { name: fallback.name } : { ...slot };
   }) as [CasterSlot, CasterSlot];
   return { slots };
 }

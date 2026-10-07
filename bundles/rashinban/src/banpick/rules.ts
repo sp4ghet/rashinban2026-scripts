@@ -29,8 +29,6 @@ export interface BanPickState {
   options: BanPickOption[];
   /** Ordered history; index i corresponds to STEPS[i]. */
   actions: BanPickAction[];
-  /** Whether the overlays should show the board. */
-  visible: boolean;
 }
 
 /** Step order from the rulebook. The single option left over is Game 3. */
@@ -66,7 +64,6 @@ export function createInitialState(): BanPickState {
     players: { A: "Player A", B: "Player B" },
     options: DEFAULT_OPTIONS.map((o) => ({ ...o })),
     actions: [],
-    visible: false,
   };
 }
 
