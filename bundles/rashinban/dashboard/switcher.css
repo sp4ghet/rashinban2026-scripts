@@ -1,0 +1,23 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #141a22; color: #edf1f8; font: 14px "Segoe UI", sans-serif; }
+.switcher { display: grid; grid-template-rows: auto 1fr auto; gap: 14px; height: 100%; padding: 14px; }
+.monitors { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.monitor h3 { margin: 0 0 6px; font-size: 13px; letter-spacing: .15em; color: #9bacc5; }
+.monitor[data-channel="program"] h3 { color: #ff6b6b; }
+.screen { position: relative; aspect-ratio: 16 / 9; background: #000; border: 2px solid #2c3950; overflow: hidden; }
+.monitor[data-channel="program"] .screen { border-color: #c62828; }
+.screen iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: 0; pointer-events: none; transform-origin: top left; transform: scale(var(--scale, .25)); }
+.screen iframe[hidden] { display: none; }
+.strip { display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.row { display: grid; grid-template-columns: 160px 1fr; align-items: center; gap: 12px; padding: 8px 12px; background: #1b2333; border-left: 4px solid transparent; border-radius: 4px; }
+.row.dirty { border-left-color: #ffcf78; background: #262d3a; }
+.row h4 { margin: 0; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.controls label { display: flex; align-items: center; gap: 6px; color: #bbc8dd; }
+input[type="text"], select { color: #f5f7fc; background: #2c3950; border: 1px solid #52637d; border-radius: 4px; padding: 6px 8px; font: inherit; min-width: 160px; }
+button { color: #f5f7fc; background: #2c3950; border: 1px solid #52637d; border-radius: 4px; padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+button.toggle.on { background: #2e7d32; border-color: #43a047; }
+.actions { display: flex; align-items: center; gap: 14px; }
+.actions #error { flex: 1; color: #ff9eaa; }
+#take { padding: 14px 48px; font-size: 20px; letter-spacing: .2em; background: #c62828; border-color: #ef5350; }
+#take:disabled { opacity: .4; cursor: default; }

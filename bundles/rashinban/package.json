@@ -73,6 +73,18 @@
     ],
     "dashboardPanels": [
       {
+        "name": "switcher-stream",
+        "title": "Stream switcher",
+        "file": "switcher-stream.html",
+        "fullbleed": true
+      },
+      {
+        "name": "switcher-led",
+        "title": "LED switcher",
+        "file": "switcher-led.html",
+        "fullbleed": true
+      },
+      {
         "name": "current-match",
         "workspace": "shared",
         "title": "Current Match",
