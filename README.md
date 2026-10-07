@@ -76,9 +76,11 @@ party selection/reconnect, side mapping, media, mute and output-mode controls.
 ## Player tie-range userscript
 
 Players can use [RASHINBAN Player Tie-Range](tampermonkey/rashinban-tie-range.user.js)
-to display the same custom HP and multipliers as the presenter. Choose matching
-Off / Full / Half settings before the duel; no NodeCG connection is required.
-See [installation and supported games](docs/presenter/player-tie-range.md).
+to display the same custom HP and multipliers as the presenter, or the same
+Pinpointing Duels points. Choose matching Off / Full / Half and Pinpointing
+Duels settings before the duel; no NodeCG connection is required.
+See [installation and supported games](docs/presenter/player-tie-range.md) and
+[Pinpointing Duels](docs/presenter/pinpointing.md).
 Build with `npm run build`; run the Chrome integration check with
 `npm run validate:player`.
 

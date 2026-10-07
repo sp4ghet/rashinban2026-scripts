@@ -66,6 +66,9 @@ An explicit replay restart uses the newly configured rule from the beginning
 of the fixture. Restarting NodeCG in replay mode resumes the saved fixture's
 position and rule. Replay settings do not overwrite the saved live-duel rule.
 
+With **Pinpointing Duels** enabled as well, HP is not shown; the band decides
+whether the closer guess scores a point. See [pinpointing.md](pinpointing.md).
+
 For arithmetic and lifecycle details, see the
 [design](../superpowers/specs/2026-09-12-presenter-tie-range-design.md) and
 [research](../geoguessr/pinpointing-duels-userscripts.md).
