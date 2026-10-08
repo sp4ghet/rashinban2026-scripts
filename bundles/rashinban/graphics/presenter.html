@@ -16,8 +16,8 @@
   <div class="health right"><div class="health-fill" id="right-health-fill"></div><span class="pips" id="right-pips" hidden></span><b id="right-health">—</b></div>
   <main id="live-area">
     <div id="shared-panorama" class="shared-view"><span>View unavailable</span></div>
-    <section class="player-window left" id="left-window"><div class="player-view key-slot" id="left-view"><span class="view-unavailable">View unavailable</span></div><div class="player-map" id="left-map"></div><div class="lock" id="left-lock" hidden>LOCKED IN</div></section>
-    <section class="player-window right" id="right-window"><div class="player-view key-slot" id="right-view"><span class="view-unavailable">View unavailable</span></div><div class="player-map" id="right-map"></div><div class="lock" id="right-lock" hidden>LOCKED IN</div></section>
+    <section class="player-window left" id="left-window"><div class="player-view key-slot" id="left-view"><span class="view-unavailable">View unavailable</span></div><div class="player-capture" id="capture-left"><canvas id="capture-left-canvas"></canvas><span>VIDEO UNAVAILABLE</span></div><div class="player-map" id="left-map"></div><div class="lock" id="left-lock" hidden>LOCKED IN</div></section>
+    <section class="player-window right" id="right-window"><div class="player-view key-slot" id="right-view"><span class="view-unavailable">View unavailable</span></div><div class="player-capture" id="capture-right"><canvas id="capture-right-canvas"></canvas><span>VIDEO UNAVAILABLE</span></div><div class="player-map" id="right-map"></div><div class="lock" id="right-lock" hidden>LOCKED IN</div></section>
   </main>
   <section id="preview-area" hidden>
     <div id="preview-panorama" class="key-slot"></div><div id="preview-map"></div>
@@ -39,6 +39,16 @@
   <div id="timer" hidden>00:00</div>
   <div class="camera key-slot left"></div><div class="camera key-slot right"></div>
   <footer><div id="phase-label">WAITING FOR GAME</div><div class="wordmark">RASHINBAN<span>2026</span></div></footer>
+  <section id="video-setup" role="dialog" aria-labelledby="video-setup-title" hidden>
+    <header><strong id="video-setup-title">Player video inputs · local setup</strong><button id="video-close" type="button">Close setup (F8)</button></header>
+    <p id="video-setup-availability"></p>
+    <div class="video-setup-sides">
+      <label>Left player<select id="video-left-device" size="4" aria-label="Left player video input"></select><video id="video-left-preview" muted autoplay playsinline></video><span id="video-left-status" role="status">No input selected</span></label>
+      <label>Right player<select id="video-right-device" size="4" aria-label="Right player video input"></select><video id="video-right-preview" muted autoplay playsinline></video><span id="video-right-status" role="status">No input selected</span></label>
+    </div>
+    <div class="video-setup-actions"><button id="video-find" type="button">Find inputs / allow video</button><button id="video-apply" type="button">Apply inputs</button><button id="video-swap" type="button">Swap feeds</button><button id="video-reconnect" type="button">Reconnect</button></div>
+    <p id="video-setup-message" role="status">Setup is visible on output. Close it before going on air. F8 reopens it in OBS Interact.</p>
+  </section>
   <script src="presenter.js"></script>
 </body>
 </html>

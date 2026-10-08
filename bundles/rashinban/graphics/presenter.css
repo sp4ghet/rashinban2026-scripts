@@ -107,3 +107,34 @@ body[data-source="chroma"] #preview-map { display: none; }
 body[data-layout="shared"][data-lock="none"] .player-window { top: 116px; height: 710px; }
 body[data-layout="shared"] #timer { top: 840px; }
 body[data-lock="left"] #timer, body[data-lock="right"] #timer { top: 866px; }
+
+/* Active video feeds keep their full frame; locked sides use comparison maps. */
+.player-capture { display: none; position: absolute; inset: 0; background: #10131f; place-items: center; }
+.player-capture canvas { width: 100%; height: 100%; object-fit: contain; }
+.player-capture span { position: absolute; color: #a8afc2; font-size: 20px; letter-spacing: .06em; }
+.player-capture:not([data-has-frame="true"]) canvas, .player-capture[data-has-frame="true"] span { visibility: hidden; }
+body[data-source="video"] .player-capture { display: grid; }
+body[data-source="video"] .player-view { display: none; }
+body[data-source="video"][data-lock="left"] .player-window.left .player-map,
+body[data-source="video"][data-lock="right"] .player-window.right .player-map,
+body[data-source="video"][data-lock="both"] .player-map { display: block; }
+body[data-source="video"][data-lock="left"] .player-window.left .player-capture,
+body[data-source="video"][data-lock="right"] .player-window.right .player-capture,
+body[data-source="video"][data-lock="both"] .player-capture { display: none; }
+body[data-source="video"] #preview-panorama { background: #171e2f; }
+body[data-source="video"] .player-window { transition: top 350ms ease, width 350ms ease, height 350ms ease; }
+
+#video-setup { position: absolute; z-index: 2000; top: 160px; left: 360px; width: 1200px; padding: 24px; border: 2px solid #7587a5; border-radius: 12px; background: #111a29fa; box-shadow: 0 12px 80px #000b; font: 20px "Segoe UI", sans-serif; }
+#video-setup header { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+#video-setup p { color: #c2cce0; font-size: 18px; }
+.video-setup-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.video-setup-sides label { display: grid; gap: 10px; min-width: 0; }
+.video-setup-sides video { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #080d17; }
+.video-setup-sides span { font-size: 17px; min-height: 48px; color: #c2cce0; }
+#video-setup select, #video-setup button { color: #f5f7fc; background: #2c3950; border: 1px solid #657b9b; border-radius: 5px; padding: 10px 14px; font: inherit; min-width: 0; }
+/* Expanded listboxes paint inside OBS's browser texture, without popup windows. */
+#video-setup select { padding: 4px; width: 100%; }
+#video-setup select option { padding: 5px 10px; }
+#video-setup button { cursor: pointer; }
+#video-setup button:disabled { opacity: .5; cursor: wait; }
+.video-setup-actions { display: flex; gap: 12px; margin-top: 16px; }

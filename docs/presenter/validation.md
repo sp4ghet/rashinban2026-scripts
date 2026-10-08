@@ -265,3 +265,89 @@ to be done with the production configuration.
 Do not treat unavailable-key placeholders or synthetic color patches as live
 map fidelity. Do not treat a calibrated analyzer, a short fixture or browser
 AudioContext inspection as a 30-minute OBS synchronization result.
+
+## Video-input presentation acceptance — 2026-10-08
+
+The third presentation was checked with the built presenter and two Chromium
+fake camera devices, using isolated NodeCG fixtures and browser storage.
+`scripts/validate-presenter-video.mjs` passed **23 checks each in Chrome and
+OBS Browser Source**. OBS was an isolated portable copy of **32.2.2**, using
+Chromium **127.0.6533.120** and `--enable-media-stream`; the OBS run did not use
+the fake permission-UI bypass flag. Both input streams contained video only.
+
+Checks covered moving pixels, MOVE/NM/NMPZ dual views, both lock directions,
+camera-slot clearance, F8 setup, frozen celebration frames, source switching,
+saved assignments after reload, feed swapping, ownership transfer, preview
+isolation, disconnect/reconnect, denied permission and unavailable devices.
+Both runs reported zero uncaught browser errors. The current workspace also
+passed 499 unit tests, TypeScript, build and `git diff --check`.
+
+Reports and screenshots are in
+`artifacts/presenter-validation/video-inputs/{chrome,obs}-report.json` and
+the adjacent PNGs. See [setup and hardware acceptance](video-inputs.md).
+Physical capture cards, sustained capture performance and real feed latency
+were not tested. Production OBS and live NodeCG state were not modified.
+
+### OBS Interact F8 correction
+
+The original F8 check injected `code: "F8"` through browser debugging. It did
+not exercise Windows OBS's native input translation. Sending native Windows
+F8 messages through an isolated OBS 32.2.2 Interact preview produced
+`key: "F8", code: "", keyCode: 119`. The old code-only handler ignored it.
+The presenter now accepts the logical key as well and ignores repeated keydown
+events. Native F8 opened and closed the setup panel after the fix; recorded
+events and visibility are in `artifacts/presenter-followup/f8/native-{open,closed}.json`.
+The integration script now checks both keyboard event forms and key repeat:
+**24 checks each in Chrome and OBS Browser Source**, with zero uncaught errors.
+
+### Video device discovery correction
+
+The original permission probe attempted to open the default camera before
+enumerating inputs. A `NotReadableError` there prevented the dropdowns from
+being populated, even when other devices could be enumerated after permission.
+Discovery now enumerates first, skips the probe when selectable inputs already
+exist, and enumerates again after either probe success or failure. Discovery
+failures identify their stage and expose the standard browser error name for
+device-start failures without publishing device IDs or raw driver messages.
+
+The integration script reproduces the failed-default-camera path, verifies
+that already exposed inputs require no default-camera open, and checks the
+empty-list diagnostic. **31 checks each in Chrome and OBS Browser Source** pass
+with simulated devices; real-device access still requires hardware verification.
+
+### OBS device-list mouse selection
+
+The device selectors now use four-row, scrollable listboxes rendered inside
+the page, avoiding native dropdown popups that OBS may not paint. The integration
+check selects both devices using pointer events on their visible option rows,
+verifies the setup panel fits within 1920 × 1080, and then opens both feeds.
+**32 checks each in Chrome and OBS Browser Source** pass. The adjacent setup
+screenshots show the visible lists and selected devices.
+
+### Video lock maps and round previews
+
+Video mode now uses the rendered comparison map on each locked side, while
+the active side keeps its full video feed and resize animation. First-round
+and next-round previews also use the rendered panorama and empty world map.
+Regression tests cover comparison pins/bounds, side mapping, both locks,
+unlocking, stale rounds, frozen celebrations and the answer reveal gate.
+
+With a live browser Maps key, the integration script passed **38 checks each
+in Chrome and OBS Browser Source**, using two simulated video inputs. The
+locked-side map and both preview panoramas were visually inspected in OBS.
+The reload check waits for a new document before checking restored feeds.
+Evidence includes `{chrome,obs}-{left-locked,first-round-preview,next-round-preview}.png`
+and the adjacent reports. All **500 unit tests**, typecheck and build passed.
+
+### Rebase and LED compatibility
+
+After rebasing onto the broadcast-switcher/LED changes, the stream capture
+setup remains exclusive to the program source. The LED presenter uses rendered
+views when video mode is selected, preserves bus blanking and silent media,
+and includes the pips/verdict elements required by the shared renderer.
+
+The final video layout shares rendered post-lock geometry: the active window
+is 1270 × 714 at y=144 in both lock directions. **42 checks each in Chrome and
+OBS Browser Source** passed with simulated inputs and live Google Maps,
+including LED startup, rendered panorama display, no capture requests and bus
+reveal/blanking. All **540 unit tests**, typecheck, build and diff checks passed.

@@ -13,6 +13,7 @@ import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
 import { bindLayers } from './broadcast/bind.ts';
 import { channelFromSearch } from '../broadcast/channel.ts';
+import { createCaptureUI } from './presenter/capture-ui.ts';
 import type { PresenterPublicConfig } from '../config/types.ts';
 import { boundMediaState, changedVideoBindings, mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
 
@@ -35,6 +36,7 @@ const clientId = crypto.randomUUID();
 const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
   send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });
 const audioOutput = createAudioOutput(client);
+const capture = document.body.dataset.output === 'led' || role === 'led' ? null : createCaptureUI(document.body, location.search);
 let boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
 media.on('change', value => {
   try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
@@ -58,6 +60,7 @@ if (document.body.dataset.output === 'led') {
 const silent = (muted: boolean) => muted || role === 'led';
 function reconcileVideo() {
   const options = settings.value ?? DEFAULT_SETTINGS;
+  capture?.update(options.viewSource, client.ownsProgram());
   videoPlayer.update(timeline.value?.generation ?? null, client.playsVideo(), timeline.value?.effect ?? 'none', silent(options.muted), options.effectsGain);
   audioOutput.sync(timeline.value, options);
 }
@@ -94,14 +97,17 @@ function startRenderer(value?: PresenterPublicConfig) {
 }
 publicConfig.on('change', startRenderer);
 startRenderer(publicConfig.value);
-window.addEventListener('pagehide', () => { clearInterval(mediaGuard); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
+window.addEventListener('pagehide', () => { clearInterval(mediaGuard); capture?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {
+  let captureFrame: RenderFrame | null = null;
   document.body.dataset.program = String(client.ownsProgram());
   const state = duel.value;
   const timing = timeline.value;
   const match = series.value;
   const options = settings.value ?? DEFAULT_SETTINGS;
+  // Capture devices belong to the stream program; the LED wall keeps rendered views.
+  const viewSource = !capture && options.viewSource === 'video' ? 'rendered' : options.viewSource;
   // Sole graphic cue consumer; sound scheduling belongs to the audio lease engine.
   for (const cue of client.pollCues()) if (cue.kind === 'five-k' && timing) {
     const complete = client.effectCompletion(timing);
@@ -111,8 +117,8 @@ function frame() {
   }
   reconcileVideo();
   document.documentElement.style.setProperty('--key-color', options.keyColor);
-  document.body.dataset.source = options.viewSource;
-  document.body.dataset.layout = layoutKind(state?.mode ?? 'NMPZ', options.viewSource);
+  document.body.dataset.source = viewSource;
+  document.body.dataset.layout = layoutKind(state?.mode ?? 'NMPZ', viewSource);
   document.body.dataset.celebrationUnderlay = 'false';
   if (!state || !views.value || !timing || !match) { celebrationUnderlay.reset(); previousScene = null; }
   if (timing && match) {
@@ -124,7 +130,7 @@ function frame() {
       ? resultMapFrame(state, timing.round, { left: match.left.playerId, right: match.right.playerId }, visible.answer ?? undefined) : null;
     const preparedResults = scene.kind === 'transition' ? resultFrame ?? undefined : undefined;
     const gameFrame = state && views.value ? celebrationUnderlay.render({ state, views: views.value,
-      projection: visible, source: options.viewSource, displayedRound: timing.round,
+      projection: visible, source: viewSource, displayedRound: timing.round,
       preparedResults,
       previewRound: scene.previewRound, prewarmRound: scene.prewarmRound,
       playerIds: { left: match.left.playerId, right: match.right.playerId } }, timing.effect !== 'none') : null;
@@ -203,6 +209,7 @@ function frame() {
     if (scene.kind === 'summary') write('phase-label', 'GAME FINISHED');
     if (scene.kind === 'aborted') write('phase-label', 'GAME CANCELLED');
     if (gameFrame) {
+      captureFrame = gameFrame;
       previousFrame = gameFrame;
       document.body.dataset.lock = lockLayout(previousFrame);
       renderer?.render(previousFrame);
@@ -215,9 +222,10 @@ function frame() {
   }
   if ((!state || !views.value || !timing || !match) && previousFrame) {
     document.body.dataset.lock = 'none';
-    renderer?.render({ ...previousFrame, source: options.viewSource, projection: { phase: 'waiting-game', answer: null, players: [], remainingMs: null } });
+    renderer?.render({ ...previousFrame, source: viewSource, projection: { phase: 'waiting-game', answer: null, players: [], remainingMs: null } });
     previousFrame = null;
   }
+  capture?.render(captureFrame);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

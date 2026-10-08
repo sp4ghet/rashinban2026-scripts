@@ -8,6 +8,12 @@ test('chroma NMPZ uses two complete player windows', () => {
   assert.equal(layoutKind('NMPZ', 'rendered'), 'shared');
 });
 
+test('video inputs persist as a third presentation and keep independent feeds in every game mode', () => {
+  const value = { ...DEFAULT_SETTINGS, viewSource: 'video' };
+  assert.equal(parseSettings(value).viewSource, 'video');
+  for (const mode of ['MOVE', 'NM', 'NMPZ'] as const) assert.equal(layoutKind(mode, 'video'), 'dual');
+});
+
 test('settings accept both keys and output choices without mutating input', () => {
   const value = { ...DEFAULT_SETTINGS, keyColor: '#00ff00', viewSource: 'rendered', audioOutput: 'embedded', muted: true, musicGain: 0, effectsGain: 0.5 };
   const parsed = parseSettings(value);

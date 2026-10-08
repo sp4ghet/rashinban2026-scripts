@@ -192,6 +192,7 @@ series.on('change', value => { if (value) showSeries(value); status(); });
 function applySettings(value: PresenterSettings | undefined) {
   if (!value) return;
   select('view-source').value = value.viewSource; select('key-color').value = value.keyColor;
+  element('video-source-help').hidden = value.viewSource !== 'video';
   select('audio-output').value = value.audioOutput; input('muted').checked = value.muted;
   input('music-gain').value = String(value.musicGain); input('effects-gain').value = String(value.effectsGain);
   input('tie-range-enabled').checked = value.tieRange?.enabled ?? false;
@@ -203,6 +204,7 @@ function applySettings(value: PresenterSettings | undefined) {
     : 'Open Program graphic for video and audio.';
 }
 settings.on('change', value => { settingsConfiguration.acceptProjection(() => applySettings(value)); status(); });
+select('view-source').addEventListener('change', () => { element('video-source-help').hidden = select('view-source').value !== 'video'; });
 ruleContexts.on('change', status);
 input('tie-range-enabled').addEventListener('change', () => { select('tie-range-mode').disabled = !input('tie-range-enabled').checked; });
 duel.on('change', status);

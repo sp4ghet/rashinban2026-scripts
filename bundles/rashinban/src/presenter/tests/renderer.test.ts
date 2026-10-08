@@ -46,12 +46,14 @@ test('outgoing result geometry prepares invisibly, then reveals without using ne
   renderer.render(f); assert.equal(resultMap.frames.at(-1)!.visible, true);
   assert.deepEqual(resultMap.frames.at(-1)!.pins, points); assert.equal(fake.maps.filter(map => map.slot === 'results-map').length, 1);
 });
-test('known preview round uses its own persistent panorama and empty world map without changing the server round', () => {
-  const f = frame(); const next = structuredClone(f.state.rounds[0]); next.number = f.state.round + 1;
+for (const source of ['rendered', 'video'] as const) test(`${source} preview uses its own persistent panorama and empty world map without changing the server round`, () => {
+  const f = frame(); f.source = source;
+  const next = structuredClone(f.state.rounds[0]); next.number = f.state.round + 1;
   next.panorama.panoId = 'upcoming-pano'; f.state.rounds.push(next);
   const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
   f.projection.phase = 'results-transition'; f.prewarmRound = next.number; renderer.render(f);
-  const preview = fake.panos.find(p => p.slot === 'preview-panorama')!;
+  const preview = fake.panos.find(p => p.slot === 'preview-panorama');
+  assert.ok(preview, 'known upcoming panorama is prepared');
   assert.equal(preview.frames.at(-1)?.panoId, 'upcoming-pano'); assert.equal(preview.options.at(-1).visible, false);
   f.projection.phase = 'between-rounds'; f.previewRound = next.number; renderer.render(f);
   assert.equal(preview.options.at(-1).visible, true);
@@ -62,7 +64,12 @@ test('known preview round uses its own persistent panorama and empty world map w
   f.playerIds!.left = null; renderer.render(f); assert.notEqual(preview.options.at(-1).identity, identity);
   f.source = 'chroma'; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
   assert.ok(fake.maps.every(map => !map.frames.at(-1)!.visible));
-  f.source = 'rendered'; f.projection.phase = 'live'; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
+  f.source = source; f.projection.phase = 'live'; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
+  f.projection.phase = 'pre-round'; f.previewRound = f.state.round; renderer.render(f);
+  assert.equal(preview.frames.at(-1)?.panoId, f.state.rounds[0].panorama.panoId);
+  assert.equal(preview.options.at(-1).visible, true);
+  f.projection.answer = f.state.rounds[0].panorama; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
+  f.projection.answer = null;
   f.projection.phase = 'between-rounds'; f.state.status = 'Finished'; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
   assert.equal(f.state.round, 1); assert.equal(fake.panos.filter(p => p.slot === 'preview-panorama').length, 1);
 });
@@ -124,6 +131,46 @@ test('shared NMPZ renders one panorama and two player maps', () => {
   assert.deepEqual(rendererPlan('NMPZ', 'chroma', 'results-reveal'), { panoramas: 0, playerMaps: 0, resultsMap: true });
   assert.deepEqual(rendererPlan('MOVE', 'rendered', 'live'), { panoramas: 2, playerMaps: 2, resultsMap: false });
   for (const phase of ['waiting-game', 'pre-round', 'results-transition', 'aborted'] as const) assert.deepEqual(rendererPlan('NM', 'rendered', phase), { panoramas: 0, playerMaps: 0, resultsMap: false });
+});
+
+test('video uses comparison maps only for locked sides, without live panoramas or early answers', () => {
+  const f = frame(); f.source = 'video';
+  const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  f.views.players[f.state.players[1].id].pin = { lat: 2, lng: -179 };
+  renderer.render(f); assert.ok(fake.maps.every(map => !map.frames.at(-1)?.visible));
+  lockPlayer(f, 0); assert.equal(lockLayout(f), 'left');
+  for (const mode of ['MOVE', 'NM', 'NMPZ'] as const) {
+    f.state.mode = mode; renderer.render(f);
+    assert.equal(fake.panos.length, 0);
+    const left = fake.maps.find(map => map.slot === 'left-map')?.frames.at(-1);
+    assert.ok(left?.visible, 'locked side shows its comparison map');
+    assert.deepEqual(left.pins.map(pin => pin.point), [{ lat: 1, lng: 179 }, { lat: 2, lng: -179 }]);
+    assert.deepEqual(left.bounds, { north: 2, south: 1, west: 179, east: -179 });
+    assert.equal(left.inactive, false); assert.equal(left.padding, 45); assert.deepEqual(left.lines, []);
+    assert.equal(fake.maps.find(map => map.slot === 'right-map')?.frames.at(-1)?.visible, false);
+  }
+  const leftId = f.playerIds!.left; const rightId = f.playerIds!.right;
+  f.playerIds = { left: rightId, right: leftId }; renderer.render(f);
+  assert.equal(fake.maps.find(map => map.slot === 'right-map')?.frames.at(-1)?.visible, true);
+  assert.equal(fake.maps.find(map => map.slot === 'left-map')?.frames.at(-1)?.visible, false);
+  f.playerIds = { left: leftId, right: rightId };
+  lockPlayer(f, 1); assert.equal(lockLayout(f), 'both');
+  renderer.render(f); assert.ok(fake.maps.every(map => map.frames.at(-1)?.visible));
+  const priorMaps = fake.maps.map(map => structuredClone(map.frames.at(-1)));
+  renderer.render({ ...f, frozen: true }); assert.deepEqual(fake.maps.map(map => map.frames.at(-1)), priorMaps);
+  f.displayedRound = f.state.round - 1; renderer.render(f); assert.ok(fake.maps.every(map => !map.frames.at(-1)?.visible));
+  f.displayedRound = f.state.round;
+  f.state.players.forEach(player => { player.results = [{ round: f.state.round, score: 4000,
+    bestGuess: player.guesses[0], healthBefore: 6000, healthAfter: 6000, damageDealt: 0, multiplier: 1 }]; });
+  f.projection.phase = 'results-reveal'; renderer.render(f);
+  assert.ok(fake.maps.every(map => !map.frames.at(-1)?.visible));
+  assert.equal(fake.maps.some(map => map.slot === 'results-map'), false);
+  f.projection.answer = f.state.rounds[0].panorama; renderer.render(f);
+  assert.equal(fake.maps.find(map => map.slot === 'results-map')?.frames.at(-1)?.visible, true);
+  assert.equal(lockLayout(f), 'none');
+  f.state.players.forEach(player => { player.guesses = []; player.results = []; });
+  f.projection.phase = 'live'; f.projection.answer = null; renderer.render(f);
+  assert.ok(fake.maps.every(map => !map.frames.at(-1)?.visible)); renderer.dispose();
 });
 test('orchestrator retains fixed NMPZ POV, independent maps and explicit side swaps', () => {
   const f = frame(); const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);

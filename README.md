@@ -68,6 +68,7 @@ your credentials.
 - [Operator setup and recovery](docs/presenter/setup.md)
 - [Media and soundtrack ownership](docs/presenter/media.md)
 - [OBS rectangles, regional keying and audio](docs/presenter/obs.md)
+- [Direct player video inputs and OBS setup](docs/presenter/video-inputs.md)
 - [Validation evidence and outstanding event checks](docs/presenter/validation.md)
 
 Program: `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program`.

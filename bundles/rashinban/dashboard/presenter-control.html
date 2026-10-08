@@ -24,7 +24,8 @@
 <p id="audio-launch-help" class="help"></p>
 
 <h2>Current match</h2><div id="current-match-summary" class="status"></div><p class="help">Edit players and wins in Current Match.</p>
-<form id="settings-form"><h2>Presentation</h2><div class="row"><label>Player views<select id="view-source"><option value="chroma">Chroma · whole player feeds</option><option value="rendered">Rendered</option></select></label><label>Key color<select id="key-color"><option value="#ff00ff">Magenta</option><option value="#00ff00">Green</option></select></label></div>
+<form id="settings-form"><h2>Presentation</h2><div class="row"><label>Player views<select id="view-source"><option value="chroma">Chroma · whole player feeds</option><option value="rendered">Rendered</option><option value="video">Video input · capture devices</option></select></label><label>Key color<select id="key-color"><option value="#ff00ff">Magenta</option><option value="#00ff00">Green</option></select></label></div>
+<p id="video-source-help" class="help" hidden>In the active OBS program source, open Interact and press F8 to assign left/right video inputs. Use HTTPS or localhost and enable OBS media access. Close setup before going on air.</p>
 <div class="row"><label>Audio output<select id="audio-output"><option value="separate">Separate browser source</option><option value="embedded">Embedded in graphic</option></select></label><label class="check"><input type="checkbox" id="muted"> Mute presenter audio</label></div>
 <div class="row"><label>Music gain (0–1)<input id="music-gain" type="number" min="0" max="1" step="0.05"></label><label>Effects gain (0–1)<input id="effects-gain" type="number" min="0" max="1" step="0.05"></label></div>
 <fieldset><h2>Tie range</h2>

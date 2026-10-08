@@ -190,6 +190,8 @@ test('presenter boots isolated replay and validates HTTP edits before publishing
     const changed = await post('view/rendered');
     assert.equal(changed.status, 200);
     assert.equal(reps.get('presenterSettings')?.value.viewSource, 'rendered');
+    assert.equal((await post('view/video')).status, 200);
+    assert.equal(reps.get('presenterSettings')?.value.viewSource, 'video');
     assert.equal(reps.get('presenterConnection')?.value.input, 'replay');
     assert.equal(reps.get('presenterTimeline')?.value.phase, 'waiting-host');
     for (const name of ['presenterConnection', 'presenterDuel', 'presenterViews', 'presenterTimeline']) assert.equal(reps.get(name)?.opts.persistent, false);
