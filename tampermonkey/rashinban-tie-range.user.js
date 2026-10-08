@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.3.0
+// @version      0.3.1
 // @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Set the same rules as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -1812,7 +1812,7 @@
     };
   }
 
-  // tampermonkey/src/tie-range-player-ui.ts
+  // tampermonkey/src/tie-range-player-mutations.ts
   var CLASS_SELECTORS = {
     duelRoot: '[class*="duels_root__"]',
     healthBars: '[class*="hud_healthBars__"]',
@@ -1825,6 +1825,52 @@
     roundNumber: '[class*="game-summary-2_roundNumber__"]',
     terminal: '[class*="summon-glow-text_root__"]'
   };
+  var DAMAGE_ANIMATION = '[class*="damage-animation_root__"]';
+  var ANSWER_MARKER = '[class*="result-map_correctLocation__"], [data-qa="correct-location"]';
+  var WATCHED = [...Object.values(CLASS_SELECTORS), DAMAGE_ANIMATION, ANSWER_MARKER].join(", ");
+  var WATCHED_CONTENT = [
+    CLASS_SELECTORS.healthBars,
+    CLASS_SELECTORS.resultRoot,
+    CLASS_SELECTORS.summary,
+    CLASS_SELECTORS.terminal,
+    DAMAGE_ANIMATION
+  ].join(", ");
+  var MAP_DOM = ".gm-style";
+  var ELEMENT_NODE = 1;
+  function asElement(node) {
+    return typeof node === "object" && node !== null && node.nodeType === ELEMENT_NODE ? node : null;
+  }
+  function touchesWatched(node) {
+    const element = asElement(node);
+    return element !== null && (element.matches(WATCHED) || element.querySelector(WATCHED) !== null);
+  }
+  function mutationNeedsImmediateReconcile(records) {
+    for (let index = 0; index < records.length; index += 1) {
+      const record2 = records[index];
+      if (record2.type === "attributes") {
+        if (record2.attributeName !== "style" && touchesWatched(record2.target)) return true;
+        continue;
+      }
+      if (record2.type !== "childList") continue;
+      for (const nodes of [record2.addedNodes, record2.removedNodes]) {
+        for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+          if (touchesWatched(nodes[nodeIndex])) return true;
+        }
+      }
+      const target = asElement(record2.target);
+      if (target && target.closest(WATCHED_CONTENT) !== null && target.closest(MAP_DOM) === null) {
+        for (const nodes of [record2.addedNodes, record2.removedNodes]) {
+          for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+            if (asElement(nodes[nodeIndex])) return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // tampermonkey/src/tie-range-player-ui.ts
+  var DEFERRED_RECONCILE_MS = 250;
   function multiplier(value) {
     return `${(value / 10).toFixed(value % 10 === 0 ? 0 : 1)}\xD7`;
   }
@@ -1983,6 +2029,7 @@
     let focusBeforeSettings = null;
     let disposed = false;
     let reconcileQueued = false;
+    let deferredReconcile = null;
     let initialResultIdentity = null;
     let requestedResultKey = null;
     const scoring = createPlayerScoringAnimation(document2, shadow);
@@ -2283,6 +2330,13 @@
       scoring.update(lastView, display, nativeResult, nativeKey, nativeKey === initialResultIdentity);
       mapOverlay.update(lastView, display.result?.round ?? null);
     }
+    function queueDeferredReconcile() {
+      if (deferredReconcile !== null || disposed || !document2.defaultView) return;
+      deferredReconcile = document2.defaultView.setTimeout(() => {
+        deferredReconcile = null;
+        queueReconcile();
+      }, DEFERRED_RECONCILE_MS);
+    }
     function queueReconcile() {
       if (reconcileQueued || disposed) return;
       reconcileQueued = true;
@@ -2321,7 +2375,10 @@
       dependencies.onPinpointingChange?.(pinpointingCheck.checked);
     });
     const MutationObserverConstructor = document2.defaultView?.MutationObserver;
-    const observer = MutationObserverConstructor ? new MutationObserverConstructor(queueReconcile) : null;
+    const observer = MutationObserverConstructor ? new MutationObserverConstructor((records) => {
+      if (mutationNeedsImmediateReconcile(records)) queueReconcile();
+      else queueDeferredReconcile();
+    }) : null;
     observer?.observe(document2.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "hidden", "style", "aria-hidden"] });
     return {
       update(view) {
@@ -2351,6 +2408,7 @@
         disposed = true;
         scoring.dispose();
         observer?.disconnect();
+        if (deferredReconcile !== null) document2.defaultView?.clearTimeout(deferredReconcile);
         mapOverlay.dispose();
         restoreNative();
         host.remove();

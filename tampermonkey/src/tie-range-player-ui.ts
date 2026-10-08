@@ -1,6 +1,7 @@
 import { createPlayerScoringAnimation } from './tie-range-player-animation.ts';
 import { renderPointPips } from './tie-range-player-pips.ts';
 import { createPlayerMapOverlay } from './tie-range-player-map.ts';
+import { CLASS_SELECTORS, mutationNeedsImmediateReconcile } from './tie-range-player-mutations.ts';
 import type { TieRangeBandMode, TieRangeRoundOutput } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
 import type { PlayerTieRangeView } from './tie-range-player-controller.ts';
 import {
@@ -28,18 +29,8 @@ export type PlayerTieRangeUi = {
 
 type StyleProperty = 'display' | 'visibility' | 'position';
 
-const CLASS_SELECTORS = {
-  duelRoot: '[class*="duels_root__"]',
-  healthBars: '[class*="hud_healthBars__"]',
-  resultRoot: '[class*="round-score_root__"]',
-  resultRound: '[class*="round-score_roundNumber__"]',
-  damage: '[class*="round-score_damageAnimation__"]',
-  summary: '[class*="game-summary-2_root__"]',
-  summaryHeader: '[class*="game-summary-2_playedRoundsHeader__"]',
-  summaryRow: '[class*="game-summary-2_playedRound__"]',
-  roundNumber: '[class*="game-summary-2_roundNumber__"]',
-  terminal: '[class*="summon-glow-text_root__"]',
-} as const;
+/** Catch-up delay for mutations that cannot change what the HUD hides or shows. */
+const DEFERRED_RECONCILE_MS = 250;
 
 function multiplier(value: number): string {
   return `${(value / 10).toFixed(value % 10 === 0 ? 0 : 1)}×`;
@@ -215,6 +206,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   let focusBeforeSettings: HTMLElement | null = null;
   let disposed = false;
   let reconcileQueued = false;
+  let deferredReconcile: number | null = null;
   let initialResultIdentity: string | null = null;
   let requestedResultKey: string | null = null;
   const scoring = createPlayerScoringAnimation(document, shadow);
@@ -512,6 +504,14 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
     mapOverlay.update(lastView, display.result?.round ?? null);
   }
 
+  function queueDeferredReconcile(): void {
+    if (deferredReconcile !== null || disposed || !document.defaultView) return;
+    deferredReconcile = document.defaultView.setTimeout(() => {
+      deferredReconcile = null;
+      queueReconcile();
+    }, DEFERRED_RECONCILE_MS);
+  }
+
   function queueReconcile(): void {
     if (reconcileQueued || disposed) return;
     reconcileQueued = true;
@@ -556,7 +556,12 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   });
 
   const MutationObserverConstructor = document.defaultView?.MutationObserver;
-  const observer = MutationObserverConstructor ? new MutationObserverConstructor(queueReconcile) : null;
+  // Street View rewrites the compass style every frame; a full reconcile per
+  // frame forces layout and makes the game stutter.
+  const observer = MutationObserverConstructor ? new MutationObserverConstructor(records => {
+    if (mutationNeedsImmediateReconcile(records)) queueReconcile();
+    else queueDeferredReconcile();
+  }) : null;
   observer?.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'style', 'aria-hidden'] });
 
   return {
@@ -587,6 +592,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       disposed = true;
       scoring.dispose();
       observer?.disconnect();
+      if (deferredReconcile !== null) document.defaultView?.clearTimeout(deferredReconcile);
       mapOverlay.dispose();
       restoreNative();
       host.remove();
