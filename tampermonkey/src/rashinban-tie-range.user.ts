@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.3.1
+// @version      0.3.2
 // @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Set the same rules as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start

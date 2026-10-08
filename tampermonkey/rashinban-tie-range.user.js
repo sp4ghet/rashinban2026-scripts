@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.3.1
+// @version      0.3.2
 // @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Set the same rules as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -1927,6 +1927,20 @@
       return null;
     }
   }
+  function teamPinColour(cell) {
+    const pin = cell.querySelector('[class*="team-pin_background"]');
+    if (!pin) return null;
+    for (const value of Array.from(pin.classList)) {
+      const match = /^team-pin_background(blue|red)(?:__|$)/.exec(value);
+      if (match) return match[1];
+    }
+    return null;
+  }
+  function summaryHealthColumnsByTeamColor(headerCells, teamLabels) {
+    if (headerCells.length !== 5) return null;
+    const columns = teamLabels.map((label) => [3, 4].find((column) => teamPinColour(headerCells[column]) === label) ?? -1);
+    return columns[0] >= 0 && columns[1] >= 0 && columns[0] !== columns[1] ? [columns[0], columns[1]] : null;
+  }
   function createPlayerTieRangeUi(dependencies) {
     const { document: document2 } = dependencies;
     const mapOverlay = createPlayerMapOverlay(() => dependencies.getPageWindow?.() ?? document2.defaultView);
@@ -2159,6 +2173,9 @@
         }) ?? -1);
         if (columnByTeam[0] >= 0 && columnByTeam[1] < 0) columnByTeam[1] = columnByTeam[0] === 3 ? 4 : 3;
         if (columnByTeam[1] >= 0 && columnByTeam[0] < 0) columnByTeam[0] = columnByTeam[1] === 3 ? 4 : 3;
+        if (columnByTeam.some((column) => column < 0)) {
+          columnByTeam = summaryHealthColumnsByTeamColor(headerCells, view.context.teamLabels) ?? columnByTeam;
+        }
         if (columnByTeam.some((column) => column < 0)) {
           const observations = Array.from(summary.querySelectorAll(CLASS_SELECTORS.summaryRow)).flatMap((row) => {
             const number = Number.parseInt(row.querySelector(CLASS_SELECTORS.roundNumber)?.textContent ?? "", 10);

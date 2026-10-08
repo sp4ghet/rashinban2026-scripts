@@ -103,6 +103,29 @@ function userIdFromLink(element: Element, document: Document): string | null {
   }
 }
 
+function teamPinColour(cell: Element): string | null {
+  const pin = cell.querySelector('[class*="team-pin_background"]');
+  if (!pin) return null;
+  for (const value of Array.from(pin.classList)) {
+    const match = /^team-pin_background(blue|red)(?:__|$)/.exec(value);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+/**
+ * Team duel summaries label columns with team pins instead of profile links:
+ * Round | best guess × 2 | health × 2. Returns each team's health column.
+ */
+export function summaryHealthColumnsByTeamColor(
+  headerCells: Element[],
+  teamLabels: readonly ['blue', 'red'],
+): [number, number] | null {
+  if (headerCells.length !== 5) return null;
+  const columns = teamLabels.map(label => [3, 4].find(column => teamPinColour(headerCells[column]) === label) ?? -1);
+  return columns[0] >= 0 && columns[1] >= 0 && columns[0] !== columns[1] ? [columns[0], columns[1]] : null;
+}
+
 export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencies): PlayerTieRangeUi {
   const { document } = dependencies;
   const mapOverlay = createPlayerMapOverlay(() => dependencies.getPageWindow?.() ?? document.defaultView!);
@@ -341,6 +364,9 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       }) ?? -1) as [number, number];
       if (columnByTeam[0] >= 0 && columnByTeam[1] < 0) columnByTeam[1] = columnByTeam[0] === 3 ? 4 : 3;
       if (columnByTeam[1] >= 0 && columnByTeam[0] < 0) columnByTeam[0] = columnByTeam[1] === 3 ? 4 : 3;
+      if (columnByTeam.some(column => column < 0)) {
+        columnByTeam = summaryHealthColumnsByTeamColor(headerCells, view.context.teamLabels) ?? columnByTeam;
+      }
       if (columnByTeam.some(column => column < 0)) {
         // Ordinary player summaries may have YOUR HEALTH and avatar labels,
         // without profile links. Match their score columns to verified history.
