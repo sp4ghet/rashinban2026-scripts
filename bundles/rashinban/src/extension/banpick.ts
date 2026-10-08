@@ -8,8 +8,8 @@ import {
   undo,
   type BanPickState,
   type Player,
-} from "../banpick/rules";
-import { BANPICK_MESSAGES, REPLICANTS } from "../types/replicants";
+} from "../banpick/rules.ts";
+import { BANPICK_MESSAGES, REPLICANTS } from "../types/replicants.ts";
 
 type Ack = NodeCG.Acknowledgement | undefined;
 
@@ -17,6 +17,11 @@ export function registerBanPick(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
   const rep = nodecg.Replicant<BanPickState>(REPLICANTS.banPick, {
     defaultValue: createInitialState(),
   });
+  // Older builds persisted an on-air flag here; visibility now lives in the broadcast bus.
+  if (rep.value && "visible" in rep.value) {
+    const { visible: _visible, ...rest } = rep.value as BanPickState & { visible?: unknown };
+    rep.value = rest;
+  }
   const state = () => rep.value ?? createInitialState();
 
   /** Runs a state transition, reporting BanPickError via the ack instead of throwing. */
@@ -45,18 +50,12 @@ export function registerBanPick(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
   nodecg.listenFor(BANPICK_MESSAGES.undo, (_data, ack) => mutate(ack, undo));
   nodecg.listenFor(BANPICK_MESSAGES.reset, (_data, ack) => mutate(ack, reset));
 
-  nodecg.listenFor(BANPICK_MESSAGES.setVisible, (data: { visible?: unknown }, ack) => {
-    mutate(ack, (s) => ({ ...s, visible: Boolean(data?.visible) }));
-  });
-
   // Companion (Generic HTTP) endpoints, mounted under /rashinban/banpick.
+  // Show/hide/toggle live on the broadcast bus (see ./broadcast.ts).
   const respond = (res: { json: (body: unknown) => void }) => {
     const s = state();
-    res.json({ visible: s.visible, step: s.actions.length, complete: s.actions.length >= 8 });
+    res.json({ step: s.actions.length, complete: s.actions.length >= 8 });
   };
-  router.post("/banpick/show", (_req, res) => { mutate(undefined, (s) => ({ ...s, visible: true })); respond(res); });
-  router.post("/banpick/hide", (_req, res) => { mutate(undefined, (s) => ({ ...s, visible: false })); respond(res); });
-  router.post("/banpick/toggle", (_req, res) => { mutate(undefined, (s) => ({ ...s, visible: !s.visible })); respond(res); });
   router.post("/banpick/undo", (_req, res) => { mutate(undefined, undo); respond(res); });
   router.post("/banpick/reset", (_req, res) => { mutate(undefined, reset); respond(res); });
 }

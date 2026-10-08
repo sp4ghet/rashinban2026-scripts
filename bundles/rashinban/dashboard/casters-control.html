@@ -45,21 +45,6 @@
         border-radius: 4px;
       }
 
-      button {
-        padding: 8px 12px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #fff;
-        background: #37474f;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        white-space: nowrap;
-      }
-
-      button:hover { filter: brightness(1.2); }
-      button.active { background: #2e7d32; }
-
       .status {
         white-space: pre-wrap;
         padding: 6px 8px;
@@ -78,18 +63,17 @@
     <h4>Left card</h4>
     <div class="row">
       <select id="slot-0-name"></select>
-      <button id="slot-0-enabled">Hidden</button>
     </div>
 
     <h4>Right card</h4>
     <div class="row">
       <select id="slot-1-name"></select>
-      <button id="slot-1-enabled">Hidden</button>
     </div>
 
-    <h4>Visible</h4>
+    <h4>Selected</h4>
     <div class="status" id="preview">Loading…</div>
     <p>Names come from the <strong>casters</strong> tab of the Google Sheet. Edit the sheet to add a caster, then pick them here.</p>
+    <p>Card visibility is on the Stream switcher tab.</p>
     <div id="error"></div>
     <script src="casters-control.js"></script>
   </body>

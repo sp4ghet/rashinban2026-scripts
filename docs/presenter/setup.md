@@ -40,8 +40,10 @@ changes.
 
 Run `npm run build` and `npm start`, then open `http://localhost:9090/` and the
 **Duels Presenter** panel. Add the program and audio URLs from [OBS setup](obs.md).
-Use [media selection](media.md) to load assets, then verify readiness and the
-program/audio owner before showing the output.
+For the venue wall add `presenter-led.html` (silent, no role parameter), and
+add `info-stream.html` / `info-led.html` for the switched overlay layers; see
+[broadcast](../broadcast.md). Use [media selection](media.md) to load assets,
+then verify readiness and the program/audio owner before showing the output.
 
 Choose **Input mode** in the dashboard, then apply the source. No restart is
 needed to switch between Replay and Live. Replay uses Full duel, Manual rounds,

@@ -1,5 +1,6 @@
-// Operator panel for Ban & Pick: player names, undo/reset, overlay
-// visibility, and a clickable board to act on a player's behalf.
+// Operator panel for Ban & Pick: player names, undo/reset, and a clickable
+// board to act on a player's behalf. Overlay visibility lives on the
+// Stream / LED switcher tabs (broadcast bus), not here.
 import { createInitialState, type BanPickState, type OptionView } from "../banpick/rules";
 import { BANPICK_MESSAGES, REPLICANTS } from "../types/replicants";
 import { renderBoard, renderGames, shortMode, stepText } from "../graphics/banpick/board";
@@ -9,7 +10,6 @@ const rep = nodecg.Replicant<BanPickState>(REPLICANTS.banPick);
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const nameA = $<HTMLInputElement>("name-a");
 const nameB = $<HTMLInputElement>("name-b");
-const visibleBtn = $<HTMLButtonElement>("visible");
 const undoBtn = $<HTMLButtonElement>("undo");
 const resetBtn = $<HTMLButtonElement>("reset");
 const stepEl = $<HTMLElement>("step");
@@ -56,14 +56,11 @@ function render() {
   stepEl.textContent = stepText(state, view);
   stepEl.dataset.turn = view.step?.player ?? "";
   renderGames(games, view);
-  visibleBtn.textContent = state.visible ? "Hide overlay" : "Show overlay";
-  visibleBtn.classList.toggle("active", state.visible);
   undoBtn.disabled = state.actions.length === 0;
   if (document.activeElement !== nameA) nameA.value = state.players.A;
   if (document.activeElement !== nameB) nameB.value = state.players.B;
 }
 
-visibleBtn.addEventListener("click", () => send(BANPICK_MESSAGES.setVisible, { visible: !state.visible }));
 undoBtn.addEventListener("click", () => send(BANPICK_MESSAGES.undo));
 resetBtn.addEventListener("click", () => {
   if (state.actions.length === 0 || confirm("Reset the Ban & Pick? All bans and picks will be cleared.")) {

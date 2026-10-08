@@ -112,7 +112,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
       const value = record(request);
       if (Object.keys(value).some(key => !['clientId', 'role', 'ready', 'renderer', 'audio', 'clockFresh'].includes(key))
         || typeof value.clientId !== 'string' || !/^[\w-]{1,80}$/.test(value.clientId)
-        || !['program', 'preview', 'audio'].includes(value.role as string) || typeof value.ready !== 'boolean' || !validStatus(value.renderer)) throw new Error();
+        || !['program', 'preview', 'audio', 'led'].includes(value.role as string) || typeof value.ready !== 'boolean' || !validStatus(value.renderer)) throw new Error();
       let audio: AudioStatus = { state: 'unreported', missing: [] };
       if (value.audio !== undefined) {
         const status = record(value.audio);

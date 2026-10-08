@@ -5,7 +5,7 @@ import { advanceTimeline } from '../timeline.ts';
 import { DEFAULT_SETTINGS } from '../settings.ts';
 import type { Timeline } from '../../types/presenter.ts';
 
-function client(role: 'preview' | 'program' = 'program') {
+function client(role: 'preview' | 'program' | 'led' = 'program') {
   let elapsed = 0; let wall = 1000; let pings = 0;
   const sent: { name: string; body: any }[] = [];
   const tasks: { fn: () => void; at: number; active: boolean }[] = [];
@@ -93,4 +93,46 @@ test('audio lease requires selected role, fresh clock and active token, independ
   assert.equal((c.value as any).audioLease?.('embedded') ?? null, null);
   c.value.updateClients(lease); c.advance(31000);
   assert.equal((c.value as any).audioLease?.('embedded') ?? null, null);
+});
+
+test('?role=led opts into the led role', () => {
+  assert.equal(clientRole('?role=led'), 'led');
+  assert.equal(clientRole('?role=LED'), 'preview');
+});
+
+test('led plays video cues on its own clock but never owns program, audio, or effect completion', async () => {
+  const c = client('led'); await c.value.start();
+  const t = timeline();
+  c.value.updateClients({ clients: [], program: { clientId: 'other', expiresAtMs: 6000 } }); c.value.updateTimeline(t);
+  assert.equal(c.value.ownsProgram(), false);
+  assert.equal(c.value.playsVideo(), true);
+  assert.equal(c.value.audioLease('embedded'), null);
+  assert.equal(c.value.audioLease('separate'), null);
+  assert.deepEqual(c.value.pollCues(), [], 'bootstrap drains anything already due');
+  c.advance(100);
+  const due = c.value.pollCues();
+  assert.deepEqual(due.map(cue => cue.id), ['five']);
+  assert.deepEqual(c.value.pollCues(), []);
+  const sent = c.sent.length;
+  assert.equal(await c.value.effectCompletion(t)(), false);
+  assert.equal(c.sent.length, sent, 'led never reports effect-ended');
+  c.advance(31000); assert.equal(c.value.playsVideo(), false, 'stale clock stops led playback');
+  c.value.dispose(); assert.equal(c.value.playsVideo(), false);
+});
+
+test('preview still never plays video', async () => {
+  const c = client('preview'); await c.value.start();
+  c.value.updateClients({ clients: [], program: null }); c.value.updateTimeline(timeline());
+  assert.equal(c.value.playsVideo(), false);
+  c.advance(100); assert.deepEqual(c.value.pollCues(), []);
+  c.value.dispose();
+});
+
+test('an LED page implies the led role unless the URL names a role', () => {
+  assert.equal(clientRole('', 'led'), 'led');
+  assert.equal(clientRole('?channel=preview', 'led'), 'led');
+  assert.equal(clientRole('?role=preview', 'led'), 'preview');
+  assert.equal(clientRole('?role=program', 'led'), 'program');
+  assert.equal(clientRole('', 'stream'), 'preview');
+  assert.equal(clientRole('', undefined), 'preview');
 });

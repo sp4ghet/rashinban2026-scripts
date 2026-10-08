@@ -24,7 +24,8 @@ export type PresenterClients = { clients: PresenterClient[]; program: Lease | nu
 import type { BanPickState } from "../banpick/rules";
 import type { StartggBracket, StartggConfig, StartggStatus } from "../startgg/types";
 import type { PlayerProfile } from "../sheet/players";
-import type { PlayerCardsState, SheetConfig, SheetStatus } from "../sheet/types";
+import type { SheetConfig, SheetStatus } from "../sheet/types";
+import type { BroadcastState } from "../broadcast/state.ts";
 import type { CurrentMatchSelection } from "../match/current";
 import type { MatchState, ResolvedMatch } from '../match/state.ts';
 import type { EffectiveAssetInventory } from '../config/media-url.ts';
@@ -44,7 +45,7 @@ export const REPLICANTS = {
   currentMatch: "currentMatch",
   matchState: 'matchState',
   matchResolved: 'matchResolved',
-  playerCards: "playerCards",
+  broadcast: "broadcast",
   bracketConfig: "bracketConfig",
   bracketFinals: "bracketFinals",
   presenterConnection: 'presenterConnection',
@@ -76,7 +77,7 @@ export interface ReplicantMap {
   [REPLICANTS.currentMatch]: CurrentMatchSelection;
   [REPLICANTS.matchState]: MatchState;
   [REPLICANTS.matchResolved]: ResolvedMatch;
-  [REPLICANTS.playerCards]: PlayerCardsState;
+  [REPLICANTS.broadcast]: BroadcastState;
   [REPLICANTS.bracketConfig]: BracketConfig;
   [REPLICANTS.bracketFinals]: BracketFinals;
   [REPLICANTS.presenterConnection]: PresenterConnection;
@@ -101,8 +102,6 @@ export const BANPICK_MESSAGES = {
   act: "banpick:act",
   undo: "banpick:undo",
   reset: "banpick:reset",
-  /** { visible: boolean } */
-  setVisible: "banpick:setVisible",
 } as const;
 
 /** Messages the start.gg poller listens for. */
@@ -132,14 +131,19 @@ export const MATCH_MESSAGES = {
   swap: 'match:swap',
 } as const;
 
-/** Player cards presentation. Partial<PlayerCardsState>. */
-export const PLAYERCARDS_MESSAGES = {
-  set: "playercards:set",
-} as const;
-
-/** Caster cards. { slot: 0 | 1, name?: string, enabled?: boolean } */
+/** Caster cards. { slot: 0 | 1, name: string } */
 export const CASTERS_MESSAGES = {
   setSlot: "casters:setSlot",
+} as const;
+
+/** Broadcast buses. output is "stream" | "led". */
+export const BROADCAST_MESSAGES = {
+  /** { output, patch: Patch<Layers> } — edit preview. */
+  setPreview: "broadcast:setPreview",
+  /** { output } — program = preview. */
+  take: "broadcast:take",
+  /** { output } — preview = program. */
+  revertPreview: "broadcast:revertPreview",
 } as const;
 
 /** DAY2 bracket data source. */

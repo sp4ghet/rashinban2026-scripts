@@ -1,0 +1,627 @@
+/* Shared stylesheet for the info pages (info-stream.html, info-led.html).
+   Each layer module injects its markup into a .layer host; every rule below
+   is scoped to its layer root so the layers cannot leak into each other.
+   kaneda-gothic comes from the Adobe Fonts kit (loaded by the pages); the
+   vendored OFL fonts provide Oswald as the offline fallback and Noto Sans JP
+   for body text. */
+
+html,
+body {
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: transparent;
+  color: #fff;
+}
+
+/* Each host is its own stacking context, so a layer's internal z-indexes stay
+   inside it: layer order on screen = DOM order of the hosts in the page. */
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.layer[hidden] { display: none; }
+
+/* Palette shared by the layers: red (P1) / blue (P2), condensed headings. */
+:root {
+  --p1: #cc2626;
+  --p1-light: #ff3030;
+  --p2: #2669cc;
+  --p2-light: #3083ff;
+  --ink: #fff;
+  --heading: "kaneda-gothic", "Oswald", "Bahnschrift Condensed", "Arial Narrow", "Noto Sans JP", sans-serif;
+  --body: "Noto Sans JP", "Hiragino Sans", "Segoe UI", sans-serif;
+}
+
+/* ==== Player cards ======================================================= */
+/* Ported from the 2025 player cards. Card = red (P1) / blue (P2), outlined white labels, condensed headings. */
+
+#cards {
+  --card-w: 400px;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: var(--card-w) 1fr var(--card-w);
+  align-items: end;
+  padding: 0 110px 70px;
+  box-sizing: border-box;
+  font-family: var(--body);
+  color: var(--ink);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+#cards.visible { opacity: 1; }
+
+#cards #round {
+  grid-column: 2;
+  align-self: end;
+  justify-self: center;
+  margin-bottom: 10px;
+  padding: 8px 26px;
+  font-family: var(--heading);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #151b26ee;
+  border-radius: 6px;
+}
+
+#cards #round:empty { display: none; }
+
+#cards .pcard {
+  --accent: var(--p1);
+  --accent-light: var(--p1-light);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 560px;
+  padding: 18px 22px 24px;
+  box-sizing: border-box;
+  background: var(--accent);
+  border: 4px solid var(--accent-light);
+  border-radius: 14px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  transform: translateY(24px);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#cards.visible .pcard { transform: none; }
+#cards #card-1 { grid-column: 1; }
+#cards #card-2 { --accent: var(--p2); --accent-light: var(--p2-light); grid-column: 3; }
+#cards .pcard[data-empty="true"] { opacity: 0.5; }
+
+#cards .head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 4px 10px;
+}
+
+#cards .name {
+  font-family: var(--heading);
+  font-size: 54px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+#cards .twitter {
+  font-family: var(--heading);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.95;
+}
+
+#cards .pcard[data-missing="true"] .head::after {
+  content: "NO PROFILE";
+  margin-left: auto;
+  font-family: var(--heading);
+  font-size: 14px;
+  letter-spacing: 0.15em;
+  opacity: 0.7;
+}
+
+/* Outlined label box, as on the 2025 cards. */
+#cards .label {
+  display: inline-block;
+  padding: 1px 8px;
+  font-family: var(--heading);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+#cards .field { display: flex; flex-direction: column; gap: 6px; padding: 0 4px; }
+#cards .field .value { font-size: 20px; font-weight: 700; white-space: pre-wrap; line-height: 1.35; min-height: 1.35em; }
+
+#cards .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 4px 8px; }
+#cards .pair .field { flex-direction: row; align-items: center; gap: 12px; padding: 0; }
+#cards .pair .value { font-family: var(--heading); font-size: 34px; font-weight: 700; line-height: 1; }
+
+#cards .page { display: none; flex-direction: column; gap: 14px; }
+#cards[data-page="profile"] .page-profile,
+#cards[data-page="stats"] .page-stats { display: flex; }
+
+/* Stats page */
+#cards table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-family: var(--heading);
+  font-weight: 700;
+}
+
+#cards col.c-rate { width: 40%; }
+#cards col.c-played { width: 26%; }
+#cards col.c-place { width: 34%; }
+
+#cards th {
+  padding: 4px 4px 6px;
+  font-size: 19px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: 3px solid var(--ink);
+}
+
+#cards th + th,
+#cards td + td { border-left: 3px solid var(--ink); }
+
+#cards td {
+  padding: 5px 6px;
+  white-space: nowrap;
+  font-size: 21px;
+}
+
+#cards td span { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+#cards td .k { font-size: 16px; font-style: normal; letter-spacing: 0.03em; }
+#cards td b { font-weight: 700; }
+
+#cards .rounds {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+  font-family: var(--heading);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+#cards .rounds .label { border: none; padding: 0; font-size: 22px; }
+
+#cards .countries {
+  padding: 8px 12px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 6px;
+  text-align: center;
+}
+
+#cards .countries > .label { border: none; font-size: 22px; }
+
+#cards .countries .flags {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: 8px;
+}
+
+#cards .countries .flags div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--heading);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+#cards .countries img { width: 76px; height: 51px; object-fit: cover; border-radius: 3px; box-shadow: 0 2px 6px #0006; }
+#cards .countries img[hidden] { display: none; }
+
+/* ==== Casters desk ======================================================= */
+/* Caster desk overlay: red title bar, two name cards over the camera feed,
+   red sponsor banner. Geometry follows the 2025 interval overlay
+   (assets/interval.css .topbar/.bottombar) and casters.png. The camera feed
+   is composited behind the (transparent) page by OBS. */
+
+#casters {
+  --red: var(--p1-light);
+  --red-dark: var(--p1);
+  --topbar-h: 77px;
+  --banner-h: 200px;
+  --card-w: 390px;
+  --card-top: 182px;
+  --jp: var(--body);
+  position: absolute;
+  inset: 0;
+  color: var(--ink);
+  font-family: var(--jp);
+}
+
+/* ---- Title bar ---------------------------------------------------- */
+
+#casters .topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: var(--topbar-h);
+  background: var(--red);
+  z-index: 1;
+}
+
+/* Straddles the bar's bottom edge: centred on it, so the lower half of
+   the compass and wordmark hangs below the red onto the camera feed. */
+#casters .mark {
+  position: absolute;
+  top: var(--topbar-h);
+  left: 0;
+  width: 1920px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  z-index: 3;
+}
+
+#casters .mark .compass {
+  width: 62px;
+  height: 62px;
+  flex: 0 0 auto;
+}
+
+#casters .mark .wordmark {
+  font-family: var(--heading);
+  font-size: 58px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* ---- Caster cards -------------------------------------------------- */
+
+#casters .caster {
+  position: absolute;
+  top: var(--card-top);
+  width: var(--card-w);
+  z-index: 2;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+}
+
+/* Left and right of the two seats, clear of the middle of frame. */
+#casters #caster-1 { left: 330px; }
+#casters #caster-2 { left: 1200px; }
+
+#casters .caster[hidden] { display: none; }
+#casters .topbar[hidden],
+#casters .mark[hidden],
+#casters .banner[hidden] { display: none; }
+
+#casters .caster .role {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--red-dark);
+  font-family: var(--jp);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+#casters .caster .role:empty { display: none; }
+
+#casters .caster .name {
+  height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: var(--red);
+  font-family: var(--heading);
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Japanese names need a different face and sit better a touch smaller. */
+#casters .caster .name.kana {
+  font-family: var(--jp);
+  font-weight: 900;
+  font-size: 58px;
+}
+
+#casters .caster .handle {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  color: #3a3a3a;
+  font-family: var(--heading);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+#casters .caster .handle:empty { display: none; }
+
+/* ---- Sponsor banner ------------------------------------------------ */
+
+#casters .banner {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1920px;
+  height: var(--banner-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 120px;
+  background: var(--red);
+  z-index: 1;
+}
+
+/* Per-logo scaling, carried over from the 2025 assets/sponsors.css so the
+   logos read as the same optical size despite different artwork heights. */
+#casters .banner img {
+  height: 84px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+#casters .banner .logo-red-tokyo { height: 118px; }
+#casters .banner .logo-geoguessr-record { height: 42px; }
+
+/* ==== Ban & Pick ========================================================= */
+/* Generic placeholder design for the board. The pages set --accent on :root
+   (it differs per output); the rest of the palette lives here. */
+
+#banpick {
+  --player-a: #ff7043;
+  --player-b: #42a5f5;
+  --panel: rgba(16, 18, 32, 0.92);
+  --text: var(--ink);
+  --muted: #9aa3b5;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 24px;
+  padding: 60px 120px;
+  box-sizing: border-box;
+  font-family: "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  color: var(--text);
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#banpick.visible {
+  opacity: 1;
+  transform: none;
+}
+
+#banpick header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 32px;
+}
+
+#banpick .player {
+  font-size: 44px;
+  font-weight: 700;
+  padding: 12px 28px;
+  background: var(--panel);
+  border-bottom: 6px solid var(--muted);
+  transition: border-color 0.3s;
+}
+
+#banpick .player.a { text-align: left; }
+#banpick .player.b { text-align: right; }
+#banpick[data-turn="A"] .player.a { border-color: var(--player-a); }
+#banpick[data-turn="B"] .player.b { border-color: var(--player-b); }
+
+#banpick #step {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-align: center;
+  padding: 12px 32px;
+  background: var(--accent);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+#banpick .bp-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+#banpick .bp-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#banpick .bp-group-title {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-align: center;
+}
+
+#banpick .bp-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  min-height: 150px;
+  padding: 18px 24px;
+  background: var(--panel);
+  border-left: 8px solid var(--muted);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+#banpick .bp-card-num {
+  grid-row: 1 / span 2;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+#banpick .bp-card-map {
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+#banpick .bp-card-tag {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  min-height: 1.4em;
+}
+
+#banpick .bp-card[data-by="A"] { border-left-color: var(--player-a); }
+#banpick .bp-card[data-by="B"] { border-left-color: var(--player-b); }
+#banpick .bp-card[data-by="A"] .bp-card-tag { color: var(--player-a); }
+#banpick .bp-card[data-by="B"] .bp-card-tag { color: var(--player-b); }
+
+#banpick .bp-card[data-status="banned"] {
+  opacity: 0.35;
+}
+
+#banpick .bp-card[data-status="banned"] .bp-card-map {
+  text-decoration: line-through;
+}
+
+#banpick .bp-card[data-status="picked"],
+#banpick .bp-card[data-status="remaining"] {
+  transform: scale(1.03);
+  outline: 3px solid var(--accent);
+}
+
+#banpick .bp-card[data-status="remaining"] {
+  border-left-color: var(--accent);
+}
+
+#banpick .bp-card[data-status="remaining"] .bp-card-tag {
+  color: var(--accent);
+}
+
+#banpick footer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+#banpick .bp-game {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 20px;
+  align-items: center;
+  padding: 16px 24px;
+  background: var(--panel);
+  border-radius: 6px;
+  opacity: 0.5;
+}
+
+#banpick .bp-game[data-filled="true"] { opacity: 1; }
+
+#banpick .bp-game-label {
+  grid-row: 1 / span 2;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+}
+
+#banpick .bp-game-mode {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  min-height: 1.4em;
+}
+
+#banpick .bp-game-map {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+/* ==== Lower third ======================================================== */
+/* Bottom-left title (match "A vs B" or operator text) with an optional
+   subtitle strip underneath; slides up when shown. */
+
+#lower-third {
+  position: absolute;
+  left: 110px;
+  bottom: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#lower-third.visible {
+  opacity: 1;
+  transform: none;
+}
+
+#lower-third .lt-title {
+  padding: 10px 28px;
+  font-family: var(--heading);
+  font-size: 56px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--p1);
+  border-left: 10px solid #fff;
+}
+
+#lower-third .lt-subtitle {
+  align-self: flex-start;
+  padding: 6px 20px;
+  font-family: var(--heading);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #151b26ee;
+}
+
+#lower-third .lt-subtitle:empty { display: none; }

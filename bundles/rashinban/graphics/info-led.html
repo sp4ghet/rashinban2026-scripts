@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>RASHINBAN 2026 — Info (LED)</title>
+    <!-- kaneda-gothic comes from the same Adobe Fonts kit as the 2025 overlays; its licence forbids self-hosting.
+         Vendored OFL fonts (scripts/fetch-fonts.mjs) provide Oswald as the offline fallback and Noto Sans JP for body text. -->
+    <link rel="stylesheet" href="https://use.typekit.net/ljs6bhu.css" />
+    <link rel="stylesheet" href="assets/fonts/fonts.css" />
+    <link rel="stylesheet" href="info.css" />
+    <style>
+      :root { --accent: #00bcd4; }
+      /* Composited over the LED presenter page, which paints its own black
+         outside the 1920x576 band, so this page must not be opaque. */
+      body { background: transparent; }
+    </style>
+  </head>
+  <body data-output="led">
+    <!-- Layer order on screen = DOM order (each host is its own stacking context). -->
+    <div class="layer" id="layer-banpick"></div>
+    <div class="layer" id="layer-cards"></div>
+    <script src="info-led.js"></script>
+  </body>
+</html>

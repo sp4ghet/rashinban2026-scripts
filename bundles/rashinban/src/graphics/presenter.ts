@@ -11,6 +11,8 @@ import { clientRole, createPresenterClient } from './presenter/client.ts';
 import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
 import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
+import { bindLayers } from './broadcast/bind.ts';
+import { channelFromSearch } from '../broadcast/channel.ts';
 import type { PresenterPublicConfig } from '../config/types.ts';
 import { boundMediaState, changedVideoBindings, mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
 
@@ -28,7 +30,7 @@ let selectedMedia = EMPTY_MEDIA;
 const videoPlayer = createVideoPlayer(() => {
   const video = document.createElement('video'); video.className = 'celebration-video'; document.body.append(video); return video;
 }, (fn, ms) => { const id = setTimeout(fn, ms); return () => clearTimeout(id); });
-const role = clientRole(location.search);
+const role = clientRole(location.search, document.body.dataset.output);
 const clientId = crypto.randomUUID();
 const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
   send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });
@@ -48,9 +50,15 @@ presenterAssets.on('change', inventory => {
   if (changedVideos.length) { videoPlayer.invalidate(changedVideos); videoPlayer.preload(selectedMedia, next.versions); }
 });
 document.body.dataset.clientId = clientId; document.body.dataset.role = role;
+// The LED bus blanks the wall between matches; the stream page ignores the bus.
+if (document.body.dataset.output === 'led') {
+  bindLayers('led', channelFromSearch(location.search), layers => { document.body.classList.toggle('blanked', !layers.presenter.visible); });
+}
+// LED clients play celebrations on their own clock and always silently.
+const silent = (muted: boolean) => muted || role === 'led';
 function reconcileVideo() {
   const options = settings.value ?? DEFAULT_SETTINGS;
-  videoPlayer.update(timeline.value?.generation ?? null, client.ownsProgram(), timeline.value?.effect ?? 'none', options.muted, options.effectsGain);
+  videoPlayer.update(timeline.value?.generation ?? null, client.playsVideo(), timeline.value?.effect ?? 'none', silent(options.muted), options.effectsGain);
   audioOutput.sync(timeline.value, options);
 }
 clients.on('change', value => { if (value) client.updateClients(value); reconcileVideo(); });
@@ -98,7 +106,7 @@ function frame() {
   for (const cue of client.pollCues()) if (cue.kind === 'five-k' && timing) {
     const complete = client.effectCompletion(timing);
     const asset = celebrationAsset(selectedMedia, timing.effect, mediaAssetsForCategory(presenterAssets.value, 'video', legacyVideoAssets.value ?? []));
-    if (asset) videoPlayer.play(asset, timing.generation, (_generation, failed) => { void complete(failed); }, options.muted, options.effectsGain);
+    if (asset) videoPlayer.play(asset, timing.generation, (_generation, failed) => { void complete(failed); }, silent(options.muted), options.effectsGain);
     else void complete(true);
   }
   reconcileVideo();

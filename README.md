@@ -20,17 +20,19 @@ npm run dev     # esbuild watch + NodeCG together
 ```
 
 - Dashboard: http://localhost:9090/
-  - **Broadcast**: Current Match, Ban & Pick, and Player Cards for live operation.
   - **Config**: Duels Presenter, start.gg, and Google Sheets for setup and connection recovery.
+  - **LED**: the LED switcher (preview/program, TAKE) for the venue wall.
+  - **Shared**: Current Match, Ban & Pick, Casters, and Bracket; content that is live on both outputs.
+  - **Stream**: the stream switcher (preview/program, TAKE) for OBS.
   - Restart NodeCG after changing dashboard workspace assignments.
-- Ban & Pick overlays (1920×1080): `graphics/banpick-stream.html` (stream),
-  `graphics/banpick-led.html` (venue LED). Same data, separate CSS.
-- Player cards (1920×1080): `graphics/player-cards.html`. Two cards for the
-  current match, filled from the Google Sheet players tab joined to the
+- Info overlays (1920×1080): `graphics/info-stream.html` (player cards, lower
+  third, casters, Ban & Pick) and `graphics/info-led.html` (player cards and
+  Ban & Pick, transparent over the LED presenter). Layer visibility is switched
+  per output from the Stream and LED tabs; see [docs/broadcast.md](docs/broadcast.md).
+  Player cards are filled from the Google Sheet players tab joined to the
   start.gg entrants. Select players or load an upcoming start.gg match in the
-  "Current Match" panel. Player Cards, Ban & Pick and Presenter share that match.
-  Flip profile/stats in "Player Cards". Column spec in
-  [docs/sheet/README.md](docs/sheet/README.md). Flags are local PNGs under
+  "Current Match" panel; the cards, Ban & Pick and Presenter share that match.
+  Column spec in [docs/sheet/README.md](docs/sheet/README.md). Flags are local PNGs under
   `graphics/assets/images/flags/` (refresh with `node scripts/fetch-flags.mjs`)
   and Noto Sans JP / Oswald are vendored OFL files under `graphics/assets/fonts/`
   (`node scripts/fetch-fonts.mjs`). The heading font kaneda-gothic loads from
@@ -70,6 +72,8 @@ your credentials.
 
 Program: `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program`.
 Separate audio: `http://localhost:9090/bundles/rashinban/graphics/presenter-audio.html?role=audio`.
+LED wall: `http://localhost:9090/bundles/rashinban/graphics/presenter-led.html`
+(no role parameter; always silent, top 1920×576 band). See [docs/broadcast.md](docs/broadcast.md).
 Use `?role=preview` for silent graphic inspection. The dashboard includes
 party selection/reconnect, side mapping, media, mute and output-mode controls.
 
@@ -124,9 +128,14 @@ migration backup; new setup uses `.env` for secrets.
 The extension mounts plain HTTP endpoints for Bitfocus Companion's
 **Generic HTTP** module (method POST, no body needed):
 
+- `POST /rashinban/broadcast/{stream,led}/{take,revert}`
 - `POST /rashinban/banpick/{show,hide,toggle,undo,reset}`
+- `POST /rashinban/playercards/{show,hide,toggle,profile,stats,flip}`
+- `POST /rashinban/casters/{1,2}/{show,hide,toggle}`
 - `POST /rashinban/startgg/refresh`
 - `POST /rashinban/sheet/refresh`
-- `POST /rashinban/playercards/{show,hide,toggle,profile,stats,flip}`
 
-Point Companion at `http://<this-machine>:9090/rashinban/...`.
+The show/hide/toggle routes cut the stream program directly; the LED output
+takes from its switcher tab or `/broadcast/led/take`. Details in
+[docs/broadcast.md](docs/broadcast.md). Point Companion at
+`http://<this-machine>:9090/rashinban/...`.

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Stream switcher</title>
+    <link rel="stylesheet" href="switcher.css" />
+  </head>
+  <body data-output="stream">
+    <main class="switcher">
+      <section class="monitors">
+        <div class="monitor" data-channel="preview">
+          <h3>PREVIEW</h3>
+          <div class="screen"><iframe class="presenter" title="Presenter preview"></iframe><iframe class="info" title="Info preview"></iframe></div>
+        </div>
+        <div class="monitor" data-channel="program">
+          <h3>PROGRAM</h3>
+          <div class="screen"><iframe class="presenter" title="Presenter program"></iframe><iframe class="info" title="Info program"></iframe></div>
+        </div>
+      </section>
+      <section class="strip" id="strip"></section>
+      <footer class="actions">
+        <label class="check"><input type="checkbox" id="presenter-monitors" /> Presenter monitors</label>
+        <span id="error" role="status"></span>
+        <button id="revert">Revert preview</button>
+        <button id="take">TAKE</button>
+      </footer>
+    </main>
+    <script src="switcher.js"></script>
+  </body>
+</html>

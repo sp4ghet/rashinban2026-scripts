@@ -2,11 +2,11 @@ import type NodeCG from "@nodecg/types";
 import { registerMatch } from './match';
 
 import { registerBanPick } from "./banpick";
+import { registerBroadcast } from "./broadcast";
 import { registerBracket } from "./bracket";
 import { registerCasters } from "./casters";
 import { registerStartgg } from "./startgg";
 import { registerSheet } from "./sheet";
-import { registerPlayerCards } from "./playercards";
 
 import { registerPresenter } from './presenter/register.ts';
 import { initializeConfiguration } from './config/register.ts';
@@ -21,13 +21,13 @@ export = (nodecg: NodeCG.ServerAPI) => {
   // Mounted at http://<host>:9090/rashinban/...
   const router = nodecg.Router();
 
+  registerBroadcast(nodecg, router);
   registerBanPick(nodecg, router);
   registerStartgg(nodecg, router, store);
   registerBracket(nodecg, router);
   registerSheet(nodecg, router, store);
-  registerCasters(nodecg, router);
+  registerCasters(nodecg);
   registerMatch(nodecg);
-  registerPlayerCards(nodecg, router);
 
   nodecg.mount("/rashinban", router);
 

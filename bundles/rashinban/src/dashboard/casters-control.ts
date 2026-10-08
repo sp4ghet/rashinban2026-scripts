@@ -1,4 +1,5 @@
-// Casters panel: pick who is on each card and toggle each card on air.
+// Casters panel: pick who is on each card. Whether a card is on air is a
+// switcher concern (Stream tab, broadcast bus), not something set here.
 import { findCaster, withDefaults, type Caster, type CastersState } from "../casters/casters";
 import { CASTERS_MESSAGES, REPLICANTS } from "../types/replicants";
 
@@ -8,7 +9,7 @@ const state = nodecg.Replicant<CastersState>(REPLICANTS.castersState);
 const el = (id: string) => document.getElementById(id)!;
 const SLOTS = [0, 1] as const;
 
-async function send(slot: number, value: { name?: string; enabled?: boolean }) {
+async function send(slot: number, value: { name: string }) {
   try {
     await nodecg.sendMessage(CASTERS_MESSAGES.setSlot, { slot, ...value });
     el("error").textContent = "";
@@ -20,10 +21,6 @@ async function send(slot: number, value: { name?: string; enabled?: boolean }) {
 for (const slot of SLOTS) {
   const select = el(`slot-${slot}-name`) as HTMLSelectElement;
   select.onchange = () => void send(slot, { name: select.value });
-  el(`slot-${slot}-enabled`).onclick = () => {
-    const current = withDefaults(state.value ?? undefined);
-    void send(slot, { enabled: !current.slots[slot]!.enabled });
-  };
 }
 
 function render() {
@@ -31,7 +28,7 @@ function render() {
   const list = casters.value ?? [];
 
   for (const slot of SLOTS) {
-    const { name, enabled } = current.slots[slot]!;
+    const { name } = current.slots[slot]!;
     const select = el(`slot-${slot}-name`) as HTMLSelectElement;
     // Rebuilding wholesale is fine: the list is a handful of rows.
     const options = ['<option value="">— none —</option>'];
@@ -45,23 +42,19 @@ function render() {
       options.push(`<option value="${name}" selected>${name} (not in sheet)</option>`);
     }
     if (document.activeElement !== select) select.innerHTML = options.join("");
-
-    const button = el(`slot-${slot}-enabled`);
-    button.textContent = enabled ? "Visible" : "Hidden";
-    button.classList.toggle("active", enabled);
   }
 
+  // Both selected names, regardless of whether the switcher has them on air.
   const live = SLOTS.map((slot) => {
-    const { name, enabled } = current.slots[slot]!;
-    const caster = findCaster(list, name);
-    if (!enabled || !caster) return null;
+    const caster = findCaster(list, current.slots[slot]!.name);
+    if (!caster) return null;
     return caster.twitter ? `${caster.name} @${caster.twitter}` : caster.name;
   }).filter(Boolean);
 
   el("preview").textContent = live.length
     ? live.join("\n")
     : list.length
-      ? "No cards visible"
+      ? "No cards selected"
       : "No casters in the sheet (check Config → Google Sheets)";
 }
 

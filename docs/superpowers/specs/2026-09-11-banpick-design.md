@@ -1,5 +1,7 @@
 # Ban & Pick design
 
+*Superseded in part: overlay visibility and the banpick:setVisible message moved to the broadcast switcher (see [docs/broadcast.md](../../broadcast.md)).*
+
 Date: 2026-09-11
 
 Status: Generic first version. Overlay designs are placeholders to be

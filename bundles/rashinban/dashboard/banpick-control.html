@@ -68,7 +68,6 @@
 
       button:hover { filter: brightness(1.2); }
       button:disabled { opacity: 0.4; cursor: default; }
-      #visible.active { background: #2e7d32; }
       #reset { background: #b71c1c; }
 
       #step {
@@ -170,7 +169,6 @@
       <label>Right / B <input id="name-b" type="text" readonly placeholder="Player B" /></label>
     </div>
     <div class="row">
-      <button id="visible">Show overlay</button>
       <button id="undo">Undo</button>
       <button id="reset">Reset</button>
     </div>
@@ -183,6 +181,7 @@
     </div>
     <div id="status"></div>
     <p class="hint">Player tablet page (append <code>?player=A</code> / <code>?player=B</code> to lock): <a id="player-link" target="_blank"></a></p>
+    <p class="hint">Overlay visibility is on the Stream / LED switcher tabs.</p>
     <script src="banpick-control.js"></script>
   </body>
 </html>
