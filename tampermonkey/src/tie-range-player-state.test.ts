@@ -63,7 +63,7 @@ test('decodes the captured player response to literal custom health without serv
   assert.equal(accepted.context.mode, 'full');
   assert.deepEqual(accepted.context.teamIds, ['team-blue', 'team-red']);
   assert.deepEqual(accepted.context.teamLabels, ['blue', 'red']);
-  assert.deepEqual(accepted.context.playerIds, ['player-blue', 'player-red']);
+  assert.deepEqual(accepted.context.playerIds, [['player-blue'], ['player-red']]);
   assert.deepEqual(accepted.context.input, {
     initialHealth: 6000,
     individual: 5,
@@ -90,10 +90,12 @@ test('decodes the captured player response to literal custom health without serv
   });
 });
 
-test('requires two distinct single-player teams and explicit blue/red labels', () => {
+test('requires two teams of distinct players and explicit blue/red labels', () => {
   for (const [name, mutate] of [
-    ['multiple players', (value: any) => value.teams[0].players.push({ playerId: 'extra' })],
+    ['empty team', (value: any) => { value.teams[0].players = []; }],
     ['duplicate player', (value: any) => { value.teams[1].players[0].playerId = 'player-blue'; }],
+    ['player on both teams', (value: any) => { value.teams[1].players.push({ playerId: 'player-blue' }); }],
+    ['repeated teammate', (value: any) => { value.teams[0].players.push({ playerId: 'player-blue' }); }],
     ['missing label', (value: any) => { delete value.teams[0].name; }],
     ['unknown label', (value: any) => { value.teams[0].name = 'home'; }],
   ] as const) {
@@ -101,6 +103,45 @@ test('requires two distinct single-player teams and explicit blue/red labels', (
     assert.equal(result.context, null, name);
     assert.equal(result.diagnostic?.code, 'unsupported-game', name);
   }
+});
+
+function teamDuel(value: any): void {
+  value.teams[0].players.push({ playerId: 'player-blue-2' });
+  value.teams[1].players.push({ playerId: 'player-red-2' });
+}
+
+test('decodes team duels with several players per team', () => {
+  const accepted = acceptPlayerSnapshot(null, snapshot(teamDuel), 'full');
+  assert.equal(accepted.accepted, true);
+  assert.equal(accepted.diagnostic, null);
+  assert.deepEqual(accepted.context?.playerIds, [['player-blue', 'player-blue-2'], ['player-red', 'player-red-2']]);
+  assert.deepEqual(accepted.output?.currentHealth, [0, 5644]);
+});
+
+test('a team guess time is the earliest deliberate guess by any teammate', () => {
+  const accepted = acceptPlayerSnapshot(null, snapshot(value => {
+    teamDuel(value);
+    withGuesses(value);
+    value.teams[0].players[1].guesses = [{ roundNumber: 1, created: '2026-09-10T12:23:10.000+00:00', score: 4000 }];
+    value.teams[1].players[1].guesses = [{ roundNumber: 1, created: '2026-09-10T12:23:25.000+00:00', score: 4164 }];
+  }), { mode: 'off', pinpointing: true });
+  assert.deepEqual(accepted.context?.input.rounds[0].guessedAtMs, [
+    Date.parse('2026-09-10T12:23:10.000+00:00'),
+    Date.parse('2026-09-10T12:23:25.000+00:00'),
+  ]);
+});
+
+test('a changed team roster is an identity change, but reordering is not', () => {
+  const first = acceptPlayerSnapshot(null, snapshot(teamDuel), 'full');
+  const reordered = acceptPlayerSnapshot(first.context, snapshot(value => {
+    teamDuel(value); value.version = 50; value.teams[0].players.reverse();
+  }), 'full');
+  assert.equal(reordered.accepted, true);
+  const changed = acceptPlayerSnapshot(first.context, snapshot(value => {
+    teamDuel(value); value.version = 50; value.teams[0].players[1].playerId = 'substitute';
+  }), 'full');
+  assert.equal(changed.accepted, false);
+  assert.equal(changed.diagnostic?.code, 'identity-change');
 });
 
 test('rejects partial, duplicate, invalid, and incompatible scoring data', () => {
@@ -522,7 +563,7 @@ test('schema 1 saved contexts migrate with Pinpointing Duels off and unknown gue
   await savePlayerContext(storage, context);
   const key = [...storage.values.keys()].find(k => k.includes('.game.'))!;
   const legacy = JSON.parse(storage.values.get(key) as string);
-  legacy.schemaVersion = 1; delete legacy.pinpointing;
+  legacy.schemaVersion = 1; delete legacy.pinpointing; legacy.playerIds = ['player-blue', 'player-red'];
   for (const round of legacy.input.rounds) delete round.guessedAtMs;
   storage.values.set(key, JSON.stringify(legacy));
   const restored = await loadPlayerContext(storage, context.gameId);
@@ -533,6 +574,27 @@ test('schema 1 saved contexts migrate with Pinpointing Duels off and unknown gue
   assert.deepEqual(restored.output?.currentHealth, [0, 5644]);
   assert.equal(restored.pinpointing, null);
   assert.equal(restored.diagnostic, null);
+});
+
+test('schema 2 saved contexts migrate single player IDs to team rosters', async () => {
+  const storage = new MemoryStorage();
+  const context = acceptPlayerSnapshot(null, snapshot(), 'full').context!;
+  await savePlayerContext(storage, context);
+  const key = [...storage.values.keys()].find(k => k.includes('.game.'))!;
+  const legacy = JSON.parse(storage.values.get(key) as string);
+  legacy.schemaVersion = 2; legacy.playerIds = ['player-blue', 'player-red'];
+  storage.values.set(key, JSON.stringify(legacy));
+  const restored = await loadPlayerContext(storage, context.gameId);
+  assert.deepEqual(restored.context, context);
+  assert.equal(restored.diagnostic, null);
+});
+
+test('saved team duel contexts restore their rosters', async () => {
+  const storage = new MemoryStorage();
+  const context = acceptPlayerSnapshot(null, snapshot(teamDuel), 'full').context!;
+  await savePlayerContext(storage, context);
+  const restored = await loadPlayerContext(storage, context.gameId);
+  assert.deepEqual(restored.context, context);
 });
 
 test('saved Pinpointing Duels contexts restore their points and reject bad guess times', async () => {

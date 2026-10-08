@@ -175,6 +175,24 @@ test('resolves the live game node and fetches player state immediately with cred
   assert.deepEqual(h.views.at(-1)?.output?.currentHealth, [0, 5644]);
 });
 
+test('orients a team duel to the team containing the current account', async () => {
+  const h = harness(async url => {
+    if (url.startsWith(PHONEBOOK_PREFIX)) {
+      return response({ gameId: 'player-rest-full', gameServerNodeId: 'node-1', status: 'Active' });
+    }
+    const value = game() as any;
+    value.teams[0].players.push({ playerId: 'player-blue-2' });
+    value.teams[1].players.push({ playerId: 'player-red-2' });
+    return response(value);
+  }, { userId: 'player-red-2' });
+
+  h.controller.start();
+  await flush();
+
+  assert.equal(h.views.at(-1)?.status, 'ready');
+  assert.equal(h.views.at(-1)?.localTeamId, 'team-red');
+});
+
 test('discovers a party lobby duel before reading its player state', async () => {
   const calls: string[] = [];
   const h = harness(async url => {

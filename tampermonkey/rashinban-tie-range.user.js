@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.2.0
+// @version      0.3.0
 // @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Set the same rules as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -56,6 +56,10 @@
       return nextStart !== void 0 && nextStart.startTime !== previousStart.startTime;
     });
   }
+  function sideLabels(context, localIndex) {
+    if (localIndex < 0) return ["Blue", "Red"];
+    return context.playerIds.some((team) => team.length > 1) ? ["Your team", "Opponents"] : ["You", "Opponent"];
+  }
   function modeLabel(mode2, pinpointing = false) {
     const tieRange = mode2 === "full" ? "Full tie-range" : mode2 === "half" ? "Half tie-range" : null;
     if (pinpointing) return tieRange ? `Pinpointing Duels \xB7 ${tieRange}` : "Pinpointing Duels";
@@ -81,7 +85,7 @@
     const totals = latest && !disclosed ? latest.totalsBefore : points.totals;
     const onMatchPoint = (total) => total >= points.firstTo - 2 && total < points.firstTo;
     const matchPoint = disclosed ? points.matchPoint : [onMatchPoint(totals[0]), onMatchPoint(totals[1])];
-    const labels = localIndex >= 0 ? ["You", "Opponent"] : ["Blue", "Red"];
+    const labels = sideLabels(context, localIndex);
     const teams = order.map((index, position) => ({
       teamId: points.teamIds[index],
       label: labels[position],
@@ -162,7 +166,7 @@
     const disclosed = latest === null || view.status === "ended" || retainedDisclosure || resultIsDisclosed(latest, context.currentRoundNumber, nativeResultVisible);
     const health = latest && !disclosed ? latest.healthBefore : output.currentHealth;
     const multipliers = latest && !disclosed ? latest.multiplierTenths : output.currentMultiplierTenths;
-    const labels = localIndex >= 0 ? ["You", "Opponent"] : ["Blue", "Red"];
+    const labels = sideLabels(context, localIndex);
     const orderedHealth = pair(health, order);
     const orderedMaximum = pair(output.initialHealth, order);
     const orderedMultipliers = pair(multipliers, order);
@@ -645,7 +649,7 @@
   }
 
   // tampermonkey/src/tie-range-player-state.ts
-  var PLAYER_TIE_RANGE_RULES_VERSION = 2;
+  var PLAYER_TIE_RANGE_RULES_VERSION = 3;
   var STORAGE_PREFIX = "rashinban.tie-range";
   var STORAGE_INDEX_KEY = `${STORAGE_PREFIX}.games`;
   var MAX_SAVED_GAMES = 10;
@@ -679,6 +683,9 @@
   }
   function tupleEqual(left, right) {
     return left.length === right.length && left.every((value, index) => value === right[index]);
+  }
+  function sameRosters(left, right) {
+    return left.length === right.length && left.every((team, index) => tupleEqual([...team].sort(), [...right[index]].sort()));
   }
   function diagnostic(code, message) {
     return { code, message };
@@ -758,9 +765,8 @@
     }
     return deadlines;
   }
-  function decodeGuessTimes(player, deadlines) {
-    const times = /* @__PURE__ */ new Map();
-    if (!Array.isArray(player.guesses)) return times;
+  function decodeGuessTimes(player, deadlines, times) {
+    if (!Array.isArray(player.guesses)) return;
     for (const rawGuess of player.guesses) {
       if (typeof rawGuess !== "object" || rawGuess === null) continue;
       const { roundNumber, created } = rawGuess;
@@ -771,7 +777,6 @@
       const previous = times.get(round);
       if (previous === void 0 || at < previous) times.set(round, at);
     }
-    return times;
   }
   function decodeTeams(raw) {
     const deadlines = decodeDeadlines(raw);
@@ -787,12 +792,16 @@
       }
       if (byLabel.has(label)) throw new DecodeError("unsupported-game", "Team labels must be unique");
       const id = nonemptyString(team.id, "Team ID");
-      if (!Array.isArray(team.players) || team.players.length !== 1) {
-        throw new DecodeError("unsupported-game", "Only one player per team is supported");
+      if (!Array.isArray(team.players) || team.players.length === 0) {
+        throw new DecodeError("unsupported-game", "Every team needs at least one player");
       }
-      const player = record(team.players[0], "Player");
-      const playerId = nonemptyString(player.playerId, "Player ID");
-      const guessTimes = decodeGuessTimes(player, deadlines);
+      const playerIds = [];
+      const guessTimes = /* @__PURE__ */ new Map();
+      for (const rawPlayer of team.players) {
+        const player = record(rawPlayer, "Player");
+        playerIds.push(nonemptyString(player.playerId, "Player ID"));
+        decodeGuessTimes(player, deadlines, guessTimes);
+      }
       if (!Array.isArray(team.roundResults)) {
         throw new DecodeError("partial-results", "Team round results are missing");
       }
@@ -805,11 +814,11 @@
         if (results.has(round)) throw new DecodeError("partial-results", `Duplicate result for round ${round}`);
         results.set(round, score);
       }
-      byLabel.set(label, { id, playerId, results, guessTimes });
+      byLabel.set(label, { id, playerIds, results, guessTimes });
     }
     const blue = byLabel.get("blue");
     const red = byLabel.get("red");
-    if (!blue || !red || blue.id === red.id || blue.playerId === red.playerId) {
+    if (!blue || !red || blue.id === red.id || (/* @__PURE__ */ new Set([...blue.playerIds, ...red.playerIds])).size !== blue.playerIds.length + red.playerIds.length) {
       throw new DecodeError("unsupported-game", "Team and player identities must be distinct");
     }
     const allRounds = /* @__PURE__ */ new Set([...blue.results.keys(), ...red.results.keys()]);
@@ -828,7 +837,7 @@
     }
     return {
       teamIds: [blue.id, red.id],
-      playerIds: [blue.playerId, red.playerId],
+      playerIds: [blue.playerIds, red.playerIds],
       rounds
     };
   }
@@ -911,6 +920,7 @@
     Object.freeze(context.input);
     Object.freeze(context.teamIds);
     Object.freeze(context.teamLabels);
+    for (const team of context.playerIds) Object.freeze(team);
     Object.freeze(context.playerIds);
     Object.freeze(context.roundStarts);
     return Object.freeze(context);
@@ -957,7 +967,7 @@
         diagnostic: activePrevious.rollbackPendingFrom ? diagnostic("recovery", "Waiting for restarted round history to clear") : endedWithoutWinner(activePrevious) ? diagnostic("source-ended", "Duel ended without a custom winner") : null
       };
     }
-    if (activePrevious && (!tupleEqual(activePrevious.teamIds, decoded.teamIds) || !tupleEqual(activePrevious.playerIds, decoded.playerIds))) {
+    if (activePrevious && (!tupleEqual(activePrevious.teamIds, decoded.teamIds) || !sameRosters(activePrevious.playerIds, decoded.playerIds))) {
       return retained(activePrevious, "identity-change", "Team identities changed during the duel");
     }
     if (activePrevious && !sameRules(activePrevious, decoded)) {
@@ -1007,7 +1017,7 @@
       rollbackPendingFrom,
       teamIds: [...decoded.teamIds],
       teamLabels: ["blue", "red"],
-      playerIds: [...decoded.playerIds],
+      playerIds: [[...decoded.playerIds[0]], [...decoded.playerIds[1]]],
       roundStarts: decoded.roundStarts.map((start2) => ({ ...start2 })),
       input: {
         ...decoded.input,
@@ -1036,11 +1046,18 @@
     }
   }
   function migrateSavedContext(parsed) {
-    if (parsed.schemaVersion !== 1) return;
-    parsed.schemaVersion = PLAYER_TIE_RANGE_RULES_VERSION;
-    parsed.pinpointing = false;
-    if (parsed.input && Array.isArray(parsed.input.rounds)) {
-      for (const round of parsed.input.rounds) if (round && round.guessedAtMs === void 0) round.guessedAtMs = [null, null];
+    if (parsed.schemaVersion === 1) {
+      parsed.schemaVersion = 2;
+      parsed.pinpointing = false;
+      if (parsed.input && Array.isArray(parsed.input.rounds)) {
+        for (const round of parsed.input.rounds) if (round && round.guessedAtMs === void 0) round.guessedAtMs = [null, null];
+      }
+    }
+    if (parsed.schemaVersion === 2) {
+      parsed.schemaVersion = PLAYER_TIE_RANGE_RULES_VERSION;
+      if (Array.isArray(parsed.playerIds)) {
+        parsed.playerIds = parsed.playerIds.map((id) => [id]);
+      }
     }
   }
   function restoreContext(value, expectedGameId) {
@@ -1059,10 +1076,12 @@
       if (parsed.mode !== "off" && parsed.mode !== "full" && parsed.mode !== "half" || typeof parsed.pinpointing !== "boolean" || parsed.gameId !== expectedGameId || expectedGameId.length === 0 || !Number.isInteger(parsed.sourceVersion) || parsed.sourceVersion < 0 || !Number.isInteger(parsed.currentRoundNumber) || parsed.currentRoundNumber < 1 || typeof parsed.sourceStatus !== "string" || parsed.sourceStatus.length === 0 || !Array.isArray(parsed.teamIds) || parsed.teamIds.length !== 2 || !Array.isArray(parsed.teamLabels) || !tupleEqual(parsed.teamLabels, ["blue", "red"]) || !Array.isArray(parsed.playerIds) || parsed.playerIds.length !== 2 || !Array.isArray(parsed.roundStarts)) {
         throw new Error("invalid context");
       }
-      for (const tuple of [parsed.teamIds, parsed.playerIds]) {
-        if (tuple.some((id) => typeof id !== "string" || id.length === 0) || tuple[0] === tuple[1]) {
-          throw new Error("invalid identity");
-        }
+      if (parsed.teamIds.some((id) => typeof id !== "string" || id.length === 0) || parsed.teamIds[0] === parsed.teamIds[1]) {
+        throw new Error("invalid identity");
+      }
+      const players = parsed.playerIds.flatMap((team) => Array.isArray(team) && team.length > 0 ? team : [null]);
+      if (players.some((id) => typeof id !== "string" || id.length === 0) || new Set(players).size !== players.length) {
+        throw new Error("invalid identity");
       }
       if (!parsed.input || !tupleEqual(parsed.teamIds, parsed.input.teamIds)) throw new Error("identity mismatch");
       foldTieRange(parsed.input, parsed.mode === "off" ? null : parsed.mode);
@@ -1222,7 +1241,7 @@
     function localTeamId() {
       const userId = dependencies.getUserId();
       if (!context || !userId) return null;
-      const index = context.playerIds.indexOf(userId);
+      const index = context.playerIds.findIndex((team) => team.includes(userId));
       return index < 0 ? null : context.teamIds[index];
     }
     function publish(status, message = null) {
@@ -1878,8 +1897,6 @@
       [hidden] { display: none !important; }
       .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; width: calc(100vw - 48px);
         transform: translateX(-50%); filter: drop-shadow(0 3px 9px #000b); }
-      .mode { margin: 0 auto 6px; width: max-content; padding: 3px 9px; border-radius: 999px;
-        background: #111d; color: #f4f4f4; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
       .teams { display: flex; justify-content: space-between; gap: 180px; }
       .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
       .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
@@ -1926,7 +1943,6 @@
         .numbers { flex-wrap: wrap; gap: 3px; } .team-head { flex-wrap: wrap; } }
     </style>
     <section class="hud" data-rb="hud" aria-live="polite" hidden>
-      <div class="mode" data-rb="mode" data-rb-mode-note></div>
       <div class="teams" data-rb="teams">
         <article class="team" data-rb="team-0"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div><div class="pips" data-rb="pips" hidden></div></article>
         <article class="team" data-rb="team-1"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div><div class="pips" data-rb="pips" hidden></div></article>
@@ -2026,9 +2042,7 @@
     }
     function renderDisplay(display, layoutDiagnostic) {
       hud.hidden = !display.showHud && !display.showDiagnostic && layoutDiagnostic === null;
-      byRb("mode").hidden = !display.showHud;
       byRb("teams").hidden = !display.showHud;
-      byRb("mode").textContent = display.appliesToNextDuel ? `${display.modeLabel} \xB7 setting applies next duel` : display.modeLabel;
       if (display.teams) {
         display.teams.forEach((team, index) => {
           const root = byRb(`team-${index}`);
@@ -2092,7 +2106,10 @@
           continue;
         }
         const healthColumns = [3, 4];
-        let columnByTeam = view.context.playerIds.map((playerId) => healthColumns.find((column) => (userIdFromLink(headerCells[column], document2) ?? userIdFromLink(headerCells[column - 2], document2)) === playerId) ?? -1);
+        let columnByTeam = view.context.playerIds.map((playerIds) => healthColumns.find((column) => {
+          const linked = userIdFromLink(headerCells[column], document2) ?? userIdFromLink(headerCells[column - 2], document2);
+          return linked !== null && playerIds.includes(linked);
+        }) ?? -1);
         if (columnByTeam[0] >= 0 && columnByTeam[1] < 0) columnByTeam[1] = columnByTeam[0] === 3 ? 4 : 3;
         if (columnByTeam[1] >= 0 && columnByTeam[0] < 0) columnByTeam[0] = columnByTeam[1] === 3 ? 4 : 3;
         if (columnByTeam.some((column) => column < 0)) {

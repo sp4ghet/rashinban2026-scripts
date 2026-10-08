@@ -211,7 +211,7 @@ export function createPlayerTieRangeController(
   function localTeamId(): string | null {
     const userId = dependencies.getUserId();
     if (!context || !userId) return null;
-    const index = context.playerIds.indexOf(userId);
+    const index = context.playerIds.findIndex(team => team.includes(userId));
     return index < 0 ? null : context.teamIds[index];
   }
 

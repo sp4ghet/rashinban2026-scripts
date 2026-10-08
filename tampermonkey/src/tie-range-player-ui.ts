@@ -128,8 +128,6 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       [hidden] { display: none !important; }
       .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; width: calc(100vw - 48px);
         transform: translateX(-50%); filter: drop-shadow(0 3px 9px #000b); }
-      .mode { margin: 0 auto 6px; width: max-content; padding: 3px 9px; border-radius: 999px;
-        background: #111d; color: #f4f4f4; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
       .teams { display: flex; justify-content: space-between; gap: 180px; }
       .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
       .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
@@ -176,7 +174,6 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
         .numbers { flex-wrap: wrap; gap: 3px; } .team-head { flex-wrap: wrap; } }
     </style>
     <section class="hud" data-rb="hud" aria-live="polite" hidden>
-      <div class="mode" data-rb="mode" data-rb-mode-note></div>
       <div class="teams" data-rb="teams">
         <article class="team" data-rb="team-0"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div><div class="pips" data-rb="pips" hidden></div></article>
         <article class="team" data-rb="team-1"><div class="team-head"><span class="label" data-rb="label"></span><span class="numbers"><strong class="health" data-rb="health"></strong><span class="multiplier" data-rb="multiplier"></span></span></div><div class="track"><div class="fill" data-rb="bar-fill"></div></div><div class="pips" data-rb="pips" hidden></div></article>
@@ -283,11 +280,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
 
   function renderDisplay(display: PlayerTieRangeDisplay, layoutDiagnostic: string | null): void {
     hud.hidden = !display.showHud && !display.showDiagnostic && layoutDiagnostic === null;
-    byRb<HTMLElement>('mode').hidden = !display.showHud;
     byRb<HTMLElement>('teams').hidden = !display.showHud;
-    byRb<HTMLElement>('mode').textContent = display.appliesToNextDuel
-      ? `${display.modeLabel} · setting applies next duel`
-      : display.modeLabel;
     if (display.teams) {
       display.teams.forEach((team, index) => {
         const root = byRb<HTMLElement>(`team-${index}`);
@@ -350,9 +343,10 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       const headerCells = header ? Array.from(header.children) : [];
       if (headerCells.length !== 5) { unsupported = true; continue; }
       const healthColumns = [3, 4] as const;
-      let columnByTeam = view.context.playerIds.map(playerId => healthColumns.find(column => (
-        (userIdFromLink(headerCells[column], document) ?? userIdFromLink(headerCells[column - 2], document)) === playerId
-      )) ?? -1) as [number, number];
+      let columnByTeam = view.context.playerIds.map(playerIds => healthColumns.find(column => {
+        const linked = userIdFromLink(headerCells[column], document) ?? userIdFromLink(headerCells[column - 2], document);
+        return linked !== null && playerIds.includes(linked);
+      }) ?? -1) as [number, number];
       if (columnByTeam[0] >= 0 && columnByTeam[1] < 0) columnByTeam[1] = columnByTeam[0] === 3 ? 4 : 3;
       if (columnByTeam[1] >= 0 && columnByTeam[0] < 0) columnByTeam[0] = columnByTeam[1] === 3 ? 4 : 3;
       if (columnByTeam.some(column => column < 0)) {

@@ -104,6 +104,11 @@ export function playerDisclosureMustReset(
   });
 }
 
+function sideLabels(context: PlayerGameContext, localIndex: number): [string, string] {
+  if (localIndex < 0) return ['Blue', 'Red'];
+  return context.playerIds.some(team => team.length > 1) ? ['Your team', 'Opponents'] : ['You', 'Opponent'];
+}
+
 function modeLabel(mode: TieRangeBandMode, pinpointing = false): string {
   const tieRange = mode === 'full' ? 'Full tie-range' : mode === 'half' ? 'Half tie-range' : null;
   if (pinpointing) return tieRange ? `Pinpointing Duels · ${tieRange}` : 'Pinpointing Duels';
@@ -136,7 +141,7 @@ function derivePinpointingDisplay(
   const totals: [number, number] = latest && !disclosed ? latest.totalsBefore : points.totals;
   const onMatchPoint = (total: number) => total >= points.firstTo - 2 && total < points.firstTo;
   const matchPoint: [boolean, boolean] = disclosed ? points.matchPoint : [onMatchPoint(totals[0]), onMatchPoint(totals[1])];
-  const labels: [string, string] = localIndex >= 0 ? ['You', 'Opponent'] : ['Blue', 'Red'];
+  const labels = sideLabels(context, localIndex);
   const teams = order.map((index, position) => ({
     teamId: points.teamIds[index],
     label: labels[position],
@@ -229,7 +234,7 @@ export function derivePlayerTieRangeDisplay(
     || resultIsDisclosed(latest, context.currentRoundNumber, nativeResultVisible);
   const health = latest && !disclosed ? latest.healthBefore : output.currentHealth;
   const multipliers = latest && !disclosed ? latest.multiplierTenths : output.currentMultiplierTenths;
-  const labels: [string, string] = localIndex >= 0 ? ['You', 'Opponent'] : ['Blue', 'Red'];
+  const labels = sideLabels(context, localIndex);
   const orderedHealth = pair(health, order);
   const orderedMaximum = pair(output.initialHealth, order);
   const orderedMultipliers = pair(multipliers, order);

@@ -11,7 +11,7 @@ import {
 } from './tie-range-player-view-model.ts';
 
 const context: PlayerGameContext = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   gameId: 'game-1',
   mode: 'full',
   pinpointing: false,
@@ -20,7 +20,7 @@ const context: PlayerGameContext = {
   sourceStatus: 'Ongoing',
   teamIds: ['blue-team', 'red-team'],
   teamLabels: ['blue', 'red'],
-  playerIds: ['blue-player', 'red-player'],
+  playerIds: [['blue-player'], ['red-player']],
   roundStarts: [
     { round: 1, startTime: '2026-09-12T10:00:00Z' },
     { round: 2, startTime: '2026-09-12T10:01:00Z' },
@@ -267,6 +267,12 @@ test('keeps verified numbers with a diagnostic while stale and restores native U
   assert.equal(off.showHud, false);
   assert.equal(off.showDiagnostic, false);
   assert.equal(off.suppressNative, false);
+});
+
+test('labels team duels as your team and the opponents', () => {
+  const teamContext = { ...context, playerIds: [['blue-player', 'blue-mate'], ['red-player', 'red-mate']] } as PlayerGameContext;
+  const display = derivePlayerTieRangeDisplay(view({ context: teamContext, localTeamId: 'red-team' }), false);
+  assert.deepEqual(display.teams!.map(team => team.label), ['Your team', 'Opponents']);
 });
 
 test('leaves native UI intact when the current account is not one of the players', () => {

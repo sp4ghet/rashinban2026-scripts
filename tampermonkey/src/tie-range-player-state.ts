@@ -6,8 +6,8 @@ import {
 } from '../../bundles/rashinban/src/presenter/tie-range-core.ts';
 import { foldPinpointing, type PinpointingOutput } from '../../bundles/rashinban/src/presenter/pinpointing-core.ts';
 
-/** Version 2 adds Pinpointing Duels (`pinpointing`, per-round `guessedAtMs`). */
-export const PLAYER_TIE_RANGE_RULES_VERSION = 2;
+/** Version 2 adds Pinpointing Duels (`pinpointing`, per-round `guessedAtMs`); version 3 stores team rosters. */
+export const PLAYER_TIE_RANGE_RULES_VERSION = 3;
 const STORAGE_PREFIX = 'rashinban.tie-range';
 const STORAGE_INDEX_KEY = `${STORAGE_PREFIX}.games`;
 const MAX_SAVED_GAMES = 10;
@@ -37,7 +37,7 @@ export type PlayerRoundStart = {
 
 export type PlayerConfiguredRules = { mode: TieRangeBandMode; pinpointing: boolean };
 
-/** Server time of each side's first deliberate guess (before the deadline), else null. */
+/** Server time of each team's first deliberate guess by any member (before the deadline), else null. */
 export type PlayerSettledRound = TieRangeInput['rounds'][number] & { guessedAtMs: [number | null, number | null] };
 export type PlayerRulesInput = Omit<TieRangeInput, 'rounds'> & { rounds: PlayerSettledRound[] };
 
@@ -51,7 +51,8 @@ export type PlayerGameContext = {
   sourceStatus: string;
   teamIds: [string, string];
   teamLabels: ['blue', 'red'];
-  playerIds: [string, string];
+  /** Each team's player IDs, in the order the source listed them. */
+  playerIds: [string[], string[]];
   roundStarts: PlayerRoundStart[];
   rollbackPendingFrom?: number | null;
   input: PlayerRulesInput;
@@ -117,6 +118,12 @@ function integer(value: unknown, label: string, minimum = 0): number {
 
 function tupleEqual<T>(left: readonly T[], right: readonly T[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+/** Same members on each team, whatever order the source lists them in. */
+function sameRosters(left: readonly (readonly string[])[], right: readonly (readonly string[])[]): boolean {
+  return left.length === right.length
+    && left.every((team, index) => tupleEqual([...team].sort(), [...right[index]].sort()));
 }
 
 function diagnostic(code: PlayerDiagnosticCode, message: string): PlayerDiagnostic {
@@ -220,9 +227,8 @@ function decodeDeadlines(raw: Record<string, unknown>): Map<number, number> {
 }
 
 /** Earliest guess created before the round deadline; a timeout auto-submission never counts. */
-function decodeGuessTimes(player: Record<string, unknown>, deadlines: Map<number, number>): Map<number, number> {
-  const times = new Map<number, number>();
-  if (!Array.isArray(player.guesses)) return times;
+function decodeGuessTimes(player: Record<string, unknown>, deadlines: Map<number, number>, times: Map<number, number>): void {
+  if (!Array.isArray(player.guesses)) return;
   for (const rawGuess of player.guesses) {
     if (typeof rawGuess !== 'object' || rawGuess === null) continue;
     const { roundNumber, created } = rawGuess as Record<string, unknown>;
@@ -233,12 +239,11 @@ function decodeGuessTimes(player: Record<string, unknown>, deadlines: Map<number
     const previous = times.get(round);
     if (previous === undefined || at < previous) times.set(round, at);
   }
-  return times;
 }
 
 function decodeTeams(raw: Record<string, unknown>): {
   teamIds: [string, string];
-  playerIds: [string, string];
+  playerIds: [string[], string[]];
   rounds: PlayerSettledRound[];
 } {
   const deadlines = decodeDeadlines(raw);
@@ -248,7 +253,7 @@ function decodeTeams(raw: Record<string, unknown>): {
 
   const byLabel = new Map<string, {
     id: string;
-    playerId: string;
+    playerIds: string[];
     results: Map<number, number>;
     guessTimes: Map<number, number>;
   }>();
@@ -260,12 +265,16 @@ function decodeTeams(raw: Record<string, unknown>): {
     }
     if (byLabel.has(label)) throw new DecodeError('unsupported-game', 'Team labels must be unique');
     const id = nonemptyString(team.id, 'Team ID');
-    if (!Array.isArray(team.players) || team.players.length !== 1) {
-      throw new DecodeError('unsupported-game', 'Only one player per team is supported');
+    if (!Array.isArray(team.players) || team.players.length === 0) {
+      throw new DecodeError('unsupported-game', 'Every team needs at least one player');
     }
-    const player = record(team.players[0], 'Player');
-    const playerId = nonemptyString(player.playerId, 'Player ID');
-    const guessTimes = decodeGuessTimes(player, deadlines);
+    const playerIds: string[] = [];
+    const guessTimes = new Map<number, number>();
+    for (const rawPlayer of team.players) {
+      const player = record(rawPlayer, 'Player');
+      playerIds.push(nonemptyString(player.playerId, 'Player ID'));
+      decodeGuessTimes(player, deadlines, guessTimes);
+    }
     if (!Array.isArray(team.roundResults)) {
       throw new DecodeError('partial-results', 'Team round results are missing');
     }
@@ -278,12 +287,13 @@ function decodeTeams(raw: Record<string, unknown>): {
       if (results.has(round)) throw new DecodeError('partial-results', `Duplicate result for round ${round}`);
       results.set(round, score);
     }
-    byLabel.set(label, { id, playerId, results, guessTimes });
+    byLabel.set(label, { id, playerIds, results, guessTimes });
   }
 
   const blue = byLabel.get('blue');
   const red = byLabel.get('red');
-  if (!blue || !red || blue.id === red.id || blue.playerId === red.playerId) {
+  if (!blue || !red || blue.id === red.id
+    || new Set([...blue.playerIds, ...red.playerIds]).size !== blue.playerIds.length + red.playerIds.length) {
     throw new DecodeError('unsupported-game', 'Team and player identities must be distinct');
   }
   const allRounds = new Set([...blue.results.keys(), ...red.results.keys()]);
@@ -299,7 +309,7 @@ function decodeTeams(raw: Record<string, unknown>): {
   }
   return {
     teamIds: [blue.id, red.id],
-    playerIds: [blue.playerId, red.playerId],
+    playerIds: [blue.playerIds, red.playerIds],
     rounds,
   };
 }
@@ -400,6 +410,7 @@ function freezeContext(context: PlayerGameContext): PlayerGameContext {
   Object.freeze(context.input);
   Object.freeze(context.teamIds);
   Object.freeze(context.teamLabels);
+  for (const team of context.playerIds) Object.freeze(team);
   Object.freeze(context.playerIds);
   Object.freeze(context.roundStarts);
   return Object.freeze(context);
@@ -464,7 +475,7 @@ export function acceptPlayerSnapshot(
     };
   }
   if (activePrevious && (!tupleEqual(activePrevious.teamIds, decoded.teamIds)
-    || !tupleEqual(activePrevious.playerIds, decoded.playerIds))) {
+    || !sameRosters(activePrevious.playerIds, decoded.playerIds))) {
     return retained(activePrevious, 'identity-change', 'Team identities changed during the duel');
   }
   if (activePrevious && !sameRules(activePrevious, decoded)) {
@@ -525,7 +536,7 @@ export function acceptPlayerSnapshot(
     rollbackPendingFrom,
     teamIds: [...decoded.teamIds],
     teamLabels: ['blue', 'red'],
-    playerIds: [...decoded.playerIds],
+    playerIds: [[...decoded.playerIds[0]], [...decoded.playerIds[1]]],
     roundStarts: decoded.roundStarts.map(start => ({ ...start })),
     input: {
       ...decoded.input,
@@ -563,12 +574,20 @@ function parseIndex(value: unknown): string[] {
 }
 
 function migrateSavedContext(parsed: PlayerGameContext): void {
-  if (parsed.schemaVersion !== 1) return;
-  // Version 1 predates Pinpointing Duels: HP-only contexts with no guess times.
-  parsed.schemaVersion = PLAYER_TIE_RANGE_RULES_VERSION;
-  parsed.pinpointing = false;
-  if (parsed.input && Array.isArray(parsed.input.rounds)) {
-    for (const round of parsed.input.rounds) if (round && round.guessedAtMs === undefined) round.guessedAtMs = [null, null];
+  if (parsed.schemaVersion === 1) {
+    // Version 1 predates Pinpointing Duels: HP-only contexts with no guess times.
+    parsed.schemaVersion = 2;
+    parsed.pinpointing = false;
+    if (parsed.input && Array.isArray(parsed.input.rounds)) {
+      for (const round of parsed.input.rounds) if (round && round.guessedAtMs === undefined) round.guessedAtMs = [null, null];
+    }
+  }
+  if (parsed.schemaVersion === 2) {
+    // Versions 1 and 2 supported one player per team and stored a bare ID.
+    parsed.schemaVersion = PLAYER_TIE_RANGE_RULES_VERSION;
+    if (Array.isArray(parsed.playerIds)) {
+      parsed.playerIds = (parsed.playerIds as unknown[]).map(id => [id]) as PlayerGameContext['playerIds'];
+    }
   }
 }
 
@@ -597,10 +616,12 @@ function restoreContext(value: unknown, expectedGameId: string): PlayerContextRe
       || !Array.isArray(parsed.roundStarts)) {
       throw new Error('invalid context');
     }
-    for (const tuple of [parsed.teamIds, parsed.playerIds]) {
-      if (tuple.some(id => typeof id !== 'string' || id.length === 0) || tuple[0] === tuple[1]) {
-        throw new Error('invalid identity');
-      }
+    if (parsed.teamIds.some(id => typeof id !== 'string' || id.length === 0) || parsed.teamIds[0] === parsed.teamIds[1]) {
+      throw new Error('invalid identity');
+    }
+    const players = parsed.playerIds.flatMap(team => Array.isArray(team) && team.length > 0 ? team : [null]);
+    if (players.some(id => typeof id !== 'string' || id.length === 0) || new Set(players).size !== players.length) {
+      throw new Error('invalid identity');
     }
     if (!parsed.input || !tupleEqual(parsed.teamIds, parsed.input.teamIds)) throw new Error('identity mismatch');
     // Off contexts still need valid inputs: they can be restored before a fetch.
