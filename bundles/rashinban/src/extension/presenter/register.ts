@@ -336,7 +336,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
     else {
       if (body !== undefined && Object.keys(record(body)).length) throw new Error('Unexpected body');
       const patch = action === 'mute' ? { muted: true } : action === 'unmute' ? { muted: false }
-        : { viewSource: action === 'view/chroma' ? 'chroma' : 'rendered' };
+        : { viewSource: action === 'view/chroma' ? 'chroma' : action === 'view/video' ? 'video' : 'rendered' };
       const next = parseSettings({ ...settings.value, ...patch });
       if (store) store.save('presenterSettings', next, expectedRevision); else settings.value = next;
     }

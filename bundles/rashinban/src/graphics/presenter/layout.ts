@@ -1,6 +1,7 @@
 import type { Mode, PinpointingVerdict } from '../../types/presenter.ts';
 import type { DuelState, Timeline } from '../../types/presenter.ts';
 import type { RenderFrame } from './renderer.ts';
+import type { PlayerViewSource } from '../../presenter/settings.ts';
 
 /** Banner text for a Pinpointing Duels round verdict. */
 export function verdictLabel(verdict: PinpointingVerdict): string {
@@ -22,7 +23,7 @@ export function pointsLabel(matchPoint: boolean, firstTo: number, points = 0): s
 }
 
 export function lockLayout(frame: RenderFrame): 'none' | 'left' | 'right' | 'both' {
-  if (frame.source !== 'rendered' || frame.projection.phase !== 'live'
+  if (frame.source === 'chroma' || frame.projection.phase !== 'live'
     || (frame.displayedRound !== undefined && frame.displayedRound !== frame.state.round)) return 'none';
   const locked = (['left', 'right'] as const).map(side => {
     const id = frame.playerIds?.[side];
@@ -43,7 +44,7 @@ export function multiplierLabel(state: DuelState | null, timeline: Timeline, sid
   return values[0] === values[1] ? label(values[0]) : `L ${label(values[0])} · R ${label(values[1])}`;
 }
 
-export function layoutKind(mode: Mode, source: 'rendered' | 'chroma'): 'shared' | 'dual' {
+export function layoutKind(mode: Mode, source: PlayerViewSource): 'shared' | 'dual' {
   return mode === 'NMPZ' && source === 'rendered' ? 'shared' : 'dual';
 }
 

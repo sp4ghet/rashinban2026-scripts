@@ -5,6 +5,10 @@ uses OBS 32.2.2; repeat acceptance on the broadcast machine with its real
 feeds and media. See [validation](validation.md) for measured results and
 remaining external checks.
 
+For direct player capture devices and animated player windows, use
+[Video input setup](video-inputs.md). Its player feeds are composited inside
+the Browser Source; only the remaining camera regions need regional keying.
+
 | Source | URL |
 | --- | --- |
 | Program | `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program` |

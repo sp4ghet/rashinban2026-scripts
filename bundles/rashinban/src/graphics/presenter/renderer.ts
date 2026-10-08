@@ -1,8 +1,9 @@
 import type { Bounds, DuelState, Mode, Panorama, Phase, Point, Projection, Views } from '../../types/presenter.ts';
 import { tieRangeMapGeometry, type TieRangeMapGeometry } from '../../presenter/tie-range-geometry.ts';
 import { lockLayout } from './layout.ts';
+import type { PlayerViewSource } from '../../presenter/settings.ts';
 
-export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: 'rendered' | 'chroma'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean; previewRound?: number | null; prewarmRound?: number | null; preparedResults?: MapFrame };
+export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: PlayerViewSource; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean; previewRound?: number | null; prewarmRound?: number | null; preparedResults?: MapFrame };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
 export type MapFrame = { visible: boolean; prepare?: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[]; tieRange?: TieRangeMapGeometry };
@@ -10,9 +11,9 @@ export interface MapSurface { render(frame: MapFrame): void; dispose(): void }
 export type PanoramaOptions = { visible: boolean; identity: string; frozen?: boolean };
 export interface PanoramaSurface { render(panorama: Panorama | null, options?: PanoramaOptions): void; dispose(): void }
 export interface RendererAdapter { map(slot: string): MapSurface; panorama(slot: string): PanoramaSurface }
-export function rendererPlan(mode: Mode, source: 'rendered' | 'chroma', phase: Phase): RendererPlan {
-  const live = phase === 'live' && source === 'rendered';
-  return { panoramas: live ? mode === 'NMPZ' ? 1 : 2 : 0, playerMaps: live ? 2 : 0,
+export function rendererPlan(mode: Mode, source: PlayerViewSource, phase: Phase): RendererPlan {
+  const live = phase === 'live' && source !== 'chroma';
+  return { panoramas: live && source === 'rendered' ? mode === 'NMPZ' ? 1 : 2 : 0, playerMaps: live ? 2 : 0,
     resultsMap: ['results-reveal', 'between-rounds', 'waiting-host', 'finished'].includes(phase) };
 }
 export function resultBounds(points: Point[]): Bounds | null {
@@ -90,17 +91,17 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
         // Only prepare panorama metadata already present in this round's snapshot.
         // Projection visibility remains authoritative when Replicants arrive separately.
         const prepare = !['waiting-game', 'aborted', 'finished'].includes(projection.phase);
-        const live = projection.phase === 'live' && displayedRound === state.round && source === 'rendered';
+        const live = projection.phase === 'live' && displayedRound === state.round && source !== 'chroma';
         const lock = lockLayout(frame);
         const locked = sides.map(side => lock === side || lock === 'both');
         const slots = state.mode === 'NMPZ' ? ['shared-panorama'] : ['left-view', 'right-view'];
-        if (preview && source === 'rendered' && !panos.has('preview-panorama')) panos.set('preview-panorama', adapter.panorama('preview-panorama'));
+        if (preview && source !== 'chroma' && !panos.has('preview-panorama')) panos.set('preview-panorama', adapter.panorama('preview-panorama'));
         for (const slot of slots) {
           if (prepare && source === 'rendered' && !panos.has(slot)) panos.set(slot, adapter.panorama(slot));
         }
         panos.forEach((pano, slot) => {
           if (slot === 'preview-panorama') {
-            pano.render(preview?.panorama ?? null, { visible: showPreview && source === 'rendered',
+            pano.render(preview?.panorama ?? null, { visible: showPreview && source !== 'chroma',
               identity: `${state.gameId}:${preview?.number ?? ''}:preview:${ids.join(':')}` });
             return;
           }
@@ -110,7 +111,7 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
             ? shared ? (ids.some(Boolean) ? initial : null) : ids[index] ? players[index]?.panorama ?? initial : null
             : null;
           const frozen = shared ? lock === 'both' : locked[index];
-          pano.render(value, { visible: live && slots.includes(slot) && !frozen, frozen: frozen || frame.frozen,
+          pano.render(value, { visible: live && source === 'rendered' && slots.includes(slot) && !frozen, frozen: frozen || frame.frozen,
             identity: `${state.gameId}:${state.round}:${shared ? 'shared' : ids[index] ?? ''}` });
         });
         if (plan.playerMaps) for (const slot of ['left-map', 'right-map']) {
@@ -129,7 +130,7 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
             const point = submitted ?? (view ? view.pin : snapshotPlayer?.pin);
             if (point) pins.push({ point: { lat: point.lat, lng: point.lng }, color: colors[sides[j]], label: sides[j] });
           }
-          maps.get(`${sides[i]}-map`)?.render({ visible: live && !!ids[i], inactive: !locked[i] && !player?.mapActive && !player?.mapSticky,
+          maps.get(`${sides[i]}-map`)?.render({ visible: live && !!ids[i] && (source === 'rendered' || locked[i]), inactive: !locked[i] && !player?.mapActive && !player?.mapSticky,
             bounds: locked[i] ? resultBounds(pins.map(pin => pin.point)) : player?.mapBounds ?? null,
             padding: locked[i] ? 45 : 0, pins, lines: [] });
         }
@@ -139,8 +140,8 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
           if (!maps.has('results-map')) maps.set('results-map', adapter.map('results-map'));
           maps.get('results-map')!.render({ ...resultFrame, visible: plan.resultsMap && projection.answer !== null });
         } else maps.get('results-map')?.render({ visible: false, bounds: null, pins: [], lines: [] });
-        if (showPreview && source === 'rendered' && !maps.has('preview-map')) maps.set('preview-map', adapter.map('preview-map'));
-        maps.get('preview-map')?.render({ visible: showPreview && source === 'rendered', bounds: null, pins: [], lines: [] });
+        if (showPreview && source !== 'chroma' && !maps.has('preview-map')) maps.set('preview-map', adapter.map('preview-map'));
+        maps.get('preview-map')?.render({ visible: showPreview && source !== 'chroma', bounds: null, pins: [], lines: [] });
       } catch { clear(); failed = true; onError('Google Maps view unavailable'); }
     },
     dispose() { clear(); disposed = true; },
