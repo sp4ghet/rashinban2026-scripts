@@ -57,15 +57,20 @@ the default webcam. The same device cannot be assigned to both players.
 **Swap feeds** swaps the saved physical input assignments. Use it when changing
 which input belongs on each side; Current Match player swaps do not identify or
 automatically reassign physical capture cables. **Reconnect** retries selected
-devices after disconnects or permission errors. Refreshing the device list
-does not silently change assignments.
+devices after disconnects or permission errors. Transient device failures retry
+automatically after 0.5, 1.5, 3 and 5 seconds, then stop. A browser device-change
+event retries a failed input when its saved device is available again, without
+restarting the healthy input. Permission denials require **Reconnect** after
+fixing access. Refreshing the device list does not silently change assignments;
+swapping also preserves unavailable saved devices.
 
 Only the current program owner acquires devices. Preview and standby graphics
 do not capture, including through the permission button. Select the intended
 program in the dashboard if setup reports inactive. Keep **Shutdown source
 when not visible** and **Refresh browser when scene becomes active** disabled,
 and reuse the same Browser Source across scenes. Capture stops on ownership
-loss, leaving Video input mode, or closing/reloading the page.
+loss (including an expired lease or stale server clock), leaving Video input
+mode, or closing/reloading the page. Pending retries are cancelled too.
 
 The LED presenter uses rendered player views when Video input is selected for
 the stream. It does not open capture devices or expose capture setup; broadcast
@@ -85,18 +90,21 @@ bus blanking and silent LED celebrations continue to work independently.
 - Google renders locked-player maps, round-preview panoramas and the results
   map. Active players continue to use their captured screen, including its
   native minimap. The Google browser key is needed for these rendered scenes.
-- The presenter retains the last permitted video frame when it observes both
-  guesses or settled round data. Celebrations reuse those pixels, without
-  sampling later video. Locked-player maps also remain during celebrations.
+- The presenter retains the last permitted video frame when the synchronized
+  round countdown reaches zero, or it observes both guesses or settled round
+  data. Celebrations reuse those pixels, without sampling later video. A muted
+  input keeps its held frame until the signal returns. Locked-player maps also
+  remain during celebrations.
   Other non-live scenes hide player video. First-round and next-round previews
   show the rendered panorama, empty world map and existing label/countdown.
 - A disconnected, missing or denied device shows a neutral placeholder in its
   player window. Detailed messages and reconnect controls stay in local setup.
 
-Freezing follows received game state; capture video and GeoGuessr telemetry are
-separate clocks. Check their relative latency with real feeds, especially at
-round completion. This mode does not buffer video to compensate for a feed that
-reveals native results before the presenter receives the corresponding event.
+Freezing follows the known deadline and received game state; capture video and
+GeoGuessr telemetry are separate clocks. Check their relative latency with real
+feeds, especially at round completion. This mode does not buffer video to
+compensate for a feed that reveals native results before the known deadline or
+before the presenter receives the corresponding event.
 
 Apply chroma key only to remaining camera regions. A whole-source chroma key
 would also remove matching colors from the captured gameplay. Existing audio
@@ -133,6 +141,8 @@ The local acceptance used OBS **32.2.2 / Chromium 127.0.6533.120**, with two
 simultaneous simulated inputs. It covers frame updates, all three movement
 modes, both resize directions, F8 setup, frozen celebration pixels, mode
 switching, assignment swapping/persistence, ownership changes, disconnects,
-permission failures, unavailable devices and preview isolation. Physical card
-drivers, sustained two-feed performance, HDMI signal loss/recovery and video /
+permission failures, unavailable devices and preview isolation. It also checks
+hidden setup playback, 30 fps input sampling at 60 Hz, automatic recovery,
+timeout freezing, mute retention, idle canvas work and unavailable-device swaps.
+Physical card drivers, sustained two-feed performance, HDMI signal loss/recovery and video /
 telemetry / audio latency remain hardware acceptance checks.

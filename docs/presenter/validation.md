@@ -351,3 +351,27 @@ is 1270 × 714 at y=144 in both lock directions. **42 checks each in Chrome and
 OBS Browser Source** passed with simulated inputs and live Google Maps,
 including LED startup, rendered panorama display, no capture requests and bus
 reveal/blanking. All **540 unit tests**, typecheck, build and diff checks passed.
+
+### Video-input review regressions
+
+Transient capture errors and ended tracks now get four bounded retries;
+device-change events can recover an available saved input after those attempts.
+Permission failures still require an explicit retry. Unit tests cover tracks
+that end before attachment, the retry budget, cancellation and stale callbacks
+after ownership loss, reassignment and disposal. Capture also freezes at a known deadline before result telemetry
+arrives, and a muted track preserves held celebration pixels.
+
+Canvas copies are skipped when the source frame count has not advanced, and
+inactive canvases are cleared only when they contain a frame. Swapping saved
+inputs preserves unavailable device IDs even after editing an unapplied choice.
+The ownership/clock gate and the permission guard after asynchronous enumeration
+remain in place. Both have regression coverage.
+
+**53 integration checks each in Chrome and OBS 32.2.2 / Chromium 127.0.6533.120**
+passed with simulated 30 fps inputs, 60 Hz presentation and live Google Maps.
+Both feeds continued advancing with setup hidden; no hidden-video decoding stall
+was reproduced in either browser. The checks also cover automatic recovery,
+device-change isolation, permission denial, timeout/mute holds, idle canvas work
+and unavailable-device swaps. Both runs reported zero uncaught browser errors.
+All **544 unit tests**, typecheck, build and diff checks passed. Physical card
+recovery and sustained capture performance still require hardware validation.

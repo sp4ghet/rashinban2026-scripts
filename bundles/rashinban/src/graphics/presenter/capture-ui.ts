@@ -28,10 +28,13 @@ export function createCaptureUI(root: HTMLElement, search: string) {
     const video = el<HTMLVideoElement>(`video-${side}-preview`);
     const host = el(`capture-${side}`); const canvas = el<HTMLCanvasElement>(`capture-${side}-canvas`);
     const context = canvas.getContext('2d', { alpha: false });
-    let identity = ''; let status: CaptureStatus = { state: 'idle', message: 'No input selected' };
+    let identity = ''; let hasFrame = false; let sampledFrame: number | null = null;
+    let status: CaptureStatus = { state: 'idle', message: 'No input selected' };
     video.muted = true; video.autoplay = true; video.playsInline = true;
     function clear() {
-      identity = ''; host.dataset.hasFrame = 'false';
+      identity = ''; sampledFrame = null;
+      if (!hasFrame) return;
+      hasFrame = false; host.dataset.hasFrame = 'false';
       context?.clearRect(0, 0, canvas.width, canvas.height);
     }
     const input = createCaptureInput({
@@ -45,7 +48,7 @@ export function createCaptureUI(root: HTMLElement, search: string) {
       status(value) {
         status = value; host.dataset.state = value.state;
         el(`video-${side}-status`).textContent = value.message;
-        if (value.state !== 'ready') clear();
+        if (value.state !== 'ready' && value.state !== 'muted') clear();
       },
     });
     return { side, select, video, input, clear, get status() { return status; },
@@ -57,12 +60,19 @@ export function createCaptureUI(root: HTMLElement, search: string) {
         if (identity !== nextIdentity) { clear(); identity = nextIdentity; }
         if (mode !== 'live' || status.state !== 'ready' || video.readyState < 2 || !context) return;
         if (!video.videoWidth || !video.videoHeight) return;
+        // The presentation loop can run faster than the input. Copy each new
+        // decoded frame once, while keeping sampling behind the safety gates.
+        const sourceFrame = video.getVideoPlaybackQuality?.().totalVideoFrames ?? video.currentTime;
+        if (sampledFrame === sourceFrame) return;
         // Retain the last permitted pixels, rather than sampling a live video at
         // celebration time when the player may already be showing the answer.
         const width = Math.min(video.videoWidth, 1920);
         const height = Math.round(width * video.videoHeight / video.videoWidth);
         if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
-        try { context.drawImage(video, 0, 0, width, height); host.dataset.hasFrame = 'true'; }
+        try {
+          context.drawImage(video, 0, 0, width, height); sampledFrame = sourceFrame;
+          if (!hasFrame) { hasFrame = true; host.dataset.hasFrame = 'true'; }
+        }
         catch { clear(); }
       } };
   });
@@ -84,7 +94,7 @@ export function createCaptureUI(root: HTMLElement, search: string) {
       slot.select.replaceChildren(...options); slot.select.value = selected;
     }
   }
-  async function scan(requestPermission = false) {
+  async function scan(requestPermission = false, recoverInputs = false) {
     if (!supported || disposed || discovering) return;
     if (requestPermission && (source !== 'video' || !enabled)) {
       message.textContent = 'Video permission can only be requested in the active program source while Video input mode is selected.';
@@ -118,6 +128,11 @@ export function createCaptureUI(root: HTMLElement, search: string) {
         ? `${selectable().length} video inputs found. Select the left and right feeds, then apply. Close setup before going on air.`
         : permissionError ? `Device discovery failed: ${captureError(permissionError)} No selectable video inputs were returned.`
           : 'No video inputs were reported by this browser. Check the capture device connection, driver and Windows camera access.';
+      if (recoverInputs && enabled && source === 'video') {
+        for (const slot of slots) {
+          if (selectable().some(device => device.deviceId === config[slot.side])) slot.input.retryAvailable();
+        }
+      }
     } catch (error) { if (!disposed && token === scanGeneration) message.textContent = `Device discovery failed: ${captureError(error)}`; }
     finally {
       if (!disposed && token === scanGeneration) { discovering = false; button.disabled = false; update(); }
@@ -137,7 +152,7 @@ export function createCaptureUI(root: HTMLElement, search: string) {
     if (event.repeat) return;
     panel.hidden = !panel.hidden; if (!panel.hidden) void scan();
   }
-  const onDevices = () => { void scan(); };
+  const onDevices = () => { void scan(false, true); };
   el('video-find').addEventListener('click', () => { void scan(true); });
   el('video-apply').addEventListener('click', () => {
     try { save(parseVideoInputs({ left: slots[0].select.value, right: slots[1].select.value })); }
@@ -145,7 +160,13 @@ export function createCaptureUI(root: HTMLElement, search: string) {
   });
   el('video-swap').addEventListener('click', () => {
     save({ left: config.right, right: config.left });
-    slots.forEach(slot => { slot.select.value = config[slot.side]; });
+    slots.forEach(slot => {
+      const selected = config[slot.side];
+      if (selected && !Array.from(slot.select.options).some(option => option.value === selected)) {
+        slot.select.add(new Option('Saved input (unavailable)', selected));
+      }
+      slot.select.value = selected;
+    });
   });
   el('video-reconnect').addEventListener('click', () => { slots.forEach(slot => slot.input.reconnect()); void scan(); });
   el('video-close').addEventListener('click', () => { panel.hidden = true; });

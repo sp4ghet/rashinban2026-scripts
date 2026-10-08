@@ -24,13 +24,15 @@ const initial = { presenterDuel: state, presenterViews: seedViews(state), presen
   presenterClients: { clients: [], program: null }, presenterPublicConfig: { googleMapsApiKey: process.env.PRESENTER_VIDEO_TEST_MAPS_KEY ?? '' } };
 const bootstrap = `
 window.qa={initial:${JSON.stringify(initial)},streams:[],requests:[],failName:null,standby:false};
+qa.draws={left:0,right:0};qa.clears={left:0,right:0};
+for(const method of ['drawImage','clearRect']){const original=CanvasRenderingContext2D.prototype[method];CanvasRenderingContext2D.prototype[method]=function(...args){const side=/^capture-(left|right)-canvas$/.exec(this.canvas.id)?.[1];if(side)qa[method==='drawImage'?'draws':'clears'][side]++;return original.apply(this,args);};}
 const reps=new Map();
 qa.set=(name,value)=>{const rep=nodecg.Replicant(name);rep.value=value;rep.listeners.forEach(fn=>fn(value));};
 window.nodecg={Replicant(name){if(!reps.has(name))reps.set(name,{value:qa.initial[name],listeners:[],on(event,fn){this.listeners.push(fn);queueMicrotask(()=>fn(this.value));}});return reps.get(name);},
   async sendMessage(name,body){if(name==='presenter:clock')return Date.now();if(name==='presenter:client'&&body.role==='program')qa.set('presenterClients',{clients:[],program:qa.standby?null:{clientId:body.clientId,expiresAtMs:Date.now()+60000}});return true;}};
 const realCapture=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 const realDevices=navigator.mediaDevices.enumerateDevices.bind(navigator.mediaDevices);
-navigator.mediaDevices.enumerateDevices=async()=>qa.hideDevices?[{kind:'videoinput',deviceId:'',label:''}]:realDevices();
+navigator.mediaDevices.enumerateDevices=async()=>{if(qa.deferDevices)await new Promise(resolve=>qa.finishScan=resolve);return qa.hideDevices?[{kind:'videoinput',deviceId:'',label:''}]:realDevices();};
 navigator.mediaDevices.getUserMedia=async options=>{qa.requests.push(options);if(options.video===true&&qa.failDefault){if(qa.revealAfterProbe)qa.hideDevices=false;throw new DOMException('test default input failure',qa.failDefault);}if(qa.failName)throw new DOMException('test failure',qa.failName);const stream=await realCapture(options);qa.streams.push(stream);return stream;};
 qa.mode=mode=>qa.set('presenterSettings',{...nodecg.Replicant('presenterSettings').value,viewSource:mode});
 qa.lock=side=>{const s=structuredClone(nodecg.Replicant('presenterDuel').value);const id=nodecg.Replicant('presenterSeries').value[side].playerId;s.players.find(p=>p.id===id).guesses.push({round:s.round,lat:35.69,lng:side==='left'?139.69:139.70,score:4000,distanceM:10,createdAtMs:Date.now()});qa.set('presenterDuel',s);};
@@ -63,7 +65,7 @@ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const url = `http://127.0.0.1:${server.address().port}/presenter.html?role=program&videoSetup=1`;
 const profile = path.join(artifacts, `chrome-${Date.now()}`);
 const isOBS = !!process.env.OBS_VIDEO_TEST_PATH;
-const flags = ['--enable-media-stream', ...isOBS ? [] : ['--use-fake-ui-for-media-stream'], '--use-fake-device-for-media-stream=device-count=2,fps=60'];
+const flags = ['--enable-media-stream', ...isOBS ? [] : ['--use-fake-ui-for-media-stream'], '--use-fake-device-for-media-stream=device-count=2,fps=30'];
 let processHandle; let socket; let debugPort; let counter = 0;
 const pending = new Map(); const errors = []; const checks = [];
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -144,6 +146,13 @@ try {
   await until(`document.readyState==='complete'`, 'initial page loaded');
   await until(`document.body?.dataset.program==='true'`, 'program lease acquired');
   if (initial.presenterPublicConfig.googleMapsApiKey) await until(`document.body.dataset.renderer==='api-ready'`, 'Google renderer ready', 30000);
+  await until(`!document.getElementById('video-find').disabled`, 'initial enumeration settled');
+  await evaluate(`qa.hideDevices=true;qa.deferDevices=true;qa.beforeGuard=qa.requests.length;document.getElementById('video-find').click()`);
+  await until(`typeof qa.finishScan==='function'`, 'permission scan waits for enumeration');
+  await evaluate(`qa.standby=true;qa.set('presenterClients',{clients:[],program:null});qa.deferDevices=false;qa.finishScan()`);
+  await until(`!document.getElementById('video-find').disabled`, 'ownership loss cancels permission probe after enumeration');
+  assert.equal(await evaluate(`qa.requests.length===qa.beforeGuard`), true);
+  await evaluate(`qa.hideDevices=false;qa.standby=false;nodecg.sendMessage('presenter:client',{role:'program',clientId:document.body.dataset.clientId})`);
   // Grant access using a simulated camera, then reproduce a default input that
   // fails to start even though permission allows the other inputs to be listed.
   await evaluate(`(async()=>{const grant=await realCapture({audio:false,video:true});grant.getTracks().forEach(t=>t.stop());})()`);
@@ -182,6 +191,15 @@ try {
   assert.equal(await evaluate(`qa.live!==qa.hash('left')`), true, 'live pixels keep advancing');
   await screenshot('setup');
   await evaluate(`document.getElementById('video-close').click()`); await screenshot('equal');
+  for (let sample = 0; sample < 3; sample++) {
+    await evaluate(`qa.hiddenHashes=['left','right'].map(qa.hash)`); await delay(1000);
+    assert.equal(await evaluate(`['left','right'].every((side,i)=>qa.hash(side)!==qa.hiddenHashes[i])`), true, 'both feeds advance with setup display:none');
+  }
+  checks.push('hidden setup does not stall either video feed');
+  await evaluate(`qa.beforeCopies={draws:{...qa.draws},frames:['left','right'].map(s=>document.getElementById('video-'+s+'-preview').getVideoPlaybackQuality().totalVideoFrames)}`);
+  await delay(500);
+  assert.equal(await evaluate(`['left','right'].every((s,i)=>qa.draws[s]-qa.beforeCopies.draws[s]<=document.getElementById('video-'+s+'-preview').getVideoPlaybackQuality().totalVideoFrames-qa.beforeCopies.frames[i]+2)`), true, 'canvas copies only new source frames');
+  checks.push('30 fps inputs avoid duplicate canvas copies at 60 Hz');
   for (const code of ['', 'F8']) {
     const label = code ? 'F8 with physical key code' : 'OBS F8 without physical key code';
     for (const hidden of [false, true]) {
@@ -221,6 +239,14 @@ try {
   await evaluate(`qa.hold()`); await until(`document.body.dataset.celebrationUnderlay==='true'`, 'celebration retains outgoing view');
   await evaluate(`qa.frozen=qa.hash('left')`); await delay(250);
   assert.equal(await evaluate(`qa.frozen===qa.hash('left')`), true, 'celebration does not sample later camera frames');
+  await evaluate(`qa.mutedTrack=document.getElementById('video-left-preview').srcObject.getVideoTracks()[0];Object.defineProperty(qa.mutedTrack,'muted',{configurable:true,value:true});qa.mutedTrack.dispatchEvent(new Event('mute'))`);
+  assert.equal(await evaluate(`qa.frozen===qa.hash('left')&&document.getElementById('capture-left').dataset.hasFrame==='true'`), true, 'signal mute preserves the held celebration frame');
+  await evaluate(`delete qa.mutedTrack.muted;qa.mutedTrack.dispatchEvent(new Event('unmute'));qa.reset()`);
+  await until(ready, 'feeds resume after signal recovery');
+  await evaluate(`const s=structuredClone(nodecg.Replicant('presenterDuel').value);s.rounds[0].endAtMs=Date.now()-1;qa.set('presenterDuel',s)`);
+  await delay(100); await evaluate(`qa.deadlineHashes=['left','right'].map(qa.hash)`); await delay(300);
+  assert.equal(await evaluate(`['left','right'].every((s,i)=>qa.hash(s)===qa.deadlineHashes[i])`), true, 'deadline freezes both feeds before results arrive');
+  checks.push('mute and timeout preserve safe held pixels');
   for (const next of [false, true]) {
     await evaluate(`qa.preview(${next})`);
     await until(`document.body.dataset.scene==='preview'&&document.getElementById('round-number').textContent==='${next ? 2 : 1}'`, next ? 'next round preview shown after results' : 'first round preview shown');
@@ -237,25 +263,42 @@ try {
   assert.equal(await evaluate(`document.getElementById('preview-area').hidden`), true);
   await evaluate(`qa.reset();qa.mode('chroma')`); await until(`qa.active()===0&&document.body.dataset.source==='chroma'`, 'chroma releases both devices');
   assert.equal(await evaluate(`getComputedStyle(document.getElementById('capture-left')).display`), 'none');
+  await delay(100); await evaluate(`qa.clearedCounts={...qa.clears}`); await delay(250);
+  assert.equal(await evaluate(`['left','right'].every(s=>qa.clears[s]===qa.clearedCounts[s])`), true, 'inactive video canvases are not repeatedly cleared');
+  checks.push('inactive capture does no canvas work');
   await evaluate(`qa.mode('rendered')`); await delay(100); assert.equal(await evaluate(`qa.active()`), 0);
   await evaluate(`qa.mode('video')`); await until(ready, 'video mode reacquires selected devices');
   await evaluate(`document.getElementById('video-swap').click()`); await until(ready, 'swapped feeds reconnect');
   assert.equal(await evaluate(`document.getElementById('video-left-preview').srcObject.getVideoTracks()[0].getSettings().deviceId===qa.ids[1]`), true);
   const beforeReload = await evaluate('performance.timeOrigin');
   await command('Page.reload'); await until(`performance.timeOrigin!==${beforeReload}&&${ready}`, 'saved assignments restore after reload');
+  await evaluate(`qa.ids=Array.from(document.querySelectorAll('#video-left-device option')).filter(o=>o.value).map(o=>o.value)`);
   await evaluate(`qa.standby=true;qa.set('presenterClients',{clients:[],program:null})`);
   await until(`qa.active()===0`, 'standby releases capture');
   await evaluate(`qa.standby=false;nodecg.sendMessage('presenter:client',{role:'program',clientId:document.body.dataset.clientId})`);
   await until(ready, 'program transfer resumes capture');
   await evaluate(`const track=document.getElementById('video-left-preview').srcObject.getVideoTracks()[0];track.stop();track.dispatchEvent(new Event('ended'))`);
   await until(`document.getElementById('capture-left').dataset.state==='error'&&document.getElementById('capture-right').dataset.state==='ready'`, 'disconnect isolates affected feed');
-  await evaluate(`document.getElementById('video-reconnect').click()`); await until(ready, 'manual reconnect restores video');
+  await until(ready, 'disconnect recovers without opening setup');
+  await evaluate(`qa.beforeDeviceChange=qa.requests.length;const disconnected=document.getElementById('video-left-preview').srcObject.getVideoTracks()[0];disconnected.stop();disconnected.dispatchEvent(new Event('ended'));navigator.mediaDevices.dispatchEvent(new Event('devicechange'))`);
+  await delay(150);
+  assert.equal(await evaluate(`qa.requests.length-qa.beforeDeviceChange`), 1, 'devicechange immediately retries only the disconnected input');
+  await until(ready, 'device discovery restores the affected feed');
   await evaluate(`qa.failName='NotAllowedError';document.getElementById('video-reconnect').click()`);
   await until(`document.getElementById('capture-left').dataset.state==='error'`, 'permission denial reported');
-  const count = await evaluate(`qa.requests.length`); await delay(300); assert.equal(await evaluate(`qa.requests.length`), count, 'no retry storm');
+  const count = await evaluate(`qa.requests.length`);
+  await evaluate(`navigator.mediaDevices.dispatchEvent(new Event('devicechange'))`);
+  await delay(600); assert.equal(await evaluate(`qa.requests.length`), count, 'permission denial is not retried by timers or devicechange');
   await evaluate(`qa.failName=null;document.getElementById('video-reconnect').click()`); await until(ready, 'permission retry restores feeds');
   await evaluate(`const select=document.getElementById('video-left-device');select.add(new Option('Missing input','missing-device'));select.value='missing-device';document.getElementById('video-apply').click()`);
   await until(`document.getElementById('capture-left').dataset.state==='error'&&document.getElementById('capture-right').dataset.state==='ready'`, 'missing device does not substitute a default camera');
+  await evaluate(`document.getElementById('video-left-device').value=qa.ids[1];document.getElementById('video-find').click()`);
+  await until(`!document.getElementById('video-find').disabled`, 'rescan retains unapplied device selection');
+  await evaluate(`document.getElementById('video-swap').click()`);
+  assert.equal(await evaluate(`document.getElementById('video-right-device').value`), 'missing-device', 'swap keeps the unavailable saved assignment');
+  await evaluate(`document.getElementById('video-apply').click()`);
+  assert.equal(await evaluate(`JSON.parse(localStorage.getItem('rashinban:presenter-video-inputs:v1')).right`), 'missing-device');
+  checks.push('swapping unavailable saved devices does not lose assignments');
   await command('Page.navigate', { url: url.replace('role=program', 'role=preview') });
   await until(`document.body?.dataset.role==='preview'`, 'preview loaded'); await delay(400);
   await evaluate(`document.getElementById('video-find').click()`); await delay(100);

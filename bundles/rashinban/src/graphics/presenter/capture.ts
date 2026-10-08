@@ -6,6 +6,7 @@ export type CaptureDeps = {
   open(deviceId: string): Promise<MediaStream>;
   attach(stream: MediaStream | null): Promise<void> | void;
   status(value: CaptureStatus): void;
+  schedule?(fn: () => void, ms: number): () => void;
 };
 export function parseVideoInputs(value: unknown): VideoInputs {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid video inputs');
@@ -25,7 +26,9 @@ export function captureFrameMode(frame: RenderFrame | null): 'live' | 'frozen' |
   if (frame.displayedRound !== undefined && frame.displayedRound !== state.round) return 'hidden';
   const round = state.rounds.find(item => item.number === state.round);
   if (!round || round.startAtMs === null) return 'hidden';
-  return state.aborted || state.status === 'Finished'
+  // remainingMs uses the synchronized presenter clock, including timeout rounds
+  // whose result telemetry has not arrived yet. Null is an untimed round.
+  return frame.projection.remainingMs === 0 || state.aborted || state.status === 'Finished'
     || state.players.some(player => player.results.some(result => result.round === state.round))
     || state.players.every(player => player.guesses.some(guess => guess.round === state.round)) ? 'frozen' : 'live';
 }
@@ -41,16 +44,30 @@ export function captureError(error: unknown): string {
 /** One device per slot. Superseded permission/play promises never revive a feed. */
 export function createCaptureInput(deps: CaptureDeps) {
   let selected = ''; let enabled = false; let disposed = false; let generation = 0;
+  const retryDelays = [500, 1500, 3000, 5000];
+  const schedule = deps.schedule ?? ((fn, ms) => { const timer = setTimeout(fn, ms); return () => clearTimeout(timer); });
+  let retryAttempt = 0; let recoverable = false; let cancelRetry: (() => void) | null = null;
   let stream: MediaStream | null = null; let removeListeners = () => {};
   const stop = (value: MediaStream) => value.getTracks().forEach(track => track.stop());
   function release() {
+    cancelRetry?.(); cancelRetry = null;
     generation++; removeListeners(); removeListeners = () => {};
     if (stream) stop(stream);
     stream = null;
     void Promise.resolve(deps.attach(null)).catch(() => {});
   }
+  function failed(message: string, canRecover: boolean) {
+    release(); recoverable = canRecover;
+    deps.status({ state: 'error', message });
+    if (!canRecover || disposed || !enabled || !selected || retryAttempt >= retryDelays.length) return;
+    const token = generation;
+    cancelRetry = schedule(() => {
+      if (token !== generation || disposed || !enabled) return;
+      cancelRetry = null; void open();
+    }, retryDelays[retryAttempt++]);
+  }
   async function open() {
-    release();
+    release(); recoverable = false;
     if (disposed || !enabled || !selected) { deps.status({ state: 'idle', message: selected ? 'Capture inactive' : 'No input selected' }); return; }
     const token = generation;
     deps.status({ state: 'opening', message: 'Opening video input…' });
@@ -59,11 +76,12 @@ export function createCaptureInput(deps: CaptureDeps) {
       if (token !== generation || disposed) { stop(next); return; }
       stream = next;
       const track = next.getVideoTracks()[0];
-      if (!track || track.readyState === 'ended') throw new Error('No live video track');
+      if (!track) throw new Error('No video track');
       const ended = () => {
         if (token !== generation) return;
-        release(); deps.status({ state: 'error', message: 'Video input disconnected. Reconnect the device, then retry.' });
+        failed('Video input disconnected. Waiting for the device to reconnect.', true);
       };
+      if (track.readyState === 'ended') { ended(); return; }
       let playing = false;
       const signal = () => {
         if (token === generation && playing) deps.status(track.muted
@@ -76,18 +94,20 @@ export function createCaptureInput(deps: CaptureDeps) {
       await deps.attach(next);
       if (token !== generation || disposed) return;
       if (next.getVideoTracks()[0]?.readyState !== 'live') { ended(); return; }
-      playing = true; signal();
+      retryAttempt = 0; playing = true; signal();
     } catch (error) {
       if (token !== generation || disposed) return;
-      release(); deps.status({ state: 'error', message: captureError(error) });
+      const name = error && typeof error === 'object' && 'name' in error ? error.name : '';
+      failed(captureError(error), ['NotReadableError', 'AbortError', 'NotFoundError', 'OverconstrainedError'].includes(String(name)));
     }
   }
   return {
     select(deviceId: string, active: boolean) {
       if (disposed || (selected === deviceId && enabled === active)) return;
-      selected = deviceId; enabled = active; void open();
+      selected = deviceId; enabled = active; retryAttempt = 0; void open();
     },
-    reconnect() { if (!disposed) void open(); },
+    reconnect() { if (!disposed) { retryAttempt = 0; void open(); } },
+    retryAvailable() { if (!disposed && enabled && recoverable) { retryAttempt = 0; void open(); } },
     dispose() { if (!disposed) { disposed = true; release(); deps.status({ state: 'idle', message: 'Capture inactive' }); } },
   };
 }
