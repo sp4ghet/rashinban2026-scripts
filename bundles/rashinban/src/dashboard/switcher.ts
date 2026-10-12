@@ -3,6 +3,7 @@
 // the real graphics pages opened on the preview/program channel.
 import { MAX_TEXT, withDefaults, layersEqual, type BroadcastOutput, type BroadcastState } from "../broadcast/state.ts";
 import { controlRows, monitorUrls, patchAt, rowDirty, valueAt, type Control, type Row } from "../broadcast/switcher-model.ts";
+import type { ResolvedMatch } from "../match/state.ts";
 import { BROADCAST_MESSAGES, REPLICANTS } from "../types/replicants.ts";
 
 const output: BroadcastOutput = document.body.dataset.output === "led" ? "led" : "stream";
@@ -22,7 +23,8 @@ async function send(name: string, body: unknown) {
 }
 const layers = () => state[output];
 function edit(control: Control, value: unknown) {
-  void send(BROADCAST_MESSAGES.setPreview, { output, patch: patchAt(control.path, value, layers().preview) });
+  const patch = patchAt(control.path, value, layers().preview);
+  void send(BROADCAST_MESSAGES.setPreview, { output, patch });
 }
 /** Drop focus after a mouse click so Space/Enter go to TAKE, not the button. */
 function blurAfterMouse(event: MouseEvent) {
@@ -76,6 +78,19 @@ function buildRow(row: Row): HTMLElement {
   return section;
 }
 strip.replaceChildren(...rows.map(buildRow));
+
+const playerControl = rows.flatMap(row => row.controls).find(control =>
+  control.kind === "select" && control.path[0] === "playerCards" && control.path[1] === "player");
+if (playerControl) {
+  const select = widgets.get(playerControl) as HTMLSelectElement;
+  nodecg.Replicant<ResolvedMatch | null>(REPLICANTS.matchResolved).on("change", match => {
+    // Update labels in place so a match refresh never changes the selected side.
+    for (const option of select.options) {
+      const side = option.value === "left" ? "left" : "right";
+      option.textContent = `${side === "left" ? "P1" : "P2"} ${match?.[side].name || "TBD"}`;
+    }
+  });
+}
 
 function render() {
   const { preview, program } = layers();

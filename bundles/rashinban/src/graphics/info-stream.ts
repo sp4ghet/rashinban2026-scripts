@@ -14,7 +14,7 @@ document.body.dataset.channel = channel;
 
 const casters = mountCasters(mustQuery(document, "#layer-casters"));
 const banpick = mountBanpick(mustQuery(document, "#layer-banpick"));
-const cards = mountPlayerCards(mustQuery(document, "#layer-cards"));
+const cards = mountPlayerCards(mustQuery(document, "#layer-cards"), "stream");
 const lowerThird = mountLowerThird(mustQuery(document, "#layer-lower-third"));
 
 bindLayers("stream", channel, (layers) => {

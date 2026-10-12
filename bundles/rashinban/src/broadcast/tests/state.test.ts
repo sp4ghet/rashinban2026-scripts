@@ -22,6 +22,32 @@ test("initial state hides every layer on both buses and keeps the caster title b
   assert.deepEqual(s.stream.program.casters.slots, [false, false]);
   assert.equal(s.led.program.presenter.visible, false);
   assert.equal(s.led.program.banpick.visible, false);
+  assert.equal(s.led.program.bracket.visible, false);
+});
+
+test("LED bracket visibility stays in preview until TAKE and can be reverted", () => {
+  const initial = createInitialState();
+  const previewed = setPreview(initial, "led", { bracket: { visible: true } });
+  assert.equal(previewed.led.preview.bracket.visible, true);
+  assert.equal(previewed.led.program.bracket.visible, false);
+  assert.equal(revertPreview(previewed, "led").led.preview.bracket.visible, false);
+  const taken = take(previewed, "led");
+  assert.equal(taken.led.program.bracket.visible, true);
+  assert.deepEqual(taken.stream, initial.stream);
+  assert.throws(() => setPreview(initial, "stream", { bracket: { visible: true } } as any), BroadcastError);
+});
+
+test("persisted LED buses without a bracket layer keep their other settings and default it hidden", () => {
+  const state = withDefaults({ led: {
+    program: { playerCards: { visible: true, page: "compact" }, presenter: { visible: true } },
+    preview: { banpick: { visible: true } },
+  } });
+  assert.equal(state.led.program.bracket.visible, false);
+  assert.equal(state.led.preview.bracket.visible, false);
+  assert.equal(state.led.program.playerCards.visible, true);
+  assert.equal(state.led.program.playerCards.page, "compact");
+  assert.equal(state.led.program.presenter.visible, true);
+  assert.equal(state.led.preview.banpick.visible, true);
 });
 
 test("setPreview deep-merges a partial into preview only", () => {
@@ -74,7 +100,7 @@ test("cutProgram merges straight into program and validates like setPreview", ()
 
 test("withDefaults repairs missing or malformed persisted state without throwing", () => {
   assert.deepEqual(withDefaults(undefined), createInitialState());
-  assert.deepEqual(withDefaults({ stream: { program: { playerCards: { visible: true } } } }).stream.program.playerCards, { visible: true, page: "profile" });
+  assert.deepEqual(withDefaults({ stream: { program: { playerCards: { visible: true } } } }).stream.program.playerCards, { visible: true, page: "profile", player: "left", position: "left" });
   assert.deepEqual(withDefaults({ led: 5 }).led, createInitialState().led);
   assert.deepEqual(withDefaults({ stream: { preview: { lowerThird: { title: 42 } } } }).stream.preview.lowerThird.title, "");
 });
@@ -118,4 +144,52 @@ test("BroadcastError is identifiable by name", () => {
   const error = new BroadcastError("boom");
   assert.equal(error.name, "BroadcastError");
   assert.ok(error instanceof Error);
+});
+
+test("card mode and player stay in preview until TAKE", () => {
+  const s = setPreview(createInitialState(), "stream", { playerCards: { page: "compact", player: "right" } });
+  assert.equal(s.stream.program.playerCards.page, "profile");
+  assert.equal(s.stream.program.playerCards.player, "left");
+  assert.equal(take(s, "stream").stream.program.playerCards.player, "right");
+  assert.equal(take(s, "stream").stream.program.playerCards.page, "compact");
+  assert.equal(s.led.program.playerCards.page, "profile");
+});
+
+test("persisted cards discard obsolete date and pagination while retaining the selected mode", () => {
+  const state = withDefaults({ stream: { program: { playerCards: { visible: true, page: "stats", player: "right", resultsDate: "2026-05-02", resultsPage: 9 } } } });
+  assert.deepEqual(state.stream.program.playerCards, { visible: true, page: "stats", player: "right", position: "right" });
+  assert.deepEqual(take(revertPreview(state, "stream"), "stream").stream.program.playerCards, state.stream.program.playerCards);
+});
+
+test("card position is independent of the player and changes on TAKE", () => {
+  const initial = createInitialState();
+  let state = setPreview(initial, "stream", { playerCards: { position: "right" } });
+  assert.equal(state.stream.preview.playerCards.player, "left");
+  assert.equal(state.stream.program.playerCards.position, "left");
+  assert.equal(state.stream.preview.playerCards.position, "right");
+  state = take(state, "stream");
+  assert.equal(state.stream.program.playerCards.position, "right");
+  state = setPreview(state, "stream", { playerCards: { player: "right", position: "left" } });
+  assert.equal(state.stream.program.playerCards.player, "left");
+  state = take(state, "stream");
+  assert.equal(state.stream.program.playerCards.player, "right");
+  assert.equal(state.stream.program.playerCards.position, "left");
+  const pending = setPreview(state, "stream", { playerCards: { position: "right" } });
+  assert.equal(revertPreview(pending, "stream").stream.preview.playerCards.position, "left");
+  assert.deepEqual(state.led, initial.led);
+  assert.throws(() => setPreview(state, "stream", { playerCards: { position: "center" } } as any), BroadcastError);
+});
+
+test("legacy card positions follow the saved player once, then preserve the independent setting", () => {
+  const legacy = { stream: {
+    program: { playerCards: { player: "right" } },
+    preview: { playerCards: { player: "left" } },
+  } };
+  const state = withDefaults(legacy);
+  assert.equal(state.stream.program.playerCards.position, "right");
+  assert.equal(state.stream.preview.playerCards.position, "left");
+  const independent = cutProgram(state, "stream", { playerCards: { position: "left" } });
+  assert.equal(withDefaults(independent).stream.program.playerCards.position, "left");
+  assert.equal(withDefaults(independent).stream.program.playerCards.player, "right");
+  assert.equal(Object.hasOwn(legacy.stream.program.playerCards, "position"), false);
 });

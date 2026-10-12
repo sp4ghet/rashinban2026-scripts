@@ -1,0 +1,27 @@
+/* Only the top 1920x576 is mapped to the venue LED. Everything below stays transparent. */
+#led-bracket {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 1920px;
+  height: 576px;
+  overflow: hidden;
+  background: linear-gradient(rgba(54, 7, 18, 0.88) 50%, rgba(6, 27, 57, 0.88) 50%),
+    url('presenter-kv.jpg') center / cover;
+}
+
+#led-bracket > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#led-bracket .bracket-band-label,
+#led-bracket .bracket-riser-label {
+  fill: white;
+  font-family: var(--heading);
+  font-weight: 900;
+  text-anchor: middle;
+}
+
+#led-bracket .bracket-band-label { font-size: 72px; dominant-baseline: middle; }
+#led-bracket .bracket-riser-label { font-size: 28px; }

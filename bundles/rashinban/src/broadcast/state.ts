@@ -5,8 +5,9 @@
 export type BroadcastOutput = "stream" | "led";
 export const BROADCAST_OUTPUTS: readonly BroadcastOutput[] = ["stream", "led"];
 
-export type CardPage = "profile" | "stats";
-export type PlayerCardsLayer = { visible: boolean; page: CardPage };
+// `stats` remains the persisted/Companion key for Page 2, now tournament results.
+export type CardPage = "profile" | "stats" | "compact";
+export type PlayerCardsLayer = { visible: boolean; page: CardPage; player: "left" | "right"; position: "left" | "right" };
 export type LowerThirdLayer = { visible: boolean; mode: "match" | "text"; title: string; subtitle: string };
 export type CastersLayer = { titleBar: boolean; slots: [boolean, boolean] };
 export type ToggleLayer = { visible: boolean };
@@ -21,6 +22,7 @@ export type LedLayers = {
   playerCards: PlayerCardsLayer;
   banpick: ToggleLayer;
   presenter: ToggleLayer;
+  bracket: ToggleLayer;
 };
 export type LayersFor<O extends BroadcastOutput> = O extends "stream" ? StreamLayers : LedLayers;
 export type OutputBus<L> = { program: L; preview: L };
@@ -60,7 +62,7 @@ type SpecOf<L> = {
         : SpecOf<L[K]>;
 };
 
-const CARD_SPEC = { visible: "boolean", page: ["profile", "stats"] } as const satisfies SpecOf<PlayerCardsLayer>;
+const CARD_SPEC = { visible: "boolean", page: ["profile", "stats", "compact"], player: ["left", "right"], position: ["left", "right"] } as const satisfies SpecOf<PlayerCardsLayer>;
 const TOGGLE_SPEC = { visible: "boolean" } as const satisfies SpecOf<ToggleLayer>;
 const STREAM_SPEC = {
   playerCards: CARD_SPEC,
@@ -68,7 +70,7 @@ const STREAM_SPEC = {
   casters: { titleBar: "boolean:true", slots: "booleanPair" },
   banpick: TOGGLE_SPEC,
 } as const satisfies SpecOf<StreamLayers>;
-const LED_SPEC = { playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC } as const satisfies SpecOf<LedLayers>;
+const LED_SPEC = { playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC, bracket: TOGGLE_SPEC } as const satisfies SpecOf<LedLayers>;
 const SPECS: Record<BroadcastOutput, Spec> = { stream: STREAM_SPEC, led: LED_SPEC };
 
 function isLeaf(spec: Leaf | Spec): spec is Leaf {
@@ -168,9 +170,20 @@ export function withDefaults(value: unknown): BroadcastState {
   const source = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
   const bus = <O extends BroadcastOutput>(output: O): OutputBus<LayersFor<O>> => {
     const raw = typeof source[output] === "object" && source[output] !== null ? (source[output] as Record<string, unknown>) : {};
+    const restore = (value: unknown): LayersFor<O> => {
+      const layers = repair(SPECS[output], value) as LayersFor<O>;
+      if (output === "stream" && typeof value === "object" && value !== null) {
+        const cards = (value as Record<string, unknown>).playerCards;
+        // Older cards were positioned by player. Preserve that side on migration.
+        if (typeof cards === "object" && cards !== null && !Object.hasOwn(cards, "position")) {
+          layers.playerCards.position = layers.playerCards.player;
+        }
+      }
+      return layers;
+    };
     return {
-      program: repair(SPECS[output], raw.program) as LayersFor<O>,
-      preview: repair(SPECS[output], raw.preview) as LayersFor<O>,
+      program: restore(raw.program),
+      preview: restore(raw.preview),
     };
   };
   return { stream: bus("stream"), led: bus("led") };

@@ -34,9 +34,10 @@ test("rowDirty is true when any control in the row differs between preview and p
   assert.equal(rowDirty(banpick, s.stream.preview, s.stream.program), false);
 });
 
-test("led rows expose presenter visibility and no lower third", () => {
+test("led rows expose presenter and bracket visibility and no lower third", () => {
   const ids = controlRows("led").map((r) => r.id);
-  assert.deepEqual(ids, ["presenter", "playerCards", "banpick"]);
+  assert.deepEqual(ids, ["presenter", "playerCards", "banpick", "bracket"]);
+  assert.ok(!controlRows("stream").some(r => r.id === "bracket"));
 });
 
 test("every control path resolves to a defined value in the real layer shape", () => {
@@ -67,6 +68,23 @@ test("every control value round-trips through the state validator", () => {
       }
     }
   }
+});
+
+test("cards expose manual modes and separate stream-only player and position selectors", () => {
+  const stream = controlRows("stream").find(r => r.id === "playerCards")!.controls;
+  const led = controlRows("led").find(r => r.id === "playerCards")!.controls;
+  const mode = stream.find(c => c.path[1] === "page");
+  assert.ok(mode?.kind === "select");
+  assert.deepEqual(mode.options.map(([value]) => value), ["profile", "stats", "compact"]);
+  assert.ok(stream.some(c => c.path[1] === "player"));
+  assert.ok(!led.some(c => c.path[1] === "player"));
+  const position = stream.find(c => c.path[1] === "position");
+  assert.ok(position?.kind === "select");
+  assert.deepEqual(position.options, [["left", "Left"], ["right", "Right"]]);
+  assert.ok(!led.some(c => c.path[1] === "position"));
+  const state = setPreview(createInitialState(), "stream", { playerCards: { position: "right" } });
+  assert.equal(rowDirty(controlRows("stream").find(r => r.id === "playerCards")!, state.stream.preview, state.stream.program), true);
+  assert.ok(!stream.some(c => ["resultsDate", "resultsPage"].includes(c.path[1]!)));
 });
 
 test("monitorUrls opens the info page on the channel and a presenter that never takes program", () => {

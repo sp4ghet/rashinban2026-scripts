@@ -1,0 +1,33 @@
+/* Shared match styling for the standalone and LED brackets. */
+.bracket-svg .bracket-line {
+  fill: none;
+  stroke: #f0f0f0;
+  stroke-width: 3px;
+}
+
+.bracket-svg .match {
+  overflow: visible;
+  font-family: 'Noto Sans JP';
+  font-weight: bold;
+}
+
+/* Red "on now" border, shown for the set start.gg marks in progress. */
+.bracket-svg .match-border { display: none; }
+.bracket-svg .match-border.active { display: block; }
+
+/* Each player row is a nested <svg>; let text run past its box. */
+.bracket-svg svg.match--player { overflow: visible; }
+.bracket-svg .match--player-background { fill: #cfcfcf; }
+.bracket-svg .match--player-name { fill: #000; font-size: 24px; }
+.bracket-svg .match--player-divider { stroke: #fff; stroke-width: 2px; }
+.bracket-svg .match--seed-background { fill: #646464; }
+.bracket-svg .match--player.winner .match--seed-background { fill: #ff3030; }
+
+/* The score. ("seed" is the 2025 class name.) */
+.bracket-svg .match--seed {
+  fill: white;
+  font-size: 42px;
+  font-family: 'kaneda-gothic', 'Oswald', sans-serif;
+  font-weight: 900;
+  font-style: normal;
+}

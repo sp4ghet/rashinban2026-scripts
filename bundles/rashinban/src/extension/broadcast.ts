@@ -101,8 +101,12 @@ export function registerBroadcast(nodecg: NodeCG.ServerAPI, router: ReturnType<N
   router.post("/playercards/show", (_req, res) => cut(res, { playerCards: { visible: true } }));
   router.post("/playercards/hide", (_req, res) => cut(res, { playerCards: { visible: false } }));
   router.post("/playercards/toggle", (_req, res) => cut(res, { playerCards: { visible: !stream().playerCards.visible } }));
-  router.post("/playercards/profile", (_req, res) => cut(res, { playerCards: { page: "profile" } }));
-  router.post("/playercards/stats", (_req, res) => cut(res, { playerCards: { page: "stats" } }));
+  for (const [route, page] of [["profile", "profile"], ["stats", "stats"], ["results", "stats"], ["compact", "compact"]] as const) {
+    router.post(`/playercards/${route}`, (_req, res) => cut(res, { playerCards: { page } }));
+  }
+  for (const player of ["left", "right"] as const) {
+    router.post(`/playercards/${player}`, (_req, res) => cut(res, { playerCards: { player } }));
+  }
   router.post("/playercards/flip", (_req, res) =>
     cut(res, { playerCards: { page: stream().playerCards.page === "stats" ? "profile" : "stats" } }));
   for (const index of [0, 1] as const) {

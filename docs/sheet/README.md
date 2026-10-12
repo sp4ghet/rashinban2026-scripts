@@ -25,7 +25,7 @@ as text so the sheet controls formatting ("71.4%", "1st").
 | `startgg_entrant_id` | join key | Optional numeric entrant id for an exact match when tags differ. |
 | `name` | display name | Falls back to `startgg_tag`. |
 | `twitter` | handle | With or without `@`. |
-| `age`, `rating` | profile | |
+| `age`, `rating` | profile and compact | Rating is the all-time overall peak populated from GeoGuessr. |
 | `favorite_mode`, `strengths`, `favorite_food`, `message` | profile | Free text; newlines allowed. |
 | `winrate_all`, `winrate_move`, `winrate_nm`, `winrate_nmpz` | stats: match win rate | |
 | `played_all`, `played_move`, `played_nm`, `played_nmpz` | stats: played | |
@@ -35,6 +35,10 @@ as text so the sheet controls formatting ("71.4%", "1st").
 
 `samples/players-sample.csv` shows the expected shape and is used by the
 unit tests.
+
+The old statistics columns remain accepted for compatibility, but Page 2 now
+shows start.gg tournament results. See [Player cards](../player-cards.md) for
+Profile, Results, Compact, player selection, and the Preview/Take workflow.
 
 ## `casters` tab
 

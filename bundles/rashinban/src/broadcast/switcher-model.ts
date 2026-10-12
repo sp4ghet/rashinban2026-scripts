@@ -11,16 +11,19 @@ export type Row = { id: string; title: string; controls: readonly Control[] };
 const PAGE: Control = {
   kind: "select",
   path: ["playerCards", "page"],
-  label: "Page",
+  label: "Mode",
   options: [
-    ["profile", "Profile"],
-    ["stats", "Stats"],
+    ["profile", "Page 1 · Profile"],
+    ["stats", "Page 2 · Results"],
+    ["compact", "Compact"],
   ],
 };
 const CARDS: Row = {
   id: "playerCards",
   title: "Player cards",
-  controls: [{ kind: "toggle", path: ["playerCards", "visible"], label: "Visible" }, PAGE],
+  controls: [
+    { kind: "toggle", path: ["playerCards", "visible"], label: "Visible" }, PAGE,
+  ],
 };
 const BANPICK: Row = {
   id: "banpick",
@@ -29,7 +32,10 @@ const BANPICK: Row = {
 };
 
 const STREAM_ROWS: readonly Row[] = [
-  CARDS,
+  { ...CARDS, controls: [CARDS.controls[0]!,
+    { kind: "select", path: ["playerCards", "player"], label: "Player", options: [["left", "P1 TBD"], ["right", "P2 TBD"]] },
+    { kind: "select", path: ["playerCards", "position"], label: "Position", options: [["left", "Left"], ["right", "Right"]] },
+    ...CARDS.controls.slice(1)] },
   {
     id: "lowerThird",
     title: "Lower third",
@@ -63,6 +69,7 @@ const LED_ROWS: readonly Row[] = [
   { id: "presenter", title: "Presenter", controls: [{ kind: "toggle", path: ["presenter", "visible"], label: "Visible" }] },
   CARDS,
   BANPICK,
+  { id: "bracket", title: "Bracket", controls: [{ kind: "toggle", path: ["bracket", "visible"], label: "Visible" }] },
 ];
 
 export function controlRows(output: BroadcastOutput): readonly Row[] {

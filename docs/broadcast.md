@@ -15,7 +15,7 @@ to render the preview bus instead (that is what the switcher monitors do).
 | `presenter.html?role=program` | stream | Duels presenter (unchanged, see [presenter/obs.md](presenter/obs.md)) |
 | `info-stream.html` | stream | Player cards, lower third, caster title bar / nameplates / sponsor banner, Ban & Pick |
 | `presenter-led.html` | LED | Duels presenter in the LED layout (top 1920x576 band, black below) |
-| `info-led.html` | LED | Player cards, Ban & Pick; transparent, composite it over `presenter-led.html` |
+| `info-led.html` | LED | Player cards, Ban & Pick, finals bracket; composite it over `presenter-led.html` |
 
 Unchanged: `banpick-player.html` (tablet), `brackets-finals.html`,
 `presenter-audio.html`. Removed: `banpick-stream.html`, `banpick-led.html`,
@@ -31,8 +31,8 @@ only; **TAKE** copies preview to program; **Revert preview** copies program
 back to preview. Companion routes have no preview and cut program directly.
 
 Live **content** is not in the buses and changes on air immediately from the
-Shared tab: the current match (players, round), the caster names, and the
-Ban & Pick board state (picks, bans, undo, reset). Only its visibility is
+Shared tab: the current match (players, round), the caster names, the finals
+bracket, and the Ban & Pick board state (picks, bans, undo, reset). Only visibility is
 switched.
 
 Defaults: every layer hidden except the caster title bar (on). Text fields
@@ -49,6 +49,15 @@ accept up to 120 characters. Invalid patches are rejected and nothing changes.
 | LED | Presenter | visible (off = opaque black over `presenter-led.html`) |
 | LED | Player cards | visible; page `profile` / `stats` |
 | LED | Ban & Pick | visible |
+| LED | Bracket | visible; fills the top 1920x576 LED band |
+
+To show the bracket on the wall, enable **Bracket → Visible** in the LED
+switcher and press **TAKE**. Hide Player cards and Ban & Pick in the same
+preview if you want an unobstructed bracket; those layers draw above it.
+The bracket starts hidden, including when upgrading saved broadcast state.
+Choose its live start.gg or recorded sample data in **Shared → Bracket**.
+The dedicated `brackets-finals.html` graphic remains available at 1920x1080
+and uses the same data independently of the LED visibility toggle.
 
 ## Dashboard
 

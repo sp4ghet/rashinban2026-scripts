@@ -57,23 +57,6 @@ body {
 
 #cards.visible { opacity: 1; }
 
-#cards #round {
-  grid-column: 2;
-  align-self: end;
-  justify-self: center;
-  margin-bottom: 10px;
-  padding: 8px 26px;
-  font-family: var(--heading);
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: #151b26ee;
-  border-radius: 6px;
-}
-
-#cards #round:empty { display: none; }
-
 #cards .pcard {
   --accent: var(--p1);
   --accent-light: var(--p1-light);
@@ -92,31 +75,38 @@ body {
 }
 
 #cards.visible .pcard { transform: none; }
+#cards .pcard[hidden] { display: none; }
 #cards #card-1 { grid-column: 1; }
 #cards #card-2 { --accent: var(--p2); --accent-light: var(--p2-light); grid-column: 3; }
 #cards .pcard[data-empty="true"] { opacity: 0.5; }
 
 #cards .head {
   display: flex;
+  flex-shrink: 0;
   align-items: baseline;
   gap: 12px;
+  flex-wrap: wrap;
   padding: 6px 4px 10px;
 }
 
 #cards .name {
-  font-family: var(--heading);
+  font-family: var(--body);
   font-size: 54px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.01em;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 #cards .twitter {
-  font-family: var(--heading);
+  font-family: var(--body);
   font-size: 24px;
   font-weight: 700;
   letter-spacing: 0.02em;
   opacity: 0.95;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 #cards .pcard[data-missing="true"] .head::after {
@@ -145,94 +135,108 @@ body {
 }
 
 #cards .field { display: flex; flex-direction: column; gap: 6px; padding: 0 4px; }
-#cards .field .value { font-size: 20px; font-weight: 700; white-space: pre-wrap; line-height: 1.35; min-height: 1.35em; }
+#cards .field .value { font-size: 20px; font-weight: 700; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.35; min-height: 1.35em; }
 
-#cards .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 4px 8px; }
+#cards .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 4px 0; }
 #cards .pair .field { flex-direction: row; align-items: center; gap: 12px; padding: 0; }
-#cards .pair .value { font-family: var(--heading); font-size: 34px; font-weight: 700; line-height: 1; }
+/* Center the number's line box, without the body fields' extra empty height. */
+#cards .pair .value { font-family: var(--heading); font-size: 34px; font-weight: 700; line-height: 1; min-height: 0; }
 
-#cards .page { display: none; flex-direction: column; gap: 14px; }
+#cards .page { display: none; flex-direction: column; flex-shrink: 0; gap: 14px; }
+/* The upper profile stays fixed; only this lower section changes by mode. */
 #cards[data-page="profile"] .page-profile,
-#cards[data-page="stats"] .page-stats { display: flex; }
+#cards[data-page="profile"] .page-details,
+#cards[data-page="stats"] .page-results,
+#cards[data-page="compact"] .page-profile,
+#cards[data-page="compact"] .page-results { display: flex; }
 
-/* Stats page */
-#cards table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-family: var(--heading);
-  font-weight: 700;
+/* Tournament results */
+#cards .results-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+#cards .result-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+#cards .result-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 4px; padding: 8px 0 12px; border-bottom: 1px solid #ffffff66; }
+#cards .result-round { font-family: var(--heading); font-size: 22px; line-height: 1.1; font-weight: 700; text-transform: uppercase; }
+#cards .result-opponent { grid-column: 1; font-size: 19px; font-weight: 700; overflow-wrap: anywhere; line-height: 1.35; }
+#cards .result-score { grid-column: 2; grid-row: 1 / 3; align-self: center; font-family: var(--heading); font-size: 32px; font-weight: 700; white-space: nowrap; }
+#cards .results-empty { padding-top: 20px; font-family: var(--heading); font-size: 19px; line-height: 1.5; text-transform: uppercase; opacity: 0.85; }
+#cards .results-empty:empty { display: none; }
+
+/* Compact replaces food/message with history, keeping the same upper layout. */
+#cards[data-page="compact"] .profile-only { display: none; }
+#cards[data-page="compact"] .page-results { padding: 0 4px; }
+#cards[data-page="compact"] .result-list { gap: 5px; }
+#cards[data-page="compact"] .result-row { padding: 4px 0 7px; gap: 2px 10px; }
+#cards[data-page="compact"] .result-round { font-size: 19px; }
+#cards[data-page="compact"] .result-opponent { font-size: 17px; }
+#cards[data-page="compact"] .result-score { font-size: 28px; }
+
+/* Stream cards accompany a single-player camera shot at 1920x1080. */
+body[data-output="stream"] #cards { --card-w: 800px; }
+body[data-output="stream"] #cards[data-position="left"] :is(#card-1, #card-2) { grid-column: 1; }
+body[data-output="stream"] #cards[data-position="right"] :is(#card-1, #card-2) { grid-column: 3; }
+body[data-output="stream"] #cards .pcard {
+  height: 900px;
+  min-height: 0;
+  gap: 18px;
+  padding: 24px 36px 30px;
+  border-width: 6px;
+  border-radius: 44px;
 }
+body[data-output="stream"] #cards .head { gap: 28px; padding: 6px 4px 18px; }
+body[data-output="stream"] #cards .name { font-size: 80px; }
+body[data-output="stream"] #cards .twitter { font-size: 36px; }
+body[data-output="stream"] #cards .label { font-size: 28px; padding: 2px 10px; }
+body[data-output="stream"] #cards .field { gap: 10px; }
+body[data-output="stream"] #cards .field .value { font-size: 28px; }
+body[data-output="stream"] #cards .pair { gap: 28px; }
+body[data-output="stream"] #cards .pair .field { gap: 28px; }
+body[data-output="stream"] #cards .pair .label { font-size: 34px; padding: 4px 18px; }
+body[data-output="stream"] #cards .pair .value { font-size: 50px; }
+body[data-output="stream"] #cards .page { gap: 14px; }
+body[data-output="stream"] #cards .result-list { gap: 10px; }
+body[data-output="stream"] #cards .result-row { padding: 6px 0 10px; column-gap: 24px; }
+body[data-output="stream"] #cards .result-round { font-size: 28px; }
+body[data-output="stream"] #cards .result-opponent { font-size: 26px; line-height: 1.25; }
+body[data-output="stream"] #cards .result-score { font-size: 48px; }
+body[data-output="stream"] #cards .results-empty { font-size: 28px; }
+body[data-output="stream"] #cards[data-page="compact"] .result-list { gap: 8px; }
+body[data-output="stream"] #cards[data-page="compact"] .result-row { padding: 6px 0 10px; }
+body[data-output="stream"] #cards[data-page="compact"] .result-round { font-size: 28px; }
+body[data-output="stream"] #cards[data-page="compact"] .result-opponent { font-size: 25px; }
+body[data-output="stream"] #cards[data-page="compact"] .result-score { font-size: 42px; }
 
-#cards col.c-rate { width: 40%; }
-#cards col.c-played { width: 26%; }
-#cards col.c-place { width: 34%; }
-
-#cards th {
-  padding: 4px 4px 6px;
-  font-size: 19px;
-  letter-spacing: 0.04em;
-  text-align: center;
-  text-transform: uppercase;
-  white-space: nowrap;
-  border-bottom: 3px solid var(--ink);
+/* The LED processor displays only y=0..576 of the 1920x1080 source.
+   Keep both cards 24px from the outer edges, leaving the center for ban/pick. */
+body[data-output="led"] #cards {
+  --card-w: 480px;
+  inset: 0 0 auto;
+  height: 576px;
+  padding: 24px;
+  align-items: start;
 }
-
-#cards th + th,
-#cards td + td { border-left: 3px solid var(--ink); }
-
-#cards td {
-  padding: 5px 6px;
-  white-space: nowrap;
-  font-size: 21px;
+body[data-output="led"] #cards .pcard {
+  height: 528px;
+  min-height: 0;
+  gap: 8px;
+  padding: 12px 16px 14px;
 }
-
-#cards td span { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-#cards td .k { font-size: 16px; font-style: normal; letter-spacing: 0.03em; }
-#cards td b { font-weight: 700; }
-
-#cards .rounds {
-  display: flex;
-  justify-content: space-between;
+body[data-output="led"] #cards .head { gap: 12px; padding: 2px 4px 8px; }
+body[data-output="led"] #cards .name { font-size: 40px; }
+body[data-output="led"] #cards .twitter { font-size: 20px; }
+body[data-output="led"] #cards .field { gap: 4px; }
+body[data-output="led"] #cards .field .value { font-size: 18px; }
+body[data-output="led"] #cards .pair .value { font-size: 30px; }
+body[data-output="led"] #cards .page { gap: 8px; }
+body[data-output="led"] #cards .result-list { gap: 6px; }
+body[data-output="led"] #cards .result-row {
+  grid-template-columns: 104px minmax(0, 1fr) auto;
+  gap: 2px 12px;
   align-items: center;
-  padding: 6px 12px;
-  border: 3px solid var(--ink);
-  border-radius: 6px;
-  font-family: var(--heading);
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1;
+  padding: 6px 0 8px;
 }
-
-#cards .rounds .label { border: none; padding: 0; font-size: 22px; }
-
-#cards .countries {
-  padding: 8px 12px 14px;
-  border: 3px solid var(--ink);
-  border-radius: 6px;
-  text-align: center;
-}
-
-#cards .countries > .label { border: none; font-size: 22px; }
-
-#cards .countries .flags {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  margin-top: 8px;
-}
-
-#cards .countries .flags div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--heading);
-  font-size: 22px;
-  font-weight: 700;
-}
-
-#cards .countries img { width: 76px; height: 51px; object-fit: cover; border-radius: 3px; box-shadow: 0 2px 6px #0006; }
-#cards .countries img[hidden] { display: none; }
+body[data-output="led"] #cards .result-round { font-size: 20px; overflow-wrap: anywhere; }
+body[data-output="led"] #cards .result-opponent { grid-column: 2; font-size: 18px; }
+body[data-output="led"] #cards .result-score { grid-column: 3; grid-row: 1; font-size: 32px; }
+body[data-output="led"] #cards[data-page="compact"] .result-row { padding: 2px 0 4px; }
 
 /* ==== Casters desk ======================================================= */
 /* Caster desk overlay: red title bar, two name cards over the camera feed,
