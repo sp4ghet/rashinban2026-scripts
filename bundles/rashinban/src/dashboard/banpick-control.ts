@@ -12,6 +12,7 @@ const nameA = $<HTMLInputElement>("name-a");
 const nameB = $<HTMLInputElement>("name-b");
 const undoBtn = $<HTMLButtonElement>("undo");
 const resetBtn = $<HTMLButtonElement>("reset");
+const nextBtn = $<HTMLButtonElement>("next-game");
 const stepEl = $<HTMLElement>("step");
 const board = $<HTMLElement>("board");
 const games = $<HTMLElement>("games");
@@ -56,12 +57,15 @@ function render() {
   stepEl.textContent = stepText(state, view);
   stepEl.dataset.turn = view.step?.player ?? "";
   renderGames(games, view);
+  nextBtn.disabled = !view.ready || view.game === 3;
+  nextBtn.textContent = view.game === 2 ? "Next game (1–1 only)" : "Next game";
   undoBtn.disabled = state.actions.length === 0;
   if (document.activeElement !== nameA) nameA.value = state.players.A;
   if (document.activeElement !== nameB) nameB.value = state.players.B;
 }
 
 undoBtn.addEventListener("click", () => send(BANPICK_MESSAGES.undo));
+nextBtn.addEventListener("click", () => send(BANPICK_MESSAGES.nextGame));
 resetBtn.addEventListener("click", () => {
   if (state.actions.length === 0 || confirm("Reset the Ban & Pick? All bans and picks will be cleared.")) {
     void send(BANPICK_MESSAGES.reset);
@@ -69,6 +73,7 @@ resetBtn.addEventListener("click", () => {
 });
 
 rep.on("change", (raw) => {
+  if (raw?.game !== state.game || raw?.actions.length !== state.actions.length) selected = null;
   state = raw ?? createInitialState();
   const pending = selected?.option.id;
   if (pending !== undefined && state.actions.some((a) => a.optionId === pending)) selected = null;

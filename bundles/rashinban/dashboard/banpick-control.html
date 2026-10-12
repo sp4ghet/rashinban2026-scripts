@@ -69,6 +69,7 @@
       button:hover { filter: brightness(1.2); }
       button:disabled { opacity: 0.4; cursor: default; }
       #reset { background: #b71c1c; }
+      #next-game { background: #1565c0; margin-left: auto; }
 
       #step {
         padding: 8px 12px;
@@ -164,13 +165,14 @@
   </head>
   <body>
     <div class="row">
-      <label>Left / A <input id="name-a" type="text" readonly placeholder="Player A" /></label>
+      <label>P1 <input id="name-a" type="text" readonly placeholder="Player 1" /></label>
       <span>vs</span>
-      <label>Right / B <input id="name-b" type="text" readonly placeholder="Player B" /></label>
+      <label>P2 <input id="name-b" type="text" readonly placeholder="Player 2" /></label>
     </div>
     <div class="row">
       <button id="undo">Undo</button>
       <button id="reset">Reset</button>
+      <button id="next-game" disabled>Next game</button>
     </div>
     <div id="step"></div>
     <div id="board"></div>

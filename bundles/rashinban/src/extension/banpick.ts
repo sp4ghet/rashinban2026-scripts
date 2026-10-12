@@ -4,6 +4,9 @@ import {
   BanPickError,
   applyAction,
   createInitialState,
+  currentGame,
+  isGameReady,
+  nextGame,
   reset,
   undo,
   type BanPickState,
@@ -21,6 +24,9 @@ export function registerBanPick(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
   if (rep.value && "visible" in rep.value) {
     const { visible: _visible, ...rest } = rep.value as BanPickState & { visible?: unknown };
     rep.value = rest;
+  }
+  if (rep.value && rep.value.game !== currentGame(rep.value)) {
+    rep.value = { ...rep.value, game: currentGame(rep.value) };
   }
   const state = () => rep.value ?? createInitialState();
 
@@ -49,13 +55,18 @@ export function registerBanPick(nodecg: NodeCG.ServerAPI, router: ReturnType<Nod
 
   nodecg.listenFor(BANPICK_MESSAGES.undo, (_data, ack) => mutate(ack, undo));
   nodecg.listenFor(BANPICK_MESSAGES.reset, (_data, ack) => mutate(ack, reset));
+  nodecg.listenFor(BANPICK_MESSAGES.nextGame, (_data, ack) => mutate(ack, nextGame));
 
   // Companion (Generic HTTP) endpoints, mounted under /rashinban/banpick.
   // Show/hide/toggle live on the broadcast bus (see ./broadcast.ts).
   const respond = (res: { json: (body: unknown) => void }) => {
     const s = state();
-    res.json({ step: s.actions.length, complete: s.actions.length >= 8 });
+    res.json({ step: s.actions.length, complete: s.actions.length >= 8, game: currentGame(s), ready: isGameReady(s) });
   };
   router.post("/banpick/undo", (_req, res) => { mutate(undefined, undo); respond(res); });
   router.post("/banpick/reset", (_req, res) => { mutate(undefined, reset); respond(res); });
+  router.post("/banpick/next-game", (_req, res) => {
+    if (!mutate(undefined, nextGame)) res.status(409);
+    respond(res);
+  });
 }

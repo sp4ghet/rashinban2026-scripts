@@ -32,7 +32,7 @@ back to preview. Companion routes have no preview and cut program directly.
 
 Live **content** is not in the buses and changes on air immediately from the
 Shared tab: the current match (players, round), the caster names, the finals
-bracket, and the Ban & Pick board state (picks, bans, undo, reset). Only visibility is
+bracket, and the Ban & Pick state (picks, bans, next game, undo, reset). Only visibility is
 switched.
 
 Defaults: every layer hidden except the caster title bar (on). Text fields
@@ -58,6 +58,43 @@ The bracket starts hidden, including when upgrading saved broadcast state.
 Choose its live start.gg or recorded sample data in **Shared → Bracket**.
 The dedicated `brackets-finals.html` graphic remains available at 1920x1080
 and uses the same data independently of the LED visibility toggle.
+
+### Ban & Pick stack
+
+Both info pages show only the current game's selections, newest first.
+The stream column starts at **(60, 60)** and is **440px** wide. The LED
+column starts at **(552, 24)** and is **816px** wide, centered between the
+player cards. Its full five-row Game 3 stack ends at **y=544**, within the
+1920x576 LED band. Map names and labels use uppercase Kaneda Gothic, with
+map names fitted to their row when necessary.
+
+Use **Shared → Ban & Pick → Next game** after playing each game:
+
+| Stage | Selections shown | When ready |
+| --- | --- | --- |
+| Game 1 | P1 ban, P2 ban, P1 pick (steps 1–3) | Play Game 1, then Next game |
+| Game 2 | P2 pick (step 4) | Play Game 2; advance only at 1–1 |
+| Game 3 | P2 ban, P1 ban, P1 ban, P2 ban (steps 5–8), automatic decider | Play Game 3 |
+
+**Next game** immediately clears the on-air stack for the new stage. All
+earlier choices remain unavailable on the tablet and operator board.
+Input pauses after each pick until the operator advances; a 2–0 match
+ends on Game 2 without advancing. The remaining Game 3 option appears at
+the top, labeled **DECIDER · AUTO**, above the four bans.
+
+On `banpick-player.html`, tap or click an option once to select it, then
+tap or click the same option again to confirm. Selecting a different
+option changes the pending choice. The bottom Confirm/Cancel controls
+remain available; input is disabled while a confirmation is being sent.
+
+**Undo** reverses the latest selection; on an empty newly advanced stage,
+it returns to the preceding game's completed stack without removing its
+pick. **Reset** clears the whole procedure and returns to Game 1.
+Existing saved procedures resume on the game most recently selected.
+Visibility still uses each output's Preview/TAKE controls independently.
+
+Companion can advance with `POST /rashinban/banpick/next-game`; an unfinished
+stage or completed Game 3 returns HTTP 409 without changing state.
 
 ## Dashboard
 

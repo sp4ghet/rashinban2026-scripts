@@ -1,6 +1,6 @@
 # Ban & Pick design
 
-*Superseded in part: overlay visibility and the banpick:setVisible message moved to the broadcast switcher (see [docs/broadcast.md](../../broadcast.md)).*
+*Superseded in part: visibility moved to the broadcast switcher, and the info overlays now show a current-game stack with operator-controlled Next game pauses (see [docs/broadcast.md](../../broadcast.md)).*
 
 Date: 2026-09-11
 

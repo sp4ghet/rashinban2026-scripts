@@ -7,6 +7,10 @@ import {
   createInitialState,
   currentStep,
   deriveView,
+  currentGame,
+  deriveStack,
+  isGameReady,
+  nextGame,
   reset,
   undo,
   type BanPickState,
@@ -14,7 +18,7 @@ import {
 
 /** Runs the procedure with a fixed option order. */
 function play(order: number[]): BanPickState {
-  return order.reduce((s, id) => applyAction(s, id), createInitialState());
+  return order.reduce((s, id) => applyAction(isGameReady(s) ? nextGame(s) : s, id), createInitialState());
 }
 
 test("step table matches rulebook 4.4.1", () => {
@@ -38,7 +42,12 @@ test("actions record the acting player and kind from the step table", () => {
     { player: "B", kind: "ban", optionId: 7 },
     { player: "A", kind: "pick", optionId: 1 },
   ]);
-  assert.deepEqual(currentStep(s), { player: "B", kind: "pick", game: 2 });
+  assert.equal(currentStep(s), null, "Game 1's pick pauses input until the operator advances");
+});
+
+test("cannot select Game 2 before the operator advances", () => {
+  const s = play([4, 7, 1]);
+  assert.throws(() => applyAction(s, 2, "B"), /Next game/);
 });
 
 test("rejects reusing a banned or picked option", () => {
@@ -83,4 +92,71 @@ test("remaining option is not labelled until the procedure completes", () => {
   assert.equal(view.complete, false);
   assert.equal(view.options.filter((v) => v.status === "open").length, 2);
   assert.deepEqual(view.games.map((g) => g?.option.id ?? null), [3, 4, null]);
+});
+
+test("three stages show only their own selections, newest first", () => {
+  let s = createInitialState();
+  assert.deepEqual(deriveStack(s).entries, []);
+  s = applyAction(s, 9);
+  assert.deepEqual(deriveStack(s).entries.map(v => v.stepIndex), [1]);
+  s = applyAction(s, 8);
+  s = applyAction(s, 1);
+  assert.deepEqual(deriveStack(s).entries.map(v => v.stepIndex), [3, 2, 1]);
+  assert.equal(currentGame(s), 1);
+  s = nextGame(s);
+  assert.deepEqual(deriveStack(s).entries, []);
+  assert.deepEqual(currentStep(s), { player: "B", kind: "pick", game: 2 });
+  assert.throws(() => applyAction(s, 9), /already banned/);
+  s = applyAction(s, 4, "B");
+  assert.deepEqual(deriveStack(s).entries.map(v => v.stepIndex), [4]);
+  assert.equal(currentStep(s), null);
+  assert.throws(() => applyAction(s, 5), /Next game/);
+  s = nextGame(s);
+  assert.equal(currentGame(s), 3);
+  assert.deepEqual(deriveStack(s).entries, []);
+  for (const [index, id] of [7, 6, 5, 3].entries()) {
+    s = applyAction(s, id);
+    assert.deepEqual(deriveStack(s).entries.filter(v => v.stepIndex).map(v => v.stepIndex),
+      Array.from({ length: index + 1 }, (_, i) => index + 5 - i));
+  }
+  assert.equal(deriveStack(s).entries[0]!.option.id, 2);
+  assert.equal(deriveStack(s).entries[0]!.status, "remaining");
+  assert.equal(deriveStack(s).entries.length, 5);
+  assert.throws(() => nextGame(s), /no next game/);
+});
+
+test("cannot advance an unfinished stage or skip Game 2", () => {
+  for (const s of [createInitialState(), play([1, 2]), nextGame(play([1, 2, 3])), play([1, 2, 3, 4, 5])]) {
+    assert.throws(() => nextGame(s), /Finish this game/);
+  }
+});
+
+test("undo reverses selections and stage advances in order", () => {
+  let s = play([1, 2, 3, 4, 5, 6, 7, 8]);
+  s = undo(s);
+  assert.equal(deriveStack(s).entries.some(v => v.status === "remaining"), false);
+  assert.deepEqual(currentStep(s), { player: "B", kind: "ban" });
+  for (let i = 0; i < 3; i++) s = undo(s);
+  assert.equal(currentGame(s), 3);
+  assert.equal(s.actions.length, 4);
+  s = undo(s);
+  assert.equal(currentGame(s), 2);
+  assert.equal(s.actions.length, 4);
+  assert.equal(isGameReady(s), true);
+  s = undo(s);
+  assert.equal(currentGame(s), 2);
+  assert.deepEqual(deriveStack(s).entries, []);
+  s = undo(s);
+  assert.equal(currentGame(s), 1);
+  assert.equal(s.actions.length, 3);
+  assert.deepEqual(reset(s), createInitialState());
+});
+
+test("legacy saved progress restores the latest game without clearing history", () => {
+  for (let count = 0; count <= 8; count++) {
+    const { game: _, ...legacy } = play(Array.from({ length: count }, (_, i) => i + 1));
+    assert.equal(currentGame(legacy), count <= 3 ? 1 : count === 4 ? 2 : 3);
+    assert.equal(isGameReady(legacy), [3, 4, 8].includes(count));
+    assert.equal(legacy.actions.length, count);
+  }
 });

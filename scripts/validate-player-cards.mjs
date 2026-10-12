@@ -12,7 +12,9 @@ import { rowToProfile } from '../bundles/rashinban/src/sheet/players.ts';
 import { normalizeEvent } from '../bundles/rashinban/src/startgg/normalize.ts';
 import { playerCardResults } from '../bundles/rashinban/src/broadcast/player-card-results.ts';
 import { fromPhaseGroupSample } from '../bundles/rashinban/src/bracket/finals.ts';
-import { REPLICANTS, BROADCAST_MESSAGES } from '../bundles/rashinban/src/types/replicants.ts';
+import { createInitialState as initialBanpick, applyAction, nextGame, undo, reset } from '../bundles/rashinban/src/banpick/rules.ts';
+import { REPLICANTS, BROADCAST_MESSAGES, BANPICK_MESSAGES } from '../bundles/rashinban/src/types/replicants.ts';
+import { verifyBanpick } from './banpick-browser-checks.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifacts = path.join(root, 'artifacts/player-cards');
@@ -44,7 +46,7 @@ const bracket = { fetchedAt: now, event: null, phases: [], groups: {}, streamQue
   sets: Object.fromEntries(sets.map(set => [set.id, set])) };
 const finals = { source: 'sample', updatedAt: now, error: null,
   ...fromPhaseGroupSample(JSON.parse(await readFile(path.join(root, 'docs/startgg/samples/evo-japan-2026-sf6-finals-top8.json'), 'utf8'))) };
-const values = { [REPLICANTS.broadcast]: state, [REPLICANTS.matchResolved]: resolveMatch(match, profiles),
+const values = { [REPLICANTS.banPick]: initialBanpick(), [REPLICANTS.broadcast]: state, [REPLICANTS.matchResolved]: resolveMatch(match, profiles),
   [REPLICANTS.players]: profiles, [REPLICANTS.startggBracket]: bracket, [REPLICANTS.bracketFinals]: finals };
 const preload = () => `
 Date.now=()=>${now};
@@ -53,19 +55,27 @@ const handlers=new Map();
 window.fixtureValues=values;
 window.emit=(name,value)=>{values[name]=value;for(const cb of handlers.get(name)||[])cb(value);};
 window.nodecg={Replicant(name){return{on(event,callback){if(!handlers.has(name))handlers.set(name,[]);handlers.get(name).push(callback);if(Object.hasOwn(values,name))queueMicrotask(()=>callback(values[name]));}};},
-async sendMessage(name,data){const response=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,data})});const next=await response.json();if(!response.ok)throw Error(next.error);emit('${REPLICANTS.broadcast}',next);for(const frame of document.querySelectorAll('iframe'))frame.contentWindow.emit?.('${REPLICANTS.broadcast}',next);return next;}};
+async sendMessage(name,data){const response=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,data})});const next=await response.json();if(!response.ok)throw Error(next.error);emit(next.replicant,next.value);for(const frame of document.querySelectorAll('iframe'))frame.contentWindow.emit?.(next.replicant,next.value);return next.value;}};
 `;
 const server = createServer(async (req, res) => {
   try {
     if (req.url === '/message') {
       let body = ''; for await (const chunk of req) body += chunk;
       const { name, data } = JSON.parse(body);
+      if (Object.values(BANPICK_MESSAGES).includes(name)) {
+        const previous = values[REPLICANTS.banPick];
+        values[REPLICANTS.banPick] = name === BANPICK_MESSAGES.act ? applyAction(previous, data.optionId, data.player)
+          : name === BANPICK_MESSAGES.nextGame ? nextGame(previous)
+          : name === BANPICK_MESSAGES.undo ? undo(previous) : reset(previous);
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ replicant: REPLICANTS.banPick, value: values[REPLICANTS.banPick] })); return;
+      }
       if (name === BROADCAST_MESSAGES.setPreview) state = setPreview(state, data.output, data.patch);
       else if (name === BROADCAST_MESSAGES.take) state = take(state, data.output);
       else if (name === BROADCAST_MESSAGES.revertPreview) state = revertPreview(state, data.output);
       else throw Error('Unexpected message ' + name);
       values[REPLICANTS.broadcast] = state;
-      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(state)); return;
+      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ replicant: REPLICANTS.broadcast, value: state })); return;
     }
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     const file = path.resolve(root, '.' + pathname);
@@ -354,6 +364,13 @@ try {
   await evaluate(`document.querySelector('#take').click()`);
   await until(`!fixtureValues.${REPLICANTS.broadcast}.led.program.bracket.visible`);
   assert.equal(await evaluate(bracketHidden(programDocument)), true);
+  state = createInitialState();
+  for (const output of ['stream', 'led']) state = take(setPreview(state, output, {
+    banpick: { visible: true }, playerCards: { visible: output === 'led' },
+    ...(output === 'stream' ? { casters: { titleBar: false } } : {}),
+  }), output);
+  values[REPLICANTS.broadcast] = state;
+  await verifyBanpick({ navigate, evaluate, until, screenshot, delay, command });
   await writeFile(path.join(artifacts, 'startgg-check.json'), JSON.stringify({
     source: liveStartgg ? 'fresh API responses' : 'saved API responses', sourceFiles,
     fetchedAt: sources.map(source => source.fetchedAt), loadedSets: Object.keys(realBracket.sets).length,

@@ -119,3 +119,56 @@ test("registerBanPick scrubs a persisted on-air flag and keeps the rest of the s
   const { visible: _visible, ...rest } = seeded;
   assert.deepEqual(rep.value, rest);
 });
+
+test("Ban & Pick pauses server-side and only an operator advance unlocks the next game", () => {
+  const fake = fakeNodecg();
+  registerBanPick(fake.nodecg, express.Router());
+  for (const optionId of [1, 2, 3]) assert.equal(fake.message("banpick:act", { optionId }).error, null);
+  assert.ok(fake.message("banpick:act", { optionId: 4 }).error instanceof Error);
+  const advanced = fake.message("banpick:nextGame");
+  assert.equal(advanced.error, null);
+  assert.equal((advanced.value as any).game, 2);
+  assert.equal(fake.message("banpick:act", { optionId: 4, player: "B" }).error, null);
+  assert.ok(fake.message("banpick:act", { optionId: 5 }).error instanceof Error);
+  assert.equal((fake.message("banpick:nextGame").value as any).game, 3);
+  for (const optionId of [5, 6, 7, 8]) assert.equal(fake.message("banpick:act", { optionId }).error, null);
+  assert.ok(fake.message("banpick:nextGame").error instanceof Error);
+  const reset = fake.message("banpick:reset").value as any;
+  assert.equal(reset.game, 1);
+  assert.deepEqual(reset.actions, []);
+});
+
+test("Ban & Pick restores legacy stage progress on startup", () => {
+  const fake = fakeNodecg();
+  const { game: _, ...legacy } = createInitialState();
+  legacy.actions = [
+    { optionId: 1, player: "A", kind: "ban" },
+    { optionId: 2, player: "B", kind: "ban" },
+    { optionId: 3, player: "A", kind: "pick" },
+    { optionId: 4, player: "B", kind: "pick" },
+  ];
+  const rep = fake.nodecg.Replicant(REPLICANTS.banPick, { defaultValue: legacy });
+  registerBanPick(fake.nodecg, express.Router());
+  assert.deepEqual(rep.value, { ...legacy, game: 2 });
+  assert.ok(fake.message("banpick:act", { optionId: 5 }).error instanceof Error);
+});
+
+test("Companion Next game rejects premature advances and reports the new stage", async () => {
+  const a = fakeNodecg();
+  const router = express.Router();
+  registerBanPick(a.nodecg, router);
+  a.nodecg.mount("/rashinban", router);
+  const server = a.http.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/rashinban/banpick/next-game`;
+  try {
+    assert.equal((await fetch(url, { method: "POST" })).status, 409);
+    for (const optionId of [1, 2, 3]) a.message("banpick:act", { optionId });
+    const response = await fetch(url, { method: "POST" });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { step: 3, complete: false, game: 2, ready: false });
+    assert.equal((await fetch(url, { method: "POST" })).status, 409);
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
+});

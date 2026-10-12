@@ -25,6 +25,7 @@ const toast = document.getElementById("toast")!;
 
 let state: BanPickState = createInitialState();
 let selected: OptionView | null = null;
+let submitting = false;
 let toastTimer: number | undefined;
 
 function showToast(message: string) {
@@ -38,6 +39,11 @@ function render() {
   const view = renderBoard(board, state, {
     selectedId: selected?.option.id ?? null,
     onSelect: (v) => {
+      if (submitting) return;
+      if (selected?.option.id === v.option.id) {
+        void confirmSelection();
+        return;
+      }
       selected = v;
       render();
     },
@@ -51,12 +57,14 @@ function render() {
   renderGames(games, view);
 
   const myTurn = !lockedPlayer || view.step?.player === lockedPlayer;
-  root.classList.toggle("locked-out", !myTurn && !view.complete);
-  if (!myTurn) {
+  root.classList.toggle("locked-out", !myTurn && !!view.step);
+  if (!myTurn || submitting) {
     board.querySelectorAll<HTMLButtonElement>("button.bp-card").forEach((b) => {
       b.disabled = true;
     });
   }
+  confirmBtn.disabled = submitting || !selected || !view.step || !myTurn;
+  cancelBtn.disabled = submitting;
 
   if (selected && view.step && myTurn) {
     const verb = view.step.kind === "pick" ? `PICK for Game ${view.step.game}` : "BAN";
@@ -69,20 +77,23 @@ function render() {
   }
 }
 
-confirmBtn.addEventListener("click", async () => {
-  if (!selected) return;
+async function confirmSelection() {
+  if (!selected || submitting) return;
   const optionId = selected.option.id;
-  confirmBtn.disabled = true;
+  submitting = true;
+  render();
   try {
     await nodecg.sendMessage(BANPICK_MESSAGES.act, { optionId, player: lockedPlayer });
   } catch (err) {
     showToast((err as Error)?.message ?? "Rejected");
   } finally {
     selected = null;
-    confirmBtn.disabled = false;
+    submitting = false;
     render();
   }
-});
+}
+
+confirmBtn.addEventListener("click", () => void confirmSelection());
 
 cancelBtn.addEventListener("click", () => {
   selected = null;
@@ -90,6 +101,7 @@ cancelBtn.addEventListener("click", () => {
 });
 
 rep.on("change", (raw) => {
+  if (raw?.game !== state.game || raw?.actions.length !== state.actions.length) selected = null;
   state = raw ?? createInitialState();
   // Drop a pending selection if that option is no longer open.
   const pending = selected?.option.id;

@@ -102,6 +102,7 @@ export const BANPICK_MESSAGES = {
   act: "banpick:act",
   undo: "banpick:undo",
   reset: "banpick:reset",
+  nextGame: "banpick:nextGame",
 } as const;
 
 /** Messages the start.gg poller listens for. */

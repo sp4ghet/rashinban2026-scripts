@@ -1,4 +1,4 @@
-// LED info page: the venue screen shows the bracket, Ban & Pick board and
+// LED info page: the venue screen shows the bracket, Ban & Pick stack and
 // player cards, bound to the led bus (program by default, preview with
 // ?channel=preview).
 import { channelFromSearch } from "../broadcast/channel.ts";

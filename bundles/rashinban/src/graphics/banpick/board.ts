@@ -39,10 +39,10 @@ export function cardTag(v: OptionView): string {
 
 /** Sentence describing the pending step, e.g. "sp4ghet: BAN". */
 export function stepText(state: BanPickState, view: BoardView): string {
-  if (!view.step) return "BAN & PICK COMPLETE";
+  if (!view.step) return view.complete ? "GAME 3 READY" : `GAME ${view.game} READY — waiting for operator`;
   const who = playerName(state, view.step.player);
   const what = view.step.kind === "pick" ? `PICK GAME ${view.step.game}` : "BAN";
-  return `${who}: ${what}`;
+  return `GAME ${view.game} — ${who}: ${what}`;
 }
 
 export function renderBoard(container: HTMLElement, state: BanPickState, opts: BoardOptions = {}): BoardView {
@@ -90,7 +90,7 @@ export function renderBoard(container: HTMLElement, state: BanPickState, opts: B
       if (opts.onSelect) {
         const btn = card as HTMLButtonElement;
         btn.type = "button";
-        btn.disabled = v.status !== "open" || view.complete;
+        btn.disabled = v.status !== "open" || !view.step;
         btn.addEventListener("click", () => opts.onSelect?.(v));
       }
       group.append(card);
