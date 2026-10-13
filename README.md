@@ -22,8 +22,8 @@ npm run dev     # esbuild watch + NodeCG together
 - Dashboard: http://localhost:9090/
   - **Config**: Duels Presenter, start.gg, and Google Sheets for setup and connection recovery.
   - **LED**: the LED switcher (preview/program, TAKE) for the venue wall.
-  - **Shared**: Current Match, Ban & Pick, Casters, and Bracket; content that is live on both outputs.
-  - **Stream**: the stream switcher (preview/program, TAKE) for OBS.
+  - **Shared**: Current Match, Ban & Pick, and Bracket; content that is live on both outputs.
+  - **Stream**: the stream switcher (preview/program, TAKE) for OBS, including left/right/center caster dropdowns.
   - Restart NodeCG after changing dashboard workspace assignments.
 - Info overlays (1920×1080): `graphics/info-stream.html` (player cards, lower
   third, casters, Ban & Pick) and `graphics/info-led.html` (player cards and
@@ -132,7 +132,7 @@ The extension mounts plain HTTP endpoints for Bitfocus Companion's
 - `POST /rashinban/broadcast/{stream,led}/{take,revert}`
 - `POST /rashinban/banpick/{show,hide,toggle,undo,reset}`
 - `POST /rashinban/playercards/{show,hide,toggle,profile,stats,flip}`
-- `POST /rashinban/casters/{1,2}/{show,hide,toggle}`
+- `POST /rashinban/casters/{1,2,3}/{show,hide,toggle}` (left, right, center)
 - `POST /rashinban/startgg/refresh`
 - `POST /rashinban/sheet/refresh`
 

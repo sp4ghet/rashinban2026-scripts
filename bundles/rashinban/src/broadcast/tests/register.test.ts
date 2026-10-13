@@ -89,6 +89,10 @@ test("Companion routes cut the stream program directly and take/revert per outpu
     assert.equal((await post("/playercards/results")).body.playerCards.page, "stats");
     assert.deepEqual((await post("/casters/2/show")).body.casters.slots, [false, true]);
     assert.deepEqual((await post("/casters/2/toggle")).body.casters.slots, [false, false]);
+    assert.equal((await post("/casters/3/show")).body.casters.center, true);
+    assert.equal(a.state().stream.preview.casters.center, false);
+    assert.equal((await post("/casters/3/toggle")).body.casters.center, false);
+    assert.equal((await post("/casters/3/hide")).body.casters.center, false);
     a.message(BROADCAST_MESSAGES.setPreview, { output: "led", patch: { presenter: { visible: true } } });
     assert.equal((await post("/broadcast/led/take")).body.presenter.visible, true);
     assert.equal(a.state().led.program.presenter.visible, true);

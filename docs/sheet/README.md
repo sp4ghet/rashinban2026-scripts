@@ -43,8 +43,9 @@ Profile, Results, Compact, player selection, and the Preview/Take workflow.
 ## `casters` tab
 
 One row per caster (gid 247806508). The sheet is the directory of who could be
-on air; which two are actually shown is operator state, chosen in
-**Broadcast → Casters**.
+on air. Choose the left, right, and centered nameplates in **Stream → Casters**.
+Selections and visibility stay in Preview until **TAKE**; there is no caster
+selection panel in Shared.
 
 | Column | Card field | Notes |
 | --- | --- | --- |
@@ -54,7 +55,7 @@ on air; which two are actually shown is operator state, chosen in
 
 `samples/casters-sample.csv` shows the expected shape. Renaming a caster in the
 sheet leaves any card pointing at the old name showing "not in sheet" in the
-panel and blank on air, rather than silently switching to someone else.
+Stream dropdown and blank on air, rather than silently switching to someone else.
 
 ## Current match
 

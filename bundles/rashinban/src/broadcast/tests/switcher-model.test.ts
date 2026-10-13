@@ -16,6 +16,21 @@ test("caster slot toggles patch the whole pair read from the current layers", ()
   assert.deepEqual(layers.casters.slots, [false, false], "current layers are not mutated");
 });
 
+test("stream caster dropdowns edit independent left, right, and center selections", () => {
+  const row = controlRows("stream").find(row => row.id === "casters")!;
+  const selectors = row.controls.filter(control => control.kind === "select");
+  assert.deepEqual(selectors.map(control => control.path), [
+    ["casters", "names", "left"], ["casters", "names", "right"], ["casters", "names", "center"],
+  ]);
+  for (const control of selectors) {
+    const state = setPreview(createInitialState(), "stream", patchAt(control.path, "SD", createInitialState().stream.preview));
+    assert.equal(rowDirty(row, state.stream.preview, state.stream.program), true);
+    assert.equal(valueAt(state.stream.preview, control.path), "SD");
+    assert.equal(valueAt(state.stream.program, control.path), "");
+  }
+  assert.ok(row.controls.some(control => control.kind === "toggle" && control.path[1] === "center"));
+});
+
 test("patchAt throws on an empty path", () => {
   assert.throws(() => patchAt([], true, createInitialState().stream.preview), /path/);
 });

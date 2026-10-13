@@ -109,14 +109,6 @@
         "headerColor": "#1565c0"
       },
       {
-        "name": "casters-control",
-        "workspace": "shared",
-        "title": "Casters",
-        "file": "casters-control.html",
-        "width": 3,
-        "headerColor": "#ad1457"
-      },
-      {
         "name": "bracket-control",
         "workspace": "shared",
         "title": "Bracket",

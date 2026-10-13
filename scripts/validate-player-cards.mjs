@@ -15,9 +15,11 @@ import { fromPhaseGroupSample } from '../bundles/rashinban/src/bracket/finals.ts
 import { createInitialState as initialBanpick, applyAction, nextGame, undo, reset } from '../bundles/rashinban/src/banpick/rules.ts';
 import { REPLICANTS, BROADCAST_MESSAGES, BANPICK_MESSAGES } from '../bundles/rashinban/src/types/replicants.ts';
 import { verifyBanpick } from './banpick-browser-checks.mjs';
+import { verifyCasters } from './casters-browser-checks.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const artifacts = path.join(root, 'artifacts/player-cards');
+const castersOnly = process.argv.includes('--casters-only');
+const artifacts = path.join(root, castersOnly ? 'artifacts/casters' : 'artifacts/player-cards');
 const adobeFonts = process.argv.includes('--adobe-fonts');
 await mkdir(artifacts, { recursive: true });
 const now = Date.parse('2026-10-12T05:00:00Z');
@@ -147,6 +149,11 @@ try {
   await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   socket.onmessage = event => { const message = JSON.parse(event.data); if (message.id) { const call = pending.get(message.id); if (call) { pending.delete(message.id); message.error ? call.reject(Error(message.error.message)) : call.resolve(message.result); } } else if (message.method === 'Runtime.exceptionThrown') errors.push(message.params); };
   await command('Runtime.enable'); await command('Page.enable');
+  if (castersOnly) {
+    await verifyCasters({ navigate, evaluate, until, screenshot, delay, command });
+    assert.deepEqual(errors, [], 'no browser exceptions');
+    console.log('Caster browser checks passed. Screenshots: ' + artifacts);
+  } else {
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await navigate('/bundles/rashinban/graphics/info-stream.html');
   if (adobeFonts) assert.ok(await evaluate(`[...document.fonts].some(font=>font.family.includes('kaneda-gothic')&&font.weight==='700'&&font.status==='loaded')`), 'Adobe Kaneda Gothic must be loaded for the online typography check');
@@ -371,6 +378,7 @@ try {
   }), output);
   values[REPLICANTS.broadcast] = state;
   await verifyBanpick({ navigate, evaluate, until, screenshot, delay, command });
+  await verifyCasters({ navigate, evaluate, until, screenshot, delay, command });
   await writeFile(path.join(artifacts, 'startgg-check.json'), JSON.stringify({
     source: liveStartgg ? 'fresh API responses' : 'saved API responses', sourceFiles,
     fetchedAt: sources.map(source => source.fetchedAt), loadedSets: Object.keys(realBracket.sets).length,
@@ -381,6 +389,7 @@ try {
   console.log(`start.gg replay verified from ${liveStartgg ? 'fresh' : 'saved'} API responses: 30 sets, latest five/three games across dates, current/later matches excluded.`);
   console.log('Bracket verified: 1920x576 LED layout, independent 1080p dedicated graphic, shared data updates, reset visibility, stale-data clearing, LED Preview/TAKE show and hide.');
   console.log('Screenshots: ' + artifacts);
+  }
 } finally {
   socket?.close(); chrome.kill(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
   await delay(300);

@@ -111,6 +111,37 @@ test("layersEqual compares structurally", () => {
   assert.equal(layersEqual(s.stream.program, setPreview(s, "stream", { banpick: { visible: true } }).stream.preview), false);
 });
 
+test("caster names and the centered card stay in preview until TAKE and revert together", () => {
+  const initial = createInitialState();
+  const preview = setPreview(initial, "stream", { casters: {
+    names: { left: "Stephen", right: "Kai", center: "SD" }, center: true, slots: [true, true],
+  } });
+  assert.deepEqual(initial.stream.program.casters.names, { left: "", right: "", center: "" });
+  assert.deepEqual(preview.stream.program, initial.stream.program);
+  assert.deepEqual(revertPreview(preview, "stream").stream.preview, initial.stream.program);
+  const live = take(preview, "stream");
+  assert.equal(live.stream.program.casters.names.center, "SD");
+  assert.equal(live.stream.program.casters.center, true);
+  assert.deepEqual(live.led, initial.led);
+  const edited = setPreview(live, "stream", { casters: { names: { left: "SD" } } });
+  assert.equal(edited.stream.program.casters.names.left, "Stephen");
+  assert.equal(edited.stream.preview.casters.names.right, "Kai");
+  assert.throws(() => setPreview(initial, "stream", { casters: { names: { left: 4 } } } as any), BroadcastError);
+});
+
+test("legacy caster selections migrate once on both buses without changing visibility", () => {
+  const legacy = { slots: [{ name: "Stephen" }, { name: "Kai" }] };
+  const raw = { stream: { program: { casters: { slots: [true, false] } }, preview: { casters: { slots: [false, true] } } } };
+  const migrated = withDefaults(raw, legacy);
+  assert.deepEqual(migrated.stream.program.casters.names, { left: "Stephen", right: "Kai", center: "" });
+  assert.deepEqual(migrated.stream.preview.casters.names, migrated.stream.program.casters.names);
+  assert.deepEqual(migrated.stream.program.casters.slots, [true, false]);
+  assert.deepEqual(migrated.stream.preview.casters.slots, [false, true]);
+  assert.equal(migrated.stream.program.casters.center, false);
+  const cleared = setPreview(migrated, "stream", { casters: { names: { left: "" } } });
+  assert.equal(withDefaults(cleared, legacy).stream.preview.casters.names.left, "");
+});
+
 test("patches cannot reach the spec through Object.prototype names", () => {
   const s = createInitialState();
   assert.throws(() => setPreview(s, "stream", JSON.parse('{"constructor": {}}')), BroadcastError);

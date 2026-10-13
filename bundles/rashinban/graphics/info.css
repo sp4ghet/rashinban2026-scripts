@@ -250,7 +250,7 @@ body[data-output="led"] #cards[data-page="compact"] .result-row { padding: 2px 0
   --topbar-h: 77px;
   --banner-h: 200px;
   --card-w: 390px;
-  --card-top: 182px;
+  --card-top: 180px;
   --jp: var(--body);
   position: absolute;
   inset: 0;
@@ -303,28 +303,43 @@ body[data-output="led"] #cards[data-page="compact"] .result-row { padding: 2px 0
 /* ---- Caster cards -------------------------------------------------- */
 
 #casters .caster {
+  --red: #ff2d2d;
+  --red-dark: #ce2020;
   position: absolute;
   top: var(--card-top);
   width: var(--card-w);
   z-index: 2;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
 }
 
 /* Left and right of the two seats, clear of the middle of frame. */
 #casters #caster-1 { left: 330px; }
 #casters #caster-2 { left: 1200px; }
+#casters #caster-3 { left: 765px; top: 729px; }
 
 #casters .caster[hidden] { display: none; }
 #casters .topbar[hidden],
 #casters .mark[hidden],
 #casters .banner[hidden] { display: none; }
 
-#casters .caster .role {
-  height: 38px;
+#casters .caster .band { position: relative; background: #fff; }
+#casters .caster .band[hidden] { display: none; }
+#casters .caster .band-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--red-dark);
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+#casters .caster .role {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--jp);
   font-size: 24px;
   font-weight: 700;
@@ -332,18 +347,16 @@ body[data-output="led"] #cards[data-page="compact"] .result-row { padding: 2px 0
   line-height: 1;
 }
 
-#casters .caster .role:empty { display: none; }
+#casters .caster .role .band-content { background: var(--red-dark); }
 
 #casters .caster .name {
-  height: 104px;
+  height: 98px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 16px;
   box-sizing: border-box;
-  background: var(--red);
   font-family: var(--heading);
-  font-size: 72px;
+  font-size: 96px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.01em;
@@ -351,6 +364,7 @@ body[data-output="led"] #cards[data-page="compact"] .result-row { padding: 2px 0
   overflow: hidden;
   text-overflow: ellipsis;
 }
+#casters .caster .name .band-content { background: var(--red); }
 
 /* Japanese names need a different face and sit better a touch smaller. */
 #casters .caster .name.kana {
@@ -360,20 +374,20 @@ body[data-output="led"] #cards[data-page="compact"] .result-row { padding: 2px 0
 }
 
 #casters .caster .handle {
-  height: 34px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f0f0;
-  color: #3a3a3a;
-  font-family: var(--heading);
-  font-size: 24px;
+  background: var(--red);
+  color: var(--red);
+  font-family: Arial, var(--jp);
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
 }
 
-#casters .caster .handle:empty { display: none; }
+#casters .caster .handle .band-content { background: #fff; }
 
 /* ---- Sponsor banner ------------------------------------------------ */
 

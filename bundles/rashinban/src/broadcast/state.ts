@@ -9,7 +9,13 @@ export const BROADCAST_OUTPUTS: readonly BroadcastOutput[] = ["stream", "led"];
 export type CardPage = "profile" | "stats" | "compact";
 export type PlayerCardsLayer = { visible: boolean; page: CardPage; player: "left" | "right"; position: "left" | "right" };
 export type LowerThirdLayer = { visible: boolean; mode: "match" | "text"; title: string; subtitle: string };
-export type CastersLayer = { titleBar: boolean; slots: [boolean, boolean] };
+export type CastersLayer = {
+  titleBar: boolean;
+  /** Keep the existing pair for Companion's /casters/1 and /casters/2 routes. */
+  slots: [boolean, boolean];
+  center: boolean;
+  names: { left: string; right: string; center: string };
+};
 export type ToggleLayer = { visible: boolean };
 
 export type StreamLayers = {
@@ -67,7 +73,7 @@ const TOGGLE_SPEC = { visible: "boolean" } as const satisfies SpecOf<ToggleLayer
 const STREAM_SPEC = {
   playerCards: CARD_SPEC,
   lowerThird: { visible: "boolean", mode: ["match", "text"], title: "text", subtitle: "text" },
-  casters: { titleBar: "boolean:true", slots: "booleanPair" },
+  casters: { titleBar: "boolean:true", slots: "booleanPair", center: "boolean", names: { left: "text", right: "text", center: "text" } },
   banpick: TOGGLE_SPEC,
 } as const satisfies SpecOf<StreamLayers>;
 const LED_SPEC = { playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC, bracket: TOGGLE_SPEC } as const satisfies SpecOf<LedLayers>;
@@ -166,7 +172,7 @@ export function createInitialState(): BroadcastState {
 }
 
 /** Coerce anything (e.g. a persisted replicant value) into a valid state. Never throws. */
-export function withDefaults(value: unknown): BroadcastState {
+export function withDefaults(value: unknown, legacyCasters?: unknown): BroadcastState {
   const source = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
   const bus = <O extends BroadcastOutput>(output: O): OutputBus<LayersFor<O>> => {
     const raw = typeof source[output] === "object" && source[output] !== null ? (source[output] as Record<string, unknown>) : {};
@@ -177,6 +183,17 @@ export function withDefaults(value: unknown): BroadcastState {
         // Older cards were positioned by player. Preserve that side on migration.
         if (typeof cards === "object" && cards !== null && !Object.hasOwn(cards, "position")) {
           layers.playerCards.position = layers.playerCards.player;
+        }
+        const casters = (value as Record<string, unknown>).casters;
+        // Only migrate buses that predate name selection in the switcher.
+        // An intentionally cleared name must never be filled back in on restart.
+        if (typeof casters === "object" && casters !== null && !Object.hasOwn(casters, "names")) {
+          const legacy = legacyCasters as { slots?: { name?: unknown }[] } | null | undefined;
+          const slots = Array.isArray(legacy?.slots) ? legacy.slots : [];
+          for (const [index, side] of ["left", "right"].entries()) {
+            const name = slots[index]?.name;
+            if (validLeaf("text", name)) (layers as StreamLayers).casters.names[side as "left" | "right"] = name as string;
+          }
         }
       }
       return layers;

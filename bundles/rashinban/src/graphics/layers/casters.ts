@@ -1,12 +1,16 @@
 // Caster desk layer. The title bar and sponsor banner are static markup;
-// the two name cards come from the casters sheet tab (`casters`) plus the
-// operator's slot selection (`castersState`, set in the Casters panel).
-// Which cards (and whether the title bar) are on air comes from the
-// broadcast bus via apply().
-import { findCaster, withDefaults, type Caster, type CastersState } from "../../casters/casters.ts";
-import type { CastersLayer } from "../../broadcast/state.ts";
+// the name cards come from the casters sheet tab. Selection and visibility
+// belong to the output's broadcast bus, so preview edits cannot change program.
+import { findCaster, type Caster } from "../../casters/casters.ts";
+import { defaultLayers, type CastersLayer } from "../../broadcast/state.ts";
 import { REPLICANTS } from "../../types/replicants.ts";
 import { mustQuery, type Layer } from "./layer.ts";
+
+const cardMarkup = (id: string) => `<div class="caster" id="${id}" hidden>
+  <div class="band role"><span class="band-content"></span></div>
+  <div class="band name"><span class="band-content"></span></div>
+  <div class="band handle"><span class="band-content"></span></div>
+</div>`;
 
 const TEMPLATE = `<div id="casters">
   <div class="topbar"></div>
@@ -15,16 +19,9 @@ const TEMPLATE = `<div id="casters">
     <span class="wordmark">RASHINBAN 2026</span>
   </div>
 
-  <div class="caster" id="caster-1" hidden>
-    <div class="role"></div>
-    <div class="name"></div>
-    <div class="handle"></div>
-  </div>
-  <div class="caster" id="caster-2" hidden>
-    <div class="role"></div>
-    <div class="name"></div>
-    <div class="handle"></div>
-  </div>
+  ${cardMarkup("caster-1")}
+  ${cardMarkup("caster-2")}
+  ${cardMarkup("caster-3")}
 
   <!-- Static for now: three confirmed sponsors, no rotation. The 2025 page
        rotated a fourth+ logo through the right slot; add that back when the
@@ -41,35 +38,94 @@ const hasJapanese = (text: string) => /[぀-ヿ㐀-鿿]/.test(text);
 
 export function mountCasters(host: HTMLElement): Layer<CastersLayer> {
   host.innerHTML = TEMPLATE;
-  const cardEls = [mustQuery(host, "#caster-1"), mustQuery(host, "#caster-2")];
+  const cards = ["left", "right", "center"].map((side, index) => ({
+    side: side as keyof CastersLayer["names"],
+    el: mustQuery(host, `#caster-${index + 1}`),
+    visible: false,
+    name: "",
+    animations: [] as Animation[],
+  }));
   const chrome = host.querySelectorAll<HTMLElement>(".topbar, .mark, .banner");
 
   let casters: Caster[] = [];
-  let state: CastersState = withDefaults(undefined);
-  let layer: CastersLayer = { titleBar: true, slots: [false, false] };
+  let layer: CastersLayer = defaultLayers("stream").casters;
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const closed = "inset(0 50% 0 50%)";
+  const open = "inset(0 0% 0 0%)";
+  // Measured from the reference: about 65% open after 0.33s and 96% after
+  // 1.03s, with a long settling tail. Sampling the exponential keeps the
+  // original motion more closely than a generic CSS ease-out curve.
+  const reveal = Array.from({ length: 61 }, (_, index) => ({
+    clipPath: `inset(0 ${index === 60 ? 0 : 50 * Math.exp(-9.5 * index / 60)}% 0 ${index === 60 ? 0 : 50 * Math.exp(-9.5 * index / 60)}%)`,
+  }));
+
+  function animate(card: typeof cards[number], visible: boolean) {
+    // Capture both masks before cancellation so an interrupted entrance never
+    // flashes its still-closed role/handle or jumps the name to full width.
+    const currentClips = new Map<Element, string>();
+    if (!visible) for (const element of card.el.querySelectorAll(".band, .band-content")) {
+      const clip = getComputedStyle(element).clipPath;
+      currentClips.set(element, clip === "none" ? open : clip);
+    }
+    for (const animation of card.animations) animation.cancel();
+    card.animations = [];
+    card.visible = visible;
+    card.el.dataset.visible = String(visible);
+    if (reducedMotion.matches) {
+      card.el.hidden = !visible;
+      return;
+    }
+    card.el.hidden = false;
+    for (const [part, delay] of [["name", 0], ["role", 200], ["handle", 600]] as const) {
+      const band = mustQuery(card.el, `.${part}`);
+      if (band.hidden) continue;
+      const content = mustQuery(band, ".band-content");
+      // Two masks chase each other: the outside mask reveals a leading white
+      // strip (red for the handle), then the colored content follows it.
+      // Text is clipped at its final size, never stretched with the strip.
+      card.animations.push(band.animate(
+        visible ? reveal : [{ clipPath: currentClips.get(band)! }, { clipPath: closed }],
+        { duration: visible ? 3000 : 220, delay: visible ? delay : 0,
+          easing: visible ? "linear" : "ease-in", fill: "both" },
+      ));
+      card.animations.push(content.animate(
+        visible ? reveal : [{ clipPath: currentClips.get(content)! }, { clipPath: closed }],
+        { duration: visible ? 3000 : 220, delay: visible ? delay + 100 : 0,
+          easing: visible ? "linear" : "ease-in", fill: "both" },
+      ));
+    }
+    if (!visible) {
+      const last = card.animations.at(-1);
+      if (last) last.onfinish = () => { if (!card.visible) card.el.hidden = true; };
+      else card.el.hidden = true;
+    }
+  }
 
   function render() {
     for (const el of chrome) el.hidden = !layer.titleBar;
-    for (const [index, card] of cardEls.entries()) {
-      const caster = findCaster(casters, state.slots[index]!.name);
-      // Off air, or selected someone the sheet no longer lists.
-      card.hidden = !layer.slots[index] || !caster;
-      if (!caster) continue;
-      mustQuery(card, ".role").textContent = caster.role;
-      const name = mustQuery(card, ".name");
-      name.textContent = caster.name;
+    for (const [index, card] of cards.entries()) {
+      const caster = findCaster(casters, layer.names[card.side]);
+      const visible = Boolean((index === 2 ? layer.center : layer.slots[index]) && caster);
+      if (!visible || !caster) {
+        if (card.visible) animate(card, false);
+        continue;
+      }
+      const role = mustQuery(card.el, ".role");
+      role.hidden = !caster.role;
+      mustQuery(role, ".band-content").textContent = caster.role;
+      const name = mustQuery(card.el, ".name");
+      mustQuery(name, ".band-content").textContent = caster.name;
       name.classList.toggle("kana", hasJapanese(caster.name));
-      mustQuery(card, ".handle").textContent = caster.twitter ? `@${caster.twitter}` : "";
+      const handle = mustQuery(card.el, ".handle");
+      handle.hidden = !caster.twitter;
+      mustQuery(handle, ".band-content").textContent = caster.twitter ? `@${caster.twitter}` : "";
+      if (!card.visible || card.name !== caster.name) animate(card, true);
+      card.name = caster.name;
     }
   }
 
   nodecg.Replicant<Caster[]>(REPLICANTS.casters).on("change", (value) => {
     casters = value ?? [];
-    render();
-  });
-
-  nodecg.Replicant<CastersState>(REPLICANTS.castersState).on("change", (value) => {
-    state = withDefaults(value);
     render();
   });
 

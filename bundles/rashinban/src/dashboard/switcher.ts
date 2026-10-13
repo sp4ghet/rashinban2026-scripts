@@ -4,6 +4,7 @@
 import { MAX_TEXT, withDefaults, layersEqual, type BroadcastOutput, type BroadcastState } from "../broadcast/state.ts";
 import { controlRows, monitorUrls, patchAt, rowDirty, valueAt, type Control, type Row } from "../broadcast/switcher-model.ts";
 import type { ResolvedMatch } from "../match/state.ts";
+import { findCaster, type Caster } from "../casters/casters.ts";
 import { BROADCAST_MESSAGES, REPLICANTS } from "../types/replicants.ts";
 
 const output: BroadcastOutput = document.body.dataset.output === "led" ? "led" : "stream";
@@ -12,6 +13,7 @@ const el = (id: string) => document.getElementById(id)!;
 const strip = el("strip");
 const rows = controlRows(output);
 let state = withDefaults(undefined);
+let casters: Caster[] = [];
 
 async function send(name: string, body: unknown) {
   try {
@@ -69,9 +71,16 @@ function buildRow(row: Row): HTMLElement {
         input = text;
       }
       input.onchange = () => edit(control, input.value);
+      // Reconcile after keyboard selection/revert while this widget had focus.
+      input.onblur = () => render();
       widgets.set(control, input);
       label.append(input);
-      controls.append(label);
+      if (control.path[0] === "casters" && control.kind === "select") {
+        const group = document.createElement("div");
+        group.className = "caster-choice";
+        group.append(controls.lastElementChild!, label);
+        controls.append(group);
+      } else controls.append(label);
     }
   }
   section.append(title, controls);
@@ -99,6 +108,17 @@ function render() {
     for (const control of row.controls) {
       const widget = widgets.get(control)!;
       const value = valueAt(preview, control.path);
+      if (control.kind === "select" && control.path[0] === "casters" && document.activeElement !== widget) {
+        const select = widget as HTMLSelectElement;
+        const selected = findCaster(casters, String(value ?? ""));
+        const options = [new Option(casters.length ? "— none —" : "— no casters in sheet —", "")];
+        for (const caster of casters) {
+          options.push(new Option(caster.role ? `${caster.name} (${caster.role})` : caster.name,
+            caster === selected ? String(value) : caster.name));
+        }
+        if (value && !selected) options.push(new Option(`${value} (not in sheet)`, String(value)));
+        select.replaceChildren(...options);
+      }
       if (control.kind === "toggle") {
         widget.classList.toggle("on", value === true);
         widget.setAttribute("aria-pressed", String(value === true));
@@ -114,6 +134,12 @@ rep.on("change", (value) => {
   state = withDefaults(value);
   render();
 });
+if (output === "stream") {
+  nodecg.Replicant<Caster[]>(REPLICANTS.casters).on("change", value => {
+    casters = value ?? [];
+    render();
+  });
+}
 
 // ---- Actions -----------------------------------------------------------------
 el("take").onclick = (event) => {

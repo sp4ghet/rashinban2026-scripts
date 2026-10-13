@@ -26,12 +26,12 @@ Unchanged: `banpick-player.html` (tablet), `brackets-finals.html`,
 The `broadcast` replicant holds `{ stream, led }`, each with `program` (on
 air) and `preview` (what the operator is lining up). Everything in the buses
 is **visibility and presentation**: which layers show, which card page, the
-lower third mode and text, caster slot visibility. The switcher edits preview
+lower third mode and text, caster selections and visibility. The switcher edits preview
 only; **TAKE** copies preview to program; **Revert preview** copies program
 back to preview. Companion routes have no preview and cut program directly.
 
 Live **content** is not in the buses and changes on air immediately from the
-Shared tab: the current match (players, round), the caster names, the finals
+Shared tab: the current match (players, round), the finals
 bracket, and the Ban & Pick state (picks, bans, next game, undo, reset). Only visibility is
 switched.
 
@@ -44,7 +44,7 @@ accept up to 120 characters. Invalid patches are rejected and nothing changes.
 | --- | --- | --- |
 | stream | Player cards | visible; page `profile` / `stats` |
 | stream | Lower third | visible; mode `match` (current match) / `text`; title; subtitle |
-| stream | Casters | title bar + sponsor banner; left card; right card |
+| stream | Casters | title bar + sponsor banner; left/right/center visibility and name dropdowns |
 | stream | Ban & Pick | visible |
 | LED | Presenter | visible (off = opaque black over `presenter-led.html`) |
 | LED | Player cards | visible; page `profile` / `stats` |
@@ -58,6 +58,36 @@ The bracket starts hidden, including when upgrading saved broadcast state.
 Choose its live start.gg or recorded sample data in **Shared → Bracket**.
 The dedicated `brackets-finals.html` graphic remains available at 1920x1080
 and uses the same data independently of the LED visibility toggle.
+
+### Caster nameplates
+
+Choose **Left**, **Right**, and **Center** in the Stream controller's Casters
+row. The options come from the Google Sheet casters tab. Enable each card's
+button, check Preview, and press **TAKE**. Names and visibility are staged
+together; **Revert preview** restores both. Choose **none** to clear a slot.
+The Center slot is an independent single nameplate in the lower center of
+the picture, so it can be used alone or alongside the two upper cards.
+
+Cards reveal outward from their center with white leading edges: name first,
+role 200ms later, handle 600ms later. Each colored strip follows its leading
+edge by 100ms. The quick opening eases into a 3-second settling tail; there
+is no opening black wait. Cards hold until hidden (a short 220ms collapse).
+Changing the selected name replays its reveal; sheet polling and unrelated
+TAKE operations do not. Reduced-motion clients show/hide immediately.
+Blank roles and handles are omitted. A name missing from the sheet stays
+marked **not in sheet** in the dropdown and its card is hidden.
+
+On a 1920x1080 output, the 390px cards start at (330, 180), (1200, 180), and
+(765, 729). The title bar and sponsor banner retain their separate control.
+Existing left/right selections migrate from `castersState` into both buses
+once; the center starts empty and hidden. Restart NodeCG after updating to
+remove the old Shared Casters panel, then refresh the controller and graphics.
+
+Local reference clips live in `references/local/casters/` (`day5_kai_stephen.mov`
+and `day5_sd.mov`). That directory is Git-ignored. Run `npm run build` then
+`npm run validate:casters` for isolated browser checks; captures are saved in
+the ignored `artifacts/casters/` directory. Add `-- --adobe-fonts` to check
+with the existing Adobe Kaneda Gothic kit instead of the offline fallback.
 
 ### Ban & Pick stack
 
@@ -104,7 +134,7 @@ NodeCG lists workspaces alphabetically:
 | --- | --- | --- |
 | Config | Duels Presenter, start.gg, Google Sheets | setup and connection recovery |
 | LED | LED switcher (fullbleed) | LED operator |
-| Shared | Current Match, Ban & Pick, Casters, Bracket | content operator; changes are live on both outputs |
+| Shared | Current Match, Ban & Pick, Bracket | content operator; changes are live on both outputs |
 | Stream | Stream switcher (fullbleed) | stream operator |
 
 Each switcher tab has PREVIEW (left) and PROGRAM (right) monitors, the layer
@@ -120,8 +150,8 @@ The monitors register as presenter clients: stream monitors open
 monitors open `presenter-led.html` (the `led` role). Expect them in the Duels
 Presenter client list while a switcher tab is open.
 
-The Ban & Pick panel no longer has a show/hide overlay button and the Casters
-panel only selects names; visibility lives in the switcher tabs.
+The Ban & Pick panel no longer has a show/hide overlay button. Caster names
+and visibility are both controlled from Stream; there is no Shared Casters panel.
 
 ## Companion (Generic HTTP, POST, no body)
 
@@ -135,7 +165,7 @@ the output's program layers as JSON, or `400 {"error": ...}` on bad input.
 | `/banpick/show`, `/banpick/hide`, `/banpick/toggle` | stream program Ban & Pick visibility |
 | `/playercards/show`, `/playercards/hide`, `/playercards/toggle` | stream program player cards visibility |
 | `/playercards/profile`, `/playercards/stats`, `/playercards/flip` | stream program player cards page |
-| `/casters/1/show|hide|toggle`, `/casters/2/show|hide|toggle` | stream program caster card 1 (left) / 2 (right) |
+| `/casters/1/show|hide|toggle`, `/casters/2/show|hide|toggle`, `/casters/3/show|hide|toggle` | stream program caster card 1 (left) / 2 (right) / 3 (center) |
 
 The layer routes cut the **stream program bus only**. To change the LED
 output from Companion, line it up in the LED switcher (or let an operator do
@@ -172,8 +202,8 @@ instant). The Duels Presenter panel has an **LED graphic** launch link.
   `casters.html` with `info-stream.html`; replace `banpick-led.html` with
   `info-led.html` composited over `presenter-led.html`.
 - The old `playerCards` replicant row may remain in NodeCG's `db/`; it is
-  unused and safe to delete. `castersState` entries lose their old `enabled`
-  flag automatically, and `banPick.visible` is scrubbed on boot.
+  unused and safe to delete. `castersState` is now read only for the one-time
+  name migration; `banPick.visible` is scrubbed on boot.
 - Companion responses changed: `/banpick/show|hide|toggle` now return the
   whole stream program layer set, and `/banpick/undo|reset` no longer
   include `visible`. Update any Companion feedback that parsed those bodies.

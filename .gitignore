@@ -30,3 +30,7 @@ bundles/rashinban/extension/
 
 /artifacts/player-tie-range/
 /artifacts/player-cards/
+
+# Local design references and caster animation validation captures
+/references/local/
+/artifacts/casters/

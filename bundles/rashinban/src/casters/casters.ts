@@ -1,7 +1,7 @@
 // Casters (解説 / 実況) authored in the Google Sheet "casters" tab.
-// The sheet is the directory of who *could* be on air; which two the cards
-// show is operator state held in the castersState replicant. Whether a card
-// is actually on air is a switcher concern, held in the broadcast replicant.
+// The sheet is the directory of who *could* be on air. Card selection and
+// visibility now live together in the broadcast replicant. The legacy
+// CastersState shape remains readable for the one-time selection migration.
 // See docs/sheet/README.md for the column list.
 
 export interface Caster {

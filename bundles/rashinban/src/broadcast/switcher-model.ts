@@ -60,7 +60,11 @@ const STREAM_ROWS: readonly Row[] = [
     controls: [
       { kind: "toggle", path: ["casters", "titleBar"], label: "Title bar + banner" },
       { kind: "toggle", path: ["casters", "slots", "0"], label: "Left card" },
+      { kind: "select", path: ["casters", "names", "left"], label: "Left", options: [["", "— none —"]] },
       { kind: "toggle", path: ["casters", "slots", "1"], label: "Right card" },
+      { kind: "select", path: ["casters", "names", "right"], label: "Right", options: [["", "— none —"]] },
+      { kind: "toggle", path: ["casters", "center"], label: "Center card" },
+      { kind: "select", path: ["casters", "names", "center"], label: "Center", options: [["", "— none —"]] },
     ],
   },
   BANPICK,

@@ -24,7 +24,9 @@ type Ack = NodeCG.Acknowledgement | undefined;
 
 export function registerBroadcast(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeCG.ServerAPI["Router"]>) {
   const rep = nodecg.Replicant<BroadcastState>(REPLICANTS.broadcast, { defaultValue: createInitialState() });
-  rep.value = withDefaults(rep.value);
+  // Read the retired Shared panel's selection once when upgrading old buses.
+  const legacyCasters = nodecg.Replicant(REPLICANTS.castersState);
+  rep.value = withDefaults(rep.value, legacyCasters.value);
   const current = () => withDefaults(rep.value);
 
   /**
@@ -119,4 +121,7 @@ export function registerBroadcast(nodecg: NodeCG.ServerAPI, router: ReturnType<N
     router.post(`/casters/${index + 1}/hide`, (_req, res) => cut(res, { casters: { slots: slots(false) } }));
     router.post(`/casters/${index + 1}/toggle`, (_req, res) => cut(res, { casters: { slots: slots(!stream().casters.slots[index]) } }));
   }
+  router.post("/casters/3/show", (_req, res) => cut(res, { casters: { center: true } }));
+  router.post("/casters/3/hide", (_req, res) => cut(res, { casters: { center: false } }));
+  router.post("/casters/3/toggle", (_req, res) => cut(res, { casters: { center: !stream().casters.center } }));
 }

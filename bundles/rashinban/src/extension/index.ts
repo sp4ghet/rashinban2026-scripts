@@ -4,7 +4,6 @@ import { registerMatch } from './match';
 import { registerBanPick } from "./banpick";
 import { registerBroadcast } from "./broadcast";
 import { registerBracket } from "./bracket";
-import { registerCasters } from "./casters";
 import { registerStartgg } from "./startgg";
 import { registerSheet } from "./sheet";
 
@@ -26,7 +25,6 @@ export = (nodecg: NodeCG.ServerAPI) => {
   registerStartgg(nodecg, router, store);
   registerBracket(nodecg, router);
   registerSheet(nodecg, router, store);
-  registerCasters(nodecg);
   registerMatch(nodecg);
 
   nodecg.mount("/rashinban", router);

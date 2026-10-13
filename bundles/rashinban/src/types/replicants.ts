@@ -132,11 +132,6 @@ export const MATCH_MESSAGES = {
   swap: 'match:swap',
 } as const;
 
-/** Caster cards. { slot: 0 | 1, name: string } */
-export const CASTERS_MESSAGES = {
-  setSlot: "casters:setSlot",
-} as const;
-
 /** Broadcast buses. output is "stream" | "led". */
 export const BROADCAST_MESSAGES = {
   /** { output, patch: Patch<Layers> } — edit preview. */
