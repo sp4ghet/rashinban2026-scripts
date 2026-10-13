@@ -19,8 +19,8 @@ time, so it cannot win a double 5K.
 
 ## Presenter
 
-Open **Config > Duels Presenter**, enable **Pinpointing Duels** under its own
-heading, and select **Apply presentation**. The setting is captured when the
+Open the shared **Duel Setup** panel and tick **Pinpointing Duels**; the change
+is saved immediately, with no separate apply step. The setting is captured when the
 presenter first receives a new duel, exactly like tie range, and the panel
 shows the active and next-duel rules. Reconnecting or restarting NodeCG keeps
 the current duel's rules. Tie range can be enabled at the same time; its

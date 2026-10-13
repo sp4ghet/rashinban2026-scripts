@@ -73,6 +73,16 @@ test('all stems share a scheduled start and muted layers advance through context
   p.context.currentTime = 12; p.audio.sync({ ...timeline, phase: 'aborted' }, DEFAULT_SETTINGS, 15500);
   assert.equal(base.output.gain.at(13), 0); assert.equal(p.sources.length, 2);
 });
+test('a finished duel fades the music with the end fade; abort keeps the idle fade', async () => {
+  for (const [phase, fadeMs, silentAt] of [['finished', { ...manifest.fadeMs, end: 4000 }, 16], ['finished', manifest.fadeMs, 12.1], ['aborted', { ...manifest.fadeMs, end: 4000 }, 12.1]] as const) {
+    const p = port(); await p.audio.load({ ...manifest, fadeMs }); p.audio.lease(30000, 13500); p.audio.sync(timeline, DEFAULT_SETTINGS, 13500);
+    const base = p.sources[0];
+    p.context.currentTime = 12; p.audio.sync({ ...timeline, phase }, DEFAULT_SETTINGS, 15500);
+    if (silentAt === 16) assert.ok(Math.abs(base.output.gain.at(14) - 0.35) < 1e-9, 'halfway through the end fade');
+    assert.equal(base.output.gain.at(silentAt), 0, `${phase} silent at ${silentAt}`);
+    assert.equal(base.stops, 0);
+  }
+});
 test('invalid decoded bounds, mismatched loops and missing assets stay silent with status', async () => {
   const p = port(); await p.audio.load({ ...manifest, stems: [...manifest.stems,
     { ...manifest.stems[0], id: 'missing', url: '/missing' }, { ...manifest.stems[0], id: 'short', url: '/short' },

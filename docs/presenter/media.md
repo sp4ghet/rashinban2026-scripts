@@ -22,7 +22,7 @@ Ordinary Chrome can deny audible autoplay without user activation. Browser-sourc
 
 For separate audio, add `/bundles/rashinban/graphics/presenter-audio.html?role=audio` as an OBS browser source and select **Separate** in the dashboard. The plain URL is a silent preview. Only one audio page holds the lease; duplicate pages remain silent. For embedded fallback, select **Embedded** and use the active `presenter.html?role=program` graphic. Missing Google Maps configuration does not prevent music in either mode. The video soundtrack exception above still plays on the active program only; the music engine never duplicates it. The LED wall page `presenter-led.html` is always silent: it plays the celebration video muted on its own clock and never holds the program or audio lease.
 
-All selected stems decode before a shared scheduled start. Every layer loops continuously, including layers with zero gain. A reloaded owner joins the phase derived from the shared game music epoch. Changing rounds or music context changes gain with the configured fade; it does not restart sources or alter playback rate or pitch. Abort and finished states fade to silence using the idle fade. A new game replaces the old sources and establishes its new epoch.
+All selected stems decode before a shared scheduled start. Every layer loops continuously, including layers with zero gain. A reloaded owner joins the phase derived from the shared game music epoch. Changing rounds or music context changes gain with the configured fade; it does not restart sources or alter playback rate or pitch. A finished duel fades to silence using the optional `end` fade (the dashboard's **duel end** field), falling back to the idle fade when unset; abort always uses the idle fade. A new game replaces the old sources and establishes its new epoch.
 
 The first authored stem defines the common loop length. Each decoded layer must have finite loop bounds within its decoded duration, with the same loop length (within one microsecond). A missing, invalid, or incompatible layer stays silent while valid compatible layers play. Dashboard client rows report loading, ready, partial, decode failure, silent empty configuration, or suspended audio, and list unavailable stem IDs and sound-kind IDs (for example, sound-pin) without raw error text. Graphics never wait for audio assets.
 
@@ -45,7 +45,7 @@ Cues use the same AudioContext and ownership gate as music. Expired one-shots ar
 ```json
 {
   "stems": [],
-  "fadeMs": { "idle": 0, "round": 0, "urgent": 0, "results": 0 },
+  "fadeMs": { "idle": 0, "round": 0, "urgent": 0, "results": 0, "end": 4000 },
   "sounds": {},
   "fiveK": { "single": null, "double": null }
 }
@@ -61,7 +61,7 @@ A selected video has this form:
 }
 ```
 
-Music stems contain `id`, `url`, `loopStartS`, `loopEndS`, and gains for `idle`, `round`, `urgent`, and `results`. IDs must be unique, nonempty, and contain only letters, digits, underscores or hyphens (80 characters maximum). All gains are finite values from 0 to 1. Loop bounds are finite seconds from 0 to 86400, with end strictly after start; decoding and loop-to-file-duration checks belong to the music player. Fade values are finite milliseconds from 0 to 120000. At most 32 stems are accepted.
+Music stems contain `id`, `url`, `loopStartS`, `loopEndS`, and gains for `idle`, `round`, `urgent`, and `results`. IDs must be unique, nonempty, and contain only letters, digits, underscores or hyphens (80 characters maximum). All gains are finite values from 0 to 1. Loop bounds are finite seconds from 0 to 86400, with end strictly after start; decoding and loop-to-file-duration checks belong to the music player. Fade values, including the optional `end`, are finite milliseconds from 0 to 120000. At most 32 stems are accepted.
 
 Sound keys are `pin`, `guess`, `countdown`, `results`, `count`, `collision`, `tie`, `multiplier`, `damage`, and `five-k`. URLs must be canonical, root-relative NodeCG asset URLs within the matching category of this bundle. Remote URLs, cross-bundle/category URLs, query strings, fragments and path traversal are rejected. Use the inventory URLs directly; filenames are URI-encoded by NodeCG. Unknown manifest fields and unsupported soundtrack values are rejected.
 

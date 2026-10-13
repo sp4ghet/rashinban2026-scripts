@@ -1,5 +1,6 @@
 # GeoGuessr documentation
 
+- [Player API](player-api.md): public player statistics, country strengths, authenticated match history and own-account analytics.
 - [Game-master flow](game-master-flow.md): manual/automatic rounds, between-round views, winner/summary and the next game.
 - [Presenter protocol](presenter-protocol.md): HTTP controls, WebSocket events and state captures.
 - [Scoring animation](scoring-animation.md): GeoGuessr/presenter comparison and choreography.

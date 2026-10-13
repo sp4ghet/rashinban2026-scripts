@@ -39,13 +39,6 @@ function showPublicConfig(value?: PresenterPublicConfig) {
 publicConfig.on('change', showPublicConfig);
 showPublicConfig(publicConfig.value);
 element('google-referrer').textContent = `${location.origin}/*`;
-function showInputDraft() {
-  const replay = select('input-mode').value === 'replay';
-  element('replay-controls').hidden = !replay;
-  input('party-id').disabled = replay;
-  element('reconnect').textContent = replay ? 'Apply replay / restart fixture' : 'Apply live / reconnect spectator';
-}
-select('input-mode').addEventListener('change', showInputDraft);
 
 function assetOptions(menu: HTMLSelectElement, category: MediaCategory, chosen = menu.value) {
   const inventory = mediaAssetsForCategory(presenterAssets.value, category, legacyInventories[category].value ?? []);
@@ -82,6 +75,7 @@ function addStem(stem: Stem) {
   element('media-stems').append(row);
 }
 for (const context of MUSIC_CONTEXTS) field(element('media-fades'), context, context, '0', 120000);
+field(element('media-fades'), 'duel end', 'end', '0', 120000);
 const cuePreview = element('cue-preview-audio') as HTMLAudioElement;
 let stopPreview: ReturnType<typeof setTimeout> | undefined;
 function stopCuePreview() { clearTimeout(stopPreview); cuePreview.pause(); cuePreview.removeAttribute('src'); cuePreview.load(); }
@@ -107,6 +101,7 @@ function applyMedia(value: MediaManifest | undefined) {
   }
   element('media-stems').replaceChildren(); value.stems.forEach(addStem);
   for (const context of MUSIC_CONTEXTS) (element('media-fades').querySelector(`[data-field="${context}"]`) as HTMLInputElement).value = String(value.fadeMs[context]);
+  (element('media-fades').querySelector('[data-field="end"]') as HTMLInputElement).value = String(value.fadeMs.end ?? value.fadeMs.idle);
   for (const kind of CUE_KINDS) assetOptions(element('media-sounds').querySelector(`[data-cue="${kind}"]`) as HTMLSelectElement, 'effects', value.sounds[kind] ?? '');
 }
 media.on('change', value => mediaConfiguration.acceptProjection(() => applyMedia(value)));
@@ -127,6 +122,7 @@ element('media-form').addEventListener('submit', event => {
       gains: Object.fromEntries(MUSIC_CONTEXTS.map(context => [context, Number(read(context))])) as Stem['gains'] });
   }
   for (const context of MUSIC_CONTEXTS) next.fadeMs[context] = Number((element('media-fades').querySelector(`[data-field="${context}"]`) as HTMLInputElement).value);
+  next.fadeMs.end = Number((element('media-fades').querySelector('[data-field="end"]') as HTMLInputElement).value);
   for (const kind of CUE_KINDS) { const url = (element('media-sounds').querySelector(`[data-cue="${kind}"]`) as HTMLSelectElement).value; if (url) next.sounds[kind] = url; }
   void control('media', next, 'error', mediaConfiguration);
 });
@@ -149,12 +145,6 @@ function status() {
   element('tie-range-status').textContent = active
     ? `Active duel: ${modeLabel(active.mode)}${active.mode !== configuredMode ? ` · Next duel: ${modeLabel(configuredMode)}` : ''}`
     : `Next duel: ${modeLabel(configuredMode)}`;
-  const pointsLabel = (enabled: boolean) => enabled ? 'Pinpointing Duels' : 'Health duel';
-  const configuredPinpointing = settings.value?.pinpointing?.enabled ?? false;
-  const activePinpointing = active ? active.pinpointing === true : null;
-  element('pinpointing-status').textContent = activePinpointing !== null
-    ? `Active duel: ${pointsLabel(activePinpointing)}${activePinpointing !== configuredPinpointing ? ` · Next duel: ${pointsLabel(configuredPinpointing)}` : ''}`
-    : `Next duel: ${pointsLabel(configuredPinpointing)}`;
   const labels = { unreported: 'No graphic report', loading: 'Loading Google Maps', 'api-ready': 'Google Maps API loaded',
     'missing-key': 'Google Maps browser key missing', 'api-error': 'Google Maps API unavailable', 'view-error': 'Google Maps view unavailable', 'pano-error': 'Exact Street View panorama unavailable' };
   element('renderer-status').textContent = labels[renderer.value?.status ?? 'unreported'];
@@ -180,7 +170,6 @@ function status() {
   const value = connection.value;
   const replay = value?.input === 'replay';
   element('replay-label').hidden = !replay;
-  element('party-selection').textContent = `Selected: ${value?.selectedPartyId ?? 'automatic'} · Config default: ${value?.configuredPartyId ?? 'automatic'} · Connected party: ${value?.partyId ?? 'none'}`;
   element('connection-status').textContent = value ? `${replay ? 'Replay' : 'Spectator'} · ${value.state}` : 'Connecting to NodeCG…';
   element('game-status').textContent = `${duel.value?.mode ?? 'No game'} · ${timeline.value?.phase ?? 'waiting-game'}${duel.value ? ` · Round ${duel.value.round}` : ''}`;
   element('server-warning').textContent = [value?.error, ...(value?.warnings ?? [])].filter(Boolean).join(' · ');
@@ -198,7 +187,6 @@ function applySettings(value: PresenterSettings | undefined) {
   input('tie-range-enabled').checked = value.tieRange?.enabled ?? false;
   select('tie-range-mode').value = value.tieRange?.mode ?? 'full';
   select('tie-range-mode').disabled = !input('tie-range-enabled').checked;
-  input('pinpointing-enabled').checked = value.pinpointing?.enabled ?? false;
   element('audio-launch-help').textContent = value.audioOutput === 'separate'
     ? 'Open Program graphic and Separate audio.'
     : 'Open Program graphic for video and audio.';
@@ -208,13 +196,7 @@ select('view-source').addEventListener('change', () => { element('video-source-h
 ruleContexts.on('change', status);
 input('tie-range-enabled').addEventListener('change', () => { select('tie-range-mode').disabled = !input('tie-range-enabled').checked; });
 duel.on('change', status);
-let partyInitialized = false;
-connection.on('change', (value, previous) => {
-  if (value && (!previous || value.input !== previous.input)) { select('input-mode').value = value.input; showInputDraft(); }
-  if (value && !partyInitialized) { input('party-id').value = value.selectedPartyId ?? ''; partyInitialized = true; }
-  if (value?.replayFixture && value.replayFixture !== previous?.replayFixture) select('replay-fixture').value = value.replayFixture;
-  status();
-});
+connection.on('change', status);
 timeline.on('change', status);
 renderer.on('change', status);
 clients.on('change', status);
@@ -225,17 +207,7 @@ element('settings-form').addEventListener('submit', event => {
   void control('settings', { ...settings.value, viewSource: select('view-source').value, keyColor: select('key-color').value,
     audioOutput: select('audio-output').value, muted: input('muted').checked,
     musicGain: Number(input('music-gain').value), effectsGain: Number(input('effects-gain').value),
-    tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value },
-    pinpointing: { enabled: input('pinpointing-enabled').checked } }, 'error', settingsConfiguration);
-});
-element('reconnect').addEventListener('click', () => {
-  const mode = select('input-mode').value;
-  const partyId = input('party-id').value.trim();
-  if (mode === 'live' && partyId && !/^(?:[\w-]{1,128}|https:\/\/www\.geoguessr\.com\/party\/broadcast\/[\w-]{1,128})$/.test(partyId)) {
-    element('source-error').textContent = 'Enter a party ID (letters, digits, underscores or hyphens), the exact https://www.geoguessr.com/party/broadcast/partyId URL, or leave blank for automatic discovery.';
-    return;
-  }
-  void control('reconnect', mode === 'replay' ? { input: mode, fixture: select('replay-fixture').value } : { input: mode, partyId }, 'source-error');
+    tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value } }, 'error', settingsConfiguration);
 });
 
 element('settings-form').addEventListener('input', () => settingsConfiguration.draft.markDirty());

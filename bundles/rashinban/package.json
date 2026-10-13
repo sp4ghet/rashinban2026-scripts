@@ -85,6 +85,14 @@
         "fullbleed": true
       },
       {
+        "name": "duel-setup",
+        "workspace": "shared",
+        "title": "Duel Setup",
+        "file": "duel-setup.html",
+        "width": 3,
+        "headerColor": "#335f9b"
+      },
+      {
         "name": "current-match",
         "workspace": "shared",
         "title": "Current Match",

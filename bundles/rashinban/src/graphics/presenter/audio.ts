@@ -170,11 +170,12 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       syncCues(timeline, settings, now, programOwner);
       const ended = timeline.phase === 'aborted' || timeline.phase === 'finished';
       const music = ended ? 'idle' : timeline.music;
+      const fadeMs = timeline.phase === 'finished' ? media.fadeMs.end ?? media.fadeMs.idle : media.fadeMs[music];
       for (const node of nodes) {
         const target = settings.muted || ended ? 0 : node.stem.gains[music] * settings.musicGain;
         if (target === node.target && settings.muted === node.muted && music === node.music) continue;
         node.target = target; node.muted = settings.muted; node.music = music;
-        fade(node.gain.gain, target, time, settings.muted ? time : time + media.fadeMs[music] / 1000);
+        fade(node.gain.gain, target, time, settings.muted ? time : time + fadeMs / 1000);
       }
     },
     status() {

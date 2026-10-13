@@ -27,3 +27,8 @@ test('rejects remote, cross-category, traversal and noncanonical asset URLs', ()
     const v = valid(); v.fiveK.single.url = url; assert.throws(() => parseMedia(v), url);
   }
 });
+test('an optional end fade is preserved and bounded like the context fades', () => {
+  const ended = { ...valid(), fadeMs: { ...EMPTY_MEDIA.fadeMs, end: 4000 } };
+  assert.deepEqual(parseMedia(ended), ended);
+  for (const end of [-1, 120001, Infinity, '4000']) assert.throws(() => parseMedia({ ...valid(), fadeMs: { ...EMPTY_MEDIA.fadeMs, end } }));
+});

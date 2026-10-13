@@ -4,7 +4,7 @@ export const AUDIO_STATES = ['unreported', 'loading', 'ready', 'silent', 'partia
 export type AudioState = typeof AUDIO_STATES[number];
 export type AudioStatus = { state: AudioState; missing: string[] };
 export type EffectAsset = { url: string; watchdogMs: number; soundtrack: 'embedded' | 'cue' | 'silent' };
-export type MediaManifest = { stems: Stem[]; fadeMs: Record<MusicContext, number>; sounds: Partial<Record<CueKind, string>>; fiveK: { single: EffectAsset | null; double: EffectAsset | null } };
+export type MediaManifest = { stems: Stem[]; fadeMs: Record<MusicContext, number> & { end?: number }; sounds: Partial<Record<CueKind, string>>; fiveK: { single: EffectAsset | null; double: EffectAsset | null } };
 export const EMPTY_MEDIA: MediaManifest = { stems: [], fadeMs: { idle: 0, round: 0, urgent: 0, results: 0 }, sounds: {}, fiveK: { single: null, double: null } };
 export const MUSIC_CONTEXTS = ['idle', 'round', 'urgent', 'results'] as const;
 export const CUE_KINDS = ['pre-round-tick', 'round-start', 'pin', 'opponent-guess', 'guess', 'countdown', 'results', 'count', 'collision', 'tie', 'multiplier', 'damage', 'five-k'] as const;
@@ -51,7 +51,10 @@ export function parseMedia(input: unknown): MediaManifest {
     if (value.soundtrack === 'cue' && !sounds['five-k']) throw new Error('Cue soundtrack needs a five-k sound');
     return { url: assetUrl(value.url, 'video'), watchdogMs: number(value.watchdogMs, 500, 120000), soundtrack: value.soundtrack };
   }
-  return { stems, fadeMs: contexts(value.fadeMs, 120000), sounds, fiveK: { single: effect(fiveK.single), double: effect(fiveK.double) } };
+  // `end` is optional: the finished-duel fade falls back to the idle fade.
+  const { end, ...fades } = record(value.fadeMs, [...MUSIC_CONTEXTS, 'end']);
+  const fadeMs = end === undefined ? contexts(fades, 120000) : { ...contexts(fades, 120000), end: number(end, 0, 120000) };
+  return { stems, fadeMs, sounds, fiveK: { single: effect(fiveK.single), double: effect(fiveK.double) } };
 }
 
 /** Resolve exactly one variant; a double never substitutes the single asset. */

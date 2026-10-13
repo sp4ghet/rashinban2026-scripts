@@ -61,7 +61,7 @@ function validateSettingsShape(input: unknown): void {
 
 function validateMediaShape(input: unknown): void {
   const media = validatePartialObject(input, ['stems', 'fadeMs', 'sounds', 'fiveK'], 'presenter.media');
-  if (media.fadeMs !== undefined) validatePartialObject(media.fadeMs, ['idle', 'round', 'urgent', 'results'], 'presenter.media.fadeMs');
+  if (media.fadeMs !== undefined) validatePartialObject(media.fadeMs, ['idle', 'round', 'urgent', 'results', 'end'], 'presenter.media.fadeMs');
   if (media.sounds !== undefined) {
     const sounds = validatePartialObject(media.sounds, ['pre-round-tick', 'round-start', 'pin', 'opponent-guess', 'guess', 'countdown', 'results', 'count', 'collision', 'tie', 'multiplier', 'damage', 'five-k'], 'presenter.media.sounds');
     if (Object.values(sounds).some(sound => sound !== null && typeof sound !== 'string')) {

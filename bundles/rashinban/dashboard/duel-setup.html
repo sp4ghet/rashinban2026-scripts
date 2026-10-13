@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Duel setup</title>
+<style>
+  * { box-sizing: border-box; } body { margin: 0; padding: 16px; color: #edf1f8; background: #1b2333; font: 14px "Segoe UI", sans-serif; }
+  h2 { font-size: 16px; margin: 14px 0 7px; } label { display: grid; gap: 5px; margin: 9px 0; color: #bbc8dd; } input, select, button { color: #f5f7fc; background: #2c3950; border: 1px solid #52637d; border-radius: 4px; padding: 8px; font: inherit; min-width: 0; } button { cursor: pointer; font-weight: 600; } button:hover { background: #3b5073; } .status { padding: 10px; background: #111a29; border-radius: 5px; line-height: 1.4; overflow-wrap: anywhere; } #replay-label { display: block; color: #ffcf78; font-weight: 800; letter-spacing: .09em; } .warning { color: #ffcd7d; } .help { color: #9bacc5; font-size: 12px; line-height: 1.5; margin: 6px 0; } .check { display: flex; gap: 9px; align-items: center; } [hidden] { display: none !important; } .wide { width: 100%; margin-top: 8px; }
+  details { margin: 6px 0; } summary { cursor: pointer; color: #9bacc5; font-size: 12px; } .warning:empty { display: none; } h2:first-of-type { margin-top: 0; }
+</style></head><body>
+<h2>Input source</h2>
+<div class="status"><span id="replay-label" hidden>OFFLINE REPLAY</span><strong id="connection-status">Connecting to NodeCG…</strong></div>
+<label>Input mode<select id="input-mode"><option value="replay">Replay (offline fixture)</option><option value="live">Live GeoGuessr spectator</option></select></label>
+<div id="replay-controls" hidden><label>Replay fixture<select id="replay-fixture"><option value="gs2-ws-presenter-showcase.json">Presenter showcase · telemetry + single/double 5K</option><option value="gs2-ws-full-duel-sequence.json">Full duel</option><option value="gs2-ws-full-duel-sequence-manual-rounds.json">Manual rounds</option><option value="gs2-ws-full-duel-sequence-maxroundtime.json">Maximum round time</option><option value="gs2-ws-full-duel-sequence-aborted.json">Aborted game</option></select></label></div>
+<div id="live-controls"><label>Live broadcast URL or party ID<input id="party-id" maxlength="180" placeholder="https://www.geoguessr.com/party/broadcast/partyId"></label><p class="help">Blank uses your active party.</p><details><summary>Connection details</summary><div id="party-selection" class="help"></div></details></div>
+<button id="reconnect" class="wide">Apply source / reconnect</button>
+<div id="source-error" class="warning" role="status"></div>
+
+<h2>Pinpointing Duels</h2>
+<label class="check"><input id="pinpointing-enabled" type="checkbox"> Enable Pinpointing Duels</label>
+<div id="pinpointing-status" class="status">Next duel: Health duel</div>
+<p class="help">Applies to the next duel as soon as it is toggled. Set a very high initial health in the party and abort the GeoGuessr game once the presenter announces the winner.</p>
+<div id="pinpointing-error" class="warning" role="status"></div>
+<script src="duel-setup.js"></script></body></html>

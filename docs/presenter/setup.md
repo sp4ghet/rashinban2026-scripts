@@ -45,7 +45,7 @@ add `info-stream.html` / `info-led.html` for the switched overlay layers; see
 [broadcast](../broadcast.md). Use [media selection](media.md) to load assets,
 then verify readiness and the program/audio owner before showing the output.
 
-Choose **Input mode** in the dashboard, then apply the source. No restart is
+Choose **Input mode** in the shared **Duel Setup** panel, then apply the source. No restart is
 needed to switch between Replay and Live. Replay uses Full duel, Manual rounds,
 Maximum round time, or Aborted game fixtures and never opens a live connection.
 The live broadcast field remains visible and is enabled when Live is selected.
