@@ -3,26 +3,33 @@ import type { RenderFrame } from './renderer.ts';
 import { captureError, captureFrameMode, createCaptureInput, parseVideoInputs, type CaptureStatus, type VideoInputs } from './capture.ts';
 
 const sides = ['left', 'right'] as const;
-const storageKey = 'rashinban:presenter-video-inputs:v1';
 
 /** Device IDs and streams belong to this OBS/browser instance, never NodeCG. */
-export function createCaptureUI(root: HTMLElement, search: string) {
+type CaptureIntegration = {
+  relay?: { name: string; open(side: 'left' | 'right'): Promise<MediaStream>; reconnect(): void; onAvailable(listener: (side: 'left' | 'right') => void): () => void };
+  streamChanged?(side: 'left' | 'right', stream: MediaStream | null): void;
+  storageKey?: string;
+};
+export function createCaptureUI(root: HTMLElement, search: string, output: 'stream' | 'led' | 'relay' = 'stream', integration: CaptureIntegration = {}) {
+  // Do not automatically open the stream's physical devices in a second output.
+  const storageKey = integration.storageKey ?? (output === 'led' ? 'rashinban:presenter-led-video-inputs:v1' : 'rashinban:presenter-video-inputs:v1');
   const doc = root.ownerDocument; const win = doc.defaultView!;
   const el = <T extends HTMLElement>(id: string) => root.querySelector<T>(`#${id}`)!;
   const panel = el('video-setup'); const message = el('video-setup-message');
   const availability = el('video-setup-availability');
-  const media = win.navigator.mediaDevices;
+  const media = integration.relay ? undefined : win.navigator.mediaDevices;
   let disposed = false; let enabled = false; let source: PlayerViewSource = 'chroma';
   let config: VideoInputs = { left: '', right: '' }; let scanGeneration = 0;
   let discovering = false;
-  const supported = win.isSecureContext && !!media?.getUserMedia && !!media?.enumerateDevices;
+  const supported = integration.relay ? typeof RTCPeerConnection === 'function' : win.isSecureContext && !!media?.getUserMedia && !!media?.enumerateDevices;
   if (!supported) message.textContent = win.isSecureContext
     ? 'Video capture is unavailable in this browser.' : 'Video capture needs HTTPS or localhost on the OBS computer.';
   try {
-    const saved = win.localStorage.getItem(storageKey);
+    const saved = integration.relay ? null : win.localStorage.getItem(storageKey);
     if (saved) config = parseVideoInputs(JSON.parse(saved));
   } catch { message.textContent = 'Saved video inputs could not be loaded. Select both inputs again.'; }
 
+  if (integration.relay) config = { left: 'left', right: 'right' };
   const slots = sides.map(side => {
     const select = el<HTMLSelectElement>(`video-${side}-device`);
     const video = el<HTMLVideoElement>(`video-${side}-preview`);
@@ -38,16 +45,17 @@ export function createCaptureUI(root: HTMLElement, search: string) {
       context?.clearRect(0, 0, canvas.width, canvas.height);
     }
     const input = createCaptureInput({
-      open: deviceId => media.getUserMedia({ audio: false, video: { deviceId: { exact: deviceId },
+      open: deviceId => integration.relay ? integration.relay.open(side) : media!.getUserMedia({ audio: false, video: { deviceId: { exact: deviceId },
         width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 60 } } }),
       attach(stream) {
         clear(); video.srcObject = stream;
+        integration.streamChanged?.(side, stream);
         if (stream) return video.play();
         video.pause();
       },
       status(value) {
         status = value; host.dataset.state = value.state;
-        el(`video-${side}-status`).textContent = value.message;
+        el(`video-${side}-status`).textContent = integration.relay && value.state === 'error' ? 'Waiting for the capture relay. Check its inputs or reconnect.' : value.message;
         if (value.state !== 'ready' && value.state !== 'muted') clear();
       },
     });
@@ -77,14 +85,19 @@ export function createCaptureUI(root: HTMLElement, search: string) {
       } };
   });
 
+  const unsubscribeRelay = integration.relay?.onAvailable(side => { slots.find(slot => slot.side === side)?.input.retryAvailable(); });
   function update() {
     const active = supported && source === 'video' && enabled && !discovering;
     for (const slot of slots) slot.input.select(config[slot.side], active);
-    availability.textContent = source !== 'video' ? 'Select Video input in the presenter dashboard to start capture.'
-      : !enabled ? 'Only the active program source opens video inputs. Previews and standby sources stay inactive.'
-        : 'Active program · video only · assignments saved in this browser';
+    availability.textContent = integration.relay ? 'Relay ' + integration.relay.name + (active ? ' · subscribed' : ' · inactive') : source !== 'video' ? 'Select Video input in the presenter dashboard to start capture.'
+      : !enabled ? 'Capture inactive. Previews, standby stream sources and sources without a fresh server clock do not open inputs.'
+        : `${output === 'relay' ? 'Capture relay' : output === 'led' ? 'LED output' : 'Active program'} · video only · assignments saved for this output in this browser`;
   }
   function showDevices(devices: MediaDeviceInfo[]) {
+    if (integration.relay) {
+      for (const slot of slots) { slot.select.replaceChildren(new Option('Relay ' + slot.side + ' feed', slot.side)); slot.select.disabled = true; }
+      return;
+    }
     const cameras = devices.filter(device => device.kind === 'videoinput' && device.deviceId);
     for (const slot of slots) {
       const selected = slot.select.options.length ? slot.select.value : config[slot.side];
@@ -95,15 +108,15 @@ export function createCaptureUI(root: HTMLElement, search: string) {
     }
   }
   async function scan(requestPermission = false, recoverInputs = false) {
-    if (!supported || disposed || discovering) return;
+    if (integration.relay || !supported || disposed || discovering) return;
     if (requestPermission && (source !== 'video' || !enabled)) {
-      message.textContent = 'Video permission can only be requested in the active program source while Video input mode is selected.';
+      message.textContent = 'Video permission needs an active stream program or LED output with Video input mode selected.';
       return;
     }
     const token = ++scanGeneration;
     const button = el<HTMLButtonElement>('video-find'); button.disabled = true;
     try {
-      let devices = await media.enumerateDevices();
+      let devices = await media!.enumerateDevices();
       if (disposed || token !== scanGeneration) return;
       showDevices(devices);
       const selectable = () => devices.filter(device => device.kind === 'videoinput' && device.deviceId);
@@ -115,12 +128,12 @@ export function createCaptureUI(root: HTMLElement, search: string) {
         // Release pending/failed slot opens before the temporary permission probe.
         discovering = true; update();
         let permissionStream: MediaStream | null = null;
-        try { permissionStream = await media.getUserMedia({ audio: false, video: true }); }
+        try { permissionStream = await media!.getUserMedia({ audio: false, video: true }); }
         catch (error) { permissionError = error; }
         finally { permissionStream?.getTracks().forEach(track => track.stop()); }
         if (disposed || token !== scanGeneration || !enabled || source !== 'video') return;
         // Permission may have been granted even if that camera could not start.
-        devices = await media.enumerateDevices();
+        devices = await media!.enumerateDevices();
         if (disposed || token !== scanGeneration) return;
         showDevices(devices);
       }
@@ -168,19 +181,26 @@ export function createCaptureUI(root: HTMLElement, search: string) {
       slot.select.value = selected;
     });
   });
-  el('video-reconnect').addEventListener('click', () => { slots.forEach(slot => slot.input.reconnect()); void scan(); });
+  el('video-reconnect').addEventListener('click', () => { integration.relay?.reconnect(); slots.forEach(slot => slot.input.reconnect()); void scan(); });
   el('video-close').addEventListener('click', () => { panel.hidden = true; });
   win.addEventListener('keydown', onKey); media?.addEventListener('devicechange', onDevices);
   panel.hidden = new URLSearchParams(search).get('videoSetup') !== '1';
+  if (integration.relay) {
+    for (const id of ['video-find', 'video-apply', 'video-swap']) el<HTMLButtonElement>(id).disabled = true;
+    message.textContent = 'Inputs are configured on the capture relay page. This presenter never opens physical devices.';
+  }
   showDevices([]); void scan(); update();
   return {
-    update(nextSource: PlayerViewSource, ownsProgram: boolean) {
-      if (source === nextSource && enabled === ownsProgram) return;
-      source = nextSource; enabled = ownsProgram; update();
+    setRelayStatus(value: string) {
+      if (integration.relay) message.textContent = value + '. Inputs are configured on the capture relay page.';
+    },
+    update(nextSource: PlayerViewSource, active: boolean) {
+      if (source === nextSource && enabled === active) return;
+      source = nextSource; enabled = active; update();
     },
     render(frame: RenderFrame | null) { slots.forEach(slot => slot.paint(enabled && source === 'video' ? frame : null)); },
     dispose() {
-      disposed = true; scanGeneration++;
+      disposed = true; scanGeneration++; unsubscribeRelay?.();
       slots.forEach(slot => slot.input.dispose());
       win.removeEventListener('keydown', onKey); media?.removeEventListener('devicechange', onDevices);
     },

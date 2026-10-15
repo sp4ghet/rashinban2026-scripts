@@ -14,6 +14,8 @@ import { createAudioOutput } from './presenter/audio-output.ts';
 import { bindLayers } from './broadcast/bind.ts';
 import { channelFromSearch } from '../broadcast/channel.ts';
 import { createCaptureUI } from './presenter/capture-ui.ts';
+import { createRelayReceiver } from './presenter/relay.ts';
+import { RELAY_MESSAGE, relayName, type RelayResponse } from '../presenter/relay-protocol.ts';
 import type { PresenterPublicConfig } from '../config/types.ts';
 import { boundMediaState, changedVideoBindings, mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
 
@@ -36,7 +38,13 @@ const clientId = crypto.randomUUID();
 const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
   send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });
 const audioOutput = createAudioOutput(client);
-const capture = document.body.dataset.output === 'led' || role === 'led' ? null : createCaptureUI(document.body, location.search);
+const ledOutput = document.body.dataset.output === 'led' || role === 'led';
+const relayParam = new URLSearchParams(location.search).get('videoRelay');
+const relay = relayParam !== null ? createRelayReceiver({ room: relayName(relayParam),
+  request: request => nodecg.sendMessage(RELAY_MESSAGE, request) as Promise<RelayResponse>,
+  status(message) { document.body.dataset.relayStatus = message; capture.setRelayStatus(message); },
+}) : null;
+const capture = createCaptureUI(document.body, location.search, ledOutput ? 'led' : 'stream', { relay: relay ?? undefined });
 let boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
 media.on('change', value => {
   try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
@@ -60,7 +68,11 @@ if (document.body.dataset.output === 'led') {
 const silent = (muted: boolean) => muted || role === 'led';
 function reconcileVideo() {
   const options = settings.value ?? DEFAULT_SETTINGS;
-  capture?.update(options.viewSource, client.ownsProgram());
+  // LED follows its own fresh clock; it must never take the stream's program
+  // lease. Switcher previews do not open devices, even on the LED page.
+  const captureActive = client.playsVideo() && (!ledOutput || channelFromSearch(location.search) === 'program');
+  relay?.setActive(options.viewSource === 'video' && captureActive);
+  capture.update(options.viewSource, captureActive);
   videoPlayer.update(timeline.value?.generation ?? null, client.playsVideo(), timeline.value?.effect ?? 'none', silent(options.muted), options.effectsGain);
   audioOutput.sync(timeline.value, options);
 }
@@ -97,7 +109,7 @@ function startRenderer(value?: PresenterPublicConfig) {
 }
 publicConfig.on('change', startRenderer);
 startRenderer(publicConfig.value);
-window.addEventListener('pagehide', () => { clearInterval(mediaGuard); capture?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
+window.addEventListener('pagehide', () => { clearInterval(mediaGuard); capture.dispose(); relay?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {
   let captureFrame: RenderFrame | null = null;
@@ -106,8 +118,7 @@ function frame() {
   const timing = timeline.value;
   const match = series.value;
   const options = settings.value ?? DEFAULT_SETTINGS;
-  // Capture devices belong to the stream program; the LED wall keeps rendered views.
-  const viewSource = !capture && options.viewSource === 'video' ? 'rendered' : options.viewSource;
+  const viewSource = options.viewSource;
   // Sole graphic cue consumer; sound scheduling belongs to the audio lease engine.
   for (const cue of client.pollCues()) if (cue.kind === 'five-k' && timing) {
     const complete = client.effectCompletion(timing);
@@ -225,7 +236,7 @@ function frame() {
     renderer?.render({ ...previousFrame, source: viewSource, projection: { phase: 'waiting-game', answer: null, players: [], remainingMs: null } });
     previousFrame = null;
   }
-  capture?.render(captureFrame);
+  capture.render(captureFrame);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

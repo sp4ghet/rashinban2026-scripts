@@ -1,12 +1,12 @@
 # Player video inputs in OBS
 
 **Video input** is the third presenter presentation, alongside Rendered and
-Chroma. It captures two independent video devices on the OBS computer and
+Chroma. It uses two independent video feeds, captured directly or through the relay, and
 draws their complete player feeds inside the presenter. No player-feed chroma
 key is needed. Player cameras still use the existing camera slots and regional
 keying described in [OBS composition](obs.md).
 
-## Setup
+## Direct input setup
 
 After updating the code, rebuild and restart NodeCG, then reload the dashboard
 and presenter sources so the server and graphics both recognize the new mode.
@@ -64,17 +64,115 @@ restarting the healthy input. Permission denials require **Reconnect** after
 fixing access. Refreshing the device list does not silently change assignments;
 swapping also preserves unavailable saved devices.
 
-Only the current program owner acquires devices. Preview and standby graphics
-do not capture, including through the permission button. Select the intended
-program in the dashboard if setup reports inactive. Keep **Shutdown source
+For the stream, only the current program owner acquires devices. The LED
+program output captures independently, without taking the stream's ownership
+or playing audio. Preview and standby stream graphics do not capture, including
+through the permission button. LED switcher previews (`?channel=preview`) and
+explicit `?role=preview` pages also do not capture. Select the intended stream
+program in the dashboard if its setup reports inactive. Keep **Shutdown source
 when not visible** and **Refresh browser when scene becomes active** disabled,
-and reuse the same Browser Source across scenes. Capture stops on ownership
-loss (including an expired lease or stale server clock), leaving Video input
-mode, or closing/reloading the page. Pending retries are cancelled too.
+and reuse the same Browser Source across scenes. Stream capture stops on
+ownership loss (including an expired lease or stale server clock). Both outputs
+release inputs when leaving Video input mode or closing/reloading the page.
+Pending retries are cancelled too.
 
-The LED presenter uses rendered player views when Video input is selected for
-the stream. It does not open capture devices or expose capture setup; broadcast
-bus blanking and silent LED celebrations continue to work independently.
+The LED presenter follows the same Player views setting, including Video input.
+Open `presenter-led.html` in OBS, reveal the presenter on its LED broadcast bus
+for off-air setup, then use **Interact → F8** to assign the LED's left and right
+inputs. Its assignments start empty and are saved separately from the stream's
+assignments, even at the same URL origin. Reload both Browser Sources after
+updating. The LED keeps its 1920 × 576 layout, comparison maps on locked sides,
+frozen celebration frames, bus blanking and silent celebrations. Blanking covers
+the output but keeps capture warm; leave Video input mode or close the source
+to release the LED's inputs. An expired server clock also releases them.
+
+## Share inputs through the WebRTC relay
+
+Use the relay when the stream and LED need the same physical player inputs.
+One capture page opens each input once and sends both raw player feeds to each
+presenter. Each presenter still applies its own layouts, locked-player maps and
+frame freezes. Media travels directly over WebRTC; NodeCG handles connection
+setup and ownership only. No additional hardware or npm packages are required.
+
+After building and restarting NodeCG, open these URLs on the same NodeCG server:
+
+| Purpose | Local URL |
+| --- | --- |
+| Capture owner | `http://localhost:9090/bundles/rashinban/graphics/presenter-capture.html?relay=main` |
+| Stream Browser Source | `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program&videoRelay=main` |
+| LED Browser Source | `http://localhost:9090/bundles/rashinban/graphics/presenter-led.html?videoRelay=main` |
+
+1. Open the capture page in Chrome on the computer connected to the capture
+   card. Click **Start relay**, then **Find inputs / allow video** if needed.
+   Select left/right devices and **Apply inputs**. Check both previews. A new
+   relay starts with empty assignments; its saved assignments are separate
+   from the stream and LED's direct-capture assignments.
+2. Set the dashboard's Player views to **Video input**. Load the two receiver
+   URLs in OBS with the existing output dimensions. Select the intended stream
+   program owner and reveal the LED presenter on its broadcast bus.
+3. Keep the capture page open and the capture computer awake. Avoid browser
+   memory/energy-saving suspension for this page. Receiver **Interact → F8**
+   shows relay status; inputs are configured on the capture page. Receiver
+   **Reconnect** retries its subscription without reopening hardware.
+4. Click **Stop relay** to release the physical inputs. Reloading the capture
+   page also releases them and requires **Start relay** again. Reloading either
+   presenter, leaving Video input mode, or closing a receiver leaves the owner
+   and the other output running.
+
+The capture browser needs localhost or trusted HTTPS and camera permission.
+A capture page inside OBS instead needs its media-stream launch flag described
+above. Relay-only receiver pages never request camera access or silently fall
+back to physical devices. They ignore their saved direct input assignments.
+Removing `videoRelay` from a presenter URL restores direct input operation.
+
+The room name must match in all three URLs: 1–64 letters, digits, underscores
+or hyphens. Keep a single room for the physical input pair. The broker allows
+one publisher per room; a second Start reports busy and waits until that room
+is free. Different room names do not protect the same hardware from contention.
+Direct OBS capture sources or other applications can still hold the device.
+
+The capture owner renews a six-second lease and releases inputs before its local
+deadline if signaling stops. Presenters clear disconnected feeds and reconnect
+when the owner returns. Lost connection-setup messages retry after 12 seconds.
+A frozen browser or sleeping OS cannot execute that release logic: close a
+stuck capture page before starting a replacement. The lease is not a device
+lock enforced by the capture driver.
+
+The default relay uses local WebRTC connections with no public STUN/TURN
+service. Start with all three pages on the same computer. A venue LAN can work
+when the browsers can reach each other, but firewall/routing compatibility
+needs testing. All pages must use the same NodeCG instance; a remote capture
+computer needs its own reachable trusted HTTPS URL, not the OBS computer's
+`localhost`.
+
+WebRTC encodes the feeds independently for each viewer. Resolution, frame rate,
+compression and delay can adapt to CPU/GPU and network load. This is not an
+uncompressed or frame-synchronized distribution path. Check text/map clarity,
+sustained two-feed performance and the stream/LED delay with the actual machines.
+The existing video/telemetry frame-freeze boundary remains in each receiver;
+the relay does not compensate for a player feed arriving ahead of telemetry.
+
+## DeckLink compatibility
+
+The relay avoids two presenter pages independently opening the same input.
+The capture page still requires each HDMI channel to be exposed as a usable
+browser video device by the installed driver.
+
+Blackmagic's developer support identifies an input already enabled by another
+application as a common cause of `IDeckLinkInput.EnableVideoInput` failure:
+[DeckLink input access guidance](https://forum.blackmagicdesign.com/viewtopic.php?f=12&t=187750).
+Multiple HDMI channels let you capture multiple player PCs; they do not by
+themselves promise multiple consumers of each channel.
+
+DeckLink provides Windows WDM/DirectShow support, but verify that the exact card,
+Desktop Video driver and capture browser expose **each required HDMI channel**
+in **Find inputs / allow video**, and can actually open it at the desired format.
+Working as an OBS Blackmagic Device source alone does not verify browser capture.
+See [Blackmagic's software interfaces](https://www.blackmagicdesign.com/products/decklink/software/).
+A native DeckLink SDK-to-WebRTC bridge is outside this implementation.
+Rehearse simultaneous stream/LED operation, source reloads and HDMI signal
+loss/recovery before using the hardware on air.
+
 
 ## Presentation
 
@@ -141,8 +239,39 @@ The local acceptance used OBS **32.2.2 / Chromium 127.0.6533.120**, with two
 simultaneous simulated inputs. It covers frame updates, all three movement
 modes, both resize directions, F8 setup, frozen celebration pixels, mode
 switching, assignment swapping/persistence, ownership changes, disconnects,
-permission failures, unavailable devices and preview isolation. It also checks
+permission failures, unavailable devices and preview isolation. The browser
+script also verifies LED video selection, independent saved assignments,
+capture without stream ownership, LED lock geometry, frame freezing, mode
+switching, bus blanking and LED switcher-preview isolation. It also checks
 hidden setup playback, 30 fps input sampling at 60 Hz, automatic recovery,
 timeout freezing, mute retention, idle canvas work and unavailable-device swaps.
 Physical card drivers, sustained two-feed performance, HDMI signal loss/recovery and video /
 telemetry / audio latency remain hardware acceptance checks.
+
+
+### Relay verification
+
+After building, run:
+
+```powershell
+node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validate-presenter-relay.mjs
+```
+
+This starts an isolated HTTP signaling fixture using the actual relay broker,
+the built capture/stream/LED pages and real Chromium WebRTC connections. It
+uses simulated NodeCG state and two encodable fake camera feeds, never the
+running NodeCG server or physical inputs. The second default Chromium fake
+camera is a depth stream, so this fixture uses the first and third cameras.
+
+The harness checks simultaneous left/right delivery, zero receiver camera
+calls, publisher exclusion, receiver reload/mode changes, swaps, a missing
+input, publisher stop/restart, signaling interruption, lost offer and answer
+acknowledgements, frozen stream frames with live LED video, preview isolation,
+and visible connection status. Reports and screenshots are saved under
+`artifacts/presenter-validation/relay/`. Unit tests cover the broker's role/
+room boundaries, bounded queues, lease expiry and delayed acknowledgements.
+
+DeckLink, OBS's WebRTC implementation, venue LAN connectivity, long-duration
+performance, source signal-loss behavior, and measured audio/video/telemetry
+latency remain production rehearsal checks. Browser fake-camera acceptance
+does not establish any of those hardware results.

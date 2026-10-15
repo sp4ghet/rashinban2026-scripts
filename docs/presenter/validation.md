@@ -375,3 +375,40 @@ device-change isolation, permission denial, timeout/mute holds, idle canvas work
 and unavailable-device swaps. Both runs reported zero uncaught browser errors.
 All **544 unit tests**, typecheck, build and diff checks passed. Physical card
 recovery and sustained capture performance still require hardware validation.
+
+
+### LED video and WebRTC relay — 2026-10-15
+
+The LED now honors Video input mode. Direct LED input assignments are separate
+from the stream's assignments. This supersedes the rendered-only LED behavior
+recorded under "Rebase and LED compatibility."
+
+The optional relay uses a dedicated capture page for both physical inputs and
+WebRTC subscriptions in stream/LED outputs. Its independent review identified
+a lost-offer recovery gap: a poll acknowledgement could be lost after draining
+the broker inbox, leaving the publisher waiting forever. A new browser
+regression reproduced that failure before the fix. Unfinished negotiation now
+retries after 12 seconds; regressions pass for lost offers and lost answers.
+Receiver setup also shows current connection status.
+
+Validation in the isolated `feat/presenter-webrtc-relay` worktree:
+
+- `npm test`: **597/597**, including eight new broker/session tests.
+- `npm run typecheck`, `npm run build`, `git diff --check`: passed.
+- Direct-video browser script: **58 checks**, zero uncaught exceptions.
+- Relay browser script: **34 checks**, zero uncaught exceptions. It uses the
+  built pages, actual signaling broker, simulated NodeCG state and real WebRTC
+  connections between Chromium pages with two encodable fake camera feeds.
+- Confirmed two input opens serve both receivers; receiver pages make no camera
+  calls. Coverage includes publisher exclusion, input side mapping/swaps,
+  missing-input recovery, independent mode changes/reloads, stream frame
+  freezing with live LED video, publisher restart, signaling interruption,
+  lost setup messages, preview isolation and visible status.
+- Capture/stream/LED screenshots were inspected. Reports and images are under
+  `artifacts/presenter-validation/relay/`; direct-video results are under
+  `artifacts/presenter-validation/video-inputs/`.
+
+This run used Chrome 155 with fake devices and no Google Maps key. It did not
+exercise the live NodeCG message transport, OBS's WebRTC stack, physical
+DeckLink inputs, venue LAN routing, or sustained audio/video/telemetry latency.
+Those remain rehearsal checks; see [relay setup](video-inputs.md#share-inputs-through-the-webrtc-relay).

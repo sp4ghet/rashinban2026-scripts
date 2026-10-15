@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>RASHINBAN — Player capture relay</title><link rel="stylesheet" href="presenter-capture.css"></head>
+<body>
+<main>
+  <h1>Player capture relay <span id="relay-name">main</span></h1>
+  <p>Keep this page open on the capture computer. Start one relay for both presenter outputs.</p>
+  <div class="relay-controls"><button id="relay-start" type="button">Start relay</button><button id="relay-stop" type="button">Stop relay</button><strong id="relay-status" role="status">Stopped — inputs are released</strong></div>
+  <section id="video-setup" role="region" aria-labelledby="video-setup-title">
+    <header><strong id="video-setup-title">Player inputs</strong><button id="video-close" type="button">Close setup (F8)</button></header>
+    <p id="video-setup-availability"></p>
+    <div class="video-setup-sides">
+      <label>Left player<select id="video-left-device" size="4" aria-label="Left player video input"></select><video id="video-left-preview" muted autoplay playsinline></video><span id="video-left-status" role="status">No input selected</span></label>
+      <label>Right player<select id="video-right-device" size="4" aria-label="Right player video input"></select><video id="video-right-preview" muted autoplay playsinline></video><span id="video-right-status" role="status">No input selected</span></label>
+    </div>
+    <div class="video-setup-actions"><button id="video-find" type="button">Find inputs / allow video</button><button id="video-apply" type="button">Apply inputs</button><button id="video-swap" type="button">Swap feeds</button><button id="video-reconnect" type="button">Reconnect</button></div>
+    <p id="video-setup-message" role="status">Select Video input in the presenter dashboard. Configure physical inputs here once.</p>
+  </section>
+  <section class="links"><p>Stream presenter: <a id="stream-url"></a></p><p>LED presenter: <a id="led-url"></a></p></section>
+  <p class="note">Video only. Both presenters receive these feeds; their audio routing stays separate. If the capture page becomes unresponsive, close it before starting another owner.</p>
+</main>
+<div hidden><div id="capture-left"><canvas id="capture-left-canvas"></canvas></div><div id="capture-right"><canvas id="capture-right-canvas"></canvas></div></div>
+<script src="presenter-capture.js"></script>
+</body>
+</html>
