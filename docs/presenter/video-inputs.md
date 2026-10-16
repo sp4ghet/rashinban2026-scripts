@@ -67,7 +67,7 @@ swapping also preserves unavailable saved devices.
 For the stream, only the current program owner acquires devices. The LED
 program output captures independently, without taking the stream's ownership
 or playing audio. Preview and standby stream graphics do not capture, including
-through the permission button. LED switcher previews (`?channel=preview`) and
+through the permission button. Legacy LED preview URLs (`?channel=preview`) and
 explicit `?role=preview` pages also do not capture. Select the intended stream
 program in the dashboard if its setup reports inactive. Keep **Shutdown source
 when not visible** and **Refresh browser when scene becomes active** disabled,
@@ -77,14 +77,15 @@ release inputs when leaving Video input mode or closing/reloading the page.
 Pending retries are cancelled too.
 
 The LED presenter follows the same Player views setting, including Video input.
-Open `presenter-led.html` in OBS, reveal the presenter on its LED broadcast bus
-for off-air setup, then use **Interact → F8** to assign the LED's left and right
+Open the always-on `presenter-led.html` source in OBS and use
+**Interact / F8** during off-air setup to assign the LED's left and right
 inputs. Its assignments start empty and are saved separately from the stream's
 assignments, even at the same URL origin. Reload both Browser Sources after
 updating. The LED keeps its 1920 × 576 layout, comparison maps on locked sides,
-frozen celebration frames, bus blanking and silent celebrations. Blanking covers
-the output but keeps capture warm; leave Video input mode or close the source
-to release the LED's inputs. An expired server clock also releases them.
+frozen celebration frames and silent celebrations. Select or blank the LED
+output in OBS/ATEM while keeping its browser source running to keep capture
+warm. Leave Video input mode or close the source to release the LED's inputs.
+An expired server clock also releases them.
 
 ## Share inputs through the WebRTC relay
 
@@ -109,7 +110,7 @@ After building and restarting NodeCG, open these URLs on the same NodeCG server:
    from the stream and LED's direct-capture assignments.
 2. Set the dashboard's Player views to **Video input**. Load the two receiver
    URLs in OBS with the existing output dimensions. Select the intended stream
-   program owner and reveal the LED presenter on its broadcast bus.
+   program owner; the LED presenter stays on and is selected in OBS/ATEM.
 3. Keep the capture page open and the capture computer awake. Avoid browser
    memory/energy-saving suspension for this page. Receiver **Interact → F8**
    shows relay status; inputs are configured on the capture page. Receiver
@@ -279,7 +280,8 @@ switching, assignment swapping/persistence, ownership changes, disconnects,
 permission failures, unavailable devices and preview isolation. The browser
 script also verifies LED video selection, independent saved assignments,
 capture without stream ownership, LED lock geometry, frame freezing, mode
-switching, bus blanking and LED switcher-preview isolation. It also checks
+switching, always-on LED behavior despite legacy bus visibility settings, and
+legacy LED preview-URL capture isolation. It also checks
 hidden setup playback, 30 fps input sampling at 60 Hz, automatic recovery,
 timeout freezing, mute retention, idle canvas work and unavailable-device swaps.
 Physical card drivers, sustained two-feed performance, HDMI signal loss/recovery and video /

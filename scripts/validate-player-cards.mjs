@@ -16,8 +16,10 @@ import { createInitialState as initialBanpick, applyAction, nextGame, undo, rese
 import { REPLICANTS, BROADCAST_MESSAGES, BANPICK_MESSAGES } from '../bundles/rashinban/src/types/replicants.ts';
 import { verifyBanpick } from './banpick-browser-checks.mjs';
 import { verifyCasters } from './casters-browser-checks.mjs';
+import { verifyLedPages } from './led-browser-checks.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ledOnly = process.argv.includes('--led-only');
 const castersOnly = process.argv.includes('--casters-only');
 const artifacts = path.join(root, castersOnly ? 'artifacts/casters' : 'artifacts/player-cards');
 const adobeFonts = process.argv.includes('--adobe-fonts');
@@ -56,8 +58,8 @@ const values=${JSON.stringify(values).replaceAll('<', '\\u003c')};
 const handlers=new Map();
 window.fixtureValues=values;
 window.emit=(name,value)=>{values[name]=value;for(const cb of handlers.get(name)||[])cb(value);};
-window.nodecg={Replicant(name){return{on(event,callback){if(!handlers.has(name))handlers.set(name,[]);handlers.get(name).push(callback);if(Object.hasOwn(values,name))queueMicrotask(()=>callback(values[name]));}};},
-async sendMessage(name,data){const response=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,data})});const next=await response.json();if(!response.ok)throw Error(next.error);emit(next.replicant,next.value);for(const frame of document.querySelectorAll('iframe'))frame.contentWindow.emit?.(next.replicant,next.value);return next.value;}};
+window.nodecg={Replicant(name){return{get value(){return values[name];},on(event,callback){if(!handlers.has(name))handlers.set(name,[]);handlers.get(name).push(callback);if(Object.hasOwn(values,name))queueMicrotask(()=>callback(values[name]));}};},
+async sendMessage(name,data){if(name==='presenter:clock')return Date.now();if(name.startsWith('presenter:'))return true;const response=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,data})});const next=await response.json();if(!response.ok)throw Error(next.error);emit(next.replicant,next.value);for(const frame of document.querySelectorAll('iframe'))frame.contentWindow.emit?.(next.replicant,next.value);return next.value;}};
 `;
 const server = createServer(async (req, res) => {
   try {
@@ -149,11 +151,16 @@ try {
   await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   socket.onmessage = event => { const message = JSON.parse(event.data); if (message.id) { const call = pending.get(message.id); if (call) { pending.delete(message.id); message.error ? call.reject(Error(message.error.message)) : call.resolve(message.result); } } else if (message.method === 'Runtime.exceptionThrown') errors.push(message.params); };
   await command('Runtime.enable'); await command('Page.enable');
-  if (castersOnly) {
+  if (ledOnly) {
+    await verifyLedPages({ navigate, evaluate, until, screenshot, delay, command });
+    assert.deepEqual(errors, [], 'no browser exceptions');
+    console.log('LED page checks passed. Screenshots: ' + artifacts);
+  } else if (castersOnly) {
     await verifyCasters({ navigate, evaluate, until, screenshot, delay, command });
     assert.deepEqual(errors, [], 'no browser exceptions');
     console.log('Caster browser checks passed. Screenshots: ' + artifacts);
   } else {
+  await verifyLedPages({ navigate, evaluate, until, screenshot, delay, command });
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await navigate('/bundles/rashinban/graphics/info-stream.html');
   if (adobeFonts) assert.ok(await evaluate(`[...document.fonts].some(font=>font.family.includes('kaneda-gothic')&&font.weight==='700'&&font.status==='loaded')`), 'Adobe Kaneda Gothic must be loaded for the online typography check');
@@ -231,11 +238,11 @@ try {
   const ledBracket = structuredClone(longBracket);
   for (const [index, round] of ['Losers Quarter-Final', 'Losers Round 1', 'Losers Round 6', 'Losers Round 5', 'Losers Round 4'].entries()) ledBracket.sets[14 - index].roundText = round;
   await evaluate(`emit('${REPLICANTS.startggBracket}',${JSON.stringify(ledBracket)});{const p=structuredClone(fixtureValues.${REPLICANTS.players});p[1].name='とても長い日本語のプレイヤーネームを持つ対戦相手';emit('${REPLICANTS.players}',p);}`);
-  await card({ page: 'stats' }, 'led');
+  await card({ page: 'stats' });
   assert.equal(await evaluate(`document.querySelectorAll('#card-1 .result-row').length`), 5);
   await screenshot('13-led-results');
   assert.ok(await fits(), 'five LED results with long opponents fit the physical 576px band');
-  await card({ page: 'compact' }, 'led');
+  await card({ page: 'compact' });
   assert.equal(await evaluate(`document.querySelectorAll('#card-1 .result-row').length`), 3);
   await screenshot('06-led');
   assert.ok(await fits(), 'compact LED cards fit the physical 576px band');
@@ -313,8 +320,7 @@ try {
   assert.equal(await evaluate(`document.querySelectorAll('#card-1 .result-row').length`), 3);
   assert.ok(await fits()); await screenshot('11-startgg-earlier-match');
 
-  // Both bracket graphics consume the same recorded data. LED visibility is
-  // independent; the dedicated graphic still fills its original 1080p canvas.
+  // Both independent bracket graphics consume the same recorded data.
   const bracketRows = () => evaluate(`[...document.querySelectorAll('#bracket-matches > .match')].map(el=>({
     match:Number(el.id.slice(5)),top:el.querySelector('.match--player-name').textContent,
     bottom:el.querySelectorAll('.match--player-name')[1].textContent,
@@ -322,19 +328,12 @@ try {
     winner:el.querySelector('.winner')===el.querySelector('.match--player')?'top':el.querySelector('.winner')?'bottom':null,
     active:el.querySelector('.match-border').classList.contains('active')
   }))`);
-  for (const [page, height] of [['info-led', 576], ['brackets-finals', 1080]]) {
+  for (const [page, height] of [['bracket-led', 576], ['brackets-finals', 1080]]) {
     await navigate(`/bundles/rashinban/graphics/${page}.html`, 'document.querySelector("#match1-top")?.textContent');
-    if (page === 'info-led') {
-      assert.equal(await evaluate(`document.querySelector('#layer-bracket').hidden`), true);
-      await evaluate(`{const s=structuredClone(fixtureValues.${REPLICANTS.broadcast});s.led.program.bracket.visible=true;s.led.program.playerCards.visible=false;emit('${REPLICANTS.broadcast}',s);}`);
-      await delay(550);
-    } else {
-      assert.equal(state.led.program.bracket.visible, false, 'standalone works with the LED bracket hidden');
-    }
     assert.deepEqual(await bracketRows(), finals.rows, `${page}: names, scores, winners, and active matches`);
     assert.equal(await evaluate(`document.querySelector('#bracket').getBoundingClientRect().height`), height);
     assert.ok(await evaluate(`[...document.querySelectorAll('#bracket-matches > .match')].filter(el=>getComputedStyle(el).display!=='none').every(el=>{const r=el.getBoundingClientRect();return r.x>=0&&r.right<=1920&&r.y>=0&&r.bottom<=${height};})`), `${page}: match boxes fit the output`);
-    await screenshot(page === 'info-led' ? '16-led-bracket' : '17-dedicated-bracket');
+    await screenshot(page === 'bracket-led' ? '16-led-bracket' : '17-dedicated-bracket');
     const reset = { ...finals.rows[0], match: 11, top: 'めうめう', bottom: 'たいけい/Taikei', active: true, winner: 'bottom' };
     await evaluate(`emit('${REPLICANTS.bracketFinals}',${JSON.stringify({ ...finals, rows: [reset] })})`);
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('#match11')).display`), 'inline');
@@ -348,29 +347,6 @@ try {
     assert.equal(await evaluate(`document.querySelectorAll('#bracket .active,#bracket .winner').length`), 0);
   }
 
-  await command('Emulation.setDeviceMetricsOverride', { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false });
-  await navigate('/bundles/rashinban/dashboard/switcher-led.html', 'document.querySelector("[data-row=bracket] button.toggle")');
-  await until(`${programDocument}.querySelector('#match1-top')?.textContent&&${previewDocument}.querySelector('#match1-top')?.textContent`);
-  const bracketHidden = document => `${document}.querySelector('#layer-bracket').hidden`;
-  assert.equal(await evaluate(bracketHidden(programDocument)), true);
-  assert.equal(await evaluate(bracketHidden(previewDocument)), true);
-  await evaluate(`document.querySelector('[data-row=bracket] button.toggle').click()`);
-  await until(`fixtureValues.${REPLICANTS.broadcast}.led.preview.bracket.visible`);
-  assert.equal(await evaluate(bracketHidden(previewDocument)), false);
-  assert.equal(await evaluate(bracketHidden(programDocument)), true);
-  await evaluate(`document.querySelector('[data-row=playerCards] button.toggle').click()`);
-  await until(`!fixtureValues.${REPLICANTS.broadcast}.led.preview.playerCards.visible`);
-  await evaluate(`document.querySelector('#take').click()`);
-  await until(`fixtureValues.${REPLICANTS.broadcast}.led.program.bracket.visible`);
-  assert.equal(await evaluate(bracketHidden(programDocument)), false);
-  await delay(550);
-  await screenshot('18-led-switcher-bracket');
-  await evaluate(`document.querySelector('[data-row=bracket] button.toggle').click()`);
-  await until(`!fixtureValues.${REPLICANTS.broadcast}.led.preview.bracket.visible`);
-  assert.equal(await evaluate(bracketHidden(programDocument)), false, 'hiding is also staged until TAKE');
-  await evaluate(`document.querySelector('#take').click()`);
-  await until(`!fixtureValues.${REPLICANTS.broadcast}.led.program.bracket.visible`);
-  assert.equal(await evaluate(bracketHidden(programDocument)), true);
   state = createInitialState();
   for (const output of ['stream', 'led']) state = take(setPreview(state, output, {
     banpick: { visible: true }, playerCards: { visible: output === 'led' },
@@ -387,7 +363,7 @@ try {
   assert.deepEqual(errors, [], 'no browser exceptions');
   console.log('Player cards verified: independent player/position in every mode, position Preview/TAKE, identical Profile/Compact frame and shared-field positions, single stream player, two LED cards, latest five/three games, obsolete date/page ignored, missing data, dashboard selection and TAKE.');
   console.log(`start.gg replay verified from ${liveStartgg ? 'fresh' : 'saved'} API responses: 30 sets, latest five/three games across dates, current/later matches excluded.`);
-  console.log('Bracket verified: 1920x576 LED layout, independent 1080p dedicated graphic, shared data updates, reset visibility, stale-data clearing, LED Preview/TAKE show and hide.');
+  console.log('Bracket verified: 1920x576 LED layout, independent 1080p dedicated graphic, shared data updates, reset visibility, stale-data clearing, always-on LED sources, Stream Program page sync, background-only tint transparency.');
   console.log('Screenshots: ' + artifacts);
   }
 } finally {

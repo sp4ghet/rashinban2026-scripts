@@ -307,9 +307,9 @@ try {
   await until(`document.body?.dataset.role==='led'&&document.body.dataset.scene==='live'`, 'LED page initializes alongside video mode');
   assert.equal(await evaluate(`document.body.dataset.source`), 'video', 'LED honors the selected video presentation');
   assert.equal(await evaluate(`qa.requests.length`), 0, 'LED waits for its own input assignments');
-  assert.equal(await evaluate(`document.body.classList.contains('blanked')`), true, 'LED starts blanked by the broadcast bus');
+  assert.equal(await evaluate(`document.body.classList.contains('blanked')`), false, 'LED starts on without broadcast visibility settings');
   await evaluate(`qa.set('broadcast',{led:{program:{presenter:{visible:true}}}})`);
-  await until(`!document.body.classList.contains('blanked')`, 'broadcast bus can reveal LED presenter');
+  assert.equal(await evaluate(`document.body.classList.contains('blanked')`), false, 'legacy LED show leaves presenter on');
   await evaluate(`window.dispatchEvent(new KeyboardEvent('keydown',{key:'F8'}))`);
   await until(`!document.getElementById('video-setup').hidden`, 'LED F8 opens local video setup');
   assert.equal(await evaluate(`document.getElementById('video-setup').getBoundingClientRect().bottom<=576&&getComputedStyle(document.getElementById('video-setup')).overflowY==='auto'`), true, 'LED setup is scrollable within the physical wall height');
@@ -338,7 +338,7 @@ try {
   await evaluate(`qa.reset();qa.mode('video')`);
   await until(ready, 'LED reacquires inputs on return to video mode');
   await evaluate(`qa.set('broadcast',{led:{program:{presenter:{visible:false}}}})`);
-  await until(`document.body.classList.contains('blanked')`, 'broadcast bus can blank LED presenter');
+  assert.equal(await evaluate(`document.body.classList.contains('blanked')`), false, 'legacy LED hide cannot blank presenter');
   await command('Page.reload');
   await until(ready, 'LED input assignments survive reload');
   await command('Page.navigate', { url: url.split('?')[0].replace('/presenter.html', '/presenter-led.html') + '?channel=preview&videoSetup=1' });

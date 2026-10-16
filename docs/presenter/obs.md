@@ -18,11 +18,13 @@ Only external-camera compositions need regional camera keying.
 | Silent browser preview | `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=preview` |
 | LED wall presenter | `http://localhost:9090/bundles/rashinban/graphics/presenter-led.html` (the wall shows the top 1920 × 576; silent, no role parameter) |
 | Stream info layers | `http://localhost:9090/bundles/rashinban/graphics/info-stream.html` (replaces the old Ban & Pick, player cards and casters sources) |
-| LED info layers | `http://localhost:9090/bundles/rashinban/graphics/info-led.html` (transparent; composite over the LED wall presenter) |
+| LED player cards + Ban & Pick | `http://localhost:9090/bundles/rashinban/graphics/info-led.html` (always on; separate source) |
+| LED bracket | `http://localhost:9090/bundles/rashinban/graphics/bracket-led.html` (always on; composite over background video) |
 
-Info and presenter layer visibility is driven by the **Stream** and **LED**
-switcher tabs (see [broadcast](../broadcast.md)); the LED info page overlays
-the LED presenter, which the LED bus can blank to black.
+Stream info visibility is driven by the **Stream** switcher tab (see
+[broadcast](../broadcast.md)). LED uses three always-on sources: presenter,
+player cards + Ban & Pick, and bracket. Select or blank the LED output in
+OBS/ATEM; there is no LED switcher dashboard.
 
 The dashboard has **Silent preview**, **Program graphic**, **Separate
 audio** and **LED graphic** launch links that use the current NodeCG origin. The latter two expose

@@ -341,6 +341,10 @@ and the adjacent reports. All **500 unit tests**, typecheck and build passed.
 
 ### Rebase and LED compatibility
 
+Historical validation below predates the always-on LED pages. As of the
+2026-10-17 LED change, bus reveal/blanking is removed; current browser checks
+assert that saved LED visibility settings cannot hide the presenter.
+
 After rebasing onto the broadcast-switcher/LED changes, the stream capture
 setup remains exclusive to the program source. The LED presenter uses rendered
 views when video mode is selected, preserves bus blanking and silent media,
