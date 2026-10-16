@@ -73,6 +73,12 @@
     ],
     "dashboardPanels": [
       {
+        "name": "party-control",
+        "title": "Party",
+        "file": "party-control.html",
+        "fullbleed": true
+      },
+      {
         "name": "switcher-stream",
         "title": "Stream",
         "file": "switcher-stream.html",

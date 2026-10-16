@@ -266,7 +266,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
     if (resuming) rows = rows.slice(position);
     source?.stop(); reset(); fixture = name; input = 'replay';
     ruleContexts.value = { ...ruleContexts.value, replay: resuming ? saved : null, replayFixture: String(name) };
-    connection.value = { ...connection.value, state: 'live', input, error: null, replayFixture: String(name), serverOffsetMs: 0,
+    connection.value = { ...connection.value, controlGeneration: crypto.randomUUID(), state: 'live', input, error: null, replayFixture: String(name), serverOffsetMs: 0,
       partyId: null, gameId: null, lastUpdateMs: null, warnings: [] };
     let bootstrap = resuming;
     source = createReplay(rows, (message, at) => { ingest(message, at, bootstrap); bootstrap = false; }, deps);
@@ -286,7 +286,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
     source?.stop(); reset();
     input = 'live'; selectedPartyId = nextPartyId;
     if ('partyId' in value) selectionUsesDefault = false;
-    connection.value = { ...connection.value, input, selectedPartyId, replayFixture: null,
+    connection.value = { ...connection.value, controlGeneration: crypto.randomUUID(), input, selectedPartyId, replayFixture: null,
       state: 'disconnected', partyId: null, gameId: null, lastUpdateMs: null, error: null, serverOffsetMs: 0, warnings: [] };
     try {
       const credentials = loadConnectionConfig({

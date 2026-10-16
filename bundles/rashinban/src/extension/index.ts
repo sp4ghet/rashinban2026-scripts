@@ -8,6 +8,7 @@ import { registerStartgg } from "./startgg";
 import { registerSheet } from "./sheet";
 
 import { registerPresenter } from './presenter/register.ts';
+import { registerParty } from './party/register.ts';
 import { initializeConfiguration } from './config/register.ts';
 import { registerSharedAssets } from './config/assets.ts';
 
@@ -15,6 +16,7 @@ export = (nodecg: NodeCG.ServerAPI) => {
   const { store, roots } = initializeConfiguration(nodecg);
   registerSharedAssets(nodecg, roots);
   registerPresenter(nodecg, undefined, store);
+  registerParty(nodecg, store);
 
   // HTTP endpoints for Bitfocus Companion (Generic HTTP module).
   // Mounted at http://<host>:9090/rashinban/...
