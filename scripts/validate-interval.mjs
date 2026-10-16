@@ -157,20 +157,30 @@ try {
   await click('#pause'); await until('document.querySelector("#timer-status").textContent === "Paused"');
 
   for (const output of ['stream', 'led']) {
-    await navigate(`dashboard/switcher-${output}.html`, 1440, 1000);
-    await until('document.querySelector("[data-row=interval] button") !== null');
-    await click('[data-row="interval"] button');
-    await until('document.querySelector(".monitor[data-channel=preview] iframe.info").contentDocument?.querySelector("#layer-interval")?.hidden === false');
-    assert.equal(values.broadcast[output].program.interval.visible, false);
-    await click('#revert');
-    await until('document.querySelector(".monitor[data-channel=preview] iframe.info").contentDocument?.querySelector("#layer-interval")?.hidden === true');
-    await click('[data-row="interval"] button');
-    await until('!document.querySelector("#take").disabled');
-    await click('#take');
-    await until('document.querySelector(".monitor[data-channel=program] iframe.info").contentDocument?.querySelector("#layer-interval")?.hidden === false');
-    assert.equal(values.broadcast[output].program.interval.visible, true);
-    await navigate(`graphics/interval-${output}.html`);
+    if (output === 'stream') {
+      await navigate('dashboard/switcher-stream.html', 1440, 1000);
+      await until('document.querySelector("[data-row=interval] button") !== null');
+      await click('[data-row="interval"] button');
+      await until('document.querySelector(".monitor[data-channel=preview] iframe.info").contentDocument?.querySelector("#layer-interval")?.hidden === false');
+      assert.equal(values.broadcast[output].program.interval.visible, false);
+      await click('#revert');
+      await until('document.querySelector(".monitor[data-channel=preview] iframe.info").contentDocument?.querySelector("#layer-interval")?.hidden === true');
+      await click('[data-row="interval"] button');
+      await until('!document.querySelector("#take").disabled');
+      await click('#take');
+      await until('document.querySelector(".monitor[data-channel=program] iframe.info").contentDocument?.querySelector("#layer-interval")?.hidden === false');
+      assert.equal(values.broadcast[output].program.interval.visible, true);
+    }
+    await navigate(`graphics/interval-${output}.html${output === 'led' ? '?channel=preview' : ''}`);
     await until('document.querySelector("#layer-interval")?.hidden === false');
+    if (output === 'led') {
+      await message('broadcast:setPreview', { output: 'stream', patch: { interval: { visible: false } } });
+      await message('broadcast:take', { output: 'stream' });
+      await until('fixtureValues.broadcast.stream.program.interval.visible === false');
+      assert.equal(await evaluate('document.querySelector("#layer-interval").hidden'), false, 'LED is always on regardless of Stream visibility or a legacy preview URL');
+      await message('broadcast:setPreview', { output: 'stream', patch: { interval: { visible: true } } });
+      await message('broadcast:take', { output: 'stream' });
+    }
     if (adobeFonts) console.log(`${output}: Adobe heading font loaded: ${await evaluate('document.fonts.check(\'700 112px "kaneda-gothic"\')')}`);
     assert.equal(await evaluate('document.querySelector(".interval-match-players").textContent'), 'SHIINAVSEURYA');
     assert.equal(await evaluate('[...document.querySelectorAll("#layer-interval img")].every(img => img.complete && img.naturalWidth > 0)'), true);

@@ -4,16 +4,16 @@ Restart NodeCG after building (`npm run build`) to register the new graphics and
 
 1. Set the title, upcoming heading, countdown label, and up to four matches in **Shared → Interval**. Leave unused rows blank; a populated row needs both player names. **Apply content** updates both outputs. Round labels are optional.
 2. Start a duration in minutes, or set an explicit restart date/time in **JST**. Pause/Resume preserves the remaining time; Clear hides the countdown. Expired countdowns stay at `00:00`. Refreshing a browser or restarting NodeCG preserves the deadline or paused time.
-3. In **Stream** or **LED**, enable the **Interval** row, inspect Preview, then **TAKE**. Each output has independent visibility. Turning Interval off reveals the other selected layers. Content/timer edits are shared and live; TAKE controls visibility only.
+3. In **Stream**, enable the **Interval** row, inspect Preview, then **TAKE**. Turning Interval off reveals the other selected layers. The **LED** interval page is always on, like the other LED pages; switch to its source in OBS/ATEM. Content/timer edits are shared and live; Stream TAKE controls visibility only.
 
 Dashboard and graphics sample the NodeCG server clock and advance using a monotonic browser clock, so a remote LED computer's clock setting does not change the countdown. A running timer stays hidden until its first successful clock sample; brief disconnections retain the last server estimate.
 
-The existing `info-stream.html` and `info-led.html` sources include Interval as their topmost layer. Standalone sources are also registered, using the same switcher visibility:
+The existing `info-stream.html` source includes Interval as its topmost layer. Standalone sources are also registered:
 
-- `/bundles/rashinban/graphics/interval-stream.html`
-- `/bundles/rashinban/graphics/interval-led.html`
+- `/bundles/rashinban/graphics/interval-stream.html` — follows Stream switcher visibility.
+- `/bundles/rashinban/graphics/interval-led.html` — always visible, independent of Stream and legacy LED bus settings.
 
-Both use a 1920×1080 OBS canvas. The LED artwork occupies the **top 1920×576**, with black below. Append `?channel=preview` to inspect the preview bus. Do not stack both an info source and its standalone interval source in the same scene.
+Both use a 1920×1080 OBS canvas. The LED artwork occupies the **top 1920×576**, with black below. Append `?channel=preview` to the Stream source to inspect its preview bus; LED ignores that parameter. Do not stack both `info-stream.html` and its standalone interval source in the same scene. The LED `info-led.html` page remains dedicated to player cards and Ban & Pick.
 
 Stream follows the [2025 interval reference](https://zashness.github.io/rashinban2025/interval.html). LED follows the supplied designer sketch: upcoming matches left, large central countdown, slides right, sponsors below the countdown. Both use the existing 2026 key visual and font stack. Adobe's Kaneda Gothic uses the existing licensed remote kit; locally bundled Oswald/Noto Sans JP provide offline fallbacks.
 

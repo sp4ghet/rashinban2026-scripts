@@ -8,6 +8,7 @@ import { registerBracket } from "./bracket";
 import { registerStartgg } from "./startgg";
 import { registerSheet } from "./sheet";
 
+import { registerVideoRelay } from './presenter/video-relay.ts';
 import { registerPresenter } from './presenter/register.ts';
 import { registerParty } from './party/register.ts';
 import { initializeConfiguration } from './config/register.ts';
@@ -17,6 +18,7 @@ export = (nodecg: NodeCG.ServerAPI) => {
   const { store, roots } = initializeConfiguration(nodecg);
   registerSharedAssets(nodecg, roots);
   registerPresenter(nodecg, undefined, store);
+  registerVideoRelay(nodecg);
   registerParty(nodecg, store);
 
   // HTTP endpoints for Bitfocus Companion (Generic HTTP module).

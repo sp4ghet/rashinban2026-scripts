@@ -21,14 +21,14 @@ npm run dev     # esbuild watch + NodeCG together
 
 - Dashboard: http://localhost:9090/
   - **Config**: Duels Presenter, start.gg, and Google Sheets for setup and connection recovery.
-  - **LED**: the LED switcher (preview/program, TAKE) for the venue wall.
   - **Shared**: Current Match, Ban & Pick, and Bracket; content that is live on both outputs.
   - **Stream**: the stream switcher (preview/program, TAKE) for OBS, including left/right/center caster dropdowns.
   - Restart NodeCG after changing dashboard workspace assignments.
 - Info overlays (1920×1080): `graphics/info-stream.html` (player cards, lower
   third, casters, Ban & Pick) and `graphics/info-led.html` (player cards and
-  Ban & Pick, transparent over the LED presenter). Layer visibility is switched
-  per output from the Stream and LED tabs; see [docs/broadcast.md](docs/broadcast.md).
+  Ban & Pick, always on). LED uses three separate sources: `presenter-led.html`,
+  `info-led.html`, and `bracket-led.html`, switched in OBS/ATEM. Both LED cards
+  follow Stream Program pagination; see [docs/broadcast.md](docs/broadcast.md).
   Player cards are filled from the Google Sheet players tab joined to the
   start.gg entrants. Select players or load an upcoming start.gg match in the
   "Current Match" panel; the cards, Ban & Pick and Presenter share that match.
@@ -73,7 +73,11 @@ your credentials.
 
 Program: `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program`.
 Separate audio: `http://localhost:9090/bundles/rashinban/graphics/presenter-audio.html?role=audio`.
-LED wall: `http://localhost:9090/bundles/rashinban/graphics/presenter-led.html`
+LED sources (always on, switch in OBS/ATEM):
+
+- Presenter: `http://localhost:9090/bundles/rashinban/graphics/presenter-led.html`
+- Player cards + Ban & Pick: `http://localhost:9090/bundles/rashinban/graphics/info-led.html`
+- Bracket: `http://localhost:9090/bundles/rashinban/graphics/bracket-led.html`
 (no role parameter; always silent, top 1920×576 band). See [docs/broadcast.md](docs/broadcast.md).
 Use `?role=preview` for silent graphic inspection. The dashboard includes
 party selection/reconnect, side mapping, media, mute and output-mode controls.
@@ -136,7 +140,8 @@ The extension mounts plain HTTP endpoints for Bitfocus Companion's
 - `POST /rashinban/startgg/refresh`
 - `POST /rashinban/sheet/refresh`
 
-The show/hide/toggle routes cut the stream program directly; the LED output
-takes from its switcher tab or `/broadcast/led/take`. Details in
+The show/hide/toggle routes cut Stream Program directly. LED sources stay on
+and only follow Stream card pagination; legacy LED bus routes no longer
+affect the graphics. Details in
 [docs/broadcast.md](docs/broadcast.md). Point Companion at
 `http://<this-machine>:9090/rashinban/...`.

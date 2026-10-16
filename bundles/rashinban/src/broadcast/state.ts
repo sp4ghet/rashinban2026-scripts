@@ -26,7 +26,6 @@ export type StreamLayers = {
   banpick: ToggleLayer;
 };
 export type LedLayers = {
-  interval: ToggleLayer;
   playerCards: PlayerCardsLayer;
   banpick: ToggleLayer;
   presenter: ToggleLayer;
@@ -79,7 +78,7 @@ const STREAM_SPEC = {
   casters: { titleBar: "boolean:true", slots: "booleanPair", center: "boolean", names: { left: "text", right: "text", center: "text" } },
   banpick: TOGGLE_SPEC,
 } as const satisfies SpecOf<StreamLayers>;
-const LED_SPEC = { interval: TOGGLE_SPEC, playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC, bracket: TOGGLE_SPEC } as const satisfies SpecOf<LedLayers>;
+const LED_SPEC = { playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC, bracket: TOGGLE_SPEC } as const satisfies SpecOf<LedLayers>;
 const SPECS: Record<BroadcastOutput, Spec> = { stream: STREAM_SPEC, led: LED_SPEC };
 
 function isLeaf(spec: Leaf | Spec): spec is Leaf {

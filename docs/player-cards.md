@@ -5,7 +5,10 @@ Choose **Player: P1 [player name]** or **P2 [player name]**, then choose **Posit
 to place that card on either side of the stream. Choose the mode, turn on
 **Visible**, then press **TAKE**. Position changes stay in Preview until TAKE,
 independently of the selected player. P1 stays red and P2 stays blue on either
-side. The LED switcher shows both players in their fixed positions.
+side. The always-on `info-led.html` page shows both players in their fixed positions.
+Both LED cards follow the Stream **Program** page selection after TAKE, even
+when Stream cards are hidden. Stream player/position selections and Preview
+edits do not affect LED; there is no LED switcher.
 Player names update with the current match; an unset player is shown as `TBD`.
 
 Saved stream cards without a Position setting keep the side of their selected
@@ -87,7 +90,8 @@ coordinates and typography between Profile and Compact, including wrapped
 headers and missing results. It also verifies stream/LED visibility, all LED modes
 inside the mapped 576 px band with 24 px margins, newest-first
 results capped at five/three, obsolete date/page settings, long text, missing data, safe text rendering, and
-manual selection through Preview/Take. Chrome must be installed, or supplied via
+manual selection through Preview/Take, LED pagination following Stream Program,
+and independent always-on LED sources. Chrome must be installed, or supplied via
 `CHROME_PATH`. Screenshots are saved in ignored `artifacts/player-cards/`; a dark
 test background stands in for the video feed. No live NodeCG state is changed.
 

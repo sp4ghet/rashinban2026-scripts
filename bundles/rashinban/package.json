@@ -36,6 +36,11 @@
     ],
     "graphics": [
       {
+        "file": "presenter-capture.html",
+        "width": 1280,
+        "height": 1080
+      },
+      {
         "file": "presenter-audio.html",
         "width": 1920,
         "height": 1080
@@ -71,6 +76,11 @@
         "height": 1080
       },
       {
+        "file": "bracket-led.html",
+        "width": 1920,
+        "height": 1080
+      },
+      {
         "file": "banpick-player.html",
         "width": 1280,
         "height": 800
@@ -92,12 +102,6 @@
         "name": "switcher-stream",
         "title": "Stream",
         "file": "switcher-stream.html",
-        "fullbleed": true
-      },
-      {
-        "name": "switcher-led",
-        "title": "LED",
-        "file": "switcher-led.html",
         "fullbleed": true
       },
       {

@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="interval-control.css" />
   </head>
   <body>
-    <p class="help">Show via <strong>Stream / LED → Interval → TAKE</strong>. Content and timer changes below are live on both outputs.</p>
+    <p class="help">Stream: <strong>Interval → TAKE</strong>. LED: select the Interval source in OBS/ATEM. Content and timer changes below are live on both outputs.</p>
     <fieldset id="timer-controls" disabled>
       <legend>Countdown</legend>
       <div class="timer-status"><output id="countdown">—</output><span id="timer-status">Connecting…</span></div>
@@ -41,7 +41,7 @@
     <div id="error" role="alert"></div>
     <details>
       <summary>Graphic sources</summary>
-      <p class="help">1920×1080. LED content occupies the top 1920×576. Interval also appears in the existing info sources.</p>
+      <p class="help">1920×1080. LED is always on, with content in the top 1920×576. Stream Interval also appears in the info-stream source.</p>
       <a href="../graphics/interval-stream.html" target="_blank" rel="noopener">Stream</a>
       <a href="../graphics/interval-led.html" target="_blank" rel="noopener">LED</a>
     </details>

@@ -34,3 +34,5 @@ bundles/rashinban/extension/
 # Local design references and caster animation validation captures
 /references/local/
 /artifacts/casters/
+
+/artifacts/led-pages/

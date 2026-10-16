@@ -1,6 +1,6 @@
 // Operator panel for Ban & Pick: player names, undo/reset, and a clickable
 // board to act on a player's behalf. Overlay visibility lives on the
-// Stream / LED switcher tabs (broadcast bus), not here.
+// Stream switcher; the LED page is always on.
 import { createInitialState, type BanPickState, type OptionView } from "../banpick/rules";
 import { BANPICK_MESSAGES, REPLICANTS } from "../types/replicants";
 import { renderBoard, renderGames, shortMode, stepText } from "../graphics/banpick/board";

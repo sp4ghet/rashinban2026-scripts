@@ -79,7 +79,6 @@ const LED_ROWS: readonly Row[] = [
   CARDS,
   BANPICK,
   { id: "bracket", title: "Bracket", controls: [{ kind: "toggle", path: ["bracket", "visible"], label: "Visible" }] },
-  INTERVAL,
 ];
 
 export function controlRows(output: BroadcastOutput): readonly Row[] {
