@@ -78,7 +78,7 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
     await message('banpick:reset'); assert.deepEqual(await entries(), []);
     await evaluate(`{const s=structuredClone(fixtureValues.broadcast);s.${output}.program.banpick.visible=false;emit('broadcast',s);}`);
     await delay(350);
-    assert.equal(await evaluate(`getComputedStyle(document.querySelector('#banpick')).opacity`), '0');
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('#banpick')).opacity`), output === 'led' ? '1' : '0', 'only Stream responds to visibility controls');
   }
 
   // Real dashboard controls, including the second-click selection confirmation.

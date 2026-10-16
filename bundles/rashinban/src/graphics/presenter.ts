@@ -11,8 +11,6 @@ import { clientRole, createPresenterClient } from './presenter/client.ts';
 import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
 import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
-import { bindLayers } from './broadcast/bind.ts';
-import { channelFromSearch } from '../broadcast/channel.ts';
 import { createCaptureUI } from './presenter/capture-ui.ts';
 import type { PresenterPublicConfig } from '../config/types.ts';
 import { boundMediaState, changedVideoBindings, mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
@@ -52,10 +50,7 @@ presenterAssets.on('change', inventory => {
   if (changedVideos.length) { videoPlayer.invalidate(changedVideos); videoPlayer.preload(selectedMedia, next.versions); }
 });
 document.body.dataset.clientId = clientId; document.body.dataset.role = role;
-// The LED bus blanks the wall between matches; the stream page ignores the bus.
-if (document.body.dataset.output === 'led') {
-  bindLayers('led', channelFromSearch(location.search), layers => { document.body.classList.toggle('blanked', !layers.presenter.visible); });
-}
+// LED is always on; the venue operator switches sources in OBS/ATEM.
 // LED clients play celebrations on their own clock and always silently.
 const silent = (muted: boolean) => muted || role === 'led';
 function reconcileVideo() {

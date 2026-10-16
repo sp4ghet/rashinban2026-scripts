@@ -1,21 +1,26 @@
-# Broadcast switcher, info pages and LED presenter
+# Stream switcher and separate LED graphics
 
-Two outputs leave the venue: the **stream** (OBS) and the **LED** wall. Each
-has its own preview/program bus, switcher tab and pair of graphics pages.
-Design: [plans/2026-10-07-broadcast-switcher-design.md](plans/2026-10-07-broadcast-switcher-design.md).
+The **Stream** tab controls stream Preview/Program. The LED operator switches
+three independent, always-on browser sources in OBS/ATEM: presenter,
+player cards + Ban & Pick, and bracket. There is no LED controller dashboard.
+Shared match, player, ban/pick and bracket data still updates both outputs.
 
 ## Pages
 
 All pages are 1920x1080 under `http://localhost:9090/bundles/rashinban/graphics/`.
-Every page renders its output's **program** bus; append `?channel=preview`
-to render the preview bus instead (that is what the switcher monitors do).
+`info-stream.html` renders Stream **Program** by default; append
+`?channel=preview` for the Stream switcher monitor. LED pages are always on.
+LED cards follow Stream **Program** pagination even with an old
+`?channel=preview` URL; neither Stream visibility nor player/position selection
+affects the LED layout.
 
 | Page | Output | Shows |
 | --- | --- | --- |
 | `presenter.html?role=program` | stream | Duels presenter (unchanged, see [presenter/obs.md](presenter/obs.md)) |
 | `info-stream.html` | stream | Player cards, lower third, caster title bar / nameplates / sponsor banner, Ban & Pick |
 | `presenter-led.html` | LED | Duels presenter in the LED layout (top 1920x576 band, black below) |
-| `info-led.html` | LED | Player cards, Ban & Pick, finals bracket; composite it over `presenter-led.html` |
+| `info-led.html` | LED | Both player cards + Ban & Pick, always on |
+| `bracket-led.html` | LED | Finals bracket, always on; translucent red/blue tint over an OBS/ATEM background video |
 
 Unchanged: `banpick-player.html` (tablet), `brackets-finals.html`,
 `presenter-audio.html`. Removed: `banpick-stream.html`, `banpick-led.html`,
@@ -23,41 +28,47 @@ Unchanged: `banpick-player.html` (tablet), `brackets-finals.html`,
 
 ## Bus model
 
-The `broadcast` replicant holds `{ stream, led }`, each with `program` (on
-air) and `preview` (what the operator is lining up). Everything in the buses
-is **visibility and presentation**: which layers show, which card page, the
-lower third mode and text, caster selections and visibility. The switcher edits preview
-only; **TAKE** copies preview to program; **Revert preview** copies program
-back to preview. Companion routes have no preview and cut program directly.
+The `broadcast` replicant retains `{ stream, led }` for persisted-state and
+API compatibility, but only the **stream** bus controls these graphics.
+The Stream switcher edits `stream.preview`; **TAKE** copies it to
+`stream.program`; **Revert preview** restores preview from program.
+Companion routes cut Stream Program directly. Only the card page selection
+(`profile`, `stats` for Results, or `compact`) also changes the LED cards.
+Legacy `led` bus fields and routes no longer affect any LED source.
 
 Live **content** is not in the buses and changes on air immediately from the
 Shared tab: the current match (players, round), the finals
 bracket, and the Ban & Pick state (picks, bans, next game, undo, reset). Only visibility is
 switched.
 
-Defaults: every layer hidden except the caster title bar (on). Text fields
+Stream defaults: every layer hidden except the caster title bar (on).
+LED defaults: sources are always on; cards show Profile until a Stream
+Program page is selected. Missing match data still clears and hides cards. Text fields
 accept up to 120 characters. Invalid patches are rejected and nothing changes.
 
 ### Layers
 
 | Output | Layer | Controls |
 | --- | --- | --- |
-| stream | Player cards | visible; page `profile` / `stats` |
+| stream | Player cards | visible; page `profile` / `stats` / `compact`; player; position |
 | stream | Lower third | visible; mode `match` (current match) / `text`; title; subtitle |
 | stream | Casters | title bar + sponsor banner; left/right/center visibility and name dropdowns |
 | stream | Ban & Pick | visible |
-| LED | Presenter | visible (off = opaque black over `presenter-led.html`) |
-| LED | Player cards | visible; page `profile` / `stats` |
-| LED | Ban & Pick | visible |
-| LED | Bracket | visible; fills the top 1920x576 LED band |
+| LED | Presenter | always on, selected in OBS/ATEM |
+| LED | Player cards + Ban & Pick | always on; both cards follow Stream Program page |
+| LED | Bracket | always on; top 1920x576 band |
 
-To show the bracket on the wall, enable **Bracket → Visible** in the LED
-switcher and press **TAKE**. Hide Player cards and Ban & Pick in the same
-preview if you want an unobstructed bracket; those layers draw above it.
-The bracket starts hidden, including when upgrading saved broadcast state.
-Choose its live start.gg or recorded sample data in **Shared → Bracket**.
-The dedicated `brackets-finals.html` graphic remains available at 1920x1080
-and uses the same data independently of the LED visibility toggle.
+Use three separate 1920x1080 browser sources for LED; the wall maps the top
+1920x576 pixels. Switch between them in OBS/ATEM. Keep sources running when
+hidden if the next screen needs to be ready immediately.
+
+`bracket-led.html` has a red/blue tint at **20% opacity**, with no static KV
+image. Match boxes, text and connector lines remain fully opaque. The area
+below y=576 is transparent. Place the looped background video underneath it
+in OBS/ATEM. Adjust `--bracket-tint-opacity` in
+`graphics/assets/bracket-led.css` (0 = clear, 1 = opaque tint) if needed.
+Choose live start.gg or recorded sample data in **Shared ? Bracket**.
+The separate `brackets-finals.html` retains its original 1920x1080 layout.
 
 ### Caster nameplates
 
@@ -133,11 +144,10 @@ NodeCG lists workspaces alphabetically:
 | Tab | Panels | Operator |
 | --- | --- | --- |
 | Config | Duels Presenter, start.gg, Google Sheets | setup and connection recovery |
-| LED | LED switcher (fullbleed) | LED operator |
 | Shared | Current Match, Ban & Pick, Bracket | content operator; changes are live on both outputs |
 | Stream | Stream switcher (fullbleed) | stream operator |
 
-Each switcher tab has PREVIEW (left) and PROGRAM (right) monitors, the layer
+The Stream switcher tab has PREVIEW (left) and PROGRAM (right) monitors, the layer
 strip, **TAKE** and **Revert preview**. The monitors are scaled iframes of
 the info page; ticking **Presenter monitors** also loads the presenter page
 (it loads Google Maps, so it is off by default and remembered per browser).
@@ -145,10 +155,9 @@ Rows whose preview differs from program are highlighted. **Space** or
 **Enter** triggers TAKE when focus is not on an input, select, text area or
 button; modifier combinations are ignored.
 
-The monitors register as presenter clients: stream monitors open
-`presenter.html?role=preview` (silent, never a program candidate) and LED
-monitors open `presenter-led.html` (the `led` role). Expect them in the Duels
-Presenter client list while a switcher tab is open.
+Presenter monitors open `presenter.html?role=preview` (silent, never a
+program candidate). Expect them in the Duels Presenter client list while
+Presenter monitors are enabled in the Stream switcher.
 
 The Ban & Pick panel no longer has a show/hide overlay button. Caster names
 and visibility are both controlled from Stream; there is no Shared Casters panel.
@@ -160,18 +169,19 @@ the output's program layers as JSON, or `400 {"error": ...}` on bad input.
 
 | Route | Effect |
 | --- | --- |
-| `/broadcast/stream/take`, `/broadcast/led/take` | program = preview for that output |
-| `/broadcast/stream/revert`, `/broadcast/led/revert` | preview = program for that output |
+| `/broadcast/stream/take` | Stream Program = Preview; also updates LED card pagination |
+| `/broadcast/stream/revert` | Stream Preview = Program |
 | `/banpick/show`, `/banpick/hide`, `/banpick/toggle` | stream program Ban & Pick visibility |
 | `/playercards/show`, `/playercards/hide`, `/playercards/toggle` | stream program player cards visibility |
 | `/playercards/profile`, `/playercards/stats`, `/playercards/flip` | stream program player cards page |
 | `/casters/1/show|hide|toggle`, `/casters/2/show|hide|toggle`, `/casters/3/show|hide|toggle` | stream program caster card 1 (left) / 2 (right) / 3 (center) |
 
-The layer routes cut the **stream program bus only**. To change the LED
-output from Companion, line it up in the LED switcher (or let an operator do
-it) and call `/broadcast/led/take`. `/banpick/undo` and `/banpick/reset`
-still edit the shared board state. `/startgg/refresh`, `/sheet/refresh` and
-`/bracket/refresh` are unchanged.
+The layer routes cut **Stream Program**. Card page changes also appear on
+LED; Stream show/hide and player/position changes do not. Legacy
+`/broadcast/led/take` and `/broadcast/led/revert` still update the saved LED
+bus for compatibility but have no effect on the graphics. `/banpick/undo`
+and `/banpick/reset` still edit shared content. `/startgg/refresh`,
+`/sheet/refresh` and `/bracket/refresh` are unchanged.
 
 ## LED presenter
 
@@ -190,20 +200,26 @@ The page implies the `led` client role, so no `?role=` is needed; add
 `?role=preview` for a silent inspection copy. The `led` client never owns
 the program or audio lease, plays the 5K celebration video muted on its own
 clock and never reports effect completion, so the stream program still gates
-the reveal. The LED bus **Presenter** toggle blanks the page with an opaque
-black cover (the renderer keeps running underneath, so un-blanking is
-instant). The Duels Presenter panel has an **LED graphic** launch link.
+the reveal. The page stays on regardless of the old LED visibility state;
+use OBS/ATEM to select or blank the venue output. The Duels Presenter panel
+has an **LED graphic** launch link.
 
-## Upgrading from the per-overlay pages
+## Upgrading LED sources
 
-- Every layer starts hidden until a TAKE or a Companion cut, so after the
-  update bring up the title bar and any cards in each switcher tab.
-- Replace the OBS sources `banpick-stream.html`, `player-cards.html` and
-  `casters.html` with `info-stream.html`; replace `banpick-led.html` with
-  `info-led.html` composited over `presenter-led.html`.
-- The old `playerCards` replicant row may remain in NodeCG's `db/`; it is
-  unused and safe to delete. `castersState` is now read only for the one-time
-  name migration; `banPick.visible` is scrubbed on boot.
-- Companion responses changed: `/banpick/show|hide|toggle` now return the
-  whole stream program layer set, and `/banpick/undo|reset` no longer
-  include `visible`. Update any Companion feedback that parsed those bodies.
+- Restart NodeCG and refresh the dashboard to remove the LED switcher panel
+  and register `bracket-led.html` in the graphics list.
+- Keep `presenter-led.html` and `info-led.html`, but use them as independent
+  sources. Add `bracket-led.html` as the third LED source with the background
+  video underneath it. Bracket is no longer part of `info-led.html`.
+- Existing saved LED visibility settings can remain; they do not blank the
+  pages. Prepare the card page in Stream Preview and TAKE it to update both
+  LED cards. Page changes work even while Stream cards are hidden.
+- Stream setup and shared content controls retain their existing behavior.
+
+## Validation
+
+Run `npm run typecheck`, `npm test`, `npm run build`, then
+`node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validate-player-cards.mjs`.
+Use `--led-only` for the focused LED check. It exercises built browser pages
+with isolated fixtures and saves screenshots under `artifacts/player-cards/`.
+Actual OBS/ATEM compositing and LED-wall acceptance still need a venue check.

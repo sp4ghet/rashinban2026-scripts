@@ -3,10 +3,6 @@
    top band because the players on stage can cover the lower part. */
 :root { --stage-top: 104px; --stage-h: 460px; }
 body { background: #000; }
-/* Blanking is an opaque cover, not visibility: the renderer and presenter.js set
-   inline visibility on their own elements, and late-appended layers (celebration
-   video z-index 1000, audio unlock 10000) must stay covered too. */
-body.blanked::after { content: ''; position: fixed; inset: 0; background: #000; z-index: 2147483647; }
 .backdrop { inset: auto; top: 0; left: 0; width: 1920px; height: 576px; }
 .celebration-video { height: 576px; }
 /* No facecams on the wall. <footer> stays in the DOM because presenter.js writes #phase-label. */

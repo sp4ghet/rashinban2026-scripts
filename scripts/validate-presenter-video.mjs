@@ -307,12 +307,12 @@ try {
   await until(`document.body?.dataset.role==='led'&&document.body.dataset.scene==='live'`, 'LED page initializes alongside video mode');
   assert.equal(await evaluate(`document.body.dataset.source`), 'rendered', 'LED uses rendered views while program owns capture devices');
   assert.equal(await evaluate(`qa.requests.length`), 0, 'LED never opens capture devices');
-  assert.equal(await evaluate(`document.body.classList.contains('blanked')`), true, 'LED starts blanked by the broadcast bus');
+  assert.equal(await evaluate(`document.body.classList.contains('blanked')`), false, 'LED starts on without broadcast visibility settings');
   await evaluate(`qa.set('broadcast',{led:{program:{presenter:{visible:true}}}})`);
-  await until(`!document.body.classList.contains('blanked')`, 'broadcast bus can reveal LED presenter');
+  assert.equal(await evaluate(`document.body.classList.contains('blanked')`), false, 'legacy LED show leaves presenter on');
   if (initial.presenterPublicConfig.googleMapsApiKey) await until(`Array.from(document.querySelectorAll('#shared-panorama .google-surface, #left-view .google-surface')).some(surface=>surface.style.visibility==='visible')`, 'LED rendered panorama remains available');
   await evaluate(`qa.set('broadcast',{led:{program:{presenter:{visible:false}}}})`);
-  await until(`document.body.classList.contains('blanked')`, 'broadcast bus can blank LED presenter');
+  assert.equal(await evaluate(`document.body.classList.contains('blanked')`), false, 'legacy LED hide cannot blank presenter');
   assert.deepEqual(errors, []);
   const report = { browser: isOBS ? 'OBS Browser Source' : 'Chrome', userAgent: await evaluate('navigator.userAgent'), checks,
     errors, googleMaps: initial.presenterPublicConfig.googleMapsApiKey ? 'Live API and preview panorama verified' : 'No API key; layout and capture checks only',
