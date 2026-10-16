@@ -138,3 +138,10 @@ body[data-source="video"] .player-window { transition: top 350ms ease, width 350
 #video-setup button { cursor: pointer; }
 #video-setup button:disabled { opacity: .5; cursor: wait; }
 .video-setup-actions { display: flex; gap: 12px; margin-top: 16px; }
+
+/* Relayed cameras fill the existing dock without a chroma-key region. */
+.camera.relay-camera { overflow: hidden; background: #080d17; }
+.relay-camera video { width: 100%; height: 100%; object-fit: cover; display: none; }
+.relay-camera span { position: absolute; inset: 0; display: grid; place-items: center; color: #aeb9cb; font: 16px "Segoe UI", sans-serif; }
+.relay-camera[data-state="ready"] video, .relay-camera[data-state="muted"] video { display: block; }
+.relay-camera[data-state="ready"] span, .relay-camera[data-state="muted"] span { display: none; }

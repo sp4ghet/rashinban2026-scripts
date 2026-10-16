@@ -1,4 +1,5 @@
 import type { RenderFrame } from './renderer.ts';
+import { RELAY_FEEDS, type RelayFeed } from '../../presenter/relay-protocol.ts';
 
 export type VideoInputs = { left: string; right: string };
 export type CaptureStatus = { state: 'idle' | 'opening' | 'ready' | 'muted' | 'error'; message: string };
@@ -8,14 +9,20 @@ export type CaptureDeps = {
   status(value: CaptureStatus): void;
   schedule?(fn: () => void, ms: number): () => void;
 };
-export function parseVideoInputs(value: unknown): VideoInputs {
+export type RelayInputs = Record<RelayFeed, string>;
+export function parseVideoInputs(value: unknown): VideoInputs;
+export function parseVideoInputs(value: unknown, cameras: true): RelayInputs;
+export function parseVideoInputs(value: unknown, cameras = false): VideoInputs | RelayInputs {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid video inputs');
   const input = value as Record<string, unknown>;
-  if (Object.keys(input).some(key => key !== 'left' && key !== 'right')
-    || typeof input.left !== 'string' || typeof input.right !== 'string'
-    || input.left.length > 512 || input.right.length > 512) throw new Error('Invalid video inputs');
-  if (input.left && input.left === input.right) throw new Error('Choose a different input for each player');
-  return { left: input.left, right: input.right };
+  const keys: readonly string[] = cameras ? RELAY_FEEDS : ['left', 'right'];
+  if (Object.keys(input).some(key => !keys.includes(key))
+    || typeof input.left !== 'string' || typeof input.right !== 'string') throw new Error('Invalid video inputs');
+  const entries = keys.map(key => [key, key.startsWith('camera-') && input[key] === undefined ? '' : input[key]] as const);
+  if (entries.some(([, value]) => typeof value !== 'string' || value.length > 512)) throw new Error('Invalid video inputs');
+  const selected = entries.map(([, value]) => value).filter(Boolean);
+  if (new Set(selected).size !== selected.length) throw new Error('Choose a different input for every player feed and camera');
+  return Object.fromEntries(entries) as VideoInputs | RelayInputs;
 }
 
 /** Stop consuming live pixels as soon as authoritative state settles the round. */
