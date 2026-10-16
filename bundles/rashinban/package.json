@@ -61,6 +61,16 @@
         "height": 1080
       },
       {
+        "file": "interval-stream.html",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "file": "interval-led.html",
+        "width": 1920,
+        "height": 1080
+      },
+      {
         "file": "banpick-player.html",
         "width": 1280,
         "height": 800
@@ -120,6 +130,14 @@
         "title": "Bracket",
         "file": "bracket-control.html",
         "width": 3,
+        "headerColor": "#b71c1c"
+      },
+      {
+        "name": "interval-control",
+        "workspace": "shared",
+        "title": "Interval",
+        "file": "interval-control.html",
+        "width": 4,
         "headerColor": "#b71c1c"
       },
       {

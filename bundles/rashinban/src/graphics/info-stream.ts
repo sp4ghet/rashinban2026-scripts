@@ -6,6 +6,7 @@ import { mountBanpick } from "./layers/banpick.ts";
 import { mountCasters } from "./layers/casters.ts";
 import { mustQuery } from "./layers/layer.ts";
 import { mountLowerThird } from "./layers/lower-third.ts";
+import { mountInterval } from "./layers/interval.ts";
 import { mountPlayerCards } from "./layers/player-cards.ts";
 
 const channel = channelFromSearch(location.search);
@@ -16,10 +17,12 @@ const casters = mountCasters(mustQuery(document, "#layer-casters"));
 const banpick = mountBanpick(mustQuery(document, "#layer-banpick"));
 const cards = mountPlayerCards(mustQuery(document, "#layer-cards"), "stream");
 const lowerThird = mountLowerThird(mustQuery(document, "#layer-lower-third"));
+const interval = mountInterval(mustQuery(document, "#layer-interval"), "stream");
 
 bindLayers("stream", channel, (layers) => {
   casters.apply(layers.casters);
   banpick.apply(layers.banpick);
   cards.apply(layers.playerCards);
   lowerThird.apply(layers.lowerThird);
+  interval.apply(layers.interval);
 });

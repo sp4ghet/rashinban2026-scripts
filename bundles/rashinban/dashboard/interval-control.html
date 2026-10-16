@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Interval control</title>
+    <link rel="stylesheet" href="interval-control.css" />
+  </head>
+  <body>
+    <p class="help">Show via <strong>Stream / LED → Interval → TAKE</strong>. Content and timer changes below are live on both outputs.</p>
+    <fieldset id="timer-controls" disabled>
+      <legend>Countdown</legend>
+      <div class="timer-status"><output id="countdown">—</output><span id="timer-status">Connecting…</span></div>
+      <div class="row">
+        <label>Minutes <input id="duration" type="number" min="0.1" max="1440" step="0.1" value="10" /></label>
+        <button id="start" type="button">Start</button>
+        <button id="pause" type="button">Pause</button>
+        <button id="clear" type="button">Clear</button>
+      </div>
+      <div class="row">
+        <label>Restart (JST) <input id="restart-at" type="datetime-local" /></label>
+        <button id="schedule" type="button">Set time</button>
+      </div>
+    </fieldset>
+    <form id="content-form">
+      <fieldset id="content-controls" disabled>
+        <legend>Screen content</legend>
+        <div class="row"><label>Title <input id="title" maxlength="40" required /></label></div>
+        <div class="row">
+          <label>Upcoming heading <input id="upcoming-label" maxlength="40" required /></label>
+          <label>Countdown label <input id="countdown-label" maxlength="60" /></label>
+        </div>
+        <div class="match-head"><span>Round / label</span><span>Player 1</span><span>Player 2</span></div>
+        <div id="matches"></div>
+        <div class="row actions">
+          <span id="draft-status" role="status"></span>
+          <button id="reload" type="button">Reload saved</button>
+          <button id="apply" type="submit">Apply content</button>
+        </div>
+      </fieldset>
+    </form>
+    <div id="error" role="alert"></div>
+    <details>
+      <summary>Graphic sources</summary>
+      <p class="help">1920×1080. LED content occupies the top 1920×576. Interval also appears in the existing info sources.</p>
+      <a href="../graphics/interval-stream.html" target="_blank" rel="noopener">Stream</a>
+      <a href="../graphics/interval-led.html" target="_blank" rel="noopener">LED</a>
+    </details>
+    <script src="interval-control.js"></script>
+  </body>
+</html>

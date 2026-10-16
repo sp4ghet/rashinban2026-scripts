@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <rect width="1920" height="1080" fill="#11151d"/>
+  <rect x="12" y="12" width="1896" height="1056" rx="44" fill="none" stroke="#ff3030" stroke-width="12"/>
+  <path d="M960 210v160M880 290h160M920 250l80 80M1000 250l-80 80" stroke="#ff3030" stroke-width="8"/>
+  <text x="960" y="550" fill="white" font-family="Arial,sans-serif" font-size="112" font-weight="700" text-anchor="middle" letter-spacing="8">RASHINBAN 2026</text>
+  <path d="M720 620h480" stroke="#ff3030" stroke-width="6"/>
+  <text x="960" y="740" fill="#aeb7c5" font-family="Arial,sans-serif" font-size="48" text-anchor="middle" letter-spacing="10">SLIDE PLACEHOLDER</text>
+</svg>

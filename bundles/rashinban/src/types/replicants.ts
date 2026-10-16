@@ -5,6 +5,7 @@ import type { DuelState, SeriesState, Timeline, Views } from './presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
 import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import type { PartyStatus } from '../party/types.ts';
+import type { IntervalState } from '../interval/state.ts';
 import type { ConnectionStatus } from '../extension/presenter/connection.ts';
 import type { ClientReady, Lease } from '../presenter/clock.ts';
 import type { MediaManifest, AudioStatus } from '../presenter/media.ts';
@@ -48,6 +49,7 @@ export const REPLICANTS = {
   matchState: 'matchState',
   matchResolved: 'matchResolved',
   broadcast: "broadcast",
+  interval: "interval",
   bracketConfig: "bracketConfig",
   bracketFinals: "bracketFinals",
   presenterConnection: 'presenterConnection',
@@ -81,6 +83,7 @@ export interface ReplicantMap {
   [REPLICANTS.matchState]: MatchState;
   [REPLICANTS.matchResolved]: ResolvedMatch;
   [REPLICANTS.broadcast]: BroadcastState;
+  [REPLICANTS.interval]: IntervalState;
   [REPLICANTS.bracketConfig]: BracketConfig;
   [REPLICANTS.bracketFinals]: BracketFinals;
   [REPLICANTS.presenterConnection]: PresenterConnection;

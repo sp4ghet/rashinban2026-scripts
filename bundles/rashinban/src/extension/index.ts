@@ -3,6 +3,7 @@ import { registerMatch } from './match';
 
 import { registerBanPick } from "./banpick";
 import { registerBroadcast } from "./broadcast";
+import { registerInterval } from "./interval.ts";
 import { registerBracket } from "./bracket";
 import { registerStartgg } from "./startgg";
 import { registerSheet } from "./sheet";
@@ -23,6 +24,7 @@ export = (nodecg: NodeCG.ServerAPI) => {
   const router = nodecg.Router();
 
   registerBroadcast(nodecg, router);
+  registerInterval(nodecg);
   registerBanPick(nodecg, router);
   registerStartgg(nodecg, router, store);
   registerBracket(nodecg, router);

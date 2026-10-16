@@ -1,0 +1,23 @@
+html { background: #1b232b; color-scheme: dark; }
+body { margin: 0; padding: 12px; font: 13px "Segoe UI", sans-serif; color: #efefef; }
+fieldset { border: 0; margin: 0 0 12px; padding: 0; min-width: 0; }
+legend { padding: 0; margin-bottom: 8px; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: #90a4ae; }
+.help { margin: 0 0 12px; color: #aebfc9; font-size: 12px; line-height: 1.5; }
+.row { display: flex; gap: 8px; align-items: end; margin-bottom: 8px; }
+label { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
+input { box-sizing: border-box; width: 100%; min-width: 0; padding: 7px 8px; border: 1px solid #546e7a; border-radius: 4px; background: #303f49; color: #fff; font: inherit; }
+button { padding: 8px 12px; border: 0; border-radius: 4px; font: 600 13px "Segoe UI", sans-serif; color: #fff; background: #37474f; cursor: pointer; white-space: nowrap; }
+button:hover { filter: brightness(1.2); }
+button:disabled { opacity: .45; cursor: default; }
+#apply, #start { background: #9c3038; }
+.timer-status { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+#countdown { font: 600 32px Consolas, monospace; font-variant-numeric: tabular-nums; }
+#timer-status { color: #aebfc9; }
+.match-head, .match-row { display: grid; grid-template-columns: 1fr 1.25fr 1.25fr; gap: 6px; margin-bottom: 6px; }
+.match-head { color: #aebfc9; font-size: 11px; }
+.actions { margin-top: 10px; flex-wrap: wrap; align-items: center; }
+#draft-status { flex: 1; color: #e5c68b; font-size: 12px; }
+#error { min-height: 1.2em; color: #ff8a80; font-size: 12px; }
+details { margin-top: 8px; color: #aebfc9; font-size: 12px; }
+details p { margin: 8px 0; }
+a { color: #aed7ff; margin-right: 16px; }

@@ -30,6 +30,10 @@ const BANPICK: Row = {
   title: "Ban & Pick",
   controls: [{ kind: "toggle", path: ["banpick", "visible"], label: "Visible" }],
 };
+const INTERVAL: Row = {
+  id: "interval", title: "Interval",
+  controls: [{ kind: "toggle", path: ["interval", "visible"], label: "Visible" }],
+};
 
 const STREAM_ROWS: readonly Row[] = [
   { ...CARDS, controls: [CARDS.controls[0]!,
@@ -68,12 +72,14 @@ const STREAM_ROWS: readonly Row[] = [
     ],
   },
   BANPICK,
+  INTERVAL,
 ];
 const LED_ROWS: readonly Row[] = [
   { id: "presenter", title: "Presenter", controls: [{ kind: "toggle", path: ["presenter", "visible"], label: "Visible" }] },
   CARDS,
   BANPICK,
   { id: "bracket", title: "Bracket", controls: [{ kind: "toggle", path: ["bracket", "visible"], label: "Visible" }] },
+  INTERVAL,
 ];
 
 export function controlRows(output: BroadcastOutput): readonly Row[] {

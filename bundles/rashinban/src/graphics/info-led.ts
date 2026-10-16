@@ -7,6 +7,7 @@ import { mountBanpick } from "./layers/banpick.ts";
 import { mountBracket } from "./layers/bracket.ts";
 import { mustQuery } from "./layers/layer.ts";
 import { mountPlayerCards } from "./layers/player-cards.ts";
+import { mountInterval } from "./layers/interval.ts";
 
 const channel = channelFromSearch(location.search);
 // Not styled: lets a switcher monitor or DevTools tell preview from program.
@@ -15,9 +16,11 @@ document.body.dataset.channel = channel;
 const banpick = mountBanpick(mustQuery(document, "#layer-banpick"));
 const cards = mountPlayerCards(mustQuery(document, "#layer-cards"), "led");
 const bracket = mountBracket(mustQuery(document, "#layer-bracket"));
+const interval = mountInterval(mustQuery(document, "#layer-interval"), "led");
 
 bindLayers("led", channel, (layers) => {
   banpick.apply(layers.banpick);
   cards.apply(layers.playerCards);
   bracket.apply(layers.bracket);
+  interval.apply(layers.interval);
 });

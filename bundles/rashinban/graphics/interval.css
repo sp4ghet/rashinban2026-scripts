@@ -1,0 +1,67 @@
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+#layer-interval { position: absolute; inset: 0; isolation: isolate; pointer-events: none; }
+#layer-interval[hidden], #layer-interval [hidden] { display: none; }
+.interval-output {
+  --interval-heading: "kaneda-gothic", "Oswald", "Arial Narrow", "Noto Sans JP", sans-serif;
+  --interval-body: "Noto Sans JP", "Segoe UI", sans-serif;
+  position: absolute; inset: 0; color: #fff; background: #000;
+  font-family: var(--interval-heading); font-weight: 700;
+}
+.interval-screen {
+  position: relative; width: 1920px; height: 1080px; overflow: hidden;
+  background: linear-gradient(#050a12b8, #050a12c9), url("assets/presenter-kv.jpg") center / cover;
+}
+.interval-topbar, .interval-bottombar { position: absolute; left: 0; width: 100%; background: #ff3030; }
+.interval-topbar { top: 0; height: 180px; }
+.interval-bottombar { bottom: 0; height: 24px; }
+.interval-icon { position: absolute; top: 24px; left: 932px; width: 56px; height: 56px; filter: brightness(0) invert(1); }
+.interval-title { position: absolute; top: 96px; left: 360px; width: 1200px; margin: 0; font-size: 200px; line-height: 1; text-align: center; }
+.interval-upcoming { position: absolute; left: 110px; top: 324px; width: 500px; }
+.interval-upcoming h2 { margin: 0 0 24px; padding-bottom: 20px; border-bottom: 2px solid #fff; font-size: 88px; line-height: 1.1; }
+.interval-matches { display: grid; gap: 20px; }
+.interval-match { min-width: 0; }
+.interval-match-label { font-family: var(--interval-body); color: #e6c5cb; font-size: 18px; line-height: 1.5; height: 27px; }
+.interval-match-label:has(span:empty) { display: none; }
+.interval-match-players { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 14px; font-size: 48px; line-height: 1.25; }
+.interval-match-players > div { min-width: 0; }
+.interval-match-players b { font-size: 28px; color: #ffa1a1; }
+.interval-output[data-layout="stream"] .interval-matches[data-count="4"] { gap: 14px; }
+.interval-output[data-layout="stream"] .interval-matches[data-count="4"] .interval-match-label { font-size: 16px; height: 24px; }
+.interval-output[data-layout="stream"] .interval-matches[data-count="4"] .interval-match-players { font-size: 40px; }
+.interval-timer { position: absolute; left: 110px; top: 820px; width: 500px; }
+.interval-countdown-label { font-family: var(--interval-body); font-size: 22px; line-height: 1.5; }
+.interval-countdown { font-size: 170px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.interval-slides { position: absolute; left: 730px; top: 310px; width: 1080px; height: 607.5px; border-radius: 24px; overflow: hidden; background: #101419; }
+.interval-slides img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.interval-sponsors { position: absolute; left: 730px; top: 944px; width: 1080px; height: 86px; display: grid; grid-template-columns: 40% 60%; align-items: center; background: #080c17c9; border-radius: 8px; }
+.interval-sponsor-lead { padding: 10px 28px; border-right: 1px solid #ffffff38; height: 64px; display: flex; align-items: center; }
+.interval-sponsor-lead img { width: 100%; max-height: 64px; object-fit: contain; }
+.interval-sponsor-groups { position: relative; height: 100%; }
+.interval-sponsor-group { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: center; padding: 8px 24px; }
+.interval-sponsor-group img { width: 100%; height: 64px; object-fit: contain; }
+/* Scale long labels to their column without cropping player names. */
+#layer-interval [data-fit] { display: inline-block; width: max-content; white-space: nowrap; transform-origin: left center; }
+
+/* The venue wall displays the top 1920 x 576 of the OBS canvas. */
+.interval-output[data-layout="led"] .interval-screen { height: 576px; }
+.interval-output[data-layout="led"] .interval-topbar { height: 96px; }
+.interval-output[data-layout="led"] .interval-bottombar { height: 16px; }
+.interval-output[data-layout="led"] .interval-icon { top: 16px; left: 941px; width: 38px; height: 38px; }
+.interval-output[data-layout="led"] .interval-title { top: 56px; left: 540px; width: 840px; font-size: 112px; }
+.interval-output[data-layout="led"] .interval-upcoming { left: 72px; top: 192px; width: 405px; }
+.interval-output[data-layout="led"] .interval-upcoming h2 { font-size: 66px; margin-bottom: 18px; padding-bottom: 12px; }
+.interval-output[data-layout="led"] .interval-matches { gap: 10px; }
+.interval-output[data-layout="led"] .interval-match-label { font-size: 16px; height: 24px; }
+.interval-output[data-layout="led"] .interval-match-players { font-size: 38px; line-height: 1.1; gap: 10px; }
+.interval-output[data-layout="led"] .interval-match-players b { font-size: 24px; }
+.interval-output[data-layout="led"] .interval-matches[data-count="4"] { gap: 8px; }
+.interval-output[data-layout="led"] .interval-matches[data-count="4"] .interval-match-label { font-size: 13px; height: 20px; }
+.interval-output[data-layout="led"] .interval-matches[data-count="4"] .interval-match-players { font-size: 32px; }
+.interval-output[data-layout="led"] .interval-timer { left: 520px; top: 180px; width: 820px; text-align: center; }
+.interval-output[data-layout="led"] .interval-countdown-label { font-size: 22px; }
+.interval-output[data-layout="led"] .interval-countdown { font-size: 255px; line-height: .95; }
+.interval-output[data-layout="led"] .interval-slides { left: 1400px; top: 190px; width: 460px; height: 258.75px; border-radius: 16px; }
+.interval-output[data-layout="led"] .interval-sponsors { left: 520px; top: 466px; width: 820px; height: 74px; }
+.interval-output[data-layout="led"] .interval-sponsor-lead { height: 48px; padding: 8px 18px; }
+.interval-output[data-layout="led"] .interval-sponsor-group { padding: 8px 18px; gap: 18px; }
+.interval-output[data-layout="led"] .interval-sponsor-group img { height: 56px; }

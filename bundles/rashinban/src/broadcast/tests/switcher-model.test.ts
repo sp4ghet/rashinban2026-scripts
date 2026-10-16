@@ -51,7 +51,7 @@ test("rowDirty is true when any control in the row differs between preview and p
 
 test("led rows expose presenter and bracket visibility and no lower third", () => {
   const ids = controlRows("led").map((r) => r.id);
-  assert.deepEqual(ids, ["presenter", "playerCards", "banpick", "bracket"]);
+  assert.deepEqual(ids, ["presenter", "playerCards", "banpick", "bracket", "interval"]);
   assert.ok(!controlRows("stream").some(r => r.id === "bracket"));
 });
 
