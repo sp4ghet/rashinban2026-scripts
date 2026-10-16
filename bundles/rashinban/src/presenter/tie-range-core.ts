@@ -57,7 +57,7 @@ export function tieRangeBand(bestScore: number, mode: TieRangeBandMode): number 
   return Math.floor((5000 - bestScore) / (mode === 'full' ? 1 : 2));
 }
 
-function roundHalfEven(difference: number, multiplierTenths: number): number {
+export function roundHalfEven(difference: number, multiplierTenths: number): number {
   const scaled = difference * multiplierTenths;
   const integer = Math.floor(scaled / 10);
   const remainder = scaled % 10;

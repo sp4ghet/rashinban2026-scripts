@@ -141,6 +141,13 @@ test('full and half modes include the exact boundary and reject one point beyond
   assert.equal(deriveTieRange(state([[2500, 0]]), 'half').tieRange?.rounds[0].withinBand, false);
 });
 
+test('Half tie range increments both players inside the boundary and only the winner outside', () => {
+  const inside = deriveTieRange(state([[4000, 3500]]), 'half');
+  assert.deepEqual(inside.players.map(player => player.multiplier), [1.5, 1.5]);
+  const outside = deriveTieRange(state([[4000, 3499]]), 'half');
+  assert.deepEqual(outside.players.map(player => player.multiplier), [1.5, 1]);
+});
+
 test('exact ties and double 5Ks deal no damage and increment both players', () => {
   for (const scores of [[251, 251], [5000, 5000]] as Array<[number, number]>) {
     const derived = deriveTieRange(state([scores]), 'full');

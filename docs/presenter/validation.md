@@ -444,3 +444,10 @@ Validation in the same isolated worktree:
 The dev server remains active with its local port override. Physical camera/
 DeckLink compatibility, OBS playback, sustained four-input load and real
 camera/audio synchronization still require rehearsal with the event hardware.
+
+After integrating `main` at `5b4c39f` for PR #6, verification passed again:
+**670/670 unit tests**, typecheck, build, diff checks, **54 camera relay**,
+**36 gameplay relay**, and **58 direct-video browser checks**. All three
+browser runs reported zero uncaught errors. The restarted NodeCG dev server
+also passed the four-feed signaling round-trip. The startup conflict was
+resolved by keeping both the relay and party-manager registrations.

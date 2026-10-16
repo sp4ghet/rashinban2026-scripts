@@ -52,6 +52,8 @@ export type Round = {
 
 export type DuelState = {
   gameId: string;
+  /** Origin of a party duel, retained so completed scores cannot cross parties. */
+  partyId?: string;
   version: number;
   round: number;
   mode: Mode;

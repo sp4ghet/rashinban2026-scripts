@@ -23,6 +23,8 @@ const SNAPSHOT_CODES = new Set([
   'DuelNewRound',
   'DuelFinished',
   'DuelAborted',
+  'DuelPauseRequested',
+  'DuelRoundPaused',
   'DuelMasterSnapshot',
 ]);
 
@@ -231,6 +233,8 @@ function decodeState(message: RecordValue, code: string): DuelState {
 
   return {
     gameId: string(source.gameId),
+    ...(isRecord(source.context) && source.context.type === 'Party' && typeof source.context.id === 'string'
+      && /^[\w-]{1,128}$/.test(source.context.id) ? { partyId: source.context.id } : {}),
     version: integer(source.version),
     round: currentRound,
     mode: mode(options.movementOptions),

@@ -37,7 +37,11 @@ function updatePlayer(view: PlayerView, mode: DuelState['mode'], sample: RecordV
     return null;
   }
   if (!isRecord(sample.payload)) return null;
-  const previousTime = view.lastByType[sample.type];
+  // Both sample types write the same pin. Order them together so a delayed
+  // sample cannot replace a newer position while retaining its timestamp.
+  const previousTime = sample.type === 'PinPosition' || sample.type === 'GuessWithLatLng'
+    ? Math.max(view.lastByType.PinPosition ?? -Infinity, view.lastByType.GuessWithLatLng ?? -Infinity)
+    : view.lastByType[sample.type];
   if (previousTime !== undefined && sample.time <= previousTime) return null;
 
   const payload = sample.payload;

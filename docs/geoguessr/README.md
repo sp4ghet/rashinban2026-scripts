@@ -3,6 +3,7 @@
 - [Player API](player-api.md): public player statistics, country strengths, authenticated match history and own-account analytics.
 - [Game-master flow](game-master-flow.md): manual/automatic rounds, between-round views, winner/summary and the next game.
 - [Presenter protocol](presenter-protocol.md): HTTP controls, WebSocket events and state captures.
+- [Party manager](party-manager.md): dashboard workflow, command recovery, and current roster control routes.
 - [Scoring animation](scoring-animation.md): GeoGuessr/presenter comparison and choreography.
 - [Scoring SFX](sfx-timing.md): score count, collision, multiplier and damage cues.
 - [Round SFX](round-sfx-timing.md): lock-in, countdown and transitions.
