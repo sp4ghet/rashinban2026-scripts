@@ -1,14 +1,16 @@
 import type { PlayerViewSource } from '../../presenter/settings.ts';
 import type { RenderFrame } from './renderer.ts';
-import { captureError, captureFrameMode, createCaptureInput, parseVideoInputs, type CaptureStatus, type VideoInputs } from './capture.ts';
+import { captureError, captureFrameMode, createCaptureInput, parseVideoInputs, type CaptureStatus, type RelayInputs } from './capture.ts';
 
+import { RELAY_FEEDS, type RelayFeed } from '../../presenter/relay-protocol.ts';
 const sides = ['left', 'right'] as const;
 
 /** Device IDs and streams belong to this OBS/browser instance, never NodeCG. */
 type CaptureIntegration = {
-  relay?: { name: string; open(side: 'left' | 'right'): Promise<MediaStream>; reconnect(): void; onAvailable(listener: (side: 'left' | 'right') => void): () => void };
-  streamChanged?(side: 'left' | 'right', stream: MediaStream | null): void;
+  relay?: { name: string; open(side: RelayFeed): Promise<MediaStream>; reconnect(): void; onAvailable(listener: (side: RelayFeed) => void): () => void };
+  streamChanged?(side: RelayFeed, stream: MediaStream | null): void;
   storageKey?: string;
+  cameraInputs?: boolean;
 };
 export function createCaptureUI(root: HTMLElement, search: string, output: 'stream' | 'led' | 'relay' = 'stream', integration: CaptureIntegration = {}) {
   // Do not automatically open the stream's physical devices in a second output.
@@ -19,18 +21,21 @@ export function createCaptureUI(root: HTMLElement, search: string, output: 'stre
   const availability = el('video-setup-availability');
   const media = integration.relay ? undefined : win.navigator.mediaDevices;
   let disposed = false; let enabled = false; let source: PlayerViewSource = 'chroma';
-  let config: VideoInputs = { left: '', right: '' }; let scanGeneration = 0;
+  const empty: RelayInputs = { left: '', right: '', 'camera-left': '', 'camera-right': '' };
+  const keys = integration.cameraInputs ? RELAY_FEEDS : sides;
+  const parseInputs = (value: unknown): RelayInputs => integration.cameraInputs ? parseVideoInputs(value, true) : { ...empty, ...parseVideoInputs(value) };
+  let config = { ...empty }; let scanGeneration = 0;
   let discovering = false;
   const supported = integration.relay ? typeof RTCPeerConnection === 'function' : win.isSecureContext && !!media?.getUserMedia && !!media?.enumerateDevices;
   if (!supported) message.textContent = win.isSecureContext
     ? 'Video capture is unavailable in this browser.' : 'Video capture needs HTTPS or localhost on the OBS computer.';
   try {
     const saved = integration.relay ? null : win.localStorage.getItem(storageKey);
-    if (saved) config = parseVideoInputs(JSON.parse(saved));
+    if (saved) config = parseInputs(JSON.parse(saved));
   } catch { message.textContent = 'Saved video inputs could not be loaded. Select both inputs again.'; }
 
-  if (integration.relay) config = { left: 'left', right: 'right' };
-  const slots = sides.map(side => {
+  if (integration.relay) config = { ...empty, left: 'left', right: 'right' };
+  const slots = keys.map(side => {
     const select = el<HTMLSelectElement>(`video-${side}-device`);
     const video = el<HTMLVideoElement>(`video-${side}-preview`);
     const host = el(`capture-${side}`); const canvas = el<HTMLCanvasElement>(`capture-${side}-canvas`);
@@ -61,6 +66,8 @@ export function createCaptureUI(root: HTMLElement, search: string, output: 'stre
     });
     return { side, select, video, input, clear, get status() { return status; },
       paint(frame: RenderFrame | null) {
+        // Camera inputs are previewed/published here, never sampled as gameplay.
+        if (side !== 'left' && side !== 'right') return;
         const mode = captureFrameMode(frame);
         const id = frame?.playerIds?.[side];
         if (!frame || mode === 'hidden' || !id || !frame.state.players.some(player => player.id === id)) { clear(); return; }
@@ -89,7 +96,7 @@ export function createCaptureUI(root: HTMLElement, search: string, output: 'stre
   function update() {
     const active = supported && source === 'video' && enabled && !discovering;
     for (const slot of slots) slot.input.select(config[slot.side], active);
-    availability.textContent = integration.relay ? 'Relay ' + integration.relay.name + (active ? ' · subscribed' : ' · inactive') : source !== 'video' ? 'Select Video input in the presenter dashboard to start capture.'
+    availability.textContent = integration.relay ? 'Gameplay relay ' + integration.relay.name + (active ? ' · subscribed' : ' · gameplay inactive') : source !== 'video' ? 'Select Video input in the presenter dashboard to start capture.'
       : !enabled ? 'Capture inactive. Previews, standby stream sources and sources without a fresh server clock do not open inputs.'
         : `${output === 'relay' ? 'Capture relay' : output === 'led' ? 'LED output' : 'Active program'} · video only · assignments saved for this output in this browser`;
   }
@@ -151,10 +158,10 @@ export function createCaptureUI(root: HTMLElement, search: string, output: 'stre
       if (!disposed && token === scanGeneration) { discovering = false; button.disabled = false; update(); }
     }
   }
-  function save(value: VideoInputs) {
-    // Release both before swapping assignments: capture drivers may be exclusive.
+  function save(value: RelayInputs) {
+    // Release all before swapping assignments: capture drivers may be exclusive.
     slots.forEach(slot => slot.input.select('', false)); config = value;
-    try { win.localStorage.setItem(storageKey, JSON.stringify(config)); message.textContent = 'Video inputs saved in this browser.'; }
+    try { win.localStorage.setItem(storageKey, JSON.stringify(integration.cameraInputs ? config : { left: config.left, right: config.right })); message.textContent = 'Video inputs saved in this browser.'; }
     catch { message.textContent = 'Inputs applied for this session; browser storage is unavailable.'; }
     update();
   }
@@ -168,11 +175,11 @@ export function createCaptureUI(root: HTMLElement, search: string, output: 'stre
   const onDevices = () => { void scan(false, true); };
   el('video-find').addEventListener('click', () => { void scan(true); });
   el('video-apply').addEventListener('click', () => {
-    try { save(parseVideoInputs({ left: slots[0].select.value, right: slots[1].select.value })); }
+    try { save(parseInputs(Object.fromEntries(slots.map(slot => [slot.side, slot.select.value])))); }
     catch (error) { message.textContent = error instanceof Error ? error.message : 'Invalid video inputs'; }
   });
   el('video-swap').addEventListener('click', () => {
-    save({ left: config.right, right: config.left });
+    save({ left: config.right, right: config.left, 'camera-left': config['camera-right'], 'camera-right': config['camera-left'] });
     slots.forEach(slot => {
       const selected = config[slot.side];
       if (selected && !Array.from(slot.select.options).some(option => option.value === selected)) {

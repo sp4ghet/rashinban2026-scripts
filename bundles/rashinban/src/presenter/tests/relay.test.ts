@@ -72,3 +72,26 @@ test('inactive viewers are removed and the viewer limit is enforced', () => {
   const result = b.request({ action: 'poll', session: owner.session });
   if (!result.ok) throw Error(); assert.deepEqual(result.viewers, []);
 });
+
+test('relay offers preserve distinct gameplay and player camera track identities', () => {
+  const b = setup();
+  const owner = b.request({ action: 'join', room: 'main', role: 'publisher' });
+  const viewer = b.request({ action: 'join', room: 'main', role: 'viewer' });
+  if (!owner.ok || !viewer.ok) throw Error();
+  const signal = { type: 'offer', connection: 'four-feeds', sdp: 'v=0',
+    mids: { left: '0', right: '1', 'camera-left': '2', 'camera-right': '3' } };
+  assert.equal(b.request({ action: 'signal', session: owner.session, to: viewer.peer, signal }).ok, true);
+  const inbox = b.request({ action: 'poll', session: viewer.session });
+  if (!inbox.ok) throw Error();
+  assert.deepEqual(inbox.messages, [{ from: owner.peer, signal }]);
+});
+
+test('relay rejects a camera mapped onto a gameplay transceiver', () => {
+  const b = setup();
+  const owner = b.request({ action: 'join', room: 'main', role: 'publisher' });
+  const viewer = b.request({ action: 'join', room: 'main', role: 'viewer' });
+  if (!owner.ok || !viewer.ok) throw Error();
+  assert.equal(b.request({ action: 'signal', session: owner.session, to: viewer.peer,
+    signal: { type: 'offer', connection: 'overlap', sdp: 'v=0',
+      mids: { left: '0', right: '1', 'camera-left': '0', 'camera-right': '3' } } }).ok, false);
+});

@@ -1,6 +1,6 @@
 import type NodeCG from '@nodecg/types';
 import { randomUUID } from 'node:crypto';
-import { RELAY_LEASE_MS, RELAY_MESSAGE, relayName, type RelayEnvelope, type RelayResponse, type RelayRole, type RelaySignal } from '../../presenter/relay-protocol.ts';
+import { RELAY_LEASE_MS, RELAY_MESSAGE, RELAY_FEEDS, relayName, type RelayMids, type RelayEnvelope, type RelayResponse, type RelayRole, type RelaySignal } from '../../presenter/relay-protocol.ts';
 
 type Session = { token: string; peer: string; room: string; role: RelayRole; expires: number; queue: RelayEnvelope[] };
 function object(input: unknown): Record<string, unknown> {
@@ -18,9 +18,12 @@ function parseSignal(value: unknown): RelaySignal {
   if (s.type === 'answer') return { type: 'answer', connection, sdp: s.sdp };
   if (s.type !== 'offer') throw Error('Invalid signal type');
   const mids = object(s.mids);
-  const left = identifier(mids.left); const right = identifier(mids.right);
-  if (left === right) throw Error('Video sides must have distinct transceivers');
-  return { type: 'offer', connection, sdp: s.sdp, mids: { left, right } };
+  const mapped: RelayMids = { left: identifier(mids.left), right: identifier(mids.right) };
+  for (const feed of ['camera-left', 'camera-right'] as const) if (mids[feed] !== undefined) mapped[feed] = identifier(mids[feed]);
+  if (Object.keys(mids).some(key => !RELAY_FEEDS.includes(key as typeof RELAY_FEEDS[number]))) throw Error('Invalid relay feed');
+  const values = Object.values(mapped);
+  if (new Set(values).size !== values.length) throw Error('Video feeds must have distinct transceivers');
+  return { type: 'offer', connection, sdp: s.sdp, mids: mapped };
 }
 
 /** Signaling only: media and physical device IDs never reach this broker. */

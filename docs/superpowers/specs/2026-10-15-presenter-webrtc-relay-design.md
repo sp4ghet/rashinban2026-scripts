@@ -30,3 +30,27 @@ The user requested implementation of the previously proposed local WebRTC relay 
 Physical DeckLink access requires the driver to expose usable browser video devices. A native DeckLink SDK/WebRTC bridge is outside this implementation; document this clearly.
 Tests must prove exclusive publisher ownership, leases and stale sessions, signaling isolation/limits, no hardware acquisition by subscribers, simultaneous two-track delivery to stream and LED, input swaps, publisher restart, subscriber restart, frozen frames and cleanup.
 Use real built pages, Chromium fake cameras and the actual signaling broker for isolated browser validation. Run npm test, typecheck, build and diff check in this worktree. Physical card throughput, OBS CEF compatibility, venue connectivity and latency remain rehearsal checks.
+
+
+## Player camera extension — 2026-10-16
+
+The user requested the same relay mechanism for player cameras and explicitly
+chose the existing stream camera boxes with no LED layout change.
+
+- Add optional camera-left and camera-right feeds to the same capture owner
+  and peer connections. Retain existing two-feed settings/SDP compatibility.
+- Configure all four physical inputs on one capture page. Reject duplicate
+  device assignments across all slots before touching active capture.
+- Camera-enabled stream URLs opt in with relayCameras=1 alongside videoRelay.
+  Old URLs retain external-camera key regions. The capture page provides both.
+- Render camera tracks as live muted videos inside existing camera rectangles.
+  Preserve the layout and center-crop to fit. Cameras remain live through
+  results/gameplay freezes and Rendered/Chroma modes, including camera-only
+  capture. They obey program ownership, clock freshness and page disposal.
+- LED/gameplay-only peers decline camera transceivers. They do not transport
+  or display cameras. No direct-capture fallback exists in relay subscribers.
+- Swap players swaps both input pairs; stop/restart, missing inputs, reconnects
+  and ownership changes clear/recover camera streams through existing capture
+  lifecycle handling. Reconnect cannot activate an inactive preview.
+- Camera setup/crop defaults and explicit URL opt-in are implementation choices.
+  Real device formats, camera/voice synchronization and OBS remain rehearsal checks.

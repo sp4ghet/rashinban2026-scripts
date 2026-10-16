@@ -7,7 +7,9 @@ remaining external checks.
 
 For direct player capture devices and animated player windows, use
 [Video input setup](video-inputs.md). Its player feeds are composited inside
-the Browser Source; only the remaining camera regions need regional keying.
+the Browser Source. Optional relayed player cameras also render inside the
+existing camera boxes; add `&relayCameras=1` alongside `videoRelay` to enable them.
+Only external-camera compositions need regional camera keying.
 
 | Source | URL |
 | --- | --- |
@@ -48,8 +50,8 @@ verified in a 1920 × 1080 browser. Bounds include the colored border.
 | --- | ---: | ---: | ---: | ---: |
 | Left whole player feed | 40 | 270 | 910 | 512 |
 | Right whole player feed | 970 | 270 | 910 | 512 |
-| Left camera | 60 | 848 | 340 | 192 |
-| Right camera | 1520 | 848 | 340 | 192 |
+| Left camera | 60 | 756 | 360 | 260 |
+| Right camera | 1500 | 756 | 360 | 260 |
 | Shared rendered NMPZ panorama | 40 | 270 | 1840 | 512 |
 | Results map | 460 | 278 | 1000 | 520 |
 

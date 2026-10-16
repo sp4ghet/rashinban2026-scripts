@@ -8,9 +8,10 @@ document.getElementById('relay-name')!.textContent = name;
 for (const [id, page, query] of [
   ['stream-url', 'presenter.html', '?role=program&videoRelay='],
   ['led-url', 'presenter-led.html', '?videoRelay='],
+  ['stream-gameplay-url', 'presenter.html', '?role=program&videoRelay='],
 ]) {
   const link = document.getElementById(id) as HTMLAnchorElement;
-  link.href = page + query + encodeURIComponent(name); link.textContent = new URL(link.href).href;
+  link.href = page + query + encodeURIComponent(name) + (id === 'stream-url' ? '&relayCameras=1' : ''); link.textContent = new URL(link.href).href;
 }
 let capture: ReturnType<typeof createCaptureUI> | null = null;
 const publisher = createRelayPublisher({ room: name,
@@ -19,6 +20,7 @@ const publisher = createRelayPublisher({ room: name,
   status(message) { status.textContent = message; },
 });
 capture = createCaptureUI(document.body, '?videoSetup=1', 'relay', {
+  cameraInputs: true,
   storageKey: 'rashinban:presenter-relay-inputs:' + name + ':v1',
   streamChanged: (side, stream) => publisher.setStream(side, stream),
 });

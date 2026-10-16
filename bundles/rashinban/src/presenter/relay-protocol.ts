@@ -1,7 +1,10 @@
 export type RelayRole = 'publisher' | 'viewer';
 export type RelaySide = 'left' | 'right';
+export const RELAY_FEEDS = ['left', 'right', 'camera-left', 'camera-right'] as const;
+export type RelayFeed = typeof RELAY_FEEDS[number];
+export type RelayMids = Record<RelaySide, string> & Partial<Record<'camera-left' | 'camera-right', string>>;
 export type RelaySignal =
-  | { type: 'offer'; connection: string; sdp: string; mids: Record<RelaySide, string> }
+  | { type: 'offer'; connection: string; sdp: string; mids: RelayMids }
   | { type: 'answer'; connection: string; sdp: string };
 export type RelayEnvelope = { from: string; signal: RelaySignal };
 export type RelaySnapshot = { ok: true; session: string; peer: string; publisher: string | null; viewers: string[]; ttlMs: number; messages: RelayEnvelope[] };

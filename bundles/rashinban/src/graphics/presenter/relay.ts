@@ -1,9 +1,9 @@
-import { type RelayEnvelope, type RelaySide, type RelaySnapshot } from '../../presenter/relay-protocol.ts';
+import { RELAY_FEEDS, type RelayEnvelope, type RelayFeed, type RelaySnapshot, type RelayMids } from '../../presenter/relay-protocol.ts';
 import { createRelaySession, type RelayRequestFn } from './relay-session.ts';
 
-const sides = ['left', 'right'] as const;
-type Streams = Record<RelaySide, MediaStream | null>;
-const empty = (): Streams => ({ left: null, right: null });
+const sides = RELAY_FEEDS;
+type Streams = Record<RelayFeed, MediaStream | null>;
+const empty = (): Streams => ({ left: null, right: null, 'camera-left': null, 'camera-right': null });
 
 async function description(pc: RTCPeerConnection, value: RTCSessionDescriptionInit): Promise<string> {
   await pc.setLocalDescription(value);
@@ -41,7 +41,7 @@ export function createRelayPublisher(options: { room: string; request: RelayRequ
     try {
       const sdp = await description(pc, await pc.createOffer());
       if (peers.get(id) !== peer || !current) return;
-      await session.send(id, { type: 'offer', connection: peer.connection, sdp, mids: { left: transceivers[0].mid!, right: transceivers[1].mid! } });
+      await session.send(id, { type: 'offer', connection: peer.connection, sdp, mids: Object.fromEntries(sides.map((side, index) => [side, transceivers[index].mid!])) as RelayMids });
     } catch (error) {
       if (peers.get(id) === peer) { close(id); options.status(error instanceof Error ? error.message : 'Video connection failed'); }
     }
@@ -67,7 +67,7 @@ export function createRelayPublisher(options: { room: string; request: RelayRequ
     }, receive: envelope => { void receive(envelope); } });
   return {
     setActive: session.setActive,
-    setStream(side: RelaySide, stream: MediaStream | null) {
+    setStream(side: RelayFeed, stream: MediaStream | null) {
       if (streams[side] === stream) return;
       streams = { ...streams, [side]: stream };
       closeAll();
@@ -77,12 +77,14 @@ export function createRelayPublisher(options: { room: string; request: RelayRequ
   };
 }
 
-export function createRelayReceiver(options: { room: string; request: RelayRequestFn; status?(message: string): void }) {
+export function createRelayReceiver(options: { room: string; cameras?: boolean; request: RelayRequestFn; status?(message: string): void }) {
+  const accepted = sides.filter(side => options.cameras || !side.startsWith('camera-'));
+  let enabled = false;
   let publisher: string | null = null;
   let current: { pc: RTCPeerConnection; connection: string } | null = null;
   let streams = empty(); const borrowed = new Set<MediaStream>();
-  const available = new Set<(side: RelaySide) => void>();
-  const pending: { side: RelaySide; resolve(stream: MediaStream): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }[] = [];
+  const available = new Set<(side: RelayFeed) => void>();
+  const pending: { side: RelayFeed; resolve(stream: MediaStream): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }[] = [];
   function borrow(stream: MediaStream) {
     for (const old of borrowed) if (old.getVideoTracks().every(t => t.readyState === 'ended')) borrowed.delete(old);
     const value = new MediaStream(stream.getVideoTracks().map(track => track.clone()));
@@ -95,7 +97,7 @@ export function createRelayReceiver(options: { room: string; request: RelayReque
     streams = empty();
     if (rejectWaiting) for (const waiting of pending.splice(0)) { clearTimeout(waiting.timer); waiting.reject(new DOMException('Relay feed disconnected', 'AbortError')); }
   }
-  function deliver(side: RelaySide, stream: MediaStream) {
+  function deliver(side: RelayFeed, stream: MediaStream) {
     streams[side] = stream;
     for (const listener of available) listener(side);
     for (const waiting of [...pending]) if (waiting.side === side) {
@@ -110,7 +112,7 @@ export function createRelayReceiver(options: { room: string; request: RelayReque
     const peer = { pc, connection: signal.connection }; current = peer;
     pc.ontrack = event => {
       if (current !== peer) return;
-      const side = sides.find(side => signal.mids[side] === event.transceiver.mid);
+      const side = accepted.find(side => signal.mids[side] === event.transceiver.mid);
       if (!side || event.track.kind !== 'video') return;
       event.track.onended = () => { if (current === peer) clear(); };
       deliver(side, new MediaStream([event.track]));
@@ -121,6 +123,11 @@ export function createRelayReceiver(options: { room: string; request: RelayReque
     };
     try {
       await pc.setRemoteDescription({ type: 'offer', sdp: signal.sdp });
+      // LED and gameplay-only viewers decline camera tracks, avoiding unused
+      // camera encoding and transport while sharing the same physical capture.
+      for (const transceiver of pc.getTransceivers()) {
+        if (!accepted.some(side => signal.mids[side] === transceiver.mid)) transceiver.direction = 'inactive';
+      }
       const sdp = await description(pc, await pc.createAnswer());
       if (current !== peer) return;
       await session.send(envelope.from, { type: 'answer', connection: signal.connection, sdp });
@@ -138,9 +145,9 @@ export function createRelayReceiver(options: { room: string; request: RelayReque
     }, receive: envelope => { void receive(envelope); } });
   return {
     name: options.room,
-    setActive(value: boolean) { session.setActive(value); if (!value) clear(true); },
-    onAvailable(listener: (side: RelaySide) => void) { available.add(listener); return () => { available.delete(listener); }; },
-    open(side: RelaySide): Promise<MediaStream> {
+    setActive(value: boolean) { enabled = value; session.setActive(value); if (!value) clear(true); },
+    onAvailable(listener: (side: RelayFeed) => void) { available.add(listener); return () => { available.delete(listener); }; },
+    open(side: RelayFeed): Promise<MediaStream> {
       const stream = streams[side];
       if (stream?.getVideoTracks()[0]?.readyState === 'live') return Promise.resolve(borrow(stream));
       return new Promise((resolve, reject) => {
@@ -151,7 +158,7 @@ export function createRelayReceiver(options: { room: string; request: RelayReque
         pending.push(waiting);
       });
     },
-    reconnect() { session.setActive(false); clear(true); session.setActive(true); },
+    reconnect() { if (enabled) { session.setActive(false); clear(true); session.setActive(true); } },
     dispose() { session.dispose(); clear(true); available.clear(); },
   };
 }

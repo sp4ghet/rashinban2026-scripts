@@ -13,6 +13,7 @@ import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
 import { bindLayers } from './broadcast/bind.ts';
 import { channelFromSearch } from '../broadcast/channel.ts';
+import { createCameraOutput } from './presenter/camera-output.ts';
 import { createCaptureUI } from './presenter/capture-ui.ts';
 import { createRelayReceiver } from './presenter/relay.ts';
 import { RELAY_MESSAGE, relayName, type RelayResponse } from '../presenter/relay-protocol.ts';
@@ -40,11 +41,13 @@ const client = createPresenterClient({ clientId, role, wallNow: () => Date.now()
 const audioOutput = createAudioOutput(client);
 const ledOutput = document.body.dataset.output === 'led' || role === 'led';
 const relayParam = new URLSearchParams(location.search).get('videoRelay');
-const relay = relayParam !== null ? createRelayReceiver({ room: relayName(relayParam),
+const relayCameras = !ledOutput && new URLSearchParams(location.search).get('relayCameras') === '1';
+const relay = relayParam !== null ? createRelayReceiver({ room: relayName(relayParam), cameras: relayCameras,
   request: request => nodecg.sendMessage(RELAY_MESSAGE, request) as Promise<RelayResponse>,
   status(message) { document.body.dataset.relayStatus = message; capture.setRelayStatus(message); },
 }) : null;
 const capture = createCaptureUI(document.body, location.search, ledOutput ? 'led' : 'stream', { relay: relay ?? undefined });
+const cameras = relay && relayCameras ? createCameraOutput(document.body, relay) : null;
 let boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
 media.on('change', value => {
   try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
@@ -71,8 +74,9 @@ function reconcileVideo() {
   // LED follows its own fresh clock; it must never take the stream's program
   // lease. Switcher previews do not open devices, even on the LED page.
   const captureActive = client.playsVideo() && (!ledOutput || channelFromSearch(location.search) === 'program');
-  relay?.setActive(options.viewSource === 'video' && captureActive);
+  relay?.setActive(captureActive && (options.viewSource === 'video' || !!cameras));
   capture.update(options.viewSource, captureActive);
+  cameras?.update(captureActive);
   videoPlayer.update(timeline.value?.generation ?? null, client.playsVideo(), timeline.value?.effect ?? 'none', silent(options.muted), options.effectsGain);
   audioOutput.sync(timeline.value, options);
 }
@@ -109,7 +113,7 @@ function startRenderer(value?: PresenterPublicConfig) {
 }
 publicConfig.on('change', startRenderer);
 startRenderer(publicConfig.value);
-window.addEventListener('pagehide', () => { clearInterval(mediaGuard); capture.dispose(); relay?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
+window.addEventListener('pagehide', () => { clearInterval(mediaGuard); capture.dispose(); cameras?.dispose(); relay?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {
   let captureFrame: RenderFrame | null = null;

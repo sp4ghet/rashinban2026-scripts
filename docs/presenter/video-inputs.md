@@ -3,8 +3,8 @@
 **Video input** is the third presenter presentation, alongside Rendered and
 Chroma. It uses two independent video feeds, captured directly or through the relay, and
 draws their complete player feeds inside the presenter. No player-feed chroma
-key is needed. Player cameras still use the existing camera slots and regional
-keying described in [OBS composition](obs.md).
+key is needed. Player cameras can use the same relay, or the existing external camera slots
+and regional keying described in [OBS composition](obs.md).
 
 ## Direct input setup
 
@@ -152,6 +152,43 @@ sustained two-feed performance and the stream/LED delay with the actual machines
 The existing video/telemetry frame-freeze boundary remains in each receiver;
 the relay does not compensate for a player feed arriving ahead of telemetry.
 
+### Player cameras through the same relay
+
+The capture page also has optional **Left player camera** and **Right player
+camera** inputs. Assign each camera once alongside the gameplay inputs and
+click **Apply inputs**. A physical device cannot occupy more than one slot.
+Existing saved two-input selections load with both cameras unassigned.
+
+Use the capture page's **Stream with player cameras** link, or add
+`&relayCameras=1` to the stream's `videoRelay` URL:
+
+`http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program&videoRelay=main&relayCameras=1`
+
+The relayed cameras fill the existing stream camera boxes, preserve aspect ratio
+with a centered crop, and remain silent. They stay live during gameplay freezes,
+results, waiting scenes, and Rendered/Chroma modes. For cameras with rendered
+gameplay, leave both gameplay inputs unassigned and select Rendered in the
+dashboard; the camera subscription does not depend on Video input mode.
+
+Program ownership loss or an expired server clock releases camera subscriptions.
+Stopping the capture owner clears both camera videos; restarting it reconnects
+automatically. Missing/unassigned camera feeds show a neutral placeholder,
+without falling back to a webcam or an OBS capture source.
+
+**Swap players** on the capture page swaps gameplay and camera assignments
+together. Match/series player swaps do not change the physical assignments.
+Device choices stay local to the capture browser and named room.
+
+Existing stream URLs without `relayCameras=1` retain their external-camera key
+regions. The capture page includes a **Stream with external cameras** link for
+that composition. The LED layout has no camera boxes and declines the camera
+tracks. Neither gameplay-only stream nor LED receivers require camera encoding
+or transport after WebRTC negotiation.
+
+Remove regional camera chroma-key filters for the relayed-camera composition;
+the browser now draws real camera pixels in those boxes. Full-screen celebration
+videos still cover the camera layer. Keep camera audio routed separately.
+
 ## DeckLink compatibility
 
 The relay avoids two presenter pages independently opening the same input.
@@ -275,3 +312,16 @@ DeckLink, OBS's WebRTC implementation, venue LAN connectivity, long-duration
 performance, source signal-loss behavior, and measured audio/video/telemetry
 latency remain production rehearsal checks. Browser fake-camera acceptance
 does not establish any of those hardware results.
+
+Run the four-feed camera acceptance with:
+
+```powershell
+node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validate-presenter-relay.mjs --cameras
+```
+
+It adds two simulated player cameras to the existing gameplay feeds and checks
+camera identity, silent playback, existing camera geometry, duplicate-input
+rejection, live reactions during gameplay freezes, rendered/chroma and camera-only
+operation, swaps, missing-camera recovery, ownership loss, publisher shutdown,
+and preview isolation. Camera reports/screenshots are under
+`artifacts/presenter-validation/relay-cameras/`.
