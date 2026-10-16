@@ -379,3 +379,79 @@ device-change isolation, permission denial, timeout/mute holds, idle canvas work
 and unavailable-device swaps. Both runs reported zero uncaught browser errors.
 All **544 unit tests**, typecheck, build and diff checks passed. Physical card
 recovery and sustained capture performance still require hardware validation.
+
+
+### LED video and WebRTC relay — 2026-10-15
+
+The LED now honors Video input mode. Direct LED input assignments are separate
+from the stream's assignments. This supersedes the rendered-only LED behavior
+recorded under "Rebase and LED compatibility."
+
+The optional relay uses a dedicated capture page for both physical inputs and
+WebRTC subscriptions in stream/LED outputs. Its independent review identified
+a lost-offer recovery gap: a poll acknowledgement could be lost after draining
+the broker inbox, leaving the publisher waiting forever. A new browser
+regression reproduced that failure before the fix. Unfinished negotiation now
+retries after 12 seconds; regressions pass for lost offers and lost answers.
+Receiver setup also shows current connection status.
+
+Validation in the isolated `feat/presenter-webrtc-relay` worktree:
+
+- `npm test`: **597/597**, including eight new broker/session tests.
+- `npm run typecheck`, `npm run build`, `git diff --check`: passed.
+- Direct-video browser script: **58 checks**, zero uncaught exceptions.
+- Relay browser script: **34 checks**, zero uncaught exceptions. It uses the
+  built pages, actual signaling broker, simulated NodeCG state and real WebRTC
+  connections between Chromium pages with two encodable fake camera feeds.
+- Confirmed two input opens serve both receivers; receiver pages make no camera
+  calls. Coverage includes publisher exclusion, input side mapping/swaps,
+  missing-input recovery, independent mode changes/reloads, stream frame
+  freezing with live LED video, publisher restart, signaling interruption,
+  lost setup messages, preview isolation and visible status.
+- Capture/stream/LED screenshots were inspected. Reports and images are under
+  `artifacts/presenter-validation/relay/`; direct-video results are under
+  `artifacts/presenter-validation/video-inputs/`.
+
+This run used Chrome 155 with fake devices and no Google Maps key. It did not
+exercise the live NodeCG message transport, OBS's WebRTC stack, physical
+DeckLink inputs, venue LAN routing, or sustained audio/video/telemetry latency.
+Those remain rehearsal checks; see [relay setup](video-inputs.md#share-inputs-through-the-webrtc-relay).
+
+
+### Relayed player cameras — 2026-10-17
+
+The capture owner now supports optional left/right player cameras alongside
+the two gameplay inputs. The camera-enabled stream URL opts in with
+`relayCameras=1`; existing stream links retain their external camera key regions.
+The LED layout is unchanged and its WebRTC answer declines camera tracks.
+
+Validation in the same isolated worktree:
+
+- **601/601 unit tests**, typecheck, build and diff checks passed.
+- **54 camera relay browser checks** passed with four simulated inputs.
+- **36 gameplay-only relay checks** and **58 direct-video checks** passed.
+- All browser runs reported zero uncaught errors.
+- Camera coverage includes distinct track identities, unchanged camera bounds,
+  muted/no-audio playback, camera-only Rendered mode, live reactions during
+  gameplay freezes and Chroma mode, four-input swapping, duplicate-device
+  rejection, missing-camera recovery, ownership loss, stop/restart and preview
+  Reconnect isolation.
+- Recovery tests now wait for remote streams to clear and physical inputs to
+  reopen after a signaling outage; stale pre-outage pixels cannot satisfy them.
+- The restarted dev server on port 9091 passed an actual NodeCG message
+  round-trip for all four track identities in a temporary room. That smoke
+  test acquired no media and left its sessions afterward.
+- Capture and stream screenshots were inspected under
+  `artifacts/presenter-validation/relay-cameras/`.
+- Independent code review found no actionable findings.
+
+The dev server remains active with its local port override. Physical camera/
+DeckLink compatibility, OBS playback, sustained four-input load and real
+camera/audio synchronization still require rehearsal with the event hardware.
+
+After integrating `main` at `5b4c39f` for PR #6, verification passed again:
+**670/670 unit tests**, typecheck, build, diff checks, **54 camera relay**,
+**36 gameplay relay**, and **58 direct-video browser checks**. All three
+browser runs reported zero uncaught errors. The restarted NodeCG dev server
+also passed the four-feed signaling round-trip. The startup conflict was
+resolved by keeping both the relay and party-manager registrations.

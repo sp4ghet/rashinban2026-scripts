@@ -96,6 +96,14 @@ test('a double 5K goes to the earlier deliberate guess', () => {
   assert.deepEqual(late.pinpointing!.rounds[0].points, [0, 0]);
 });
 
+test('tournament Half tie range withholds boundary points but preserves the double 5K exception', () => {
+  const derived = derivePinpointing(state([
+    { scores: [4000, 3500] }, { scores: [4000, 3499] }, { scores: [5000, 5000], guessedAt: [900, 500] },
+  ]), 'half');
+  assert.deepEqual(derived.pinpointing!.rounds.map(round => round.points), [[0, 0], [1, 0], [0, 1]]);
+  assert.deepEqual(derived.pinpointing!.rounds.map(round => round.reason), ['tie', 'closest', 'fastest-5k']);
+});
+
 test('reaching seven finishes the custom game and truncates later server rounds', () => {
   const specs: RoundSpec[] = [1, 2, 3, 4, 5, 6].map(() => ({ scores: [5000, 0] }));
   const source = state(specs, { round: 6 });

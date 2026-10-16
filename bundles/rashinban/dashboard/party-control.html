@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Party manager</title><link rel="stylesheet" href="party-control.css"></head>
+<body><main>
+  <header><div><span class="eyebrow">GEOGUESSR</span><h1>Party manager</h1></div><div class="header-status"><strong id="connection-status">Connecting…</strong><span id="updated" class="muted"></span></div><button id="refresh">Refresh</button><a href="https://www.geoguessr.com/party/lobby" target="_blank" rel="noopener noreferrer">Open lobby ↗</a></header>
+  <div id="error" class="notice danger" role="alert" hidden></div>
+  <div id="warning" class="notice" role="status"></div>
+  <section class="source"><label>Party ID / broadcast URL<input id="party-id" placeholder="Blank uses the account’s active party" maxlength="180"></label><button id="connect">Connect live party</button><span id="identity" class="muted"></span><details><summary>Join info</summary><div id="join-info"></div></details></section>
+  <div class="grid">
+    <section class="card live"><div class="section-title"><h2>Live duel</h2><span id="game-type" class="badge">—</span></div>
+      <div class="round-head"><div><span id="round-number" class="eyebrow">LOBBY</span><h3 id="phase">Waiting for party</h3><span id="map-name" class="muted"></span></div><strong id="timer">—</strong></div>
+      <div class="score-rules"><span id="score-rules" class="badge"></span><span id="score-next-rules" class="small muted" hidden></span></div>
+      <div id="teams" class="teams"></div>
+      <p id="score-result" class="score-result" role="status" hidden></p>
+      <p id="score-last-round" class="small muted" hidden></p>
+      <section id="prediction" class="prediction" aria-label="Current round prediction" hidden>
+        <span class="eyebrow">Round prediction</span>
+        <p id="prediction-summary" class="small muted" role="status"></p>
+        <div id="prediction-cards" class="prediction-cards"></div>
+      </section>
+      <div class="primary-actions"><button id="start-game" class="primary" disabled>Start duel</button><button id="start-round" class="primary" disabled>Start round</button></div>
+      <p id="start-hint" class="notice small" role="status" hidden></p>
+      <div class="actions"><button id="pause" disabled>Pause after round</button><button id="resume" disabled>Release held result</button><button id="abort" class="danger-button" disabled>Abort duel…</button></div>
+      <p id="live-hint" class="muted small">Pause holds the result at the round deadline. Resume releases it without adding guess time.</p>
+      <div id="presenter-warning" class="notice" hidden></div>
+      <details><summary>Recovery / rollback</summary><div class="actions"><label>Replay from round<input id="rollback-round" type="number" min="1" value="1"></label><button id="rollback" class="danger-button" disabled>Roll back…</button></div><p class="small muted">Requires a paused duel. Reuses the target location and restarts its timer. The result must be confirmed by GeoGuessr.</p></details>
+      <details><summary>Game details</summary><div id="game-details" class="small muted"></div></details>
+    </section>
+    <section class="card roster"><div class="section-title"><h2>Players & bench</h2><span id="roster-count" class="badge">0</span></div><p id="roster-hint" class="small muted">Roster changes apply between games. Order determines Duels slots.</p><div id="members" class="members"></div>
+      <div class="swap-row"><select id="swap-first" aria-label="First player"></select><span>⇄</span><select id="swap-second" aria-label="Second player"></select><button id="swap" disabled>Swap</button></div>
+      <details><summary>Moderation / host</summary><div class="actions"><select id="moderation-player" aria-label="Player to moderate"></select><select id="moderation-action" aria-label="Moderation action"><option value="kick">Kick player</option><option value="ban">Ban player</option><option value="mute">Mute chat</option><option value="unmute">Unmute chat</option><option value="host">Transfer host</option></select><button id="moderate" class="danger-button" disabled>Apply…</button></div><div id="banned" class="small"></div></details>
+    </section>
+    <section class="card settings"><div class="section-title"><h2>Next duel settings</h2><span id="draft-status" class="muted small">Waiting for party</span></div>
+      <div class="preset-controls"><label>Tournament preset<select id="tournament-preset"><option value="" disabled>Choose a game…</option></select></label></div>
+      <p id="preset-description" class="small muted"></p><p id="preset-draft" class="notice small" hidden></p>
+      <form id="settings-form"><fieldset id="settings-fields" disabled>
+        <div class="settings-grid">
+          <label>Game type<select data-group="root" data-key="gameType"><option value="Duels">Duels (1v1)</option><option value="TeamDuels">Team Duels</option></select></label>
+          <label>Map ID / map URL<input data-group="gameSettings" data-key="mapSlug" placeholder="Map slug or GeoGuessr map URL"></label>
+          <label>Movement<select id="movement"><option value="MOVE">Moving</option><option value="NM">No Move</option><option value="NMPZ">NMPZ</option><option value="CUSTOM" disabled>Custom restrictions</option></select></label>
+          <label>Initial HP<input type="number" data-group="gameSettings" data-key="initialHealth" min="1" max="1000000000"></label>
+          <label>Round limit (seconds; 0 = none)<input type="number" data-group="gameSettings" data-key="maxRoundTime" min="0" max="3600"></label>
+          <label>After first guess (seconds)<input type="number" data-group="gameSettings" data-key="timeAfterGuess" min="1" max="600"></label>
+          <label>Maximum rounds<input type="number" data-group="gameSettings" data-key="maxNumberOfRounds" min="1" max="1000"></label>
+          <label>Rounds without multiplier<input type="number" data-group="gameSettings" data-key="roundsWithoutDamageMultiplier" min="0" max="1000"></label>
+          <label>Individual increment (×)<input type="number" data-group="gameSettings" data-key="roundWinMultiplierIncrement" data-scale="10" min="0" max="100" step="0.1"></label>
+          <label>Mutual increment (×)<input type="number" data-group="gameSettings" data-key="multiplierIncrement" data-scale="10" min="0" max="100" step="0.1"></label>
+        </div><div class="checks"><label><input type="checkbox" data-group="settings" data-key="masterControl"> Game master</label><label><input type="checkbox" data-group="settings" data-key="masterControlAutoStartRounds"> Auto-start rounds</label><label><input type="checkbox" data-group="gameSettings" data-key="disableHealing"> Disable healing</label></div>
+        <details><summary>Advanced game rules & party access</summary><div class="settings-grid">
+          <label>Guess map<select data-group="gameSettings" data-key="guessMapType"><option value="roadmap">Roadmap</option><option value="satellite">Satellite</option><option value="hybrid">Hybrid</option><option value="terrain">Terrain</option></select></label>
+          <label>Party capacity<input type="number" data-group="settings" data-key="maxPartySize" min="2" max="1000"></label>
+          <label>Chat<select data-group="settings" data-key="allowedCommunication"><option value="None">Off</option><option value="EmotesOnly">Emotes</option><option value="TextMessages">Text</option><option value="TeamTextMessages">Team text</option></select></label>
+          <label>Blue initial HP<input type="number" data-group="gameSettings" data-key="initialHealthTeamOne" min="0" max="1000000000"></label>
+          <label>Red initial HP<input type="number" data-group="gameSettings" data-key="initialHealthTeamTwo" min="0" max="1000000000"></label>
+        </div><div class="checks"><label><input type="checkbox" data-group="gameSettings" data-key="individualInitialHealth"> Individual initial HP</label><label><input type="checkbox" data-group="gameSettings" data-key="countAllGuesses"> Count all team guesses</label><label><input type="checkbox" data-group="settings" data-key="allowGuests"> Allow guests</label><label><input type="checkbox" data-group="settings" data-key="allowSwitchingTeams"> Allow team switching</label><label><input type="checkbox" data-group="settings" data-key="isolateInGameChat"> Isolate in-game chat</label><label><input type="checkbox" data-group="settings" data-key="hideJoinInfo"> Hide join info</label></div></details>
+      </fieldset><div class="actions"><button id="save-settings" type="submit" class="primary" disabled>Apply settings</button><button id="reload-settings" type="button" disabled>Reload current settings</button><span class="small muted">Applies in the lobby before starting a duel.</span></div></form>
+    </section>
+    <section class="card activity"><div class="section-title"><h2>Recent commands</h2><button id="acknowledge" hidden>State checked — clear pending…</button></div><ol id="activity-list"><li class="muted">No commands sent.</li></ol></section>
+  </div>
+</main><script src="party-control.js"></script></body></html>

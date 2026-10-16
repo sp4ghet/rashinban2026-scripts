@@ -5,6 +5,8 @@
 body { background: #000; }
 .backdrop { inset: auto; top: 0; left: 0; width: 1920px; height: 576px; }
 .celebration-video { height: 576px; }
+/* Keep local capture controls reachable in a 576px-high OBS Interact view. */
+#video-setup { top: 108px; max-height: 456px; overflow-y: auto; }
 /* No facecams on the wall. <footer> stays in the DOM because presenter.js writes #phase-label. */
 .camera, footer { display: none; }
 /* Row 1: identities and match info (y 0-52). */

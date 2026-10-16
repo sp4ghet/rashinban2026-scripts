@@ -4,6 +4,7 @@
 import type { DuelState, SeriesState, Timeline, Views } from './presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
 import type { RuleContexts } from '../presenter/tie-range-context.ts';
+import type { PartyStatus } from '../party/types.ts';
 import type { ConnectionStatus } from '../extension/presenter/connection.ts';
 import type { ClientReady, Lease } from '../presenter/clock.ts';
 import type { MediaManifest, AudioStatus } from '../presenter/media.ts';
@@ -13,6 +14,7 @@ export type PresenterMediaStatus = { generation: string | null; effect: string; 
 export type PresenterConnection = ConnectionStatus & {
   input: 'live' | 'replay'; replayFixture: string | null; warnings: string[];
   configuredPartyId?: string | null; selectedPartyId?: string | null;
+  controlGeneration?: string;
 };
 export const RENDERER_STATUSES = ['unreported', 'loading', 'api-ready', 'missing-key', 'api-error', 'view-error', 'pano-error'] as const;
 export type RendererStatus = typeof RENDERER_STATUSES[number];
@@ -49,6 +51,7 @@ export const REPLICANTS = {
   bracketConfig: "bracketConfig",
   bracketFinals: "bracketFinals",
   presenterConnection: 'presenterConnection',
+  partyStatus: 'partyStatus',
   presenterDuel: 'presenterDuel',
   presenterViews: 'presenterViews',
   presenterSeries: 'presenterSeries',
@@ -81,6 +84,7 @@ export interface ReplicantMap {
   [REPLICANTS.bracketConfig]: BracketConfig;
   [REPLICANTS.bracketFinals]: BracketFinals;
   [REPLICANTS.presenterConnection]: PresenterConnection;
+  [REPLICANTS.partyStatus]: PartyStatus;
   [REPLICANTS.presenterDuel]: DuelState | null;
   [REPLICANTS.presenterViews]: Views | null;
   [REPLICANTS.presenterSeries]: SeriesState;
