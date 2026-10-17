@@ -128,6 +128,12 @@ export function summaryHealthColumnsByTeamColor(
 
 export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencies): PlayerTieRangeUi {
   const { document } = dependencies;
+  // Font faces must be registered in the document to work inside Chromium's shadow DOM.
+  if (!document.querySelector('link[href="https://use.typekit.net/ljs6bhu.css"]')) {
+    const fonts = document.createElement('link');
+    fonts.rel = 'stylesheet'; fonts.href = 'https://use.typekit.net/ljs6bhu.css';
+    (document.head ?? document.documentElement).append(fonts);
+  }
   const mapOverlay = createPlayerMapOverlay(() => dependencies.getPageWindow?.() ?? document.defaultView!);
   document.getElementById('rb-tie-range-player')?.remove();
   const host = document.createElement('div');
@@ -137,31 +143,39 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
   shadow.innerHTML = `
     <style>
       :host { all: initial; position: fixed; inset: 0; z-index: 2147483000; pointer-events: none;
-        color: #fff; font: 600 14px/1.2 Inter, system-ui, sans-serif; }
+        color: #fff; font: 600 14px/1.2 Inter, system-ui, sans-serif;
+        --presenter-latin: "kaneda-gothic", "Oswald", "Arial Narrow", "Noto Sans JP", sans-serif; }
+      .health, .multiplier, .damage, .result, .score-token, .score-calculation { font-family: var(--presenter-latin); }
       *, *::before, *::after { box-sizing: border-box; }
       [hidden] { display: none !important; }
-      .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; width: calc(100vw - 48px);
-        transform: translateX(-50%); filter: drop-shadow(0 3px 9px #000b); }
+      .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 24px; right: 24px; }
       .teams { display: flex; justify-content: space-between; gap: 180px; }
-      .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
+      .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8;
+        box-shadow: 0 3px 9px #000b, 0 0 calc(24px * var(--score-impact, 0)) rgba(255, 100, 125, var(--score-impact, 0)); }
       .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
         background: #35131f; z-index: 2; color: #ff8492; font-size: 32px; font-variant-numeric: tabular-nums; }
       .damage::before { content: attr(data-factor); display: block; font-size: 16px; color: #ffe169; text-align: center; }
+      .damage[data-animating="true"], .score-token { position: fixed; padding: 0; border-radius: 0; background: none;
+        color: #fff; font-size: 58px; line-height: 1; font-weight: 900; text-shadow: 0 3px 12px #10131fcc;
+        white-space: nowrap; pointer-events: none; z-index: 2; right: auto; }
+      .damage[data-animating="true"]::before { display: none; }
+      .score-calculation { position: fixed; font-size: 32px; line-height: 1; font-weight: 700; white-space: nowrap;
+        color: #ffd55a; text-shadow: 0 3px 10px #10131f; z-index: 3; }
       @media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
       .team[data-side="blue"] { --team: #38a8ff; }
       .team[data-side="red"] { --team: #ff5365; }
       .team-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
       .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--team); font-size: 13px; }
       .numbers { display: flex; align-items: baseline; gap: 7px; }
-      .health { font-size: 20px; font-variant-numeric: tabular-nums; }
-      .multiplier { color: #ffe169; font-size: 16px; font-variant-numeric: tabular-nums; }
+      .health { font-size: 32px; font-variant-numeric: tabular-nums; }
+      .multiplier { color: #ffe169; font-size: 24px; font-variant-numeric: tabular-nums; }
       .track { height: 8px; margin-top: 5px; overflow: hidden; border-radius: 999px; background: #ffffff25; }
       .fill { height: 100%; width: 0; border-radius: inherit; background: var(--team); transition: width 220ms ease; }
-      .result { margin: 22px auto 0; width: 76%; text-align: center; font-size: 40px; text-shadow: 0 2px 6px #000; }
+      .result { margin: 22px auto 0; width: 76%; text-align: center; font-size: 58px; line-height: 1; font-weight: 700; text-shadow: 0 2px 6px #000; }
       .result-title { display: none; }
       .result-grid { display: flex; justify-content: space-between; gap: 100px; font-variant-numeric: tabular-nums; }
       .result-meta { display: none; }
-      .result-verdict { margin-top: 10px; font-size: 26px; color: #ffe169; letter-spacing: .03em; }
+      .result-verdict { margin-top: 10px; font-size: 36px; color: #ffe169; letter-spacing: .03em; }
       .team[data-rb-rules="pinpointing"] .multiplier { color: #ffe169; font-size: 13px; letter-spacing: .06em; }
       .team[data-rb-rules="pinpointing"] .track { display: none; }
       .pips { display: flex; gap: 7px; margin-top: 7px; }
@@ -183,8 +197,8 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
       .settings select { width: 100%; padding: 8px; border: 1px solid #ffffff45; border-radius: 6px; background: #252b36; color: #fff; }
       .settings p { margin: 11px 0 15px; color: #cbd0da; font-size: 12px; font-weight: 450; line-height: 1.45; }
       .settings button { float: right; padding: 7px 12px; border: 0; border-radius: 6px; background: #e9edf5; color: #111; cursor: pointer; }
-      @media (max-width: 620px) { .hud { width: calc(100vw - 18px); top: 52px; } .teams { gap: 100px; }
-        .team { width: calc((100% - 100px) / 2); padding-inline: 7px; } .health { font-size: 17px; }
+      @media (max-width: 620px) { .hud { left: 9px; right: 9px; top: 52px; } .teams { gap: 100px; }
+        .team { width: calc((100% - 100px) / 2); padding-inline: 7px; } .health { font-size: 27px; }
         .numbers { flex-wrap: wrap; gap: 3px; } .team-head { flex-wrap: wrap; } }
     </style>
     <section class="hud" data-rb="hud" aria-live="polite" hidden>
@@ -420,7 +434,7 @@ export function createPlayerTieRangeUi(dependencies: PlayerTieRangeUiDependencie
             Object.assign(replacement.style, {
               position: 'absolute', inset: '0', zIndex: '2', display: 'grid', placeItems: 'center',
               background: '#10141c', color: teamIndex === 0 ? '#59b7ff' : '#ff6978',
-              font: '600 14px/1.2 Inter, system-ui, sans-serif', pointerEvents: 'auto',
+              font: '700 22px/1.2 "kaneda-gothic", "Oswald", "Arial Narrow", "Noto Sans JP", sans-serif', pointerEvents: 'auto',
             });
             cell.append(replacement);
             summaryReplacements.set(cell, replacement);

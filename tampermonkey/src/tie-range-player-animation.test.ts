@@ -28,5 +28,37 @@ test('Pinpointing Duels counts, announces the verdict at the collision beat, and
   assert.equal(pinpointingPhase(1749).verdict, false);
   assert.equal(pinpointingPhase(1750).verdict, true);
   assert.equal(pinpointingPhase(2999).done, false);
-  assert.equal(pinpointingPhase(3000).done, true);
+  assert.equal(pinpointingPhase(3000).done, false);
+  assert.equal(pinpointingPhase(4250).done, true);
+});
+
+
+test('keeps the impact tail visible after HP settles, matching the presenter', () => {
+  assert.equal(scoringPhase(4400, false, false).health, 1);
+  assert.equal(scoringPhase(4400, false, false).done, false);
+  assert.equal(scoringPhase(5600, false, false).done, true);
+  assert.equal(scoringPhase(4900, true, false).done, false);
+  assert.equal(scoringPhase(6100, true, false).done, true);
+});
+
+test('uses spring HP and a faster bar instead of linear interpolation', () => {
+  const phase = scoringPhase(3800, false, false);
+  assert.ok(phase.health > .7 && phase.health < .8);
+  assert.ok(phase.bar > phase.health);
+});
+
+test('score travel anticipates the collision and continues through impact', () => {
+  assert.ok(scoringPhase(1850, false, false).motion.travel < 0);
+  const before = scoringPhase(3599.99, false, false).motion;
+  const impact = scoringPhase(3600, false, false).motion;
+  assert.ok(impact.flight < 1);
+  assert.ok(Math.abs(before.flight - impact.flight) < .001);
+  assert.equal(scoringPhase(3650, false, false).motion.flight, 1);
+});
+
+test('a zero-damage result never flies toward or flashes the health bar', () => {
+  const phase = scoringPhase(4000, true, false, false);
+  assert.equal(phase.flight, 0);
+  assert.equal(phase.health, 0);
+  assert.equal(phase.done, true);
 });
