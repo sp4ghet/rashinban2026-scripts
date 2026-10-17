@@ -152,6 +152,8 @@ try {
   assert.ok(await evaluate(`document.querySelector('[class*="hud_healthBars__"]').getBoundingClientRect().width>0`),'native animation target keeps its geometry');
   assert.ok(await evaluate(`(()=>{let a=${shadow}.querySelector('[data-rb="team-0"]').getBoundingClientRect(),b=${shadow}.querySelector('[data-rb="team-1"]').getBoundingClientRect();return a.right<=innerWidth/2-90&&b.left>=innerWidth/2+90})()`),'center compass has unobstructed space');
   assert.notEqual(await evaluate(`getComputedStyle(document.getElementById('native-timer')).visibility`),'hidden','timer remains visible');
+  await until(`[...document.fonts].some(face=>face.family.replaceAll('"','')==='kaneda-gothic' && face.status==='loaded')`,'Kaneda Gothic web font loaded',15000);
+  assert.match(await evaluate(`getComputedStyle(${shadow}.querySelector('[data-rb="health"]')).fontFamily`),/kaneda-gothic/);
   await screenshot('01-playing');
 
   // Native animation may start before the next polling response is available.
@@ -175,10 +177,21 @@ try {
   await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='multiplier'`,'multiplier cue changes difference into custom damage');
   assert.match(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').textContent`),/3705/);
   assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').dataset.factor`),'\u00d71.5','damage shows the multiplier actually used');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="score-calculation"]').textContent`),'\u00d71.5','presenter-style multiplier label');
+  const tokenPosition = await evaluate(`(()=>{const root=${shadow};const damage=root.querySelector('[data-rb="team-1"] [data-rb="damage"]');const score=root.querySelector('[data-rb="result-team-1"]');const a=damage.getBoundingClientRect(),b=score.getBoundingClientRect();return {x:a.x+a.width/2,y:a.y+a.height/2,scoreX:b.x+b.width/2,scoreY:b.y+b.height/2,font:getComputedStyle(damage).fontFamily,position:getComputedStyle(damage).position}})()`);
+  assert.ok(Math.abs(tokenPosition.x-tokenPosition.scoreX)<35 && Math.abs(tokenPosition.y-tokenPosition.scoreY)<1,'damage token remains at the score during multiplication');
+  assert.match(tokenPosition.font,/kaneda-gothic/);
+  assert.equal(tokenPosition.position,'fixed');
   await screenshot('02-multiplier');
   await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='flight'`,'damage flies only after multiplier hold');
   assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent`),'6000','HP waits until flight impact');
   await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='health'`,'HP begins with impact');
+  assert.ok(Number(await evaluate(`${shadow}.querySelector('[data-rb="team-1"]').style.getPropertyValue('--score-impact')`))>0,'losing HUD flashes at impact');
+  await evaluate(`scene('playing')`);
+  await until(`${shadow}.querySelector('[data-rb="result"]').hidden`,'leaving a result hides scoring');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"]').style.getPropertyValue('--score-impact')`),'0','leaving mid-impact clears the HUD flash');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"] [data-rb="damage"]').hasAttribute('data-animating')`),false,'leaving clears fixed damage positioning');
+  await evaluate(`scene('result')`);
   await until(`${shadow}?.textContent.includes('2295')`,'revealed custom damage');
   const resultText=await evaluate(`${shadow}.textContent`);
   assert.match(resultText,/3705|3,705/,'full damage inside the band');
@@ -194,10 +207,11 @@ try {
 
   // A saved preference never changes the scoring mode of an attached game.
   await evaluate(`var s=${shadow}.querySelector('[data-rb="mode-select"]');s.value='half';s.dispatchEvent(new Event('change'))`);
-  await until(`saved['rb-tie-range:mode']==='half' && ${shadow}.querySelector('[data-rb="mode"]').textContent.includes('next duel')`,'next-duel mode capture');
-  assert.match(await evaluate(`${shadow}.querySelector('[data-rb="mode"]').textContent`),/Full/);
+  await until(`saved['rb-tie-range:mode']==='half'`,'next-duel mode capture');
+  assert.equal(await evaluate(`JSON.parse(saved['rashinban.tie-range.game.'+fixture.gameId]).mode`),'full','current duel retains captured rules');
   await command('Page.reload');
-  await until(`${shadow}?.querySelector('[data-rb="mode"]').textContent.includes('Full')`,'captured mode survives real page reload');
+  await until(`${shadow}?.querySelector('[data-rb="team-0"] [data-rb="health"]')?.textContent==='6000'`,'HUD recovers after real page reload');
+  assert.equal(await evaluate(`JSON.parse(saved['rashinban.tie-range.game.'+fixture.gameId]).mode`),'full','captured mode survives real page reload');
   await evaluate(`fixture=structuredClone(manual.resolvedDamage);scene('result');refresh()`);
   await until(`${shadow}?.querySelector('[data-rb="team-1"] [data-rb="health"]').textContent==='2295'`,'saved scores recover after reload');
   assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="result"]').dataset.phase`),'complete','reloaded results never replay old damage');
@@ -318,6 +332,42 @@ try {
   await evaluate('snapshotDelay=0');
   await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='complete'`,'delayed round settles');
 
+  // A tie moves both scores to the midpoint without flying to either HP bar.
+  await evaluate(`fixture=structuredClone(manual.created);fixture.gameId='motion-tie';scene('playing');refresh()`);
+  await until(`saved['rashinban.tie-range.game.motion-tie']`,'tie game initialized');
+  await evaluate(`fixture=structuredClone(manual.resolvedDamage);fixture.gameId='motion-tie';fixture.teams[1].roundResults.at(-1).score=fixture.teams[0].roundResults.at(-1).score;scene('result');refresh()`);
+  await until(`![0,1].some(i=>${shadow}.querySelector('[data-rb="moving-score-'+i+'"]').hidden)`,'tie moves both score tokens');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='complete'`,'tie completes');
+  assert.deepEqual(await evaluate(`[0,1].map(i=>${shadow}.querySelector('[data-rb="team-'+i+'"] [data-rb="health"]').textContent)`),['6000','6000']);
+  assert.ok(await evaluate(`[0,1].every(i=>${shadow}.querySelector('[data-rb="team-'+i+'"] [data-rb="damage"]').hidden)`),'tie never shows damage');
+
+  // Pinpointing uses the same score rise, then a verdict pop instead of damage.
+  await evaluate(`openSettings();var check=${shadow}.querySelector('[data-rb="pinpointing-check"]');check.checked=true;check.dispatchEvent(new Event('change'));fixture=structuredClone(manual.created);fixture.gameId='motion-points';scene('playing');refresh()`);
+  await until(`saved['rashinban.tie-range.game.motion-points']`,'Pinpointing game initialized');
+  await evaluate(`fixture=structuredClone(manual.resolvedDamage);fixture.gameId='motion-points';fixture.teams[0].roundResults.at(-1).score=5000;scene('result');refresh()`);
+  await until(`!${shadow}.querySelector('[data-rb="result-verdict"]').hidden`,'Pinpointing verdict appears');
+  assert.match(await evaluate(`${shadow}.querySelector('[data-rb="result-verdict"]').textContent`),/Solo 5K/);
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="health"]').textContent`),'2 / 7');
+  assert.ok(await evaluate(`[0,1].every(i=>${shadow}.querySelector('[data-rb="team-'+i+'"] [data-rb="damage"]').hidden)`),'Pinpointing never shows damage');
+  await screenshot('09-pinpointing-verdict');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='complete'`,'Pinpointing verdict hold completes');
+
+  // Reduced motion preserves cue timing and arithmetic without travel or flashes.
+  await command('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+  await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
+  await evaluate(`openSettings();var check=${shadow}.querySelector('[data-rb="pinpointing-check"]');check.checked=false;check.dispatchEvent(new Event('change'));fixture=structuredClone(manual.created);fixture.gameId='motion-reduced';scene('playing');refresh()`);
+  await until(`saved['rashinban.tie-range.game.motion-reduced']`,'reduced-motion game initialized');
+  await evaluate(`fixture=structuredClone(manual.resolvedDamage);fixture.gameId='motion-reduced';scene('result');refresh()`);
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='difference'`,'reduced-motion result');
+  assert.ok(await evaluate(`[0,1].every(i=>${shadow}.querySelector('[data-rb="moving-score-'+i+'"]').hidden)`),'reduced motion has no travelling tokens');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="result-team-0"]').style.transform`),'');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='health'`,'reduced-motion impact');
+  assert.equal(await evaluate(`${shadow}.querySelector('[data-rb="team-1"]').style.getPropertyValue('--score-impact')`),'0');
+  assert.ok(await evaluate(`[...${shadow}.querySelectorAll('[data-rb="teams"] .team')].every(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth})`),'mobile HUD remains inside the viewport');
+  await screenshot('10-reduced-mobile');
+  await command('Emulation.setEmulatedMedia',{features:[]});
+  await command('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+
   // A known non-player must never get an oriented/custom player HUD.
   await evaluate(`document.getElementById('__NEXT_DATA__').textContent=JSON.stringify({props:{accountProps:{account:{user:{userId:'non-player'}}}}});refresh()`);
   await until(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).visibility!=='hidden'`,'non-player fallback');
@@ -336,7 +386,7 @@ try {
   assert.equal(await evaluate('requests.length'),count,'no requests outside player routes');
   assert.deepEqual(await evaluate(`Array.from(new Set(requests.map(r=>r.method)))`),['GET'],'read-only player transport');
   assert.equal(errors.length,0,'no uncaught browser exceptions');
-  console.log('Player browser validation passed: bootstrap, live routing, disclosure, damage, remount, settings, real reload, next-duel mode, terminal/abort retention, Off, summary draw, stale, non-player, teardown, native count/collision/multiplier/impact timing, delayed snapshot catch-up, read-only requests.');
+  console.log('Player browser validation passed: bootstrap, live routing, disclosure, damage, remount, settings, real reload, next-duel mode, terminal/abort retention, Off, summary draw, stale, non-player, teardown, native count/collision/multiplier/impact timing, Kaneda font loading, token geometry, mid-impact cleanup, ties, Pinpointing verdict, reduced motion/mobile, delayed snapshot catch-up, read-only requests.');
   console.log('Screenshots: '+artifacts);
 } finally {
   if(socket?.readyState===WebSocket.OPEN){try{await command('Browser.close');}catch{}socket.close();}

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.3.2
+// @version      0.3.3
 // @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Set the same rules as the presenter before joining a duel.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -1625,22 +1625,174 @@
     states.forEach((filled, index) => container.children[index].classList.toggle("filled", filled));
   }
 
-  // tampermonkey/src/tie-range-player-animation.ts
-  var progress = (elapsed, start2, duration) => Math.max(0, Math.min(1, (elapsed - start2) / duration));
-  function scoringPhase(elapsed, nativeMultiplier, tie) {
-    const impact = nativeMultiplier ? 4100 : 3600;
+  // bundles/rashinban/src/presenter/scoring.ts
+  function scoreSequence(calculation, revealAtMs, timing) {
+    const immediate = timing.countMs === 0 && timing.damageMs === 0;
+    const duration = (ms) => immediate ? 0 : ms;
+    const countAtMs = revealAtMs + duration(1210);
+    const countEndAtMs = countAtMs + timing.countMs;
+    const subtractAtMs = countEndAtMs + duration(1e3);
+    if (calculation.pinpointing) {
+      const verdictAtMs = subtractAtMs;
+      return {
+        ...calculation,
+        countAtMs,
+        countEndAtMs,
+        subtractAtMs,
+        collisionAtMs: verdictAtMs,
+        differenceAtMs: verdictAtMs,
+        multiplierAtMs: null,
+        flightAtMs: null,
+        impactAtMs: null,
+        healthEndAtMs: verdictAtMs,
+        verdictAtMs,
+        completeAtMs: verdictAtMs + duration(2500)
+      };
+    }
+    const differenceAtMs = subtractAtMs + duration(350);
+    const collisionAtMs = subtractAtMs + duration(calculation.tied ? 350 : 250);
+    const multiplied = !calculation.tied && calculation.multiplier !== 1;
+    const multiplierAtMs = multiplied ? subtractAtMs + duration(1e3) : null;
+    const flightAtMs = calculation.hasDamage ? subtractAtMs + duration(multiplied ? 2e3 : 1500) : null;
+    const impactAtMs = flightAtMs === null ? null : flightAtMs + duration(350);
+    const healthEndAtMs = (impactAtMs ?? differenceAtMs) + timing.damageMs;
+    const completeAtMs = calculation.tied ? subtractAtMs + duration(700) : impactAtMs === null ? subtractAtMs + duration(multiplied ? 2e3 : 1500) : impactAtMs + Math.max(duration(2e3), timing.damageMs);
+    return { ...calculation, countAtMs, countEndAtMs, subtractAtMs, collisionAtMs, differenceAtMs, multiplierAtMs, flightAtMs, impactAtMs, healthEndAtMs, completeAtMs, verdictAtMs: null };
+  }
+  function fraction(now, from, to) {
+    if (from === null || to === null || now < from) return 0;
+    return to <= from ? 1 : Math.min(1, (now - from) / (to - from));
+  }
+  function scoreProjection(sequence, revealAtMs, now) {
+    const s = sequence;
+    const verdictAtMs = s.verdictAtMs;
+    const stage = now >= s.completeAtMs ? "complete" : now < s.countAtMs ? "entry" : now < s.countEndAtMs ? "count" : now < s.subtractAtMs ? "score-hold" : verdictAtMs !== null && now >= verdictAtMs ? "verdict" : s.tied ? "tie" : s.impactAtMs !== null && now >= s.impactAtMs ? "impact" : s.flightAtMs !== null && now >= s.flightAtMs ? "flight" : s.multiplierAtMs !== null && now >= s.multiplierAtMs ? "multiplier" : now >= s.differenceAtMs ? "difference" : "subtract";
     return {
-      count: progress(elapsed, 0, 750),
-      collision: progress(elapsed, 1750, 400),
-      difference: !tie && elapsed >= 2100,
-      multiplied: !tie && nativeMultiplier && elapsed >= 2750,
-      flight: tie ? 0 : progress(elapsed, impact - 350, 400),
-      health: tie ? 0 : progress(elapsed, impact, 800),
-      done: elapsed >= (tie ? 2450 : impact + 800)
+      tied: s.tied,
+      hasDamage: s.hasDamage,
+      winnerId: s.winnerId,
+      loserId: s.loserId,
+      difference: s.difference,
+      damage: s.damage,
+      multiplier: s.multiplier,
+      ...s.pinpointing ? { pinpointing: s.pinpointing } : {},
+      stage,
+      entryProgress: fraction(now, revealAtMs, revealAtMs + 700),
+      countProgress: fraction(now, s.countAtMs, s.countAtMs + 750),
+      subtractProgress: fraction(now, s.subtractAtMs, s.subtractAtMs + 400),
+      differenceProgress: fraction(now, s.differenceAtMs, s.differenceAtMs + 1e3),
+      multiplierProgress: fraction(now, s.multiplierAtMs, s.multiplierAtMs === null ? null : s.multiplierAtMs + 1e3),
+      multiplierFadeProgress: fraction(now, s.multiplierAtMs === null ? null : s.multiplierAtMs + 100, s.multiplierAtMs === null ? null : s.multiplierAtMs + 1200),
+      flightProgress: fraction(now, s.flightAtMs, s.flightAtMs === null ? null : s.flightAtMs + 400),
+      impactProgress: fraction(now, s.impactAtMs, s.impactAtMs === null ? null : s.impactAtMs + 1e3),
+      tieProgress: fraction(now, s.collisionAtMs, s.completeAtMs),
+      verdictProgress: fraction(now, verdictAtMs, verdictAtMs === null ? null : verdictAtMs + 400)
+    };
+  }
+  function healthProgress(now, start2, end, stiff = false) {
+    const p = fraction(now, start2, end);
+    if (p === 0 || p === 1 || start2 === null || end === null) return p;
+    const tension = stiff ? 210 : 170;
+    const friction = stiff ? 20 : 26;
+    const damping = friction / 2;
+    const frequency = Math.sqrt(tension - damping * damping);
+    const spring2 = (seconds) => 1 - Math.exp(-damping * seconds) * (Math.cos(frequency * seconds) + damping / frequency * Math.sin(frequency * seconds));
+    return spring2((now - start2) / 1e3) / spring2((end - start2) / 1e3);
+  }
+
+  // bundles/rashinban/src/presenter/timeline.ts
+  var DEFAULT_TIMING = { leadMs: 200, countMs: 750, damageMs: 800, effectWatchdogMs: 1e4 };
+
+  // bundles/rashinban/src/graphics/presenter/scoring-motion.ts
+  var travel = (p) => p === 0 || p === 1 ? p : 2.80158 * p ** 3 - 1.80158 * p ** 2;
+  function spring(seconds, wobbly = false) {
+    if (seconds <= 0) return 0;
+    const damping = wobbly ? 6 : 13;
+    const frequency = Math.sqrt((wobbly ? 180 : 170) - damping ** 2);
+    return 1 - Math.exp(-damping * seconds) * (Math.cos(frequency * seconds) + damping / frequency * Math.sin(frequency * seconds));
+  }
+  function bezier(p, x1, y1, x2, y2) {
+    if (p <= 0 || p >= 1) return p;
+    const axis = (t, a, b) => 3 * (1 - t) ** 2 * t * a + 3 * (1 - t) * t ** 2 * b + t ** 3;
+    let low = 0;
+    let high = 1;
+    for (let i = 0; i < 20; i++) {
+      const t = (low + high) / 2;
+      if (axis(t, x1, x2) < p) low = t;
+      else high = t;
+    }
+    return axis((low + high) / 2, y1, y2);
+  }
+  function scoreMotion(s) {
+    const collision = spring(s.differenceProgress);
+    const impact = spring(s.impactProgress);
+    const multiplier2 = spring(s.multiplierProgress, true);
+    const damageScale = 1 + 0.3 * multiplier2;
+    const wobble = 30 * (spring(s.differenceProgress, true) - spring(s.differenceProgress - 0.05, true));
+    const tie = spring(s.tieProgress * 0.35);
+    return {
+      entry: bezier(s.entryProgress, 0.05, 0.75, 0.49, 1),
+      rise: spring(s.countProgress * 0.75),
+      travel: travel(s.subtractProgress),
+      flight: travel(s.flightProgress),
+      collisionOpacity: 1 - collision,
+      collisionScale: 1 + 0.5 * collision,
+      wobble,
+      damageScale,
+      impactOpacity: 1 - impact,
+      impactScale: damageScale + (1.75 - damageScale) * impact,
+      tieOpacity: 1 - tie,
+      tieScale: 1 + 0.5 * tie,
+      multiplierScale: bezier(Math.min(1, s.multiplierProgress / 0.3), 0.34, 1.56, 0.64, 1),
+      multiplierOpacity: 1 - s.multiplierFadeProgress
+    };
+  }
+
+  // tampermonkey/src/tie-range-player-animation.ts
+  function frameAt(elapsed, calculation) {
+    const initial = scoreSequence(calculation, 0, DEFAULT_TIMING);
+    const reveal = -initial.countAtMs;
+    const sequence = scoreSequence(calculation, reveal, DEFAULT_TIMING);
+    const scoring = scoreProjection(sequence, reveal, elapsed);
+    return {
+      scoring,
+      motion: scoreMotion(scoring),
+      count: fraction(elapsed, sequence.countAtMs, sequence.countEndAtMs),
+      health: healthProgress(elapsed, sequence.impactAtMs, sequence.healthEndAtMs),
+      bar: healthProgress(elapsed, sequence.impactAtMs, sequence.healthEndAtMs, true),
+      done: scoring.stage === "complete"
+    };
+  }
+  function scoringPhase(elapsed, multiplied, tie, hasDamage = !tie) {
+    const frame = frameAt(elapsed, {
+      tied: tie,
+      hasDamage,
+      winnerId: null,
+      loserId: null,
+      difference: 0,
+      damage: 0,
+      multiplier: multiplied ? 1.5 : 1
+    });
+    return {
+      ...frame,
+      collision: frame.scoring.subtractProgress,
+      difference: !tie && ["difference", "multiplier", "flight", "impact", "complete"].includes(frame.scoring.stage),
+      multiplied: !tie && multiplied && ["multiplier", "flight", "impact", "complete"].includes(frame.scoring.stage),
+      flight: frame.scoring.flightProgress
     };
   }
   function pinpointingPhase(elapsed) {
-    return { count: progress(elapsed, 0, 750), verdict: elapsed >= 1750, done: elapsed >= 3e3 };
+    const frame = frameAt(elapsed, {
+      tied: false,
+      hasDamage: false,
+      winnerId: null,
+      loserId: null,
+      difference: 0,
+      damage: 0,
+      multiplier: 1,
+      pinpointing: { points: [0, 0], reason: "closest", totalsBefore: [0, 0], totalsAfter: [0, 0], matchPoint: [false, false] }
+    });
+    return { ...frame, verdict: frame.scoring.stage === "verdict" || frame.done };
   }
   function verdictText(result, teams) {
     const points = result.points ?? [0, 0];
@@ -1657,11 +1809,16 @@
     const moving = [0, 1].map((index) => {
       const element = document2.createElement("span");
       element.dataset.rb = `moving-score-${index}`;
-      element.style.cssText = "position:fixed;font-size:40px;font-weight:700;color:white;text-shadow:0 2px 6px #000;pointer-events:none;z-index:2";
+      element.className = "score-token";
       element.hidden = true;
       shadow.append(element);
       return element;
     });
+    const calculation = document2.createElement("span");
+    calculation.className = "score-calculation";
+    calculation.dataset.rb = "score-calculation";
+    calculation.hidden = true;
+    shadow.append(calculation);
     let session = null;
     let view = null;
     let display = null;
@@ -1671,6 +1828,7 @@
       moving.forEach((element) => {
         element.hidden = true;
       });
+      calculation.hidden = true;
     }
     function draw() {
       if (!session || !view || !display?.teams || !session.root.isConnected) {
@@ -1680,93 +1838,135 @@
       const natives = [...session.root.querySelectorAll('[class*="damage-animation_score__"]')];
       const now = page.performance.now();
       if (session.start === null && natives.some((element) => Number.parseFloat(page.getComputedStyle(element).opacity) > 0)) session.start = now;
-      session.multiplier || (session.multiplier = !!session.root.querySelector('[class*="damage-animation_multiplier__"]'));
       const elapsed = session.settled ? Infinity : session.start === null ? -1 : now - session.start;
       if (elapsed >= 0 && elapsed < 1750) natives.slice(0, 2).forEach((element, i) => {
         if (/^\d+$/.test(element.textContent?.trim() ?? "")) session.scores[i] = element.textContent.trim();
       });
       const result = display.result;
       node("result").hidden = elapsed < 0 || !result && (session.settled || view.localTeamId === null || Number(JSON.parse(session.key)[1]) < (view.context?.currentRoundNumber ?? 0));
-      if (elapsed < 0) hideMoving();
+      hideMoving();
+      const reduced = page.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
       if (display.pinpointing) {
-        const points = pinpointingPhase(elapsed);
-        node("result").dataset.phase = elapsed < 0 ? "entry" : points.done ? "complete" : points.verdict ? "verdict" : points.count < 1 ? "count" : "hold";
+        const points2 = pinpointingPhase(elapsed);
+        node("result").dataset.phase = elapsed < 0 ? "entry" : points2.done ? "complete" : points2.verdict ? "verdict" : points2.count < 1 ? "count" : "hold";
         [node("result-team-0"), node("result-team-1")].forEach((element, i) => {
-          element.textContent = result ? String(Math.round(result.scores[i] * points.count)) : session.scores[i];
-          element.style.opacity = "1";
+          element.textContent = result ? String(Math.round(result.scores[i] * points2.count)) : session.scores[i];
+          element.style.opacity = String(points2.done || reduced ? 1 : points2.motion.rise);
+          element.style.transform = reduced ? "" : `translateY(${50 * (1 - points2.motion.rise)}px)`;
           moving[i].hidden = true;
         });
         const verdict = node("result-verdict");
-        verdict.hidden = !result || !points.verdict;
-        if (result && points.verdict) verdict.textContent = verdictText(result, display.teams);
+        verdict.hidden = !result || !points2.verdict;
+        if (result && points2.verdict) verdict.textContent = verdictText(result, display.teams);
+        verdict.style.transform = reduced ? "" : `scale(${0.6 + 0.4 * points2.scoring.verdictProgress})`;
+        verdict.style.opacity = String(reduced ? 1 : Math.min(1, points2.scoring.verdictProgress * 2));
         const settled = result ? view.pinpointing?.rounds.find((round) => round.round === result.round) : null;
         display.teams.forEach((team, i) => {
           const root = node(`team-${i}`);
           root.querySelector('[data-rb="damage"]').hidden = true;
+          root.style.setProperty("--score-impact", "0");
           const canonicalIndex = view.pinpointing?.teamIds.indexOf(team.teamId) ?? -1;
           if (!settled || canonicalIndex < 0 || team.firstTo === void 0) return;
-          const total = points.verdict ? settled.totalsAfter[canonicalIndex] : settled.totalsBefore[canonicalIndex];
+          const total = points2.verdict ? settled.totalsAfter[canonicalIndex] : settled.totalsBefore[canonicalIndex];
           root.querySelector('[data-rb="health"]').textContent = `${total} / ${team.firstTo}`;
           renderPointPips(root.querySelector('[data-rb="pips"]'), total, team.firstTo);
           root.querySelector('[data-rb="multiplier"]').textContent = total >= team.firstTo - 2 && total < team.firstTo ? "MATCH POINT" : "";
         });
-        if (display.terminal && result) node("terminal").hidden = !points.done;
-        if (points.done) completed.add(session.key);
+        if (display.terminal && result) node("terminal").hidden = !points2.done;
+        if (points2.done) completed.add(session.key);
         return;
       }
       node("result-verdict").hidden = true;
       const tie = !!result && result.scores[0] === result.scores[1];
-      const phase = scoringPhase(elapsed, session.multiplier, tie);
-      node("result").dataset.phase = elapsed < 0 ? "entry" : phase.done ? "complete" : phase.health > 0 ? "health" : phase.flight > 0 ? "flight" : phase.multiplied ? "multiplier" : phase.difference ? "difference" : phase.collision > 0 ? "collision" : phase.count < 1 ? "count" : "hold";
-      const reduced = page.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      const winner = result && result.scores[1] > result.scores[0] ? 1 : 0;
+      const loser = winner === 0 ? 1 : 0;
+      const hasDamage = !!result?.damageDealt.some((amount) => amount > 0);
+      const factor = result ? result.usedMultiplierTenths[winner] / 10 : 1;
+      const phase = scoringPhase(elapsed, factor !== 1, tie, hasDamage);
+      const { scoring, motion } = phase;
+      const stage = scoring.stage;
+      node("result").dataset.phase = elapsed < 0 ? "entry" : stage === "score-hold" ? "hold" : stage === "subtract" || stage === "tie" ? "collision" : stage === "impact" ? "health" : stage;
       const scores = [node("result-team-0"), node("result-team-1")];
+      const ghost = !phase.done && !["entry", "count", "score-hold"].includes(stage);
       scores.forEach((element, i) => {
         element.textContent = result ? String(Math.round(result.scores[i] * phase.count)) : session.scores[i];
-        element.style.opacity = phase.collision > 0 && !phase.done ? ".65" : "1";
-        moving[i].hidden = true;
+        element.style.opacity = String(reduced || phase.done ? 1 : ghost ? 0.25 : motion.rise);
+        element.style.transform = reduced || ghost || phase.done ? "" : `translateY(${50 * (1 - motion.rise)}px)`;
       });
+      const center = (element) => {
+        const box = element.getBoundingClientRect();
+        return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+      };
+      const mix = (a, b, p) => ({ x: a.x + (b.x - a.x) * p, y: a.y + (b.y - a.y) * p });
+      const points = scores.map(center);
+      const show = (element, value, point, opacity = 1, scale = 1) => {
+        element.hidden = false;
+        element.textContent = String(value);
+        element.style.left = `${point.x}px`;
+        element.style.top = `${point.y}px`;
+        element.style.opacity = String(Math.max(0, opacity));
+        element.style.transform = `translate(-50%, -50%) scale(${scale})`;
+      };
       display.teams.forEach((team, i) => {
         const root = node(`team-${i}`);
         const damage = root.querySelector('[data-rb="damage"]');
         damage.hidden = true;
-        damage.style.transform = "";
-        damage.style.opacity = "";
+        damage.removeAttribute("style");
         damage.dataset.factor = "";
+        delete damage.dataset.animating;
+        root.style.setProperty("--score-impact", !reduced && stage === "impact" && i === loser ? String(motion.impactOpacity) : "0");
         const canonicalIndex = view.output?.teamIds.indexOf(team.teamId) ?? -1;
         const settled = result ? view.output?.rounds.find((round) => round.round === result.round) : null;
         if (!settled || canonicalIndex < 0) return;
-        const health = Math.round(settled.healthBefore[canonicalIndex] + (team.health - settled.healthBefore[canonicalIndex]) * (tie ? 1 : phase.health));
+        const before = settled.healthBefore[canonicalIndex], after = settled.healthAfter[canonicalIndex];
+        const health = Math.round(before + (after - before) * phase.health);
         root.querySelector('[data-rb="health"]').textContent = String(health);
         const fill = root.querySelector('[data-rb="bar-fill"]');
+        const bar = before + (after - before) * phase.bar;
         fill.style.transition = "none";
-        fill.style.width = `${team.maximumHealth > 0 ? health / team.maximumHealth * 100 : 0}%`;
+        fill.style.width = `${team.maximumHealth > 0 ? Math.max(0, Math.min(100, bar / team.maximumHealth * 100)) : 0}%`;
         const used = result.usedMultiplierTenths[i];
-        const mult = phase.done || phase.health > 0 ? team.multiplierTenths : used;
+        const mult = phase.done || stage === "impact" ? team.multiplierTenths : used;
         root.querySelector('[data-rb="multiplier"]').textContent = `${mult / 10}\xD7`;
-        const amount = result.damageDealt[i === 0 ? 1 : 0];
-        if (!amount || !phase.difference) return;
-        damage.hidden = false;
-        const multiplied = elapsed >= 2750;
-        const factor = result.usedMultiplierTenths[i === 0 ? 1 : 0] / 10;
+        if (i !== loser || tie || !phase.difference) return;
+        const amount = result.damageDealt[winner];
+        const difference = Math.abs(result.scores[0] - result.scores[1]);
+        const multiplied = phase.multiplied;
         damage.dataset.factor = multiplied && !phase.done && factor !== 1 ? `\xD7${factor}` : "";
-        damage.textContent = multiplied ? `\u2212${amount}` : String(Math.abs(result.scores[0] - result.scores[1]));
-        damage.title = `${Math.abs(result.scores[0] - result.scores[1])} \xD7 ${result.usedMultiplierTenths[i === 0 ? 1 : 0] / 10} = ${amount}`;
-        if (!reduced && !phase.done) {
-          const target = damage.getBoundingClientRect(), origin = scores[i].getBoundingClientRect();
-          const flight = phase.flight;
-          damage.style.transform = `translate(${(origin.left + origin.width / 2 - target.left - target.width / 2) * (1 - flight)}px, ${(origin.top - target.top) * (1 - flight)}px) scale(${multiplied && flight === 0 ? 1.3 : 1})`;
-          if (phase.health > 0 && phase.health < 1) damage.style.opacity = String(Math.max(0.2, 1 - phase.health));
+        damage.title = `${difference} \xD7 ${factor} = ${amount}`;
+        if (phase.done || reduced) {
+          damage.hidden = amount === 0;
+          damage.textContent = `\u2212${amount}`;
+          return;
+        }
+        damage.dataset.animating = "true";
+        const impact = stage === "impact";
+        const inFlight = stage === "flight" || impact;
+        const point = inFlight ? mix(points[loser], center(root.querySelector('[data-rb="health"]')), motion.flight) : { x: points[loser].x + (winner === 0 ? 1 : -1) * motion.wobble, y: points[loser].y };
+        show(
+          damage,
+          inFlight || multiplied ? amount : difference,
+          point,
+          impact ? motion.impactOpacity : 1,
+          impact ? motion.impactScale : motion.damageScale
+        );
+        if (factor !== 1 && ["multiplier", "flight"].includes(stage) && motion.multiplierOpacity > 0) {
+          calculation.hidden = false;
+          calculation.textContent = `\xD7${factor}`;
+          calculation.style.opacity = String(motion.multiplierOpacity);
+          calculation.style.transform = `translateY(-50%) rotate(20deg) scale(${motion.multiplierScale})`;
+          calculation.style.left = `${Math.min(points[loser].x + damage.offsetWidth * motion.damageScale / 2 + 6, page.innerWidth - calculation.offsetWidth - 12)}px`;
+          calculation.style.top = `${points[loser].y - damage.offsetHeight * motion.damageScale / 2 + 18}px`;
         }
       });
-      if (result && elapsed >= 1750 && elapsed < 2100 && !reduced) {
-        const winner = result.scores[0] >= result.scores[1] ? 0 : 1;
-        const boxes = scores.map((element) => element.getBoundingClientRect());
-        for (const i of tie ? [0, 1] : [winner]) {
-          const element = moving[i], origin = boxes[i], other = boxes[i === 0 ? 1 : 0];
-          element.hidden = false;
-          element.textContent = String(result.scores[i]);
-          element.style.left = `${origin.left + (other.left - origin.left) * phase.collision * (tie ? 0.5 : 1)}px`;
-          element.style.top = `${origin.top}px`;
+      if (result && !reduced && !phase.done) {
+        if (stage === "tie") {
+          const midpoint = mix(points[0], points[1], 0.5);
+          moving.forEach((element, i) => show(element, result.scores[i], mix(points[i], midpoint, motion.travel), motion.tieOpacity, motion.tieScale));
+        } else if (stage === "subtract") {
+          moving.forEach((element, i) => show(element, result.scores[i], i === winner ? mix(points[winner], points[loser], motion.travel) : points[i]));
+        } else if (["difference", "multiplier"].includes(stage) && motion.collisionOpacity > 1e-3) {
+          show(moving[winner], result.scores[winner], mix(points[winner], points[loser], motion.travel), motion.collisionOpacity, motion.collisionScale);
         }
       }
       if (display.terminal && result) node("terminal").hidden = !phase.done;
@@ -1789,7 +1989,7 @@
           const previous = JSON.parse(session.key), next = JSON.parse(key);
           if (previous.length === 2 && previous[0] === next[0] && previous[1] === next[1]) session.key = key;
         }
-        if (session?.key !== key) session = { key, root, start: null, multiplier: false, settled: skip || completed.has(key), scores: ["0", "0"] };
+        if (session?.key !== key) session = { key, root, start: null, settled: skip || completed.has(key), scores: ["0", "0"] };
         else session.root = root;
         draw();
         if (!frame) frame = page.requestAnimationFrame(tick);
@@ -1800,6 +2000,17 @@
         frame = 0;
         session = null;
         hideMoving();
+        for (const i of [0, 1]) {
+          const root = node(`team-${i}`);
+          root.style.setProperty("--score-impact", "0");
+          const damage = root.querySelector('[data-rb="damage"]');
+          damage.removeAttribute("style");
+          delete damage.dataset.animating;
+          damage.dataset.factor = "";
+          const score = node(`result-team-${i}`);
+          score.style.opacity = "";
+          score.style.transform = "";
+        }
       },
       reset() {
         this.stop();
@@ -1808,6 +2019,7 @@
       dispose() {
         this.reset();
         moving.forEach((element) => element.remove());
+        calculation.remove();
       }
     };
   }
@@ -1943,6 +2155,12 @@
   }
   function createPlayerTieRangeUi(dependencies) {
     const { document: document2 } = dependencies;
+    if (!document2.querySelector('link[href="https://use.typekit.net/ljs6bhu.css"]')) {
+      const fonts = document2.createElement("link");
+      fonts.rel = "stylesheet";
+      fonts.href = "https://use.typekit.net/ljs6bhu.css";
+      (document2.head ?? document2.documentElement).append(fonts);
+    }
     const mapOverlay = createPlayerMapOverlay(() => dependencies.getPageWindow?.() ?? document2.defaultView);
     document2.getElementById("rb-tie-range-player")?.remove();
     const host = document2.createElement("div");
@@ -1952,31 +2170,39 @@
     shadow.innerHTML = `
     <style>
       :host { all: initial; position: fixed; inset: 0; z-index: 2147483000; pointer-events: none;
-        color: #fff; font: 600 14px/1.2 Inter, system-ui, sans-serif; }
+        color: #fff; font: 600 14px/1.2 Inter, system-ui, sans-serif;
+        --presenter-latin: "kaneda-gothic", "Oswald", "Arial Narrow", "Noto Sans JP", sans-serif; }
+      .health, .multiplier, .damage, .result, .score-token, .score-calculation { font-family: var(--presenter-latin); }
       *, *::before, *::after { box-sizing: border-box; }
       [hidden] { display: none !important; }
-      .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 50%; width: calc(100vw - 48px);
-        transform: translateX(-50%); filter: drop-shadow(0 3px 9px #000b); }
+      .hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 24px; right: 24px; }
       .teams { display: flex; justify-content: space-between; gap: 180px; }
-      .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8; }
+      .team { position: relative; width: min(420px, calc((100% - 180px) / 2)); min-width: 0; padding: 7px 9px 9px; border: 1px solid #ffffff3b; border-radius: 8px; background: #0d111ae8;
+        box-shadow: 0 3px 9px #000b, 0 0 calc(24px * var(--score-impact, 0)) rgba(255, 100, 125, var(--score-impact, 0)); }
       .damage { position: absolute; top: calc(100% + 5px); right: 9px; padding: 4px 8px; border-radius: 5px;
         background: #35131f; z-index: 2; color: #ff8492; font-size: 32px; font-variant-numeric: tabular-nums; }
       .damage::before { content: attr(data-factor); display: block; font-size: 16px; color: #ffe169; text-align: center; }
+      .damage[data-animating="true"], .score-token { position: fixed; padding: 0; border-radius: 0; background: none;
+        color: #fff; font-size: 58px; line-height: 1; font-weight: 900; text-shadow: 0 3px 12px #10131fcc;
+        white-space: nowrap; pointer-events: none; z-index: 2; right: auto; }
+      .damage[data-animating="true"]::before { display: none; }
+      .score-calculation { position: fixed; font-size: 32px; line-height: 1; font-weight: 700; white-space: nowrap;
+        color: #ffd55a; text-shadow: 0 3px 10px #10131f; z-index: 3; }
       @media (prefers-reduced-motion: reduce) { .fill { transition: none; } }
       .team[data-side="blue"] { --team: #38a8ff; }
       .team[data-side="red"] { --team: #ff5365; }
       .team-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
       .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--team); font-size: 13px; }
       .numbers { display: flex; align-items: baseline; gap: 7px; }
-      .health { font-size: 20px; font-variant-numeric: tabular-nums; }
-      .multiplier { color: #ffe169; font-size: 16px; font-variant-numeric: tabular-nums; }
+      .health { font-size: 32px; font-variant-numeric: tabular-nums; }
+      .multiplier { color: #ffe169; font-size: 24px; font-variant-numeric: tabular-nums; }
       .track { height: 8px; margin-top: 5px; overflow: hidden; border-radius: 999px; background: #ffffff25; }
       .fill { height: 100%; width: 0; border-radius: inherit; background: var(--team); transition: width 220ms ease; }
-      .result { margin: 22px auto 0; width: 76%; text-align: center; font-size: 40px; text-shadow: 0 2px 6px #000; }
+      .result { margin: 22px auto 0; width: 76%; text-align: center; font-size: 58px; line-height: 1; font-weight: 700; text-shadow: 0 2px 6px #000; }
       .result-title { display: none; }
       .result-grid { display: flex; justify-content: space-between; gap: 100px; font-variant-numeric: tabular-nums; }
       .result-meta { display: none; }
-      .result-verdict { margin-top: 10px; font-size: 26px; color: #ffe169; letter-spacing: .03em; }
+      .result-verdict { margin-top: 10px; font-size: 36px; color: #ffe169; letter-spacing: .03em; }
       .team[data-rb-rules="pinpointing"] .multiplier { color: #ffe169; font-size: 13px; letter-spacing: .06em; }
       .team[data-rb-rules="pinpointing"] .track { display: none; }
       .pips { display: flex; gap: 7px; margin-top: 7px; }
@@ -1998,8 +2224,8 @@
       .settings select { width: 100%; padding: 8px; border: 1px solid #ffffff45; border-radius: 6px; background: #252b36; color: #fff; }
       .settings p { margin: 11px 0 15px; color: #cbd0da; font-size: 12px; font-weight: 450; line-height: 1.45; }
       .settings button { float: right; padding: 7px 12px; border: 0; border-radius: 6px; background: #e9edf5; color: #111; cursor: pointer; }
-      @media (max-width: 620px) { .hud { width: calc(100vw - 18px); top: 52px; } .teams { gap: 100px; }
-        .team { width: calc((100% - 100px) / 2); padding-inline: 7px; } .health { font-size: 17px; }
+      @media (max-width: 620px) { .hud { left: 9px; right: 9px; top: 52px; } .teams { gap: 100px; }
+        .team { width: calc((100% - 100px) / 2); padding-inline: 7px; } .health { font-size: 27px; }
         .numbers { flex-wrap: wrap; gap: 3px; } .team-head { flex-wrap: wrap; } }
     </style>
     <section class="hud" data-rb="hud" aria-live="polite" hidden>
@@ -2235,7 +2461,7 @@
                 placeItems: "center",
                 background: "#10141c",
                 color: teamIndex === 0 ? "#59b7ff" : "#ff6978",
-                font: "600 14px/1.2 Inter, system-ui, sans-serif",
+                font: '700 22px/1.2 "kaneda-gothic", "Oswald", "Arial Narrow", "Noto Sans JP", sans-serif',
                 pointerEvents: "auto"
               });
               cell.append(replacement);
