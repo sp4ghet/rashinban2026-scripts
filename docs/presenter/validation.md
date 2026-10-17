@@ -455,3 +455,72 @@ After integrating `main` at `5b4c39f` for PR #6, verification passed again:
 browser runs reported zero uncaught errors. The restarted NodeCG dev server
 also passed the four-feed signaling round-trip. The startup conflict was
 resolved by keeping both the relay and party-manager registrations.
+### Live relay screen quality — 2026-10-17
+
+The running test used OBS 32.2.2 / Chromium 127 as capture publisher and both
+presenter receivers. A second OBS supplied the gameplay via OBS Virtual Camera.
+The device and both OBS canvases/output formats were 1920 × 1080 at 60 fps.
+The capture owner also had eTronVideo, NVIDIA Broadcast and WarudoCam assigned,
+giving six active video encoders across stream and LED.
+
+A temporary additional receiver reproduced degraded gameplay down to
+320 × 180 at 3 fps, with zero packet loss and about 1 ms round-trip time.
+After restarting primary OBS with local CDP inspection, actual OBS senders
+reported VP8/libvpx, bandwidth adaptation, and 960 × 540 / 1280 × 720 gameplay.
+Increasing only the gameplay bitrate ceiling to 15 Mbps left both sends at
+1280 × 720 with `qualityLimitationReason: cpu`. Adding `contentHint: detail`
+and `degradationPreference: maintain-resolution` restored 1920 × 1080.
+
+The built fix applies those gameplay settings before every offer. It was
+reloaded into the live capture owner and verified on both receiver video
+elements, including a new connection. The final four samples, spaced five
+seconds apart, showed 1920 × 1080 gameplay at 59–60 encoded fps with no current
+quality limitation. Earlier samples under load did have lower frame rates;
+this is not an unconditional 60 fps guarantee. The stream's live canvas also
+matched 1920 × 1080. The LED page was waiting for a game during this sample,
+so its decoded video size was checked without claiming live canvas playback.
+Evidence is in `artifacts/presenter-validation/live-relay/` (`report.json`,
+`obs-defaults.json`, `obs-bitrate-15m.json`, `obs-detail.json`,
+`obs-built-fix.json`, `obs-final.json`, and captured gameplay PNGs).
+
+Validation: 684 unit tests, typecheck, build and diff checks passed. The real
+browser relay harness passed 37 gameplay-only checks and 55 four-input checks,
+including gameplay quality parameters after negotiation and viewer reload.
+The added quality assertion failed against the prior build before the fix.
+
+### H.264 and transparent OBS composition — 2026-10-17
+
+The live OBS comparison repeated VP8 → H.264 twice with four unchanged inputs
+and two viewers. Primary OBS plus its browser processes used 42.4% / 46.0% CPU
+with VP8 and 14.2% / 13.6% with H.264, normalized across 32 logical processors.
+GPU encoder utilization rose from 2% to 27–28%. All four gameplay encoders used
+`MediaFoundationVideoEncodeAccelerator`; the camera encoders used OpenH264 in
+this run. Gameplay retained 1920 × 1080 and 1920 × 960. Left gameplay averaged
+54 fps with H.264 versus 56–58 with VP8; right gameplay averaged 52–54 versus
+35–53. Live scene content varied: this establishes CPU headroom, not a guaranteed
+frame-rate gain. Measurements are in
+`artifacts/presenter-validation/live-relay/gpu-comparison.json`.
+
+H.264 preference is now applied to new connections, with alternatives retained.
+Round previews render independently of the gameplay source; LED previews have
+no minimap. `Transparent` is a persisted capture-window fill option. Actual PNG
+alpha checks cover both layouts, live gameplay holes, opaque lock badges,
+preview/results coverage, camera overlap holes, relayed-camera exclusion, and
+returning to green key fill. Run the isolated built-page check with:
+
+```powershell
+node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validate-presenter-compositing.mjs
+```
+
+The compositing harness uses simulated state and no Google API key: panorama
+activation and visibility gates are covered by renderer tests; alpha samples
+verify the real built page and CSS. Artifacts are in
+`artifacts/presenter-validation/compositing/`. The four-input relay harness
+also exercises relayed cameras with chroma/transparent gameplay.
+
+Final validation: **689/689 unit tests**, typecheck, build, diff checks,
+**11 compositing checks**, **41 gameplay relay checks**, **61 camera relay
+checks**, **56 direct-video checks**, and **48 motion/layout cases** passed.
+The relay tests negotiate and decode a VP8-only answer, then verify H.264 returns
+after reconnect. Independent review found no actionable issues. Diagnostics,
+browser profiles and live captures under `artifacts/` remain local.

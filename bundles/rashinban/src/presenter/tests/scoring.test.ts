@@ -4,6 +4,7 @@ import { applySnapshot } from '../normalize.ts';
 import { advanceTimeline, DEFAULT_TIMING, finishEffect } from '../timeline.ts';
 import { project } from '../projection.ts';
 import { sample } from './fixtures.ts';
+import { scoreMotion } from '../../graphics/presenter/scoring-motion.ts';
 
 function result(multiplier = 1, tied = false) {
   const state = structuredClone(applySnapshot(null, sample('gs2-ws-DuelRoundTimedOut-nopin.json')).state!);
@@ -15,6 +16,24 @@ function result(multiplier = 1, tied = false) {
   });
   return state;
 }
+
+test('scoring motion anticipates travel and remains continuous across collision and HP impact', () => {
+  const state = result(1.5); const t = advanceTimeline(null, state, 10000, false, DEFAULT_TIMING);
+  const motion = (now: number) => scoreMotion(project(state, t, now).scoring!);
+  assert.ok(motion(13360).travel < 0, 'winning score winds back before accelerating');
+  assert.ok(motion(15360).flight < 0, 'damage uses the same anticipation curve');
+  assert.ok(motion(13510).collisionOpacity === 1, 'winning score fades from full opacity at collision');
+  assert.ok(motion(13610).collisionOpacity < 1);
+  assert.equal(motion(14160).damageScale, 1, 'multiplier starts at the existing scale');
+  assert.ok(motion(14460).damageScale > 1.3, 'wobbly spring overshoots its 1.3 target');
+  assert.ok(motion(15160).multiplierOpacity > 0, 'multiplier fade overlaps the first 200ms of flight');
+  assert.equal(motion(15360).multiplierOpacity, 0, 'multiplier label finishes its captured 1200ms lifetime');
+  assert.ok(Math.abs(motion(15509).flight - motion(15510).flight) < 0.02, 'impact does not teleport damage to HP');
+  assert.equal(motion(15510).impactOpacity, 1);
+  assert.ok(motion(15610).impactOpacity < 1);
+  assert.ok(motion(15610).impactScale > motion(15510).impactScale);
+  assert.equal(motion(15560).flight, 1, 'travel finishes after the overlapping impact starts');
+});
 
 test('ordinary scoring explains count, subtraction, difference, flight and delayed authoritative HP impact', () => {
   const state = result(); const t = advanceTimeline(null, state, 10000, false, DEFAULT_TIMING);

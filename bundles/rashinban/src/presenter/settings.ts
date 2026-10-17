@@ -3,7 +3,7 @@ import { DEFAULT_TIMING } from './timeline.ts';
 
 export type PlayerViewSource = 'rendered' | 'chroma' | 'video';
 export type PresenterSettings = {
-  viewSource: PlayerViewSource; keyColor: '#00ff00' | '#ff00ff';
+  viewSource: PlayerViewSource; keyColor: '#00ff00' | '#ff00ff' | 'transparent';
   audioOutput: 'separate' | 'embedded'; muted: boolean;
   musicGain: number; effectsGain: number; timing: Timing;
   tieRange: { enabled: boolean; mode: 'full' | 'half' };
@@ -20,7 +20,7 @@ export function parseSettings(input: unknown): PresenterSettings {
   const value = input as Record<string, unknown>;
   if (Object.keys(value).some(key => !(key in DEFAULT_SETTINGS))) throw new Error('Unknown settings field');
   if (value.viewSource !== 'rendered' && value.viewSource !== 'chroma' && value.viewSource !== 'video') throw new Error('Invalid view source');
-  if (value.keyColor !== '#00ff00' && value.keyColor !== '#ff00ff') throw new Error('Invalid key color');
+  if (value.keyColor !== '#00ff00' && value.keyColor !== '#ff00ff' && value.keyColor !== 'transparent') throw new Error('Invalid key color');
   if (value.audioOutput !== 'separate' && value.audioOutput !== 'embedded') throw new Error('Invalid audio output');
   if (typeof value.muted !== 'boolean') throw new Error('Mute must be boolean');
   const tie = value.tieRange === undefined ? DEFAULT_SETTINGS.tieRange : value.tieRange;

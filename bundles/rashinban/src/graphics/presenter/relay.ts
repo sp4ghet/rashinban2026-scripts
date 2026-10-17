@@ -33,12 +33,32 @@ export function createRelayPublisher(options: { room: string; request: RelayRequ
     const peer = { pc, connection: crypto.randomUUID(), startedAt: performance.now() }; peers.set(id, peer);
     const transceivers = sides.map(side => {
       const track = streams[side]?.getVideoTracks()[0];
-      return pc.addTransceiver(track?.readyState === 'live' ? track : 'video', { direction: 'sendonly', streams: track ? [new MediaStream([track])] : [] });
+      const gameplay = side === 'left' || side === 'right';
+      // Capture cards/virtual cameras otherwise look like webcams to WebRTC,
+      // which can trade away map labels and screen detail to preserve motion.
+      if (gameplay && track) track.contentHint = 'detail';
+      return pc.addTransceiver(track?.readyState === 'live' ? track : 'video', {
+        direction: 'sendonly', streams: track ? [new MediaStream([track])] : [],
+        sendEncodings: gameplay ? [{ maxBitrate: 15_000_000 }] : undefined,
+      });
     });
     pc.onconnectionstatechange = () => {
       if (peers.get(id) === peer && ['failed', 'disconnected', 'closed'].includes(pc.connectionState)) close(id);
     };
     try {
+      // Prefer the codec OBS/Chromium can hardware-encode on this platform.
+      // Retain every alternative so receivers without H.264 can still connect.
+      const codecs = RTCRtpSender.getCapabilities?.('video')?.codecs ?? [];
+      const h264 = codecs.filter(codec => codec.mimeType.toLowerCase() === 'video/h264');
+      if (h264.length) {
+        const preferred = [...h264, ...codecs.filter(codec => codec.mimeType.toLowerCase() !== 'video/h264')];
+        for (const transceiver of transceivers) transceiver.setCodecPreferences?.(preferred);
+      }
+      for (const transceiver of transceivers.slice(0, 2)) {
+        if (!transceiver.sender.track) continue;
+        await transceiver.sender.setParameters({ ...transceiver.sender.getParameters(),
+          degradationPreference: 'maintain-resolution' });
+      }
       const sdp = await description(pc, await pc.createOffer());
       if (peers.get(id) !== peer || !current) return;
       await session.send(id, { type: 'offer', connection: peer.connection, sdp, mids: Object.fromEntries(sides.map((side, index) => [side, transceivers[index].mid!])) as RelayMids });

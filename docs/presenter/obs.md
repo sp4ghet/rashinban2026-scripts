@@ -9,7 +9,7 @@ For direct player capture devices and animated player windows, use
 [Video input setup](video-inputs.md). Its player feeds are composited inside
 the Browser Source. Optional relayed player cameras also render inside the
 existing camera boxes; add `&relayCameras=1` alongside `videoRelay` to enable them.
-Only external-camera compositions need regional camera keying.
+External-camera compositions can use transparent windows or regional camera keying.
 
 | Source | URL |
 | --- | --- |
@@ -55,12 +55,14 @@ verified in a 1920 × 1080 browser. Bounds include the colored border.
 
 | Region | x | y | width | height |
 | --- | ---: | ---: | ---: | ---: |
-| Left whole player feed | 40 | 270 | 910 | 512 |
-| Right whole player feed | 970 | 270 | 910 | 512 |
+| Left whole player feed | 28 | 180 | 922 | 518.625 |
+| Right whole player feed | 970 | 180 | 922 | 518.625 |
 | Left camera | 60 | 756 | 360 | 260 |
 | Right camera | 1500 | 756 | 360 | 260 |
-| Shared rendered NMPZ panorama | 40 | 270 | 1840 | 512 |
-| Results map | 460 | 278 | 1000 | 520 |
+| Shared rendered NMPZ panorama | 28 | 116 | 1864 | 666 |
+| Results map | 160 | 218 | 1600 | 650 |
+| LED left whole player feed | 16 | 109 | 800 | 450 |
+| LED right whole player feed | 1104 | 109 | 800 | 450 |
 
 Fit and crop each external feed below its assigned rectangle, including its
 panorama and guess map. Feed content must not extend into another region.
@@ -68,7 +70,34 @@ The four-pixel presenter border and rounded corners cover the crop edge.
 Do not reserve avatar space. Cameras stay in the same rectangles during
 live gameplay and results.
 
-## Regional keying and phase changes
+## Transparent windows with OBS captures
+
+For the mixed setup, keep the stream URL
+`presenter.html?role=program&videoRelay=main&relayCameras=1`. In **Presentation**,
+select **Chroma · whole player feeds** and **Capture window fill → Transparent ·
+OBS overlay**. The cameras still arrive through the relay; only gameplay comes
+from the OBS sources underneath the presenter. On the capture relay page,
+assign the two player cameras and set unused gameplay inputs to **No input**.
+The LED page uses the same presentation settings and has no camera windows.
+
+Place the external gameplay sources below the Browser Source, fitted/cropped to
+the player rectangles above. Remove Chroma Key filters from this composition:
+the presenter now supplies true alpha in the windows. Borders, lock badges,
+score graphics and the timer remain visible. External camera windows also use
+alpha when cameras are not relayed; relayed camera pixels are never cut out.
+
+Round previews always render Street View, including in chroma mode. The LED
+preview stays centered at 16:9 without a label or minimap. Gameplay holes close
+during previews and results so the rendered graphic covers the external feeds.
+Camera holes cut through overlapping preview/results artwork, and celebration
+video is drawn above the composition. OBS scene changes may still be useful for
+source management, but no key filters or phase-specific keyed copies are needed
+for this transparent layout. Keep the Browser Source's page background transparent.
+
+## Color keying and phase changes
+
+The following arrangement applies when using **Green** or **Magenta** instead
+of transparent windows.
 
 A chroma key on the entire presenter removes matching pixels from maps,
 graphics and celebration videos. Use the following OBS scene graph instead:

@@ -1,11 +1,13 @@
 import type { Projection, SeriesState } from '../../types/presenter.ts';
 import { verdictLabel } from './layout.ts';
+import { scoreMotion } from './scoring-motion.ts';
 
 /** Paint the clock-derived choreography; no local timers or animation replay on mount. */
 export function paintScoring(root: HTMLElement, projection: Projection, series: SeriesState): void {
   const el = (id: string) => root.querySelector<HTMLElement>(`#${id}`)!;
   const s = projection.scoring;
   const active = s && s.stage !== 'complete';
+  const motion = s ? scoreMotion(s) : null;
   root.dataset.scoring = s?.stage ?? 'none';
   el('scoring-layer').hidden = !active;
   const rootRect = root.getBoundingClientRect();
@@ -19,16 +21,17 @@ export function paintScoring(root: HTMLElement, projection: Projection, series: 
     const player = projection.players.find(p => p.id === series[side].playerId);
     el(`${side}-score`).textContent = player?.score == null ? '—' : String(player.score);
     const ghost = active && !['entry', 'count', 'score-hold', 'verdict'].includes(s.stage);
-    el(`${side}-score`).style.opacity = ghost ? '0.25' : '1';
+    el(`${side}-score`).style.opacity = ghost ? '0.25' : String(active ? motion!.rise : 1);
+    el(`${side}-score`).style.transform = `translateY(${active && !ghost ? 50 * (1 - motion!.rise) : 0}px)`;
     const panel = el(`${side}-result`);
-    panel.style.opacity = String(active ? s.entryProgress : 1);
-    panel.style.transform = `translateY(${active ? 30 * (1 - s.entryProgress) : 0}px)`;
+    panel.style.opacity = String(active ? motion!.entry : 1);
+    panel.style.transform = `scale(${active ? 0.9 + 0.1 * motion!.entry : 1})`;
     el(`score-token-${side}`).hidden = true;
-    el(`${side}-health`).parentElement!.style.setProperty('--score-impact', active && s.stage === 'impact' && s.loserId === player?.id ? String(1 - s.impactProgress) : '0');
+    el(`${side}-health`).parentElement!.style.setProperty('--score-impact', active && s.stage === 'impact' && s.loserId === player?.id ? String(motion!.impactOpacity) : '0');
   }
   el('score-calculation').hidden = true;
   el('verdict').hidden = true;
-  if (!active) return;
+  if (!active || !motion) return;
   if (s.stage === 'verdict' && s.pinpointing) {
     // Points replace damage: announce the round verdict beside the scoring side.
     const banner = el('verdict'); banner.hidden = false; banner.textContent = verdictLabel(s.pinpointing);
@@ -48,7 +51,7 @@ export function paintScoring(root: HTMLElement, projection: Projection, series: 
     const midpoint = mix(points.left, points.right, 0.5);
     for (const side of sides) {
       const score = projection.players.find(p => p.id === series[side].playerId)?.score;
-      if (score != null) show(side, score, mix(points[side], midpoint, s.subtractProgress), 1 - s.tieProgress, 1 + 0.75 * s.tieProgress);
+      if (score != null) show(side, score, mix(points[side], midpoint, motion.travel), motion.tieOpacity, motion.tieScale);
     }
     return;
   }
@@ -58,25 +61,31 @@ export function paintScoring(root: HTMLElement, projection: Projection, series: 
   if (s.stage === 'subtract') {
     for (const side of sides) {
       const score = projection.players.find(p => p.id === series[side].playerId)?.score;
-      if (score != null) show(side, score, side === winner ? mix(points[winner], points[loser], s.subtractProgress) : points[side]);
+      if (score != null) show(side, score, side === winner ? mix(points[winner], points[loser], motion.travel) : points[side]);
     }
   } else if (s.stage === 'difference' || s.stage === 'multiplier') {
     const multiplied = s.stage === 'multiplier';
-    const wobble = multiplied ? 1 + 0.3 * Math.exp(-5 * s.multiplierProgress) * Math.cos(10 * s.multiplierProgress) : 1;
-    show(loser, multiplied ? s.damage : s.difference, points[loser], 1, wobble);
-    if (multiplied) {
-      const label = el('score-calculation'); label.hidden = false; label.textContent = `×${s.multiplier}`;
-      const token = el(`score-token-${loser}`).getBoundingClientRect();
-      const panel = el(`${loser}-result`).getBoundingClientRect();
-      const labelWidth = label.getBoundingClientRect().width;
-      // Anchor the multiplier beside the number, clear of the centered distance.
-      // Keep long damage values and two-digit multipliers inside their panel.
-      label.style.left = `${(Math.min(token.right + 6 * scale, panel.right - labelWidth) - rootRect.left) / scale}px`;
-      label.style.top = `${(token.top - rootRect.top) / scale + 18}px`;
+    const winnerScore = projection.players.find(p => p.id === series[winner].playerId)?.score;
+    if (winnerScore != null && motion.collisionOpacity > 0.001) {
+      show(winner, winnerScore, mix(points[winner], points[loser], motion.travel), motion.collisionOpacity, motion.collisionScale);
     }
+    show(loser, multiplied ? s.damage : s.difference,
+      { x: points[loser].x + (winner === 'left' ? 1 : -1) * motion.wobble, y: points[loser].y }, 1, motion.damageScale);
   } else if (s.stage === 'flight' || s.stage === 'impact') {
     const hit = center(`${loser}-health`);
     const impact = s.stage === 'impact';
-    show(loser, s.damage, impact ? hit : mix(points[loser], hit, s.flightProgress), impact ? 1 - s.impactProgress : 1, impact ? 1.75 : 1);
+    show(loser, s.damage, mix(points[loser], hit, motion.flight), impact ? motion.impactOpacity : 1, impact ? motion.impactScale : motion.damageScale);
+  }
+  if (s.multiplier !== 1 && ['multiplier', 'flight'].includes(s.stage) && motion.multiplierOpacity > 0) {
+    const label = el('score-calculation'); label.hidden = false; label.textContent = `×${s.multiplier}`;
+    label.style.opacity = String(motion.multiplierOpacity);
+    label.style.transform = `translateY(-50%) rotate(20deg) scale(${motion.multiplierScale})`;
+    const token = el(`score-token-${loser}`);
+    const panel = el(`${loser}-result`).getBoundingClientRect();
+    // The label stays beside the original score as damage departs. Its 1200ms
+    // lifetime overlaps flight by 200ms, independent of the moving token.
+    const right = points[loser].x + token.offsetWidth * motion.damageScale / 2;
+    label.style.left = `${Math.min(right + 6, (panel.right - rootRect.left) / scale - label.offsetWidth)}px`;
+    label.style.top = `${points[loser].y - token.offsetHeight * motion.damageScale / 2 + 18}px`;
   }
 }

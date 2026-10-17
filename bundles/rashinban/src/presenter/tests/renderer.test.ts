@@ -30,6 +30,20 @@ function lockPlayer(f: RenderFrame, index: number) {
   player.guesses.push({ lat: 1 + index, lng: 179 - index, round: f.state.round, score: 4000, distanceM: 100, createdAtMs: 1 });
   f.projection.players.push({ id: player.id, locked: true, health: 6000, score: null, distanceM: null });
 }
+
+test('LED NMPZ renders both player panoramas and keeps the unlocked side visible after a guess', () => {
+  const f = frame(); f.output = 'led';
+  f.views.players[f.state.players[0].id].panorama = { ...f.state.rounds[0].panorama, heading: 123, zoom: 5 };
+  const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  renderer.render(f);
+  assert.deepEqual(fake.panos.map(pano => pano.slot), ['left-view', 'right-view']);
+  assert.ok(fake.panos.every(pano => pano.options.at(-1).visible));
+  assert.ok(fake.panos.every(pano => pano.frames.at(-1)?.heading === f.state.rounds[0].panorama.heading), 'NMPZ ignores per-player POV changes');
+  lockPlayer(f, 0); renderer.render(f);
+  assert.equal(fake.panos[0].options.at(-1).visible, false);
+  assert.equal(fake.panos[1].options.at(-1).visible, true);
+  assert.equal(fake.maps.find(map => map.slot === 'left-map')!.frames.at(-1)!.visible, true);
+});
 test('outgoing result geometry prepares invisibly, then reveals without using newer round pins', () => {
   const f = frame(); const round = f.state.round;
   f.state.players.forEach((player, i) => { player.results = [{ round, score: 4500,
@@ -46,8 +60,8 @@ test('outgoing result geometry prepares invisibly, then reveals without using ne
   renderer.render(f); assert.equal(resultMap.frames.at(-1)!.visible, true);
   assert.deepEqual(resultMap.frames.at(-1)!.pins, points); assert.equal(fake.maps.filter(map => map.slot === 'results-map').length, 1);
 });
-for (const source of ['rendered', 'video'] as const) test(`${source} preview uses its own persistent panorama and empty world map without changing the server round`, () => {
-  const f = frame(); f.source = source;
+for (const source of ['rendered', 'video', 'chroma'] as const) for (const output of ['stream', 'led'] as const) test(`${output} ${source} preview renders independently of gameplay without changing the server round`, () => {
+  const f = frame(); f.source = source; f.output = output;
   const next = structuredClone(f.state.rounds[0]); next.number = f.state.round + 1;
   next.panorama.panoId = 'upcoming-pano'; f.state.rounds.push(next);
   const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
@@ -57,13 +71,14 @@ for (const source of ['rendered', 'video'] as const) test(`${source} preview use
   assert.equal(preview.frames.at(-1)?.panoId, 'upcoming-pano'); assert.equal(preview.options.at(-1).visible, false);
   f.projection.phase = 'between-rounds'; f.previewRound = next.number; renderer.render(f);
   assert.equal(preview.options.at(-1).visible, true);
-  const map = fake.maps.find(map => map.slot === 'preview-map')!.frames.at(-1)!;
-  assert.equal(map.visible, true); assert.equal(map.bounds, null); assert.deepEqual(map.pins, []);
+  const map = fake.maps.find(map => map.slot === 'preview-map')?.frames.at(-1);
+  if (output === 'led') assert.equal(map, undefined, 'LED preview has no minimap');
+  else { assert.equal(map!.visible, true); assert.equal(map!.bounds, null); assert.deepEqual(map!.pins, []); }
   assert.ok(fake.panos.filter(p => p !== preview).every(p => !p.options.at(-1).visible));
   const identity = preview.options.at(-1).identity;
   f.playerIds!.left = null; renderer.render(f); assert.notEqual(preview.options.at(-1).identity, identity);
-  f.source = 'chroma'; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
-  assert.ok(fake.maps.every(map => !map.frames.at(-1)!.visible));
+  f.source = 'chroma'; renderer.render(f); assert.equal(preview.options.at(-1).visible, true);
+  assert.ok(fake.maps.filter(map => map.slot !== 'preview-map').every(map => !map.frames.at(-1)!.visible));
   f.source = source; f.projection.phase = 'live'; renderer.render(f); assert.equal(preview.options.at(-1).visible, false);
   f.projection.phase = 'pre-round'; f.previewRound = f.state.round; renderer.render(f);
   assert.equal(preview.frames.at(-1)?.panoId, f.state.rounds[0].panorama.panoId);

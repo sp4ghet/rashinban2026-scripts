@@ -4,6 +4,8 @@ import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.
 import { projectScene, paintScene, type PresenterScene } from './presenter/scene.ts';
 import { layoutKind, multiplierLabel, distanceLabel, lockLayout, pointsLabel, pointPips } from './presenter/layout.ts';
 import { paintScoring } from './presenter/scoring.ts';
+import { paintTimer } from './presenter/timer.ts';
+import { createChromaWindows } from './presenter/chroma.ts';
 import { createCelebrationUnderlay } from './presenter/celebration.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
 import { paintResultMapLabel, resultMapFrame, type GameRenderer, type RenderFrame } from './presenter/renderer.ts';
@@ -47,6 +49,7 @@ const relay = relayParam !== null ? createRelayReceiver({ room: relayName(relayP
 }) : null;
 const capture = createCaptureUI(document.body, location.search, ledOutput ? 'led' : 'stream', { relay: relay ?? undefined });
 const cameras = relay && relayCameras ? createCameraOutput(document.body, relay) : null;
+const chromaWindows = createChromaWindows(document.body);
 let boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
 media.on('change', value => {
   try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
@@ -109,7 +112,7 @@ function startRenderer(value?: PresenterPublicConfig) {
 }
 publicConfig.on('change', startRenderer);
 startRenderer(publicConfig.value);
-window.addEventListener('pagehide', () => { clearInterval(mediaGuard); capture.dispose(); cameras?.dispose(); relay?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
+window.addEventListener('pagehide', () => { clearInterval(mediaGuard); chromaWindows.dispose(); capture.dispose(); cameras?.dispose(); relay?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {
   let captureFrame: RenderFrame | null = null;
@@ -129,7 +132,7 @@ function frame() {
   reconcileVideo();
   document.documentElement.style.setProperty('--key-color', options.keyColor);
   document.body.dataset.source = viewSource;
-  document.body.dataset.layout = layoutKind(state?.mode ?? 'NMPZ', viewSource);
+  document.body.dataset.layout = layoutKind(state?.mode ?? 'NMPZ', viewSource, ledOutput);
   document.body.dataset.celebrationUnderlay = 'false';
   if (!state || !views.value || !timing || !match) { celebrationUnderlay.reset(); previousScene = null; }
   if (timing && match) {
@@ -141,7 +144,7 @@ function frame() {
       ? resultMapFrame(state, timing.round, { left: match.left.playerId, right: match.right.playerId }, visible.answer ?? undefined) : null;
     const preparedResults = scene.kind === 'transition' ? resultFrame ?? undefined : undefined;
     const gameFrame = state && views.value ? celebrationUnderlay.render({ state, views: views.value,
-      projection: visible, source: viewSource, displayedRound: timing.round,
+      projection: visible, source: viewSource, displayedRound: timing.round, output: ledOutput ? 'led' : 'stream',
       preparedResults,
       previewRound: scene.previewRound, prewarmRound: scene.prewarmRound,
       playerIds: { left: match.left.playerId, right: match.right.playerId } }, timing.effect !== 'none') : null;
@@ -201,10 +204,8 @@ function frame() {
       write(`${side}-distance`, distanceLabel(distance, player?.score));
     }
     paintScoring(document.body, visible, match);
-    element('timer').hidden = visible.remainingMs === null || scene.kind !== 'live';
-    element('timer').classList.toggle('urgent', timing.music === 'urgent');
-    const seconds = Math.ceil((visible.remainingMs ?? 0) / 1000);
-    write('timer', `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`);
+    paintTimer(document.body, scene.kind === 'live' ? visible.remainingMs : null,
+      state?.rounds.find(round => round.number === timing.round));
     const labels = { 'waiting-game': 'WAITING FOR GAME', 'waiting-host': 'WAITING FOR NEXT ROUND', 'pre-round': 'ROUND STARTING', live: '', 'results-transition': 'ROUND COMPLETE', 'results-reveal': 'ROUND RESULTS', 'between-rounds': 'NEXT ROUND', finished: 'GAME FINISHED', aborted: 'GAME ABORTED' };
     let label = labels[visible.phase];
     if (visible.phase === 'finished' && state) {
@@ -237,6 +238,7 @@ function frame() {
     previousFrame = null;
   }
   capture.render(captureFrame);
+  chromaWindows.update(options.keyColor === 'transparent');
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

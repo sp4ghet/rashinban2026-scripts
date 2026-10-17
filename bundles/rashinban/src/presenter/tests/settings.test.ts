@@ -21,6 +21,11 @@ test('settings accept both keys and output choices without mutating input', () =
   assert.notEqual(parsed.timing, value.timing);
 });
 
+test('transparent capture windows survive settings validation and serialization', () => {
+  const value = { ...DEFAULT_SETTINGS, keyColor: 'transparent' };
+  assert.deepEqual(parseSettings(JSON.parse(JSON.stringify(value))), value);
+});
+
 test('settings reject invalid gains, key, source, output, mute and timings', () => {
   for (const patch of [
     { musicGain: -1 }, { effectsGain: 1.1 }, { musicGain: NaN }, { effectsGain: '0.5' },

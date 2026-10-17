@@ -1,5 +1,37 @@
 # Scoring animation comparison, 2026-09-11
 
+## Presenter curve update, 2026-10-17
+
+The comparison below is the historical capture. The presenter now keeps
+its existing staged timeline and samples the recorded motion from the
+shared presenter clock in `src/graphics/presenter/scoring-motion.ts`:
+
+- Entry uses `cubic-bezier(.05,.75,.49,1)` and a 0.9 → 1 scale.
+- Subtraction, tie travel and damage flight use the captured `eG(t)`:
+  `2.80158*t^3 - 1.80158*t^2`. Its negative early displacement is intentional:
+  the score winds back before accelerating toward its target.
+- Score rise and collision/impact scale and opacity use the default spring.
+  The difference receives a 30px, 50ms wobbly target impulse; the multiplier
+  springs from 1 toward 1.3 and its label pops with the captured back curve.
+- Impact begins at 350ms while travel continues through 400ms. The damage
+  token no longer jumps to the HP label or jumps immediately to scale 1.75.
+- Score counting stays linear over 750ms, as in the captured source. Existing
+  sound offsets, authoritative damage/HP and the HP springs are unchanged.
+
+Default and wobbly spring parameters use unit mass with tension/friction
+170/26 and 180/12 respectively, matching the
+[React Spring presets](https://github.com/pmndrs/react-spring/blob/main/packages/core/src/constants.ts).
+These are analytic clock samples rather than React Spring's frame integrator;
+motion is reproduced without introducing local replay state or a dependency.
+Pixel distances follow the RASHINBAN layout.
+
+Focused regressions cover anticipation, multiplier overshoot, continuity at
+impact, unchanged score/cue timing, ties, 5K gates and authoritative HP.
+`scripts/validate-presenter-motion.mjs` samples the built stream and LED pages
+and saves screenshots plus token geometry in `artifacts/presenter-validation/motion/`.
+
+## Original capture
+
 Compared the live GeoGuessr game-master/spectator screen with
 `http://127.0.0.1:9091/bundles/rashinban/graphics/presenter.html?role=preview`.
 The user requested a new duel: the previous ongoing test game was aborted

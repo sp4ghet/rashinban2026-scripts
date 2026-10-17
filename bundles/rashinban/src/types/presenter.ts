@@ -128,7 +128,7 @@ export type ScoreSequence = ScoreCalculation & {
   verdictAtMs: number | null;
 };
 export type ScoreStage = 'entry' | 'count' | 'score-hold' | 'subtract' | 'difference' | 'tie' | 'multiplier' | 'flight' | 'impact' | 'verdict' | 'complete';
-export type ScoreProjection = ScoreCalculation & { stage: ScoreStage; entryProgress: number; subtractProgress: number; multiplierProgress: number; flightProgress: number; impactProgress: number; tieProgress: number; verdictProgress: number };
+export type ScoreProjection = ScoreCalculation & { stage: ScoreStage; entryProgress: number; countProgress: number; subtractProgress: number; differenceProgress: number; multiplierProgress: number; multiplierFadeProgress: number; flightProgress: number; impactProgress: number; tieProgress: number; verdictProgress: number };
 export type Cue = { id: string; kind: CueKind; atMs: number; untilMs: number; playerId: string | null; sound?: 'opponent-guess'; offsetS?: number };
 export type Timeline = {
   generation: string;

@@ -153,7 +153,36 @@ sustained two-feed performance and the stream/LED delay with the actual machines
 The existing video/telemetry frame-freeze boundary remains in each receiver;
 the relay does not compensate for a player feed arriving ahead of telemetry.
 
+### Gameplay screen quality
+
+The relay prefers **H.264** for gameplay and player cameras, retaining VP8 and
+the browser's other codecs as negotiated fallbacks. Hardware encoding depends
+on the browser, GPU, and available encoder resources; H.264 can still use a
+software encoder. OBS's streaming/recording encoder selection is independent.
+
+Gameplay tracks use a **15 Mbps ceiling per feed per viewer**, a `detail`
+content hint, and `maintain-resolution` degradation preference. These settings
+are applied to every new connection, including reconnects. Capture devices
+still request 1920 × 1080 at 60 fps; the actual device format can differ.
+The bitrate ceiling is not a fixed target or a guarantee. When constrained,
+gameplay favors readable text and map detail over frame rate. Player cameras
+retain their existing bitrate and degradation defaults while preferring H.264.
+
+For a blurry relay, compare the capture track's `getSettings()` with the
+sender's `getStats()` (`frameWidth`, `frameHeight`, `framesPerSecond`,
+`targetBitrate`, and `qualityLimitationReason`) and the receiver's decoded
+video size. OBS recording/streaming bitrate does not configure these browser
+WebRTC encoders. Configure unused input slots as **No input** to avoid
+capturing and encoding them. Four inputs shared with stream and LED can require
+six simultaneous encoders: four for stream and two gameplay feeds for LED.
+
 ### Player cameras through the same relay
+
+Relayed cameras also work with **Chroma** gameplay and transparent capture
+windows. Keep `&relayCameras=1` on the stream URL and select **Transparent** in
+**Capture window fill** to composite external OBS gameplay without key filters.
+Leave unused gameplay inputs unassigned on the capture relay page. See
+[transparent OBS composition](obs.md#transparent-windows-with-obs-captures).
 
 The capture page also has optional **Left player camera** and **Right player
 camera** inputs. Assign each camera once alongside the gameplay inputs and

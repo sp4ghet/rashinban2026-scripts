@@ -25,7 +25,7 @@ const initial = { presenterDuel: state, presenterViews: seedViews(state), presen
   presenterClients: { clients: [], program: null }, presenterPublicConfig: { googleMapsApiKey: '' }, broadcast: { led: { program: { presenter: { visible: true } } } } };
 const bootstrap = `
 window.qa={initial:${JSON.stringify(initial)},requests:[],streams:[],relayJoins:0,noOwnership:false,blockSignal:false,dropAnswer:false,droppedAnswers:0,dropOffer:new URLSearchParams(location.search).has('dropOffer'),droppedOffers:0};
-qa.peers=[];const RealPeer=RTCPeerConnection;window.RTCPeerConnection=class extends RealPeer{constructor(...args){super(...args);qa.peers.push(this);}};
+qa.peers=[];const RealPeer=RTCPeerConnection;window.RTCPeerConnection=class extends RealPeer{constructor(...args){super(...args);qa.peers.push(this);}createAnswer(...args){if(qa.vp8Only){const codecs=RTCRtpReceiver.getCapabilities('video').codecs.filter(c=>['video/VP8','video/rtx','video/red','video/ulpfec'].includes(c.mimeType));for(const t of this.getTransceivers())t.setCodecPreferences(codecs);}return super.createAnswer(...args);}};
 const reps=new Map();
 qa.set=(name,value)=>{const rep=nodecg.Replicant(name);rep.value=value;rep.listeners.forEach(fn=>fn(value));};
 window.nodecg={Replicant(name){if(!reps.has(name))reps.set(name,{value:qa.initial[name],listeners:[],on(event,fn){this.listeners.push(fn);queueMicrotask(()=>fn(this.value));}});return reps.get(name);},
@@ -110,6 +110,12 @@ try {
   const led = await page('/presenter-led.html?videoRelay=main');
   await stream.until(ready, 'stream recovers from a lost offer acknowledgement');
   assert.equal(await stream.eval('qa.droppedOffers'), 1, 'fault injection drops exactly one offer'); await led.until(ready, 'LED receives both WebRTC tracks');
+  assert.equal(await owner.eval("['left','right'].every(side=>document.getElementById('video-'+side+'-preview').srcObject.getVideoTracks()[0].contentHint==='detail')"), true, 'gameplay capture must identify screen detail to the encoder');
+  const gameplayQuality = "qa.peers.filter(pc=>pc.connectionState==='connected').every(pc=>pc.getTransceivers().slice(0,2).every(t=>{const p=t.sender.getParameters();return p.degradationPreference==='maintain-resolution'&&p.encodings.length===1&&p.encodings[0].maxBitrate===15000000;}))";
+  assert.equal(await owner.eval(gameplayQuality), true, 'both outputs must preserve gameplay resolution with a 15 Mbps ceiling');
+  checks.push('gameplay senders preserve screen detail and resolution on both outputs');
+  const prefersH264 = "(async()=>{const peers=qa.peers.filter(pc=>pc.connectionState==='connected');return peers.length>0&&(await Promise.all(peers.map(async pc=>{const stats=await pc.getStats();const active=[...stats.values()].filter(s=>s.type==='outbound-rtp'&&s.framesEncoded>0);return active.length>0&&active.every(s=>stats.get(s.codecId)?.mimeType==='video/H264')&&pc.localDescription.sdp.includes('VP8/90000');}))).every(Boolean);})()";
+  await owner.until(prefersH264, 'H.264 is negotiated for active feeds with VP8 still offered as fallback');
   if (!cameraTest) assert.equal(await stream.eval("document.querySelectorAll('.camera.key-slot').length"), 2, 'legacy relay URL retains external-camera key regions');
   if (cameraTest) {
     await stream.until(camerasReady, 'stream displays both player cameras');
@@ -156,10 +162,14 @@ try {
     await stream.until(camerasReady, 'cameras remain connected in rendered mode');
     await stream.eval("qa.cameraBefore=qa.cameraHash('left');qa.mode('chroma')");
     await stream.until("qa.cameraHash('left')!==qa.cameraBefore", 'cameras remain live in chroma mode');
+    await stream.eval("qa.set('presenterSettings',{...nodecg.Replicant('presenterSettings').value,keyColor:'transparent'});qa.cameraBefore=qa.cameraHash('left')");
+    await stream.until("qa.cameraHash('left')!==qa.cameraBefore&&getComputedStyle(document.getElementById('left-view')).backgroundColor==='rgba(0, 0, 0, 0)'", 'relayed cameras stay live beside transparent gameplay windows');
+    assert.equal(await stream.eval("document.querySelectorAll('.camera.key-slot').length"), 0, 'relayed cameras are never transparency cutouts');
   }
   await stream.eval("qa.mode('video')"); await stream.until(ready, 'stream reconnects after mode change');
   await stream.call('Page.reload'); await stream.until(ready, 'stream reload recovers with a lost offer');
   assert.equal(await owner.eval('qa.requests.length'), inputCount, 'viewer reload does not reopen devices');
+  assert.equal(await owner.eval(gameplayQuality), true, 'reconnected viewers retain gameplay quality settings');
   await owner.eval("document.getElementById('video-swap').click()");
   await owner.until("['left','right'].every(side=>document.getElementById('video-'+side+'-preview').srcObject?.getVideoTracks()[0]?.readyState==='live')", 'swapped capture tracks active');
   const swappedIds = await owner.eval("['left','right'].map(side=>document.getElementById('video-'+side+'-preview').srcObject.getVideoTracks()[0].id)");
@@ -186,6 +196,8 @@ try {
     await owner.until('qa.active()===2', 'camera-only relay opens no gameplay devices');
     await stream.eval("qa.mode('rendered')");
     await stream.until(camerasReady, 'camera-only relay works with rendered gameplay');
+    await stream.eval("qa.mode('chroma');qa.cameraBefore=qa.cameraHash('left')");
+    await stream.until(camerasReady + "&&qa.cameraHash('left')!==qa.cameraBefore", 'camera-only relay stays live with transparent external gameplay');
     await owner.eval("document.getElementById('video-left-device').selectedIndex=3;document.getElementById('video-right-device').selectedIndex=1;document.getElementById('video-apply').click()");
     await stream.eval("qa.mode('video')");
     await stream.until(ready + '&&' + camerasReady, 'all four feeds return after camera-only operation');
@@ -218,6 +230,11 @@ try {
     assert.equal(await cameraPreview.eval('qa.requests.length'), 0);
     assert.equal(await cameraPreview.eval('qa.peers.length'), 0, 'preview does not join the camera relay');
   }
+  await led.eval("qa.vp8Only=true;document.getElementById('video-reconnect').click()");
+  await led.until("(async()=>{const peers=qa.peers.filter(p=>p.connectionState==='connected');return peers.length>0&&(await Promise.all(peers.map(async p=>{const stats=await p.getStats();const videos=[...stats.values()].filter(s=>s.type==='inbound-rtp'&&s.framesDecoded>0);return videos.length===2&&videos.every(s=>stats.get(s.codecId)?.mimeType==='video/VP8')}))).every(Boolean)})()", 'VP8-only receiver negotiates fallback and decodes both gameplay feeds');
+  await led.eval("qa.vp8Only=false;document.getElementById('video-reconnect').click()");
+  await led.until(ready, 'receiver returns after VP8 fallback');
+  await owner.until(prefersH264, 'H.264 preference survives reconnect after fallback');
   const preview = await page('/presenter-led.html?channel=preview&videoRelay=main');
   await delay(1200); assert.equal(await preview.eval('qa.requests.length'), 0);
   assert.equal(await preview.eval("document.getElementById('capture-left').dataset.hasFrame==='true'"), false, 'preview does not subscribe');

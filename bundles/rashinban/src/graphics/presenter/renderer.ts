@@ -3,7 +3,7 @@ import { tieRangeMapGeometry, type TieRangeMapGeometry } from '../../presenter/t
 import { lockLayout } from './layout.ts';
 import type { PlayerViewSource } from '../../presenter/settings.ts';
 
-export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: PlayerViewSource; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean; previewRound?: number | null; prewarmRound?: number | null; preparedResults?: MapFrame };
+export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: PlayerViewSource; output?: 'stream' | 'led'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean; previewRound?: number | null; prewarmRound?: number | null; preparedResults?: MapFrame };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
 export type MapFrame = { visible: boolean; prepare?: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[]; tieRange?: TieRangeMapGeometry };
@@ -94,21 +94,22 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
         const live = projection.phase === 'live' && displayedRound === state.round && source !== 'chroma';
         const lock = lockLayout(frame);
         const locked = sides.map(side => lock === side || lock === 'both');
-        const slots = state.mode === 'NMPZ' ? ['shared-panorama'] : ['left-view', 'right-view'];
-        if (preview && source !== 'chroma' && !panos.has('preview-panorama')) panos.set('preview-panorama', adapter.panorama('preview-panorama'));
+        const slots = state.mode === 'NMPZ' && frame.output !== 'led' ? ['shared-panorama'] : ['left-view', 'right-view'];
+        if (preview && !panos.has('preview-panorama')) panos.set('preview-panorama', adapter.panorama('preview-panorama'));
         for (const slot of slots) {
           if (prepare && source === 'rendered' && !panos.has(slot)) panos.set(slot, adapter.panorama(slot));
         }
         panos.forEach((pano, slot) => {
           if (slot === 'preview-panorama') {
-            pano.render(preview?.panorama ?? null, { visible: showPreview && source !== 'chroma',
+            pano.render(preview?.panorama ?? null, { visible: showPreview,
               identity: `${state.gameId}:${preview?.number ?? ''}:preview:${ids.join(':')}` });
             return;
           }
           const index = slot === 'right-view' ? 1 : 0;
           const shared = slot === 'shared-panorama';
+          const playerPanorama = state.mode === 'NMPZ' ? initial : players[index]?.panorama ?? initial;
           const value = prepare && slots.includes(slot)
-            ? shared ? (ids.some(Boolean) ? initial : null) : ids[index] ? players[index]?.panorama ?? initial : null
+            ? shared ? (ids.some(Boolean) ? initial : null) : ids[index] ? playerPanorama : null
             : null;
           const frozen = shared ? lock === 'both' : locked[index];
           pano.render(value, { visible: live && source === 'rendered' && slots.includes(slot) && !frozen, frozen: frozen || frame.frozen,
@@ -140,8 +141,9 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
           if (!maps.has('results-map')) maps.set('results-map', adapter.map('results-map'));
           maps.get('results-map')!.render({ ...resultFrame, visible: plan.resultsMap && projection.answer !== null });
         } else maps.get('results-map')?.render({ visible: false, bounds: null, pins: [], lines: [] });
-        if (showPreview && source !== 'chroma' && !maps.has('preview-map')) maps.set('preview-map', adapter.map('preview-map'));
-        maps.get('preview-map')?.render({ visible: showPreview && source !== 'chroma', bounds: null, pins: [], lines: [] });
+        const previewMap = showPreview && frame.output !== 'led';
+        if (previewMap && !maps.has('preview-map')) maps.set('preview-map', adapter.map('preview-map'));
+        maps.get('preview-map')?.render({ visible: previewMap, bounds: null, pins: [], lines: [] });
       } catch { clear(); failed = true; onError('Google Maps view unavailable'); }
     },
     dispose() { clear(); disposed = true; },

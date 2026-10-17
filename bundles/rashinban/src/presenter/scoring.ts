@@ -59,10 +59,14 @@ export function scoreProjection(sequence: ScoreSequence, revealAtMs: number, now
     : now >= s.differenceAtMs ? 'difference' : 'subtract';
   return { tied: s.tied, hasDamage: s.hasDamage, winnerId: s.winnerId, loserId: s.loserId, difference: s.difference, damage: s.damage, multiplier: s.multiplier,
     ...(s.pinpointing ? { pinpointing: s.pinpointing } : {}),
-    stage, entryProgress: fraction(now, revealAtMs, revealAtMs + 700), subtractProgress: fraction(now, s.subtractAtMs, s.subtractAtMs + 400),
+    stage, entryProgress: fraction(now, revealAtMs, revealAtMs + 700),
+    countProgress: fraction(now, s.countAtMs, s.countAtMs + 750),
+    subtractProgress: fraction(now, s.subtractAtMs, s.subtractAtMs + 400),
+    differenceProgress: fraction(now, s.differenceAtMs, s.differenceAtMs + 1000),
     multiplierProgress: fraction(now, s.multiplierAtMs, s.multiplierAtMs === null ? null : s.multiplierAtMs + 1000),
+    multiplierFadeProgress: fraction(now, s.multiplierAtMs === null ? null : s.multiplierAtMs + 100, s.multiplierAtMs === null ? null : s.multiplierAtMs + 1200),
     flightProgress: fraction(now, s.flightAtMs, s.flightAtMs === null ? null : s.flightAtMs + 400),
-    impactProgress: fraction(now, s.impactAtMs, s.impactAtMs === null ? null : s.impactAtMs + 350),
+    impactProgress: fraction(now, s.impactAtMs, s.impactAtMs === null ? null : s.impactAtMs + 1000),
     tieProgress: fraction(now, s.collisionAtMs, s.completeAtMs),
     verdictProgress: fraction(now, verdictAtMs, verdictAtMs === null ? null : verdictAtMs + 400) };
 }
