@@ -33,7 +33,6 @@
 #preview-area { left: 560px; top: 109px; width: 800px; height: 450px; }
 #results-map { top: var(--stage-top); left: 460px; width: 1000px; height: var(--stage-h); }
 .result { top: 300px; width: 420px; } .result.left { left: 20px; } .result.right { right: 20px; }
-#tie-range-label { top: 120px; }
 #review-banner { top: 108px; }
 #preview-label, #preview-map { display: none; }
 body[data-lock="left"] .player-window.left, body[data-lock="left"] .player-window.right,

@@ -144,6 +144,22 @@ try {
     result.players.forEach((player, i) => { player.results = [{ round: result.round, score: i ? 3200 : 4500, bestGuess: null,
       healthBefore: 6000, healthAfter: i ? 4050 : 6000, damageDealt: i ? 0 : 1950, multiplier: 1.5 }]; });
     const scoring = advanceTimeline(null, result, epoch, false, DEFAULT_TIMING);
+    await evaluate(`qa.live('NM','chroma','left')`); await settle();
+    const liveWindows = await evaluate(`({left:qa.rect('left-window'),right:qa.rect('right-window')})`);
+    for (const now of [epoch, scoring.revealAtMs - 1]) {
+      await evaluate(`qa.now=${now};qa.set('presenterDuel',${JSON.stringify(result)});qa.set('presenterTimeline',${JSON.stringify(scoring)});`); await settle();
+      const lead = await evaluate(`({transitionHidden:document.getElementById('transition').hidden,liveHidden:document.getElementById('live-area').hidden,resultsVisibility:document.getElementById('results-area').style.visibility,left:qa.rect('left-window'),right:qa.rect('right-window'),phaseLabel:document.getElementById('phase-label').textContent,scoringHidden:document.getElementById('scoring-layer').hidden})`);
+      assert.equal(lead.transitionHidden,true,'No Round Complete interstitial before scoring');
+      assert.equal(lead.liveHidden,false,'Keep the last live view until results are ready');
+      assert.equal(lead.resultsVisibility,'hidden'); assert.equal(lead.scoringHidden,true);
+      assert.deepEqual({left:lead.left,right:lead.right},liveWindows,'Retain the final player window layout');
+      assert.notEqual(lead.phaseLabel,'ROUND COMPLETE');
+    }
+    const reveal = advanceTimeline(scoring, result, scoring.revealAtMs, false, DEFAULT_TIMING);
+    await evaluate(`qa.now=${scoring.revealAtMs};qa.set('presenterTimeline',${JSON.stringify(reveal)});`); await settle();
+    assert.deepEqual(await evaluate(`({liveHidden:document.getElementById('live-area').hidden,resultsVisibility:document.getElementById('results-area').style.visibility,transitionHidden:document.getElementById('transition').hidden,stage:document.body.dataset.scoring})`),
+      {liveHidden:true,resultsVisibility:'visible',transitionHidden:true,stage:'entry'});
+    checks.push(`${output}: final gameplay cuts directly to results and scoring without an interstitial`);
     const tokens = [];
     for (const [name, offset] of [['count', 1585], ['anticipate', 3160], ['collision', 3360], ['multiplier', 4260], ['flight', 4960], ['multiplier-faded', 5160], ['impact-before', 5309], ['impact', 5310], ['impact-after', 5410], ['settled', 7310]]) {
       const now = scoring.revealAtMs + offset;

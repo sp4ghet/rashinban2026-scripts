@@ -147,17 +147,19 @@ function frame() {
       projection: visible, source: viewSource, displayedRound: timing.round, output: ledOutput ? 'led' : 'stream',
       preparedResults,
       previewRound: scene.previewRound, prewarmRound: scene.prewarmRound,
-      playerIds: { left: match.left.playerId, right: match.right.playerId } }, timing.effect !== 'none') : null;
+      playerIds: { left: match.left.playerId, right: match.right.playerId } }, scene.kind === 'transition') : null;
     const underlay = gameFrame?.frozen === true;
     document.body.dataset.celebrationUnderlay = String(underlay);
     document.body.dataset.phase = visible.phase;
-    const results = scene.kind === 'results';
+    // Hold the final live view through the reveal lead-in. A client joining
+    // without a retained view can show the results layout while its map prepares.
+    const results = scene.kind === 'results' || (scene.kind === 'transition' && !underlay);
     element('results-area').hidden = !results && !preparedResults;
     element('results-area').style.visibility = results ? 'visible' : 'hidden';
     element('results-area').style.opacity = results ? '1' : '0';
     paintResultMapLabel(document.body, resultFrame, results && visible.answer !== null);
     element('live-area').hidden = scene.kind !== 'live' && !underlay;
-    element('transition').hidden = scene.kind !== 'transition' || underlay || timing.effect !== 'none';
+    element('transition').hidden = true;
     write('round-number', scene.previewRound === null ? timing.round === null ? '—' : String(timing.round) : String(scene.previewRound));
     write('mode', state?.mode ?? '—');
     // Series wins count completed games; the active game is the next one.
@@ -206,7 +208,7 @@ function frame() {
     paintScoring(document.body, visible, match);
     paintTimer(document.body, scene.kind === 'live' ? visible.remainingMs : null,
       state?.rounds.find(round => round.number === timing.round));
-    const labels = { 'waiting-game': 'WAITING FOR GAME', 'waiting-host': 'WAITING FOR NEXT ROUND', 'pre-round': 'ROUND STARTING', live: '', 'results-transition': 'ROUND COMPLETE', 'results-reveal': 'ROUND RESULTS', 'between-rounds': 'NEXT ROUND', finished: 'GAME FINISHED', aborted: 'GAME ABORTED' };
+    const labels = { 'waiting-game': 'WAITING FOR GAME', 'waiting-host': 'WAITING FOR NEXT ROUND', 'pre-round': 'ROUND STARTING', live: '', 'results-transition': '', 'results-reveal': 'ROUND RESULTS', 'between-rounds': 'NEXT ROUND', finished: 'GAME FINISHED', aborted: 'GAME ABORTED' };
     let label = labels[visible.phase];
     if (visible.phase === 'finished' && state) {
       if (state.isDraw) label = 'DRAW';

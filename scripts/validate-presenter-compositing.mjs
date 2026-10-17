@@ -114,10 +114,18 @@ try {
 
     await evaluate(`qa.live('NM','chroma','left');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'transparent'})`);
     await settle();
-    const badge=await evaluate(`qa.rect('left-lock')`);
-    opaque((await pixels([[Math.round(badge.x+15),Math.round(badge.y+15)]]))[0]);
-    transparent((await pixels([[100,300]]))[0]);
-    checks.push(output+': lock badge remains opaque over the transparent feed');
+    const label=await evaluate(`qa.rect('left-lock')`);
+    const labelPoints=[];
+    for(let y=Math.ceil(label.y);y<label.y+label.height;y+=2)
+      for(let x=Math.ceil(label.x);x<label.x+label.width;x+=2) labelPoints.push([x,y]);
+    const labelAlpha=(await pixels(labelPoints)).map(rgba=>rgba[3]);
+    assert.equal(Math.max(...labelAlpha),255,'Lock text should render at full opacity');
+    assert.equal(Math.min(...labelAlpha),102,'Lock text should have only the full-window overlay behind it');
+    const lockedPixels=await pixels([[100,300],[1800,300]]);
+    assert.deepEqual(lockedPixels[0],[0,0,0,102],'Locked window should have a 40% black overlay');
+    transparent(lockedPixels[1]);
+    await screenshot(output+'-transparent-lock',led);
+    checks.push(output+': full-opacity lock text over a 40% window overlay; unlocked feed stays transparent');
 
     await evaluate(`qa.live('NM','chroma','none');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'transparent'});const next=structuredClone(qa.initial.presenterDuel);next.rounds[0].startAtMs=qa.now+60000;qa.set('presenterDuel',next);qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'pre-round'});`);
     await settle();
