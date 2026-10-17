@@ -8,6 +8,11 @@ export function mountBracket(host: HTMLElement): Layer<ToggleLayer> {
   host.innerHTML = `
     <div id="led-bracket">
       <svg id="bracket" class="bracket-svg" viewBox="0 0 1920 576" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Finals bracket">
+        <!-- Same translucent bands and left-edge glow as Stream, split at LED mid-height. -->
+        <rect class="filter" x="-100" y="-100" width="2512" height="388" fill="#ff005e" />
+        <rect class="filter-bright" x="-1000" y="-100" width="1050" height="388" fill="#ff005e" />
+        <rect class="filter" x="-100" y="288" width="2512" height="800" fill="#0051ff" />
+        <rect class="filter-bright" x="-1000" y="288" width="1050" height="800" fill="#0051ff" />
         <text class="bracket-band-label" x="64" y="144" transform="rotate(-90 64 144)">UPPER</text>
         <text class="bracket-band-label" x="64" y="432" transform="rotate(-90 64 432)">LOWER</text>
         <text class="bracket-riser-label" x="1516" y="248">LOWER FINAL WINNER</text>

@@ -11,7 +11,7 @@ for (let index = 0; index < 4; index++) {
   const row = document.createElement("div");
   row.className = "match-row";
   const fields = {} as Record<keyof UpcomingMatch, HTMLInputElement>;
-  for (const [key, label] of [["label", "Round"], ["playerOne", "Player 1"], ["playerTwo", "Player 2"]] as const) {
+  for (const [key, label] of [["playerOne", "Player 1"], ["playerTwo", "Player 2"]] as const) {
     const field = document.createElement("input");
     field.maxLength = 60;
     field.setAttribute("aria-label", `Match ${index + 1} ${label}`);
@@ -26,10 +26,9 @@ for (let index = 0; index < 4; index++) {
 function renderContent() {
   input("title").value = state.content.title;
   input("upcoming-label").value = state.content.upcomingLabel;
-  input("countdown-label").value = state.content.countdownLabel;
   rows.forEach((row, index) => {
     const match = state.content.matches[index];
-    for (const key of ["label", "playerOne", "playerTwo"] as const) row[key].value = match?.[key] ?? "";
+    for (const key of ["playerOne", "playerTwo"] as const) row[key].value = match?.[key] ?? "";
   });
   dirty = false;
   el("draft-status").textContent = "Saved content";
@@ -76,10 +75,9 @@ async function send(message: string, data: unknown) {
 el("content-form").addEventListener("input", () => { dirty = true; el("draft-status").textContent = "Unsaved changes"; });
 el("content-form").addEventListener("submit", event => {
   event.preventDefault();
-  const matches = rows.map(row => ({ label: row.label.value.trim(), playerOne: row.playerOne.value.trim(), playerTwo: row.playerTwo.value.trim() }))
-    .filter(match => match.label || match.playerOne || match.playerTwo);
-  const content: IntervalContent = { title: input("title").value, upcomingLabel: input("upcoming-label").value,
-    countdownLabel: input("countdown-label").value, matches };
+  const matches = rows.map(row => ({ playerOne: row.playerOne.value.trim(), playerTwo: row.playerTwo.value.trim() }))
+    .filter(match => match.playerOne || match.playerTwo);
+  const content: IntervalContent = { title: input("title").value, upcomingLabel: input("upcoming-label").value, matches };
   void send(INTERVAL_MESSAGES.content, content);
 });
 el("reload").onclick = renderContent;

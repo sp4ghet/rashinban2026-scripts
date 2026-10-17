@@ -1,5 +1,5 @@
-export type UpcomingMatch = { label: string; playerOne: string; playerTwo: string };
-export type IntervalContent = { title: string; upcomingLabel: string; countdownLabel: string; matches: UpcomingMatch[] };
+export type UpcomingMatch = { playerOne: string; playerTwo: string };
+export type IntervalContent = { title: string; upcomingLabel: string; matches: UpcomingMatch[] };
 export type IntervalTimer = { endsAtMs: number | null; remainingMs: number | null };
 export type IntervalState = { content: IntervalContent; timer: IntervalTimer };
 
@@ -9,7 +9,7 @@ const MAX_DATE_MS = 8_640_000_000_000_000;
 
 export function defaultInterval(): IntervalState {
   return {
-    content: { title: "INTERVAL", upcomingLabel: "COMING UP", countdownLabel: "再開まで", matches: [] },
+    content: { title: "INTERVAL", upcomingLabel: "COMING UP", matches: [] },
     timer: { endsAtMs: null, remainingMs: null },
   };
 }
@@ -32,10 +32,9 @@ export function updateContent(state: IntervalState, value: unknown): IntervalSta
   const content: IntervalContent = {
     title: text(data.title, 40, "Title", true),
     upcomingLabel: text(data.upcomingLabel, 40, "Upcoming heading", true),
-    countdownLabel: text(data.countdownLabel, 60, "Countdown label"),
     matches: data.matches.map(value => {
       const match = record(value);
-      return { label: text(match.label, 60, "Round"), playerOne: text(match.playerOne, 60, "Player 1", true),
+      return { playerOne: text(match.playerOne, 60, "Player 1", true),
         playerTwo: text(match.playerTwo, 60, "Player 2", true) };
     }),
   };

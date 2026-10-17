@@ -1,8 +1,7 @@
 @import url('presenter.css');
 /* LED wall: only the top 1920x576 is physically shown. Names and HP sit in a
    top band because the players on stage can cover the lower part. */
-:root { --stage-top: 104px; --stage-h: 460px; }
-body { background: #000; }
+:root { --stage-top: 104px; --stage-h: 460px; --presenter-kv: url('assets/presenter-kv-led.png'); --presenter-vignette-edge: #0005; }
 .backdrop { inset: auto; top: 0; left: 0; width: 1920px; height: 576px; }
 .celebration-video { height: 576px; }
 /* Keep local capture controls reachable in a 576px-high OBS Interact view. */

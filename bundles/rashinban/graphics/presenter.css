@@ -1,9 +1,9 @@
-:root { --key-color: #ff00ff; --blue: #458af2; --red: #f05060; --ink: #10131f; }
+:root { --key-color: #ff00ff; --blue: #458af2; --red: #f05060; --ink: #10131f; --presenter-kv: url('assets/presenter-kv-stream.png'); --presenter-vignette-edge: rgba(0, 0, 0, .7); }
 * { box-sizing: border-box; }
 html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; }
-body { background: #0c101d; color: #f7f8fb; font-family: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif; }
+body { background: transparent; color: #f7f8fb; font-family: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif; }
 [hidden] { display: none !important; }
-.backdrop { position: absolute; inset: 0; background: linear-gradient(#0c101d80, #0c101db8), url('assets/presenter-kv.jpg') center / cover no-repeat; }
+.backdrop { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 35%, var(--presenter-vignette-edge) 100%), var(--presenter-kv) center / cover no-repeat; }
 /* Compact match status above the stage, player identities beside the cameras. */
 
 

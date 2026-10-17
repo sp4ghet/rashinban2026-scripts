@@ -12,8 +12,8 @@ import { registerInterval } from '../bundles/rashinban/src/extension/interval.ts
 import { registerBroadcast } from '../bundles/rashinban/src/extension/broadcast.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const artifacts = path.join(root, 'artifacts/interval');
 const adobeFonts = process.argv.includes('--adobe-fonts');
+const artifacts = path.join(root, 'artifacts/interval', adobeFonts ? '' : 'offline');
 await mkdir(artifacts, { recursive: true });
 const values = {}, handlers = new Map();
 const nodecg = {
@@ -33,6 +33,9 @@ const message = (name, data) => new Promise((resolve, reject) => {
 });
 const preload = () => `
 const nativeNow=Date.now; Date.now=()=>nativeNow()+60000;
+const nativeSetInterval=window.setInterval;
+window.fixtureIntervals=[];
+window.setInterval=(callback,ms,...args)=>{const id=nativeSetInterval(callback,ms,...args);window.fixtureIntervals.push({id,callback,ms});return id;};
 const values=${JSON.stringify(values).replaceAll('<', '\\u003c')}, listeners=new Map();
 window.fixtureValues=values;
 function emit(name,value){values[name]=value;for(const cb of listeners.get(name)||[])cb(value);}
@@ -58,7 +61,7 @@ const server = createServer(async (req, res) => {
     const ext = path.extname(file);
     if (ext === '.html') {
       data = data.toString();
-      if (!adobeFonts) data = data.replace(/<link[^>]+https:\/\/use\.typekit\.net[^>]+>/g, '');
+      if (!adobeFonts) data = data.replace(/<link[^>]+https:\/\/(?:use\.typekit\.net|fonts\.googleapis\.com)[^>]+>/g, '');
       data = data.replace('<head>', '<head><script>' + preload() + '</script>');
     }
     res.setHeader('Content-Type', { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -103,6 +106,9 @@ async function fill(selector, value) {
   await evaluate(`{const input=document.querySelector(${JSON.stringify(selector)});input.value=${JSON.stringify(value)};input.dispatchEvent(new Event('input',{bubbles:true}));}`);
 }
 async function screenshot(name, clip) {
+  await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+  // Let Chrome finish rasterizing loaded fonts/SVGs after revealing the layer.
+  await delay(300);
   const shot = await command('Page.captureScreenshot', { format: 'png', ...(clip ? { clip } : {}) });
   await writeFile(path.join(artifacts, name + '.png'), Buffer.from(shot.data, 'base64'));
 }
@@ -125,6 +131,7 @@ try {
   assert.equal(await evaluate('document.querySelector("#layer-interval").hidden'), true);
   await navigate('dashboard/interval-control.html', 650, 650);
   await until('!document.querySelector("#content-controls").disabled');
+  assert.equal(await evaluate('document.querySelector("#countdown-label, [aria-label*=Round]")'), null, 'removed labels have no dashboard controls');
   await fill('[aria-label="Match 1 Player 1"]', 'SHIINA');
   await fill('[aria-label="Match 1 Player 2"]', 'EURYA');
   await click('#apply');
@@ -182,34 +189,71 @@ try {
       await message('broadcast:take', { output: 'stream' });
     }
     if (adobeFonts) console.log(`${output}: Adobe heading font loaded: ${await evaluate('document.fonts.check(\'700 112px "kaneda-gothic"\')')}`);
-    assert.equal(await evaluate('document.querySelector(".interval-match-players").textContent'), 'SHIINAVSEURYA');
+    assert.equal(await evaluate('document.querySelector(".interval-match-players").textContent'), 'SHIINA VS EURYA');
     assert.equal(await evaluate('[...document.querySelectorAll("#layer-interval img")].every(img => img.complete && img.naturalWidth > 0)'), true);
     await screenshot(output);
     if (output === 'led') await screenshot('led-band', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
-    const visibleGroups = [];
-    for (let i = 0; i < 3; i++) {
-      await evaluate(`{const send=nodecg.sendMessage;nodecg.sendMessage=(name,data)=>name==='interval:clock'?Promise.resolve(${Date.now() - Date.now() % 30000 + i * 10000}):send(name,data);window.dispatchEvent(new PageTransitionEvent('pageshow'));}`);
-      await until(`document.querySelector('[data-sponsor-group="${i}"]').hidden === false`);
-      visibleGroups.push(await evaluate('[...document.querySelectorAll(".interval-sponsor-group:not([hidden]) img")].map(img => img.alt)'));
-    }
-    assert.equal(visibleGroups.flat().length, 6);
+    // Sample actual painted opacity through a complete 12-second sponsor cycle.
+    // This catches the old abrupt hidden/display swap even when all logos load.
+    const fade = await evaluate(`new Promise(resolve => {
+      const started = performance.now(), samples = [];
+      function sample() {
+        samples.push({ time: performance.now() - started, logos: [...document.querySelectorAll('.interval-sponsors img')].map(img => ({
+          name: img.alt, opacity: img.checkVisibility() ? Number(getComputedStyle(img).opacity) : 0,
+        })) });
+        if (performance.now() - started < 13000) requestAnimationFrame(sample); else resolve(samples);
+      }
+      sample();
+    })`);
+    assert.ok(fade.some(sample => sample.logos.some(logo => logo.opacity > .05 && logo.opacity < .95)), `${output}: sponsors must visibly fade, not cut`);
+    const outgoing = fade.map(sample => sample.logos.find(logo => logo.name === 'GeoGuessr')?.opacity);
+    const incoming = fade.map(sample => sample.logos.find(logo => logo.name === '味の素株式会社')?.opacity);
+    assert.ok(outgoing.some(opacity => opacity > .05 && opacity < .95), `${output}: outgoing logo must fade out`);
+    assert.ok(incoming.some(opacity => opacity > .05 && opacity < .95), `${output}: incoming logo must fade in`);
+    assert.ok(fade.every(sample => sample.logos.find(logo => logo.name === 'TAMURA BUILDS')?.opacity === 1), 'fixed sponsor stays visible');
+    const rotation = await evaluate(`new Promise(async resolve => {
+      const timer = fixtureIntervals.find(timer => timer.ms === 12000);
+      clearInterval(timer.id);
+      const img = document.querySelector('.interval-sponsor-rotating img');
+      const changes = [], visible = [];
+      const observer = new MutationObserver(() => changes.push({name: img.alt, opacity: Number(getComputedStyle(img).opacity)}));
+      observer.observe(img, {attributes: true, attributeFilter: ['src']});
+      for (let i = 0; i < 6; i++) {
+        timer.callback();
+        await new Promise(done => setTimeout(done, 1000));
+        const box = img.getBoundingClientRect(), parent = img.parentElement.getBoundingClientRect();
+        visible.push({name: img.alt, loaded: img.complete && img.naturalWidth > 0, opacity: Number(getComputedStyle(img).opacity), fits: box.left >= parent.left - 1 && box.right <= parent.right + 1});
+      }
+      observer.disconnect(); resolve({changes, visible});
+    })`);
+    assert.deepEqual(rotation.visible.map(logo => logo.name), ['GeoGuessr Record', '調布駅前そけいヘルニアクリニック', 'BFCC — Powered by バラジオ放送局', 'かわいいしっしー', 'GeoGuessr', '味の素株式会社']);
+    assert.ok(rotation.changes.every(logo => logo.opacity < .01), `${output}: swap logo only while invisible`);
+    assert.ok(rotation.visible.every(logo => logo.loaded && logo.fits && logo.opacity === 1), `${output}: each sponsor loads, fits and fades fully in`);
+    await writeFile(path.join(artifacts, output + '-sponsor-fade.json'), JSON.stringify({samples: fade, rotation}, null, 2));
   }
 
-  const longMatches = Array.from({ length: 4 }, (_, index) => ({ label: '準決勝 / 第' + (index + 1) + '試合', playerOne: index ? '長いプレイヤー名テスト' : '<img src=x onerror=alert(1)>', playerTwo: 'VeryLongCompetitorName' }));
-  await message('interval:content', { ...values.interval.content, title: 'RASHINBAN 2026 GRAND FINALS INTERVAL', countdownLabel: '次の試合開始までしばらくお待ちください'.repeat(3), matches: longMatches });
+  // Simulate an older dashboard sending removed fields; neither may reappear.
+  const longMatches = Array.from({ length: 4 }, (_, index) => ({ label: '準決勝', playerOne: index ? '長いプレイヤー名テスト' : '<img src=x onerror=alert(1)>', playerTwo: 'VeryLongCompetitorName' }));
+  await message('interval:content', { ...values.interval.content, title: 'RASHINBAN 2026 GRAND FINALS INTERVAL', countdownLabel: '再開まで', matches: longMatches });
   await message('interval:timer', { action: 'start', durationSeconds: 86399 });
   for (const output of ['stream', 'led']) {
     await navigate(`graphics/interval-${output}.html`);
     await until('document.querySelectorAll(".interval-match").length === 4');
     await until('document.querySelector(".interval-timer").hidden === false');
+    assert.equal(await evaluate('document.querySelector(".interval-countdown-label, .interval-match-label")'), null, 'removed labels have no graphic elements');
+    assert.equal(await evaluate('/再開まで|準決勝/.test(document.querySelector("#layer-interval").textContent)'), false, 'legacy label text must not appear');
     assert.equal(await evaluate('document.querySelector(".interval-countdown span").textContent.startsWith("23:59:")'), true, 'graphics must ignore the one-minute client clock skew');
     assert.equal(await evaluate('document.querySelectorAll(".interval-match img").length'), 0, 'names render as text');
-    const height = output === 'led' ? 560 : 1056;
-    const bottom = await evaluate('document.querySelector(".interval-matches").getBoundingClientRect().bottom');
-    assert.ok(bottom <= height, `${output} match list bottom ${bottom} exceeds ${height}`);
-    if (output === 'stream') {
-      const timerTop = await evaluate('document.querySelector(".interval-timer").getBoundingClientRect().top');
-      assert.ok(bottom + 12 <= timerTop, `Stream matches end at ${bottom}, overlapping countdown at ${timerTop}`);
+    for (const count of [3, 4]) {
+      await message('interval:content', { ...values.interval.content, matches: longMatches.slice(0, count) });
+      await until(`document.querySelectorAll('.interval-match').length === ${count}`);
+      const height = output === 'led' ? 560 : 1035;
+      const bottom = await evaluate('document.querySelector(".interval-matches").getBoundingClientRect().bottom');
+      assert.ok(bottom <= height, `${output} match list bottom ${bottom} exceeds ${height}`);
+      if (output === 'stream') {
+        const timerTop = await evaluate('document.querySelector(".interval-timer").getBoundingClientRect().top');
+        assert.ok(bottom + 12 <= timerTop + .01, `Stream matches end at ${bottom}, overlapping countdown at ${timerTop}`);
+      }
     }
     const fits = await evaluate(`[...document.querySelectorAll('#layer-interval [data-fit]')].every(span => {
       const box=span.getBoundingClientRect(), parent=span.parentElement.getBoundingClientRect();

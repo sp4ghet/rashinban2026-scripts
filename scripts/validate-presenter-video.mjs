@@ -55,7 +55,8 @@ const ledHtml = (await readFile(path.join(root, 'bundles/rashinban/graphics/pres
 const routes = { '/presenter.js': ['bundles/rashinban/graphics/presenter.js', 'text/javascript'],
   '/presenter.css': ['bundles/rashinban/graphics/presenter.css', 'text/css'],
   '/presenter-led.css': ['bundles/rashinban/graphics/presenter-led.css', 'text/css'],
-  '/assets/presenter-kv.jpg': ['bundles/rashinban/graphics/assets/presenter-kv.jpg', 'image/jpeg'] };
+  '/assets/presenter-kv-stream.png': ['bundles/rashinban/graphics/assets/presenter-kv-stream.png', 'image/png'],
+  '/assets/presenter-kv-led.png': ['bundles/rashinban/graphics/assets/presenter-kv-led.png', 'image/png'] };
 const server = createServer(async (req, res) => {
   const route = routes[new URL(req.url, 'http://localhost').pathname];
   if (route) { res.writeHead(200, { 'Content-Type': route[1] }); res.end(await readFile(path.join(root, route[0]))); }

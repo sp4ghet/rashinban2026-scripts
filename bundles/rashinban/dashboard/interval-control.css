@@ -13,7 +13,7 @@ button:disabled { opacity: .45; cursor: default; }
 .timer-status { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
 #countdown { font: 600 32px Consolas, monospace; font-variant-numeric: tabular-nums; }
 #timer-status { color: #aebfc9; }
-.match-head, .match-row { display: grid; grid-template-columns: 1fr 1.25fr 1.25fr; gap: 6px; margin-bottom: 6px; }
+.match-head, .match-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
 .match-head { color: #aebfc9; font-size: 11px; }
 .actions { margin-top: 10px; flex-wrap: wrap; align-items: center; }
 #draft-status { flex: 1; color: #e5c68b; font-size: 12px; }

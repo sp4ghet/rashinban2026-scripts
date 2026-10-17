@@ -1,3 +1,5 @@
+@import url('bracket-background.css');
+
 /* Only the top 1920x576 is mapped to the venue LED. Everything below stays transparent. */
 #led-bracket {
   position: absolute;
@@ -5,18 +7,6 @@
   width: 1920px;
   height: 576px;
   overflow: hidden;
-  --bracket-tint-opacity: 0.2;
-  isolation: isolate;
-}
-
-/* Fade only the red/blue tint; the boxes, text and connectors stay opaque. */
-#led-bracket::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(rgb(54, 7, 18) 50%, rgb(6, 27, 57) 50%);
-  opacity: var(--bracket-tint-opacity);
-  pointer-events: none;
 }
 
 #led-bracket > svg {

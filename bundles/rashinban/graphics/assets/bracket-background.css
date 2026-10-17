@@ -1,0 +1,22 @@
+/* Translucent treatment shared by Stream and LED, over the KV video in OBS. */
+.bracket-wrapper, #led-bracket {
+  background: transparent;
+  isolation: isolate;
+}
+
+.bracket-wrapper::before, #led-bracket::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Red upper / blue lower bands; only the background is tinted. */
+.bracket-svg .filter { opacity: 0.1; }
+.bracket-svg .filter-bright {
+  mix-blend-mode: multiply;
+  opacity: 0.8;
+  filter: blur(30px);
+}

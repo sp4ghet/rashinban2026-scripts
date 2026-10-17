@@ -39,6 +39,10 @@ test("content updates validate matches without resetting a running timer", () =>
   ] };
   const saved = updateContent(state, content);
   assert.equal(saved.content.title, "FINALS");
+  assert.deepEqual(saved.content, { title: "FINALS", upcomingLabel: "COMING UP", matches: [
+    { playerOne: "しいな", playerTwo: "EURYA" },
+  ] }, "discard legacy countdown and round labels");
+  assert.deepEqual(restoreInterval({ ...state, content }).content, saved.content, "old saved labels must not return after reload");
   assert.deepEqual(saved.timer, state.timer);
   content.matches[0]!.playerOne = "changed";
   assert.equal(saved.content.matches[0]!.playerOne, "しいな");

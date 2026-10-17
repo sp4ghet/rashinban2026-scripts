@@ -1,3 +1,5 @@
+@import url('bracket-background.css');
+
 /* DAY2 bracket (brackets-finals.html). Trimmed from rashinban2026's assets/brackets.css
    to the classes the page and src/graphics/bracket/svg.ts actually use. */
 
@@ -6,6 +8,7 @@ body {
   height: 1080px;
   margin: 0;
   overflow: hidden;
+  background: transparent;
 }
 
 .bracket-wrapper {
@@ -14,39 +17,6 @@ body {
   width: 1920px;
   height: 1080px;
   overflow: hidden;
-  background: url('presenter-kv.jpg');
-  background-size: cover;
-  background-position: center;
-}
-
-/* blur the key visual... */
-.bracket-wrapper::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: inherit;
-  filter: blur(1.5px);
-  z-index: 0;
-}
-
-/* ...and darken it with a semi-transparent scrim */
-.bracket-wrapper::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1;
-}
-
-/* Red (upper) / blue (lower) bands behind the bracket. */
-.filter {
-  opacity: 0.1;
-}
-
-.filter-bright {
-  mix-blend-mode: multiply;
-  opacity: 0.8;
-  filter: blur(30px);
 }
 
 svg.bracket-svg {

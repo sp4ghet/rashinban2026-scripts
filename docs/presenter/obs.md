@@ -33,9 +33,14 @@ open both Program graphic and Separate audio; embedded celebration sound stays
 on the program graphic. In Embedded mode, open Program graphic for all audio.
 The silent preview cannot become an audio owner.
 
-The backdrop uses the supplied KV JPEG at
-`bundles/rashinban/graphics/assets/presenter-kv.jpg`, without generated artwork.
-Its source bytes are preserved; fixed player/map/camera rectangles are unchanged.
+Presenter backgrounds use the static KV images `RASHINBAN2026_005.png` for Stream
+and `RASHINBAN2026_006.png` for LED, with a stronger vignette on Stream and a subtle
+vignette on LED. Copies are served from
+`graphics/assets/presenter-kv-stream.png` and `graphics/assets/presenter-kv-led.png`.
+Place the KV video beneath the bracket Browser Sources. Stream and LED brackets
+share translucent red upper / blue lower bands, a dark scrim, and a soft glow
+along the left edge; the KV video remains visible through that treatment.
+The area below each LED graphic's top 1920 × 576 band is transparent.
 
 Disable **Shutdown source when not visible** and **Refresh browser when scene
 becomes active**. Reuse one program Browser Source through nested scenes;
