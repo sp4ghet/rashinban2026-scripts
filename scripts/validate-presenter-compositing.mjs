@@ -6,6 +6,8 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import express from 'express';
+import { createMediaRouter } from '../bundles/rashinban/src/extension/config/assets.ts';
 import { applySnapshot } from '../bundles/rashinban/src/presenter/normalize.ts';
 import { seedViews } from '../bundles/rashinban/src/presenter/telemetry.ts';
 import { advanceTimeline, DEFAULT_TIMING } from '../bundles/rashinban/src/presenter/timeline.ts';
@@ -34,8 +36,11 @@ window.nodecg={Replicant(name){if(!reps.has(name))reps.set(name,{value:qa.initia
 qa.rect=id=>{const r=document.getElementById(id).getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};};
 qa.live=(mode,source,lock)=>{qa.now=${epoch};const s=structuredClone(qa.initial.presenterDuel);s.mode=mode;for(const [i,side] of ['left','right'].entries())if(lock===side||lock==='both')s.players[i].guesses=[{round:s.round,lat:1,lng:2,score:4000,distanceM:10,createdAtMs:qa.now}];qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:source});qa.set('presenterDuel',s);qa.set('presenterTimeline',structuredClone(qa.initial.presenterTimeline));};
 `;
+const media = express();
+media.use('/rashinban/media', createMediaRouter({ appRoot: root, sharedRoot: root, isWorktree: false }));
 const server = createServer(async (req, res) => {
   try {
+    if (req.url.startsWith('/rashinban/media/')) { media(req, res); return; }
     const url = new URL(req.url, 'http://localhost');
     if (url.pathname === '/favicon.ico') { res.writeHead(204); res.end(); return; }
     const file = path.resolve(root, 'bundles/rashinban/graphics', '.' + url.pathname);
@@ -105,6 +110,24 @@ try {
     const led = output === 'led';
     await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/presenter${led ? '-led' : ''}.html?role=preview` });
     for (let i=0;i<100;i++) { if(await evaluate(`document.getElementById('timer-value')?.textContent==='00:39'`))break;await delay(100); }
+    if (led) {
+      for (let i=0;i<100;i++) { if(await evaluate(`document.querySelector('.backdrop video')?.readyState>=2`))break;await delay(100); }
+      const kv=await evaluate(`(()=>{qa.kv=document.querySelector('.backdrop video');const v=qa.kv,r=v.getBoundingClientRect();return {src:new URL(v.currentSrc).pathname,muted:v.muted,loop:v.loop,autoplay:v.autoplay,inline:v.playsInline,paused:v.paused,ready:v.readyState>=2,width:v.videoWidth,height:v.videoHeight,fit:getComputedStyle(v).objectFit,rect:{x:r.x,y:r.y,width:r.width,height:r.height},time:v.currentTime};})()`);
+      assert.equal(kv.src,'/rashinban/media/background/presenter-led-kv.mp4');
+      assert.equal(kv.muted,true);assert.equal(kv.loop,true);assert.equal(kv.autoplay,true);assert.equal(kv.inline,true);
+      assert.equal(kv.paused,false);assert.equal(kv.ready,true);assert.ok(kv.width>0&&kv.height>0);
+      assert.equal(kv.fit,'cover');assert.deepEqual(kv.rect,{x:0,y:0,width:1920,height:576});
+      await delay(300);
+      assert.ok(await evaluate(`qa.kv.currentTime>${kv.time}`),'KV frames advance');
+      await evaluate(`qa.kv.currentTime=qa.kv.duration-.15`);
+      for (let i=0;i<50;i++) { if(await evaluate(`!qa.kv.seeking&&qa.kv.currentTime<1`))break;await delay(100); }
+      assert.equal(await evaluate(`!qa.kv.paused&&!qa.kv.ended&&qa.kv.currentTime<1`),true,'KV loops at the end');
+      checks.push('LED: the actual loop_002 MP4 decodes, plays silently and loops inside the 1920x576 band');
+    } else {
+      assert.equal(await evaluate(`document.querySelector('.backdrop video')`),null);
+      assert.match(await evaluate(`getComputedStyle(document.querySelector('.backdrop')).backgroundImage`),/presenter-kv\.jpg/);
+      checks.push('stream: original static KV image retained without a background video');
+    }
     const viewY=led ? 300 : 400, cameraY=led ? 800 : 900;
     await evaluate(`qa.live('NM','chroma','none');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'transparent'})`);
     await settle();
@@ -112,7 +135,7 @@ try {
     transparent(livePixels[0]); transparent(livePixels[1]); opaque(livePixels[2]);
     if(!led){transparent(livePixels[3]);transparent(livePixels[4]);}
     await screenshot(output+'-transparent-live',led);
-    checks.push(output+': gameplay holes have zero alpha while the backdrop stays opaque');
+    checks.push(output+': gameplay holes have zero alpha while the header stays opaque');
 
     // The cutout must end underneath the solid frame. Sharing its outer curve
     // creates a translucent seam that exposes OBS footage outside the window.
@@ -161,7 +184,7 @@ try {
     assert.notDeepEqual(preview[0].slice(0,3),[255,0,255]);
     if(led) assert.equal(await evaluate(`getComputedStyle(document.getElementById('preview-map')).display`),'none');
     await screenshot(output+'-transparent-preview',led);
-    checks.push(output+': preview is opaque and camera holes cut through overlapping preview artwork');
+    checks.push(output+': preview content and KV backdrop stay opaque with transparent camera holes');
 
     const result=structuredClone(state);
     result.players.forEach((p,i)=>{p.results=[{round:result.round,score:i?3200:4500,bestGuess:null,healthBefore:6000,healthAfter:i?4700:6000,damageDealt:i?0:1300,multiplier:1}];});
@@ -171,8 +194,18 @@ try {
     assert.equal(await evaluate(`document.getElementById('results-area').hidden`),false);
     const results=await pixels([[960,500],[300,cameraY],[1600,cameraY],[100,viewY]]);
     opaque(results[0]);opaque(results[3]);
+    const surroundings=await pixels([[100,200],[1820,200],[10,570]]);
+    surroundings.forEach(opaque);
+    if(led) {
+      assert.equal(await evaluate(`document.querySelector('.backdrop video')===qa.kv&&!qa.kv.paused&&qa.kv.muted`),true);
+      // Confirm the opaque backdrop pixels come from the playing video.
+      await evaluate(`qa.kv.style.visibility='hidden'`);
+      (await pixels([[100,200],[1820,200]])).forEach(rgba=>assert.ok(rgba[3]<255));
+      await evaluate(`qa.kv.style.visibility=''`);
+    }
     if(!led){transparent(results[1]);transparent(results[2]);}
-    checks.push(output+': results close gameplay holes and preserve camera alpha over the map');
+    await screenshot(output+'-transparent-results',led);
+    checks.push(output+': results retain the KV backdrop and preserve camera alpha over the map');
 
     if(!led){
       await evaluate(`document.querySelectorAll('.camera').forEach(el=>{el.classList.remove('key-slot');el.classList.add('relay-camera')});`);
@@ -197,8 +230,8 @@ try {
       });`);
       const header = () => evaluate(`['.competitor.left','.competitor.right','.match-info','.health.left','.health.right','#left-wins','#right-wins'].map(s=>{const e=document.querySelector(s),r=e.getBoundingClientRect(),style=getComputedStyle(e);return {x:r.x,y:r.y,width:r.width,height:r.height,display:style.display};})`);
       const expectedHeader = await header();
-      assert.equal(expectedHeader[0].y,0);assert.equal(expectedHeader[0].height,75);
-      assert.equal(expectedHeader[1].y,0);assert.equal(expectedHeader[1].height,75);
+      assert.equal(expectedHeader[0].y,0);assert.equal(expectedHeader[0].height,54);
+      assert.equal(expectedHeader[1].y,0);assert.equal(expectedHeader[1].height,54);
       expectedHeader.forEach(r=>assert.notEqual(r.display,'none','Keep the complete LED header'));
       for (const [view,winner] of [['before-game',null],['end-of-last-game',initial.presenterSeries.left.id],['end-of-last-game',initial.presenterSeries.right.id],['end-of-last-game',null]]) {
         await evaluate(`qa.set('presenterIntermission',{...nodecg.Replicant('presenterIntermission').value,view:'${view}',lastGame:{...nodecg.Replicant('presenterIntermission').value.lastGame,winnerCompetitorId:${JSON.stringify(winner)},draw:${winner===null}}})`);
@@ -268,6 +301,10 @@ try {
       assert.equal(await evaluate(`qa.cameraNodes.every((v,i)=>v===document.querySelectorAll('.camera video')[i]&&v.srcObject.active)`),true);
       checks.push('stream: draws are balanced and all scene switches preserve the video elements and streams');
     }
+    (await pixels([[10,led?700:570],[1910,led?700:570]])).forEach(led?transparent:opaque);
+    if(led) assert.equal(await evaluate(`document.querySelector('.backdrop video')===qa.kv&&!qa.kv.paused&&qa.kv.muted`),true);
+    else assert.match(await evaluate(`getComputedStyle(document.querySelector('.backdrop')).backgroundImage`),/presenter-kv\.jpg/);
+    checks.push(output+': intermission retains its KV background; the area below the LED band stays transparent');
     await evaluate(`qa.live('NM','chroma','none');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'#00ff00'})`);
     await settle();
     if(!led){

@@ -2,21 +2,24 @@
 @import url('presenter-timer.css');
 /* LED wall: only the top 1920x576 is physically shown. Names and HP sit in a
    top band because the players on stage can cover the lower part. */
-:root { --stage-top: 104px; --stage-h: 460px; --presenter-kv: url('assets/presenter-kv-led.png'); --presenter-vignette-edge: #0005; }
-.backdrop { inset: auto; top: 0; left: 0; width: 1920px; height: 576px; }
+:root { --stage-top: 104px; --stage-h: 460px; --led-header-h: 54px; --led-view-h: calc(576px - var(--led-header-h)); }
+/* The LED owns its silent KV loop; the stream retains its static background. */
+.backdrop { inset: auto; top: 0; left: 0; width: 1920px; height: 576px; background: none; overflow: hidden; pointer-events: none; }
+.backdrop video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.backdrop::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 35%, #0005 100%); }
 .celebration-video { height: 576px; }
 /* Keep local capture controls reachable in a 576px-high OBS Interact view. */
 #video-setup { top: 108px; max-height: 456px; overflow-y: auto; }
 /* Cameras appear only between games. Keep #phase-label for the shared painter. */
 .camera, footer { display: none; }
 .health { border-width: 3px; border-radius: 10px; }
-#timer { top: 286.5px; }
+#timer { top: calc(var(--led-header-h) + (var(--led-view-h) - 78px) / 2); }
 /* Preserve the other non-live stage geometry. */
 .player-window { top: 109px; width: 800px; height: auto; }
 .player-window.left { left: 16px; } .player-window.right { right: 16px; }
 .shared-view, #transition, #preview-area, #waiting-area, #summary-area { top: var(--stage-top); left: 16px; width: 1888px; height: var(--stage-h); }
 /* Fill the LED height below the header while retaining a centered 16:9 view. */
-#preview-area { left: 50%; top: 75px; width: calc(501px * 16 / 9); height: 501px; transform: translateX(-50%); }
+#preview-area { left: 50%; top: var(--led-header-h); width: calc(var(--led-view-h) * 16 / 9); height: var(--led-view-h); transform: translateX(-50%); }
 #results-map { top: var(--stage-top); left: 460px; width: 1000px; height: var(--stage-h); }
 .result { top: 300px; width: 420px; } .result.left { left: 20px; } .result.right { right: 20px; }
 #review-banner { top: 108px; }
@@ -30,24 +33,24 @@ body[data-output="led"] {
   --left-panel: #cc2626; --right-panel: #2669cc;
   color: #fff;
 
-  .competitor { top: 0; bottom: auto; width: 824px; height: 75px; gap: 14px; align-items: center; }
+  .competitor { top: 0; bottom: auto; width: 824px; height: var(--led-header-h); gap: 14px; align-items: center; }
   .competitor.left { left: 0; padding: 0 24px 0 418px; justify-content: flex-end; background: var(--left-panel); }
   .competitor.right { right: 0; padding: 0 418px 0 24px; justify-content: flex-start; background: var(--right-panel); }
   .competitor strong { flex: 0 1 auto; min-width: 0; font: 700 40px/1 var(--presenter-latin); text-shadow: none; }
   .handle { flex: 0 1 auto; min-width: 0; max-width: 200px; font-size: 20px; line-height: 1; font-weight: 700; color: #fff; }
   .competitor.left .handle { order: 0; }
   .handle:empty { display: none; }
-  .wins { top: 0; width: 75px; height: 75px; font: 700 64px/1 var(--presenter-latin); border: 0; padding: 0; }
+  .wins { top: 0; width: 75px; height: var(--led-header-h); font: 700 56px/1 var(--presenter-latin); border: 0; padding: 0; }
   .left .wins { left: 824px; background: var(--left-color); }
   .right .wins { right: 824px; background: var(--right-color); }
-  .match-info { top: 0; left: 899px; width: 122px; height: 75px; display: block; padding: 12px 0 0; border-radius: 0; background: #fff; color: #171d29; }
+  .match-info { top: 0; left: 899px; width: 122px; height: var(--led-header-h); display: grid; place-items: center; grid-template-columns: 1fr; padding: 0; border-radius: 0; background: #fff; color: #171d29; }
   .match-info > :not(.mode-info) { display: none; }
   .match-info .mode-info { width: 100%; }
-  .match-info small { color: inherit; font-size: 14px; line-height: 1; letter-spacing: normal; }
-  .match-info b { margin-top: 1px; font-size: 40px; line-height: 1; white-space: nowrap; }
+  .match-info small { display: none; }
+  .match-info b { margin: 0; font-size: 40px; line-height: 1; white-space: nowrap; }
 
   /* Preserve the existing rounded, skewed HP component and depletion direction. */
-  .health { top: 3px; bottom: auto; width: 382px; height: 69px; }
+  .health { top: 27px; bottom: auto; width: 382px; height: 69px; }
   .health.left { left: 6px; }
   .health.right { right: 6px; }
   .health b { font-size: 48px; line-height: 63px; }
@@ -67,7 +70,7 @@ body[data-output="led"] {
 
 /* Retain gameplay through the reveal lead-in beneath the persistent header. */
 body[data-output="led"]:is([data-scene="live"], [data-celebration-underlay="true"]) {
-  .player-window { top: 75px; width: 960px; height: 501px; aspect-ratio: auto; border-radius: 0; box-shadow: none; transition: none; }
+  .player-window { top: var(--led-header-h); width: 960px; height: var(--led-view-h); aspect-ratio: auto; border-radius: 0; box-shadow: none; transition: none; }
   .player-window.left { left: 0; }
   .player-window.right { right: 0; }
   .player-window::after { border: 0; }
@@ -77,7 +80,7 @@ body[data-output="led"]:is([data-scene="live"], [data-celebration-underlay="true
 }
 
 /* Equal 16:9 camera views, bottom-aligned in the 576px band. The header
-   covers their top 39px; the stream's 10px seam stays centered. */
+   covers their top 18px; the stream's 10px seam stays centered. */
 body[data-output="led"]:is([data-intermission="before-game"], [data-intermission="end-of-last-game"]) {
   .scoreboard { z-index: 6; }
   .camera { display: block; top: 36px; bottom: auto; width: 960px; height: 540px; border: 0; border-radius: 0; }

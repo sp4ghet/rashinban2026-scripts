@@ -33,10 +33,13 @@ open both Program graphic and Separate audio; embedded celebration sound stays
 on the program graphic. In Embedded mode, open Program graphic for all audio.
 The silent preview cannot become an audio owner.
 
-Presenter backgrounds use the static KV images `RASHINBAN2026_005.png` for Stream
-and `RASHINBAN2026_006.png` for LED, with a stronger vignette on Stream and a subtle
-vignette on LED. Copies are served from
-`graphics/assets/presenter-kv-stream.png` and `graphics/assets/presenter-kv-led.png`.
+Stream keeps its original static KV background. Only the LED presenter embeds
+the muted, looping `assets/videos/KV/RASHINBAN2026_loop_002.mp4`, cropped to fill
+the top 1920 × 576 band with a subtle vignette. It continues behind round previews
+and results; external gameplay and camera cutouts still work. NodeCG serves it at
+`/rashinban/media/background/presenter-led-kv.mp4`, with shared-installation fallback
+for worktrees. Build and restart NodeCG, then refresh the LED source to load the
+new media route. The interval/bracket KV selection is independent.
 Place the KV video beneath the bracket Browser Sources. Stream and LED brackets
 share translucent red upper / blue lower bands, a dark scrim, and a soft glow
 along the left edge; the KV video remains visible through that treatment.

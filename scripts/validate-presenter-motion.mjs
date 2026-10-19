@@ -118,9 +118,9 @@ try {
       const current = await evaluate(`({timer:qa.rect('timer'),left:qa.rect('left-window'),right:qa.rect('right-window'),leftMap:qa.rect('left-map'),rightMap:qa.rect('right-map'),layout:document.body.dataset.layout,lock:document.body.dataset.lock})`);
       if (led || source === 'chroma') assert.deepEqual(current.timer, timer, `${output} fixed timer moved on ${mode}/${source}/${lock}`);
       if (led) {
-        assert.deepEqual(current.left, {x:0,y:75,width:960,height:501});
-        assert.deepEqual(current.right, {x:960,y:75,width:960,height:501});
-        assert.deepEqual(current.timer, {x:862.5,y:286.5,width:195,height:78});
+        assert.deepEqual(current.left, {x:0,y:54,width:960,height:522});
+        assert.deepEqual(current.right, {x:960,y:54,width:960,height:522});
+        assert.deepEqual(current.timer, {x:862.5,y:276,width:195,height:78});
         if (current.lock === 'left' || current.lock === 'both') assert.deepEqual(current.leftMap, current.left);
         if (current.lock === 'right' || current.lock === 'both') assert.deepEqual(current.rightMap, current.right);
       } else {
@@ -151,8 +151,12 @@ try {
     const header = led ? await ledHeader() : null;
     if (led) {
       assert.deepEqual(header.slice(0,5).map(({x,y,width,height})=>({x,y,width,height})), [
-        {x:0,y:0,width:824,height:75},{x:1096,y:0,width:824,height:75},
-        {x:824,y:0,width:75,height:75},{x:1021,y:0,width:75,height:75},{x:899,y:0,width:122,height:75}]);
+        {x:0,y:0,width:824,height:54},{x:1096,y:0,width:824,height:54},
+        {x:824,y:0,width:75,height:54},{x:1021,y:0,width:75,height:54},{x:899,y:0,width:122,height:54}]);
+      assert.equal(await evaluate(`getComputedStyle(document.querySelector('.mode-info small')).display`),'none');
+      assert.deepEqual(await evaluate(`[...document.querySelectorAll('.health')].map(e=>{const s=getComputedStyle(e);return {top:s.top,width:s.width,height:s.height,border:s.borderTopWidth,radius:s.borderTopLeftRadius,transform:s.transform};})`),[
+        {top:'27px',width:'382px',height:'69px',border:'3px',radius:'10px',transform:'matrix(1, 0, -0.176327, 1, 0, 0)'},
+        {top:'27px',width:'382px',height:'69px',border:'3px',radius:'10px',transform:'matrix(1, 0, 0.176327, 1, 0, 0)'}], 'Move the existing healthbars without redesigning them');
       assert.equal(await evaluate(`document.getElementById('mode').textContent`),'NO MOVE');
       assert.equal(await evaluate(`document.getElementById('multiplier').textContent`),'×1.0');
       await evaluate(`qa.set('presenterSeries',{...qa.initial.presenterSeries,left:{...qa.initial.presenterSeries.left,name:'とても長いプレイヤー名の表示確認',handle:'long_player_handle_for_layout'},right:{...qa.initial.presenterSeries.right,name:'A VERY LONG PLAYER NAME FOR LAYOUT',handle:''}})`);
@@ -183,8 +187,8 @@ try {
     const preview = await evaluate(`({rect:qa.rect('preview-area'),panorama:qa.rect('preview-panorama'),hidden:document.getElementById('preview-area').hidden,timerHidden:document.getElementById('timer').hidden})`);
     ratio(preview.rect); ratio(preview.panorama); assert.equal(preview.rect.x + preview.rect.width / 2, 960); assert.equal(preview.hidden, false); assert.equal(preview.timerHidden, true);
     if (led) {
-      assert.equal(preview.rect.y,75,'Round preview starts directly below the header');
-      assert.equal(preview.rect.height,501,'Round preview uses the full remaining LED height');
+      assert.equal(preview.rect.y,54,'Round preview starts directly below the header');
+      assert.equal(preview.rect.height,522,'Round preview uses the full remaining LED height');
       assert.equal(preview.rect.y+preview.rect.height,576,'Round preview reaches the bottom of the LED');
       assert.deepEqual(await ledHeader(),header,'Designer header persists through round preview');
     }

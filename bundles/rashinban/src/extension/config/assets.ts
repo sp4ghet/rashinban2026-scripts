@@ -5,7 +5,7 @@ import type NodeCG from '@nodecg/types';
 import type { InstallationRoots } from '../../config/types.ts';
 import { isMediaCategory, isMediaFilename, MEDIA_CATEGORIES, type EffectiveAssetInventory, type MediaCategory } from '../../config/media-url.ts';
 import { REPLICANTS } from '../../types/replicants.ts';
-import { KV_VIDEO_FILENAME } from '../../config/scene-media.ts';
+import { KV_VIDEO_FILENAME, LED_PRESENTER_KV_VIDEO_FILENAME } from '../../config/scene-media.ts';
 
 const EXTENSIONS: Record<MediaCategory, readonly string[]> = {
   music: ['.wav', '.mp3', '.ogg', '.m4a'],
@@ -61,10 +61,13 @@ export function listMediaAssets(roots: InstallationRoots): EffectiveAssetInvento
 /** Mounted separately because NodeCG's built-in asset route terminates missing-file requests. */
 export function createMediaRouter(roots: InstallationRoots): express.Router {
   const router = express.Router();
-  // Fixed local production asset, outside NodeCG's uploaded presenter library.
-  router.get('/background/kv.mp4', (_req, res, next) => {
-    const file = containedFile(roots.appRoot, 'KV', KV_VIDEO_FILENAME, 'assets/videos')
-      ?? (roots.isWorktree ? containedFile(roots.sharedRoot, 'KV', KV_VIDEO_FILENAME, 'assets/videos') : null);
+  // Fixed local production assets, outside NodeCG's uploaded presenter library.
+  for (const [route, filename] of [
+    ['/background/kv.mp4', KV_VIDEO_FILENAME],
+    ['/background/presenter-led-kv.mp4', LED_PRESENTER_KV_VIDEO_FILENAME],
+  ] as const) router.get(route, (_req, res, next) => {
+    const file = containedFile(roots.appRoot, 'KV', filename, 'assets/videos')
+      ?? (roots.isWorktree ? containedFile(roots.sharedRoot, 'KV', filename, 'assets/videos') : null);
     if (!file) { res.sendStatus(404); return; }
     res.sendFile(file, error => {
       if (!error) return;
