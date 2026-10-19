@@ -1,10 +1,9 @@
 node_modules/
 .worktrees/
 /.superpowers/sdd/
-/artifacts/presenter-validation/
-/artifacts/presenter-followup/
-/artifacts/current-match-*
-/artifacts/player-sheet.png
+
+# Local validation output, browser profiles, diagnostics, and recovery snapshots
+/artifacts/
 
 # NodeCG runtime state (replicant db, logs, uploaded assets)
 /db/
@@ -28,11 +27,6 @@ bundles/rashinban/dashboard/*.js
 bundles/rashinban/dashboard/*.js.map
 bundles/rashinban/extension/
 
-/artifacts/player-tie-range/
-/artifacts/player-cards/
 
 # Local design references and caster animation validation captures
 /references/local/
-/artifacts/casters/
-
-/artifacts/led-pages/
