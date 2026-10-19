@@ -15,14 +15,19 @@ import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
 import { channelFromSearch } from '../broadcast/channel.ts';
 import { createCameraOutput } from './presenter/camera-output.ts';
+import { EMPTY_INTERMISSION, type Intermission } from '../presenter/intermission.ts';
+import { paintCameraScene } from './presenter/intermission.ts';
 import { createCaptureUI } from './presenter/capture-ui.ts';
 import { createRelayReceiver } from './presenter/relay.ts';
 import { RELAY_MESSAGE, relayName, type RelayResponse } from '../presenter/relay-protocol.ts';
 import type { PresenterPublicConfig } from '../config/types.ts';
+import type { ResolvedMatch } from '../match/state.ts';
 import { boundMediaState, changedVideoBindings, mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);
+const currentMatch = nodecg.Replicant<ResolvedMatch>(REPLICANTS.matchResolved);
+const intermission = nodecg.Replicant<Intermission>(REPLICANTS.presenterIntermission);
 const settings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings);
 const timeline = nodecg.Replicant<Timeline>(REPLICANTS.presenterTimeline);
 const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews);
@@ -140,6 +145,7 @@ function frame() {
     previousScene = scene;
     const visible = scene.projection;
     paintScene(document.body, scene, match);
+    if (!ledOutput) paintCameraScene(document.body, scene, intermission.value ?? EMPTY_INTERMISSION, match);
     const resultFrame = state?.gameId === timing.gameId
       ? resultMapFrame(state, timing.round, { left: match.left.playerId, right: match.right.playerId }, visible.answer ?? undefined) : null;
     const preparedResults = scene.kind === 'transition' ? resultFrame ?? undefined : undefined;
@@ -161,7 +167,9 @@ function frame() {
     element('live-area').hidden = scene.kind !== 'live' && !underlay;
     element('transition').hidden = true;
     write('round-number', scene.previewRound === null ? timing.round === null ? '—' : String(timing.round) : String(scene.previewRound));
-    write('mode', state?.mode ?? '—');
+    const mode = state?.mode;
+    write('mode', ledOutput ? mode ?? '—' : mode === 'NM' ? 'NO MOVE' : mode === 'NMPZ' ? 'NMPZ' : mode === 'MOVE' ? 'MOVING' : '—');
+    if (!ledOutput) write('match-label', currentMatch.value?.id === match.id ? currentMatch.value.label : '');
     // Series wins count completed games; the active game is the next one.
     write('game-number', String(match.left.wins + match.right.wins + 1));
     const pinpointing = state?.pinpointing ?? null;
@@ -176,10 +184,13 @@ function frame() {
       const player = visible.players.find(item => item.id === competitor.playerId);
       const matchPoint = pinpointing !== null && player?.matchPoint === true;
       write(side === 'left' ? 'multiplier' : 'right-multiplier', pinpointing
-        ? player ? pointsLabel(matchPoint, pinpointing.firstTo, player.points ?? 0) : '—' : sideMultipliers[side === 'left' ? 0 : 1]);
+        ? player ? pointsLabel(matchPoint, pinpointing.firstTo, player.points ?? 0) : '—'
+        : ledOutput ? sideMultipliers[side === 'left' ? 0 : 1]
+          : sideMultipliers[side === 'left' ? 0 : 1].replace(/×(\d+(?:\.\d+)?)/, (_, value: string) => `×${Number(value).toFixed(1)}`));
       element(side === 'left' ? 'multiplier' : 'right-multiplier').parentElement!.dataset.matchPoint = String(matchPoint);
       write(`${side}-name`, competitor.name);
-      write(`${side}-handle`, competitor.handle);
+      const handle = competitor.handle.trim().replace(/^@+/, '');
+      write(`${side}-handle`, handle ? `@${handle}` : '');
       write(`${side}-wins`, String(competitor.wins));
       const box = element(`${side}-health`).parentElement!;
       box.dataset.matchPoint = String(matchPoint);
@@ -203,7 +214,8 @@ function frame() {
       element(`${side}-lock`).hidden = (visible.phase !== 'live' && !underlay) || !lockPlayer?.locked;
       write(`${side}-score`, player?.score == null ? '—' : String(player.score));
       const distance = player?.distanceM;
-      write(`${side}-distance`, distanceLabel(distance, player?.score));
+      const distanceText = distanceLabel(distance, player?.score);
+      write(`${side}-distance`, ledOutput ? distanceText : distanceText.replace(' ', ''));
     }
     paintScoring(document.body, visible, match);
     paintTimer(document.body, scene.kind === 'live' ? visible.remainingMs : null,
@@ -230,6 +242,7 @@ function frame() {
     }
   }
   if (!timing || !match) {
+    document.body.dataset.intermission = 'none';
     paintResultMapLabel(document.body, null, false);
     for (const id of ['preview-area', 'summary-area', 'results-area', 'live-area', 'transition', 'timer', 'scoring-layer', 'review-banner']) element(id).hidden = true;
     element('waiting-area').hidden = false;

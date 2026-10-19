@@ -1,8 +1,8 @@
 # Stream switcher and separate LED graphics
 
 The **Stream** tab controls stream Preview/Program. The LED operator switches
-three independent, always-on browser sources in OBS/ATEM: presenter,
-player cards + Ban & Pick, and bracket. There is no LED controller dashboard.
+four independent, always-on browser sources in OBS/ATEM: presenter,
+player cards + Ban & Pick, interval, and bracket. There is no LED controller dashboard.
 Shared match, player, ban/pick and bracket data still updates both outputs.
 
 ## Pages
@@ -17,12 +17,14 @@ affects the LED layout.
 | Page | Output | Shows |
 | --- | --- | --- |
 | `presenter.html?role=program` | stream | Duels presenter (unchanged, see [presenter/obs.md](presenter/obs.md)) |
-| `info-stream.html` | stream | Player cards, lower third, caster title bar / nameplates / sponsor banner, Ban & Pick |
+| `info-stream.html` | stream | Player cards, lower third, caster title bar / nameplates / sponsor banner, Ban & Pick, Interval, Bracket |
 | `presenter-led.html` | LED | Duels presenter in the LED layout (top 1920x576 band, black below) |
 | `info-led.html` | LED | Both player cards + Ban & Pick, always on |
-| `bracket-led.html` | LED | Finals bracket, always on; translucent red/blue tint over an OBS/ATEM background video |
+| `bracket-led.html` | LED | Finals bracket, always on; embedded KV video with translucent red/blue tint |
+| `interval-led.html` | LED | Interval with embedded KV video, always on |
+| `brackets-finals.html` | stream | Standalone finals bracket with embedded KV video, always on |
 
-Unchanged: `banpick-player.html` (tablet), `brackets-finals.html`,
+Unchanged: `banpick-player.html` (tablet),
 `presenter-audio.html`. Removed: `banpick-stream.html`, `banpick-led.html`,
 `player-cards.html`, `casters.html`.
 
@@ -54,21 +56,21 @@ accept up to 120 characters. Invalid patches are rejected and nothing changes.
 | stream | Lower third | visible; mode `match` (current match) / `text`; title; subtitle |
 | stream | Casters | title bar + sponsor banner; left/right/center visibility and name dropdowns |
 | stream | Ban & Pick | visible |
+| stream | Interval | visible; minutes, Start, Pause/Resume, Clear, live countdown |
+| stream | Bracket | visible |
 | LED | Presenter | always on, selected in OBS/ATEM |
 | LED | Player cards + Ban & Pick | always on; both cards follow Stream Program page |
 | LED | Bracket | always on; top 1920x576 band |
 
-Use three separate 1920x1080 browser sources for LED; the wall maps the top
+Use separate 1920x1080 browser sources for LED; the wall maps the top
 1920x576 pixels. Switch between them in OBS/ATEM. Keep sources running when
 hidden if the next screen needs to be ready immediately.
 
-`bracket-led.html` has a red/blue tint at **20% opacity**, with no static KV
-image. Match boxes, text and connector lines remain fully opaque. The area
-below y=576 is transparent. Place the looped background video underneath it
-in OBS/ATEM. Adjust `--bracket-tint-opacity` in
-`graphics/assets/bracket-led.css` (0 = clear, 1 = opaque tint) if needed.
-Choose live start.gg or recorded sample data in **Shared ? Bracket**.
-The separate `brackets-finals.html` retains its original 1920x1080 layout.
+Use **Stream → Interval** or **Stream → Bracket**, inspect Preview, then press **TAKE**. Selecting either fullscreen scene turns the other off in Preview. Existing overlays remain staged underneath. The Interval row has a minutes field, **Start**, **Pause/Resume**, **Clear**, and a live countdown. These timer buttons apply immediately to both outputs without changing scene visibility. Content and bracket source settings remain in **Shared → Interval** and **Shared → Bracket**; there are no expandable control panels in the switcher.
+
+Interval and bracket embed the muted, looping `assets/videos/KV/RASHINBAN2026_loop_001.mp4`. Hidden scenes pause the video. NodeCG serves the existing local file at `/rashinban/media/background/kv.mp4`; restart after building to register this route. Worktrees inherit the shared installation's file when no local copy exists. No separate OBS video source is needed for these scenes.
+
+`bracket-led.html` keeps its top 1920x576 layout and transparency below the band, cropping the video to fill that band. Stream uses the original 1920x1080 designer layout in both `info-stream.html` and standalone `brackets-finals.html`. Bracket backgrounds retain the 50% black scrim and 10% red/blue bands; match boxes, text and connectors stay fully opaque. Choose live start.gg or recorded sample data in **Shared → Bracket**.
 
 ### Caster nameplates
 

@@ -77,6 +77,37 @@ export function mountPlayerCards(host: HTMLElement, output: BroadcastOutput): La
   let profiles: PlayerProfile[] = [];
   let layer = defaultLayers(output).playerCards;
 
+  // Measure the full profile even in Compact, so its shared fields never jump
+  // when the lower section switches to results. Only surplus spacing shrinks.
+  function fitProfileSpacing() {
+    const kanedaLoaded = Array.from(document.fonts).some(font => font.family.includes("kaneda-gothic") && font.weight === "700" && font.status === "loaded");
+    root.dataset.headingFont = kanedaLoaded ? "kaneda" : "fallback";
+    const page = root.dataset.page;
+    root.dataset.page = "profile";
+    for (const card of cards) {
+      if (card.hidden) continue;
+      card.style.removeProperty("--profile-gap");
+      card.style.removeProperty("--profile-head-h");
+      const style = getComputedStyle(card);
+      const scale = parseFloat(style.getPropertyValue("--card-scale"));
+      const gap = parseFloat(getComputedStyle(mustQuery(card, ".page-profile")).rowGap);
+      const bottom = card.getBoundingClientRect().bottom - parseFloat(style.paddingBottom);
+      let overflow = mustQuery(card, ".page-details").getBoundingClientRect().bottom - bottom;
+      if (overflow <= 0) continue;
+      const head = mustQuery(card, ".head");
+      const headBounds = head.getBoundingClientRect();
+      const contentBottom = Math.max(...Array.from(head.children, child => child.getBoundingClientRect().bottom));
+      // Preserve the same scaled header clearance on Stream and LED.
+      const spare = Math.max(0, headBounds.bottom - contentBottom - 28 * scale);
+      const reduction = Math.min(spare, overflow);
+      card.style.setProperty("--profile-head-h", `${headBounds.height - reduction}px`);
+      overflow -= reduction;
+      // Two upper gaps, the details margin, and the gap between food/message.
+      if (overflow > 0) card.style.setProperty("--profile-gap", `${Math.max(0, gap - Math.ceil(overflow / 4))}px`);
+    }
+    root.dataset.page = page;
+  }
+
   function render() {
     root.classList.toggle("visible", layer.visible && match !== null);
     root.dataset.page = layer.page;
@@ -93,11 +124,15 @@ export function mountPlayerCards(host: HTMLElement, output: BroadcastOutput): La
         : { rows: [], status: "empty" };
       renderResults(card, results);
     }
+    fitProfileSpacing();
   }
 
   nodecg.Replicant<ResolvedMatch | null>(REPLICANTS.matchResolved).on("change", value => { match = value ?? null; render(); });
   nodecg.Replicant<StartggBracket | null>(REPLICANTS.startggBracket).on("change", value => { bracket = value ?? null; render(); });
   nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players).on("change", value => { profiles = value ?? []; render(); });
+  // Adobe and the Japanese fallback may finish loading after the first render.
+  document.fonts.ready.then(fitProfileSpacing);
+  document.fonts.addEventListener("loadingdone", fitProfileSpacing);
   render();
   return { apply(next) { layer = next; render(); } };
 }

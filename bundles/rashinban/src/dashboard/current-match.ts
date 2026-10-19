@@ -1,339 +1,182 @@
-import { geoUid, matchProfile, playerLabel } from "../match/identity.ts";
-import {
-  emptyMatch,
-  toSeries,
-  type MatchSide,
-  type MatchState,
-  type ResolvedMatch,
-} from "../match/state.ts";
+import { matchProfile, playerLabel } from "../match/identity.ts";
+import { emptyMatch, type MatchSide, type MatchState, type ResolvedMatch } from "../match/state.ts";
 import type { PlayerProfile } from "../sheet/players.ts";
-import type { DuelState } from "../types/presenter.ts";
 import type { StartggBracket, StartggStatus } from "../startgg/types.ts";
-import {
-  MATCH_MESSAGES,
-  REPLICANTS,
-  STARTGG_MESSAGES,
-} from "../types/replicants.ts";
+import { MATCH_MESSAGES, REPLICANTS, STARTGG_MESSAGES } from "../types/replicants.ts";
 
-const state = nodecg.Replicant<MatchState>(REPLICANTS.matchState);
-const resolved = nodecg.Replicant<ResolvedMatch>(REPLICANTS.matchResolved);
-const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const players = nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players);
-const bracket = nodecg.Replicant<StartggBracket | null>(
-  REPLICANTS.startggBracket,
-);
+const bracket = nodecg.Replicant<StartggBracket | null>(REPLICANTS.startggBracket);
 const startStatus = nodecg.Replicant<StartggStatus>(REPLICANTS.startggStatus);
 const el = (id: string) => document.getElementById(id)!;
-const input = (id: string) => el(id) as HTMLInputElement;
 const menu = (id: string) => el(id) as HTMLSelectElement;
+const button = (id: string) => el(id) as HTMLButtonElement;
 const sides = ["left", "right"] as const;
-let draft = emptyMatch(),
-  dirty = false;
-let candidates: { key: string; label: string; side: MatchSide }[] = [];
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value));
-async function send(name: string, value?: unknown) {
-  try {
-    await nodecg.sendMessage(name, value);
-    el("error").textContent = "";
-    return true;
-  } catch (error) {
-    el("error").textContent = (error as Error).message;
-    return false;
-  }
+const slots = {
+  current: {
+    state: nodecg.Replicant<MatchState>(REPLICANTS.matchState),
+    resolved: nodecg.Replicant<ResolvedMatch>(REPLICANTS.matchResolved),
+    apply: MATCH_MESSAGES.apply, load: MATCH_MESSAGES.load, swap: MATCH_MESSAGES.swap,
+    draft: emptyMatch(), dirty: false, ready: false,
+  },
+  next: {
+    state: nodecg.Replicant<MatchState>(REPLICANTS.nextMatchState),
+    resolved: nodecg.Replicant<ResolvedMatch>(REPLICANTS.nextMatchResolved),
+    apply: MATCH_MESSAGES.nextApply, load: MATCH_MESSAGES.nextLoad, swap: MATCH_MESSAGES.nextSwap,
+    draft: emptyMatch(), dirty: false, ready: false,
+  },
+};
+type Slot = keyof typeof slots;
+const slotNames = ["current", "next"] as const;
+let candidates: { key: string; label: string; side: MatchSide }[] = [];
+let busy = false;
+const selected = (side: MatchSide) => !!(side.name || side.tag || side.uid || side.entrantId);
+
+async function request(errorId: string, action: () => Promise<void>) {
+  if (busy) return;
+  busy = true; el(errorId).textContent = ""; refreshControls();
+  try { await action(); }
+  catch (error) {
+    const message = typeof error === "string" ? error : error && typeof error === "object" && "message" in error ? error.message : null;
+    el(errorId).textContent = typeof message === "string" ? message : "Change rejected. Check the NodeCG connection.";
+  } finally { busy = false; refreshControls(); }
 }
-async function commit(name: string, value: unknown) {
-  try {
-    const result = (await nodecg.sendMessage(name, value)) as MatchState;
-    draft = copy(result);
-    dirty = false;
-    showDraft();
-    el("error").textContent = "";
-  } catch (error) {
-    el("error").textContent = (error as Error).message;
-  }
-}
-function showDraft() {
-  input("match-label").value = draft.label;
+function showOptions(slot: Slot) {
   for (const side of sides) {
-    const p = draft[side];
-    input(`${side}-name`).value = p.name || p.tag;
-    input(`${side}-uid`).value = p.uid ?? "";
-    input(`${side}-override`).value = p.nameOverride;
-    input(`${side}-handle`).value = p.handleOverride ?? "";
-    input(`${side}-wins`).value = String(p.wins);
-  }
-  showOptions();
-  showAccounts(true);
-}
-function showAccounts(initialize = false) {
-  for (const side of sides) {
-    const list = menu(`${side}-account`);
-    const selected = initialize
-      ? (draft.gameMapping?.[side] ?? (side === "left" ? "blue" : "red"))
-      : list.value;
-    list.replaceChildren();
-    for (const color of ["blue", "red"]) {
-      const account = duel.value?.players.find((p) => p.teamColor === color);
-      list.add(
-        new Option(
-          `Auto — ${color} team${account ? ` (${account.id})` : " (waiting for duel)"}`,
-          color,
-        ),
-      );
-    }
-    for (const p of duel.value?.players ?? [])
-      list.add(new Option(`${p.teamColor} account (${p.id})`, p.id));
-    if (selected && ![...list.options].some((o) => o.value === selected))
-      list.add(new Option(`Unavailable account (${selected})`, selected));
-    list.value = selected || (side === "left" ? "blue" : "red");
-  }
-  const active = resolved.value
-    ? toSeries(resolved.value, duel.value ?? null)
-    : null;
-  for (const side of sides)
-    el(`${side}-account-status`).textContent = active?.[side].playerId
-      ? `Using game account ${active[side].playerId}`
-      : "Waiting for a unique matching game account. Check for duplicate mappings.";
-}
-function readDraft(): MatchState {
-  const next = copy(draft);
-  next.label = input("match-label").value;
-  next.gameMapping = {
-    left: menu("left-account").value,
-    right: menu("right-account").value,
-  };
-  for (const side of sides) {
-    next[side] = {
-      ...next[side],
-      name: input(`${side}-name`).value,
-      uid: geoUid(input(`${side}-uid`).value),
-      nameOverride: input(`${side}-override`).value,
-      handleOverride: input(`${side}-handle`).value.trim() || null,
-      wins: Number(input(`${side}-wins`).value),
-    };
-    if (next[side].uid !== draft[side].uid) {
-      next[side].id = next[side].uid
-        ? `geo:${next[side].uid}`
-        : `manual:${side}:${Date.now()}`;
-      next[side].entrantId = null;
-      next[side].tag = "";
-      next.source = "manual";
-      next.setId = null;
-    }
-  }
-  return next;
-}
-function showOptions() {
-  for (const side of sides) {
-    const selected = draft[side];
-    const list = menu(`${side}-select`);
-    list.replaceChildren(new Option("Manual entry", ""));
-    for (const c of candidates) list.add(new Option(c.label, c.key));
-    const found = candidates.find((c) =>
-      selected.uid
-        ? c.side.uid === selected.uid
-        : selected.entrantId
-          ? c.side.entrantId === selected.entrantId
-          : selected.tag && c.side.tag === selected.tag,
-    );
+    const chosen = slots[slot].draft[side];
+    const list = menu(`${slot}-${side}`);
+    const placeholder = new Option("Select player", ""); placeholder.disabled = true;
+    list.replaceChildren(placeholder, ...candidates.map(c => new Option(c.label, c.key)));
+    const found = candidates.find(c => chosen.uid ? c.side.uid === chosen.uid
+      : chosen.entrantId ? c.side.entrantId === chosen.entrantId
+      : c.side.id === chosen.id || chosen.tag && c.side.tag === chosen.tag);
     if (found) list.value = found.key;
-    else if (selected.name || selected.uid || selected.tag) {
-      list.add(
-        new Option(
-          playerLabel(selected.name || selected.tag, selected.uid),
-          "current",
-        ),
-      );
-      list.value = "current";
-    }
+    else if (selected(chosen)) {
+      list.add(new Option(playerLabel(chosen.name || chosen.tag, chosen.uid), "saved")); list.value = "saved";
+    } else list.value = "";
   }
+}
+function showDraft(slot: Slot) {
+  (el(`${slot}-label`) as HTMLInputElement).value = slots[slot].draft.label;
+  showOptions(slot); refreshControls();
+}
+function refreshControls() {
+  for (const slot of slotNames) {
+    const model = slots[slot];
+    const disabled = busy || !model.ready;
+    for (const side of sides) menu(`${slot}-${side}`).disabled = disabled;
+    (el(`${slot}-label`) as HTMLInputElement).disabled = disabled;
+    button(`${slot}-apply`).disabled = disabled || !sides.every(side => selected(model.draft[side]));
+    button(`${slot}-swap`).disabled = disabled || model.dirty;
+    button(`${slot}-reload`).disabled = disabled;
+    const conflict = model.dirty && model.state.value?.revision !== model.draft.revision;
+    el(`${slot}-status`).textContent = !model.ready ? "Loading..." : conflict ? "Changed elsewhere. Discard edits to reload."
+      : model.dirty ? "Unsaved changes" : slot === "next" && !sides.some(side => selected(model.draft[side])) ? "No next match staged" : "Saved";
+  }
+  const next = slots.next.state.value;
+  button("promote-next").disabled = busy || !slots.current.ready || !slots.next.ready || slots.current.dirty || slots.next.dirty || !next || !sides.every(side => selected(next[side]));
+  button("refresh-startgg").disabled = busy;
+  document.querySelectorAll<HTMLButtonElement>("button[data-load-slot]").forEach(control => {
+    const slot = control.dataset.loadSlot as Slot;
+    control.disabled = busy || !slots[slot].ready || slots[slot].dirty || control.dataset.unavailable === "true";
+  });
+}
+async function commit(slot: Slot, name: string, value: unknown) {
+  await request(`${slot}-error`, async () => {
+    const saved = await nodecg.sendMessage(name, value) as MatchState;
+    const latest = slots[slot].state.value;
+    slots[slot].draft = copy(latest && latest.revision > saved.revision ? latest : saved);
+    slots[slot].dirty = false; showDraft(slot);
+  });
 }
 function rebuildCandidates() {
   candidates = [];
   for (const [i, p] of (players.value ?? []).entries()) {
-    candidates.push({
-      key: `profile:${i}`,
-      label: playerLabel(p.name || p.startggTag, p.geoguessrPlayerUid),
-      side: {
-        ...emptyMatch().left,
-        id: p.geoguessrPlayerUid
-          ? `geo:${p.geoguessrPlayerUid}`
-          : `profile:${p.startggTag}`,
-        uid: p.geoguessrPlayerUid ?? null,
-        entrantId: p.startggEntrantId,
-        tag: p.startggTag,
-        name: p.name,
-      },
-    });
+    candidates.push({ key: `profile:${i}`, label: playerLabel(p.name || p.startggTag, p.geoguessrPlayerUid),
+      side: { ...emptyMatch().left, id: p.geoguessrPlayerUid ? `geo:${p.geoguessrPlayerUid}` : `profile:${p.startggTag}`,
+        uid: p.geoguessrPlayerUid ?? null, entrantId: p.startggEntrantId, tag: p.startggTag, name: p.name } });
   }
   for (const e of Object.values(bracket.value?.entrants ?? {})) {
-    const profile = matchProfile(players.value ?? [], {
-      entrantId: e.id,
-      tag: e.tag,
-      name: e.name,
-    });
-    if (profile.profile) continue;
-    candidates.push({
-      key: `entrant:${e.id}`,
-      label: playerLabel(e.tag || e.name, null),
-      side: {
-        ...emptyMatch().left,
-        id: `startgg:${e.id}`,
-        entrantId: e.id,
-        tag: e.tag,
-        name: e.tag || e.name,
-      },
-    });
+    if (matchProfile(players.value ?? [], { entrantId: e.id, tag: e.tag, name: e.name }).profile) continue;
+    candidates.push({ key: `entrant:${e.id}`, label: playerLabel(e.tag || e.name, null),
+      side: { ...emptyMatch().left, id: `startgg:${e.id}`, entrantId: e.id, tag: e.tag, name: e.tag || e.name } });
   }
   candidates.sort((a, b) => a.label.localeCompare(b.label, "ja"));
-  showOptions();
+  for (const slot of slotNames) showOptions(slot);
 }
 function showUpcoming() {
-  const body = el("upcoming");
+  const body = el("upcoming"), b = bracket.value;
   body.replaceChildren();
-  const b = bracket.value;
-  const rank: Record<string, number> = {
-    active: 0,
-    called: 1,
-    queued: 2,
-    ready: 3,
-    created: 4,
-    unknown: 5,
-  };
-  const queued = new Set(b?.streamQueue.flatMap((q) => q.setIds) ?? []);
-  const sets = Object.values(b?.sets ?? {})
-    .filter((s) => s.state !== "completed" && s.state !== "invalid")
-    .sort(
-      (a, b) =>
-        Number(queued.has(b.id)) - Number(queued.has(a.id)) ||
-        rank[a.state] - rank[b.state] ||
-        a.round - b.round ||
-        a.id - b.id,
-    );
+  const rank: Record<string, number> = { active: 0, called: 1, queued: 2, ready: 3, created: 4, unknown: 5 };
+  const queued = new Set(b?.streamQueue.flatMap(q => q.setIds) ?? []);
+  const sets = Object.values(b?.sets ?? {}).filter(s => s.state !== "completed" && s.state !== "invalid")
+    .sort((a, b) => Number(queued.has(b.id)) - Number(queued.has(a.id)) || rank[a.state] - rank[b.state] || a.round - b.round || a.id - b.id);
   if (!sets.length) {
-    const row = document.createElement("tr"),
-      cell = document.createElement("td");
-    cell.colSpan = 5;
-    cell.textContent =
-      "No upcoming matches available. Refresh start.gg or enter players manually.";
-    row.append(cell);
-    body.append(row);
+    const row = document.createElement("tr"), cell = document.createElement("td"); cell.colSpan = 5;
+    cell.textContent = "No upcoming matches available. Refresh start.gg or select players above."; row.append(cell); body.append(row);
   }
   for (const set of sets) {
-    const names = set.slots.map((s) =>
-      s.entrantId == null ? "TBD" : b?.entrants[s.entrantId]?.tag || "TBD",
-    );
+    const names = set.slots.map(s => s.entrantId == null ? "TBD" : b?.entrants[s.entrantId]?.tag || b?.entrants[s.entrantId]?.name || "TBD");
     const row = document.createElement("tr");
-    for (const text of [
-      [
-        b?.phases.find((p) => p.id === set.phaseId)?.name,
-        set.roundText,
-        b?.groups[set.groupId]?.identifier,
-      ]
-        .filter(Boolean)
-        .join(" / "),
-      names.join(" vs "),
-      set.slots.map((s) => s.score ?? "–").join(" – "),
-      set.state,
-    ]) {
-      const cell = document.createElement("td");
-      cell.textContent = text;
-      row.append(cell);
+    for (const text of [[b?.phases.find(p => p.id === set.phaseId)?.name, set.roundText, b?.groups[set.groupId]?.identifier].filter(Boolean).join(" / "),
+      names.join(" vs "), set.slots.map(s => s.score ?? "–").join(" – "), set.state]) {
+      const cell = document.createElement("td"); cell.textContent = text; row.append(cell);
     }
-    const cell = document.createElement("td"),
-      button = document.createElement("button");
-    button.textContent = "Load";
-    button.disabled = names.length !== 2 || names.includes("TBD");
-    button.onclick = async () => {
-      if (dirty) {
-        el("error").textContent =
-          "Apply or discard your edits before loading another match.";
-        return;
-      }
-      await commit(MATCH_MESSAGES.load, {
-        setId: set.id,
-        revision: draft.revision,
-      });
-    };
-    cell.append(button);
-    row.append(cell);
-    body.append(row);
+    const cell = document.createElement("td"), actions = document.createElement("div"); actions.className = "row";
+    for (const slot of slotNames) {
+      const load = document.createElement("button"); load.type = "button"; load.textContent = `Load ${slot}`;
+      load.dataset.loadSlot = slot; load.dataset.setId = String(set.id); load.dataset.unavailable = String(names.length !== 2 || names.includes("TBD"));
+      load.onclick = () => { if (!slots[slot].dirty) void commit(slot, slots[slot].load, { setId: set.id, revision: slots[slot].draft.revision }); };
+      actions.append(load);
+    }
+    cell.append(actions); row.append(cell); body.append(row);
   }
+  refreshControls();
 }
-el("match-form").addEventListener("input", () => {
-  dirty = true;
-});
-el("match-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try {
-    await commit(MATCH_MESSAGES.apply, readDraft());
-  } catch (error) {
-    el("error").textContent = (error as Error).message;
-  }
-});
-for (const side of sides)
-  menu(`${side}-select`).onchange = () => {
-    try {
-      draft = readDraft();
-    } catch {
-      /* Choosing another player replaces an invalid draft. */
-    }
-    const found = candidates.find(
-      (c) => c.key === menu(`${side}-select`).value,
-    );
-    if (menu(`${side}-select`).value === "current") return;
-    draft[side] = found
-      ? copy(found.side)
-      : { ...emptyMatch()[side], id: `manual:${side}:${Date.now()}` };
-    draft.source = "manual";
-    draft.setId = null;
-    dirty = true;
-    showDraft();
-  };
-el("reload-match").onclick = () => {
-  dirty = false;
-  draft = copy(state.value ?? emptyMatch());
-  showDraft();
-  el("error").textContent = "";
-};
-el("swap-match").onclick = async () => {
-  if (dirty) {
-    el("error").textContent =
-      "Apply or discard your edits before swapping sides.";
-    return;
-  }
-  await commit(MATCH_MESSAGES.swap, { revision: draft.revision });
-};
-state.on("change", (value) => {
-  if (value && !dirty && value.revision >= draft.revision) {
-    draft = copy(value);
-    showDraft();
-  }
-});
-resolved.on("change", (value) => {
-  if (!value) return;
-  showAccounts();
-  el("match-summary").textContent =
-    `${value.left.name} ${value.left.wins} – ${value.right.wins} ${value.right.name}${value.label ? " · " + value.label : ""}`;
-  for (const side of sides)
-    el(`${side}-profile`).textContent =
-      `${value[side].profileStatus === "matched" ? "Spreadsheet profile linked" : value[side].profileStatus === "ambiguous" ? "Duplicate spreadsheet profiles" : "No spreadsheet profile"} · ${value[side].uid || "GeoGuessr UID missing"}`;
-});
-players.on("change", rebuildCandidates);
-duel.on("change", () => showAccounts());
-for (const side of sides)
-  menu(`${side}-account`).addEventListener("change", () => {
-    dirty = true;
+for (const slot of slotNames) {
+  const model = slots[slot];
+  el(`${slot}-form`).addEventListener("input", () => { model.dirty = true; refreshControls(); });
+  el(`${slot}-form`).addEventListener("submit", event => {
+    event.preventDefault();
+    const next = copy(model.draft); next.label = (el(`${slot}-label`) as HTMLInputElement).value;
+    void commit(slot, model.apply, next);
   });
-bracket.on("change", () => {
-  rebuildCandidates();
-  showUpcoming();
+  for (const side of sides) menu(`${slot}-${side}`).addEventListener("change", () => {
+    const found = candidates.find(c => c.key === menu(`${slot}-${side}`).value);
+    if (!found) return;
+    model.draft[side] = copy(found.side); model.draft.source = "manual"; model.draft.setId = null;
+    model.dirty = true; showOptions(slot); refreshControls();
+  });
+  button(`${slot}-reload`).onclick = () => {
+    model.draft = copy(model.state.value ?? emptyMatch()); model.dirty = false; el(`${slot}-error`).textContent = ""; showDraft(slot);
+  };
+  button(`${slot}-swap`).onclick = () => { if (!model.dirty) void commit(slot, model.swap, { revision: model.draft.revision }); };
+  model.state.on("change", value => {
+    if (value) {
+      model.ready = true;
+      if (!model.dirty && value.revision >= model.draft.revision) { model.draft = copy(value); showDraft(slot); }
+    }
+    refreshControls();
+  });
+  model.resolved.on("change", value => {
+    if (!value) return;
+    el(`${slot}-summary`).textContent = !sides.some(side => selected(value[side]) && value[side].name !== "TBD") ? "No match selected"
+      : `${value.left.name} ${slot === "current" ? `${value.left.wins} – ${value.right.wins}` : "vs"} ${value.right.name}${value.label ? " · " + value.label : ""}`;
+    for (const side of sides) el(`${slot}-${side}-profile`).textContent = value[side].profileStatus === "matched" ? "Spreadsheet profile linked"
+      : value[side].profileStatus === "ambiguous" ? "Duplicate spreadsheet profiles" : "";
+  });
+}
+button("promote-next").onclick = () => {
+  if (slots.current.dirty || slots.next.dirty) return;
+  void request("next-error", async () => {
+    await nodecg.sendMessage(MATCH_MESSAGES.promoteNext, { revision: slots.current.draft.revision, nextRevision: slots.next.draft.revision });
+  });
+};
+players.on("change", rebuildCandidates);
+bracket.on("change", () => { rebuildCandidates(); showUpcoming(); });
+button("refresh-startgg").onclick = () => { void request("error", async () => { await nodecg.sendMessage(STARTGG_MESSAGES.refresh); }); };
+startStatus.on("change", value => {
+  el("startgg-status").textContent = value?.lastError ? ` ${value.lastError}`
+    : value?.lastSuccessAt ? ` Updated ${new Date(value.lastSuccessAt).toLocaleTimeString()}` : " Not fetched yet";
 });
-el("refresh-startgg").onclick = () => send(STARTGG_MESSAGES.refresh);
-startStatus.on("change", (v) => {
-  el("startgg-status").textContent = v?.lastError
-    ? ` ${v.lastError}`
-    : v?.lastSuccessAt
-      ? ` Updated ${new Date(v.lastSuccessAt).toLocaleTimeString()}`
-      : " Not fetched yet";
-});
+refreshControls();

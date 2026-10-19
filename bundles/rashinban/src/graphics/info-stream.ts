@@ -7,6 +7,7 @@ import { mountCasters } from "./layers/casters.ts";
 import { mustQuery } from "./layers/layer.ts";
 import { mountLowerThird } from "./layers/lower-third.ts";
 import { mountInterval } from "./layers/interval.ts";
+import { mountBracket } from "./layers/bracket.ts";
 import { mountPlayerCards } from "./layers/player-cards.ts";
 
 const channel = channelFromSearch(location.search);
@@ -18,6 +19,7 @@ const banpick = mountBanpick(mustQuery(document, "#layer-banpick"));
 const cards = mountPlayerCards(mustQuery(document, "#layer-cards"), "stream");
 const lowerThird = mountLowerThird(mustQuery(document, "#layer-lower-third"));
 const interval = mountInterval(mustQuery(document, "#layer-interval"), "stream");
+const bracket = mountBracket(mustQuery(document, "#layer-bracket"), "stream");
 
 bindLayers("stream", channel, (layers) => {
   casters.apply(layers.casters);
@@ -25,4 +27,5 @@ bindLayers("stream", channel, (layers) => {
   cards.apply(layers.playerCards);
   lowerThird.apply(layers.lowerThird);
   interval.apply(layers.interval);
+  bracket.apply({ visible: layers.bracket.visible && !layers.interval.visible });
 });

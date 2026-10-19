@@ -14,10 +14,28 @@ leaves the spectator connection running and keeps settled results on screen
 when the next panorama is unknown. New games, rollback and cancellation clear
 inapplicable future knowledge.
 
-An unstarted current round shows a full-width starting panorama and small empty
-world map. A scheduled server start shows 3, 2, 1 against its actual timestamp,
-then ordinary live play. Chroma mode uses a full-width key rectangle and hides
-Google imagery. Camera windows remain visible in every scene.
+An unstarted current round shows a centered 16:9 starting panorama. A scheduled
+server start shows 3, 2, 1 against its actual timestamp, then ordinary live play.
+The preview is rendered even when gameplay uses chroma or transparent OBS
+windows. Both previews omit the label and minimap. Stream camera windows
+remain visible in every scene.
+
+The stream's in-game layout follows the four designer references: normal HP
+play uses two equal gameplay windows, Pinpointing replaces HP/damage with point
+pips, one-player lock-in expands the active view, and results use a full-width
+map with score cards. Red denotes the left player and blue the right, including
+map pins and verdicts. The header shows the current match label, round, game,
+series wins and mode; the sponsor mark sits between the relayed camera feeds.
+NMPZ renders the same starting panorama in both player windows.
+
+The asymmetric lock-in layout applies only to rendered/video gameplay. Chroma
+windows retain their equal geometry and the timer stays between them, so OBS
+sources do not need to move or resize. The stream timer is a Kaneda Gothic
+MM:SS pill with a purple perimeter that disappears clockwise against the server
+deadline, including first-guess shortening. At 15 seconds its outline and text
+turn red; the outline fades out during the last half-second. With rendered/video
+gameplay the timer moves above the windows on single-player lock-in. The LED
+retains its fixed timer position, radial dial and 16:9 player windows.
 
 After a round resolves, the 5K video first covers the frozen game view. Its shared
 reveal boundary switches the background to the results map while the video is
@@ -39,10 +57,27 @@ locations or puts an answer pin on the preview map. Game, round and mapping
 identities guard panorama reuse; hidden/chroma surfaces remain invisible.
 
 After final scoring, the winner follows `winnerTeamId`, not HP comparison. Draws
-are neutral; aborted games say GAME CANCELLED. The post-game panel shows only
-the winner and remains until a new game replaces the state. There is no match
-breakdown, six-second expiry, automatic lobby navigation, or avatar animation.
-The series header and camera windows remain visible.
+are neutral; aborted games say GAME CANCELLED. On the stream presenter, the
+winner's camera uses a 1049x951 panel, with the other camera in a 717x951 panel
+alongside it. Both have rounded 8px frames, with plain white Kaneda Gothic names
+and handles in their lower corners and WINNER at the top of the winning panel.
+The layout mirrors for a right-side winner. Draws, unknown winners and
+cancellations use equal panels. Existing
+camera video elements stay connected; 16:9 inputs use centered cover crops.
+The LED retains its existing winner panel and never shows face cameras.
+
+**Between games · stream** in the Party dashboard's **Live duel** card has **Before-Game** and
+**End-of-Last-Game** buttons. Before-Game shows both players in tall, side-by-side
+camera panels, with a red centre divider and compass symbol. Player names and
+handles appear in the lower outer corners; series win counts are hidden in this
+view. End-of-Last-Game restores the last result for the current matchup.
+The selection is shared between stream clients and survives browser reloads
+and same-party reconnects during the NodeCG session. A newly completed game
+automatically selects End-of-Last-Game, after its final scoring finishes.
+Repeated snapshots do not undo an operator's Before-Game selection. A different
+match, party, input source or NodeCG restart clears the remembered result.
+The buttons do not override gameplay, round previews or scoring; they never
+change game state, wins, health, or the host's start/continue controls.
 
 A paused/review game shows a banner and suppresses the running countdown without
 inventing a new start time. A valid existing preview can remain during review;

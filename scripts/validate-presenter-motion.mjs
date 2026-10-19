@@ -21,8 +21,9 @@ Object.assign(state.rounds[0], { startAtMs: epoch - 21000, timerStartAtMs: epoch
 const timeline = advanceTimeline(null, state, epoch, false, DEFAULT_TIMING);
 const initial = { presenterDuel: state, presenterViews: seedViews(state), presenterTimeline: timeline,
   presenterSettings: { ...DEFAULT_SETTINGS, viewSource: 'rendered', muted: true },
-  presenterSeries: { id: 'motion-qa', source: 'manual', left: { id: 'a', name: 'PLAYER LEFT', handle: '', wins: 1, playerId: state.players[0].id },
-    right: { id: 'b', name: 'PLAYER RIGHT', handle: '', wins: 2, playerId: state.players[1].id } },
+  presenterSeries: { id: 'motion-qa', source: 'manual', left: { id: 'a', name: 'PLAYER LEFT', handle: '@playerleft', wins: 1, playerId: state.players[0].id },
+    right: { id: 'b', name: 'PLAYER RIGHT', handle: '@playerright', wins: 2, playerId: state.players[1].id } },
+  matchResolved: { id: 'motion-qa', label: 'GRAND FINALS' },
   presenterClients: { clients: [], program: null }, presenterPublicConfig: { googleMapsApiKey: '' } };
 const bootstrap = `
 window.qa={now:${epoch},initial:${JSON.stringify(initial)}};
@@ -41,7 +42,7 @@ const server = createServer(async (req, res) => {
     if (!file.startsWith(path.join(root, 'bundles/rashinban/graphics') + path.sep)) throw Error('Invalid path');
     let data = await readFile(file);
     if (file.endsWith('.html')) data = data.toString().replace('<script src="presenter.js">', `<script>${bootstrap}</script><script src="presenter.js">`);
-    res.setHeader('Content-Type', { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.jpg': 'image/jpeg' }[path.extname(file)] || 'application/octet-stream');
+    res.setHeader('Content-Type', { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream');
     res.end(data);
   } catch (error) { res.writeHead(404); res.end(String(error)); }
 });
@@ -97,10 +98,10 @@ try {
     const led = output === 'led';
     await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/presenter${led ? '-led' : ''}.html?role=preview` });
     for (let i = 0; i < 100; i++) {
-      if (await evaluate(`document.getElementById('timer-value')?.textContent==='39'`)) break;
+      if (await evaluate(`document.getElementById('timer-value')?.textContent==='${led ? '39' : '00:39'}'`)) break;
       await delay(100);
     }
-    assert.equal(await evaluate(`document.getElementById('timer-value').textContent`), '39');
+    assert.equal(await evaluate(`document.getElementById('timer-value').textContent`), led ? '39' : '00:39');
     await evaluate(`document.fonts.ready`);
     const fontDocument = await command('DOM.getDocument');
     const fontNode = await command('DOM.querySelector', { nodeId: fontDocument.root.nodeId, selector: '#timer-value' });
@@ -115,10 +116,21 @@ try {
     for (const mode of ['NM', 'NMPZ']) for (const source of ['rendered', 'video', 'chroma']) for (const lock of ['none', 'left', 'right', 'both']) {
       await evaluate(`qa.live('${mode}','${source}','${lock}')`); await settle();
       const current = await evaluate(`({timer:qa.rect('timer'),left:qa.rect('left-window'),right:qa.rect('right-window'),leftMap:qa.rect('left-map'),rightMap:qa.rect('right-map'),layout:document.body.dataset.layout,lock:document.body.dataset.lock})`);
-      assert.deepEqual(current.timer, timer, `${output} timer moved on ${mode}/${source}/${lock}`);
-      if (current.layout === 'dual' || current.lock !== 'none') { ratio(current.left); ratio(current.right); }
-      if (current.lock === 'left' || current.lock === 'both') ratio(current.leftMap);
-      if (current.lock === 'right' || current.lock === 'both') ratio(current.rightMap);
+      if (led || source === 'chroma') assert.deepEqual(current.timer, timer, `${output} fixed timer moved on ${mode}/${source}/${lock}`);
+      if (led) {
+        ratio(current.left); ratio(current.right);
+        if (current.lock === 'left' || current.lock === 'both') ratio(current.leftMap);
+        if (current.lock === 'right' || current.lock === 'both') ratio(current.rightMap);
+      } else {
+        const singleLock = current.lock === 'left' || current.lock === 'right';
+        assert.equal(current.timer.y, singleLock ? 229 : 557);
+        assert.equal(current.timer.width,195);assert.equal(current.timer.height,78);
+        assert.equal(current.left.y,335);assert.equal(current.right.y,335);
+        assert.equal(current.left.height,522);assert.equal(current.right.height,522);
+        assert.equal(current.left.width,singleLock ? current.lock==='left' ? 578 : 1278 : 928);
+        assert.equal(current.right.width,singleLock ? current.lock==='right' ? 578 : 1278 : 928);
+        if(source==='chroma')assert.equal(current.lock,'none','External gameplay must never resize on lock');
+      }
       if (current.layout === 'shared' && ['left', 'right'].includes(current.lock)) {
         const shared = await evaluate(`(()=>{const el=document.getElementById('shared-panorama');const style=getComputedStyle(el);return{width:parseFloat(style.width)-parseFloat(style.borderLeftWidth)-parseFloat(style.borderRightWidth),height:parseFloat(style.height)-parseFloat(style.borderTopWidth)-parseFloat(style.borderBottomWidth)};})()`);
         ratio(shared);
@@ -130,15 +142,27 @@ try {
       }
       layouts.push({ output, mode, source, lock, ...current });
     }
-    checks.push(`${output}: fixed timer and 16:9 lock frames across modes, sources and both sides`);
+    checks.push(`${output}: source-aware timer and lock geometry across modes and both sides; chroma remains fixed`);
     await evaluate(`qa.live('NM','rendered','none')`); await settle(); await screenshot(`${output}-39`, led);
     await evaluate(`qa.live('NM','rendered','left')`); await settle(); await screenshot(`${output}-locked`, led);
+    if (!led) {
+      assert.equal(await evaluate(`document.querySelector('.presenter-sponsor').naturalWidth`),575,'Sponsor must load as SVG');
+      assert.equal(await evaluate(`document.getElementById('match-label').textContent`),'GRAND FINALS');
+      await evaluate(`qa.set('matchResolved',{id:'other-match',label:'STALE MATCH'})`); await settle();
+      assert.equal(await evaluate(`document.getElementById('match-label').textContent`),'','Do not label a different series');
+      await evaluate(`qa.set('matchResolved',qa.initial.matchResolved);qa.live('NM','rendered','none');const points=structuredClone(qa.initial.presenterDuel);points.pinpointing={teamIds:points.players.map(p=>p.teamId),firstTo:7,tieRange:'off',rounds:[],totals:[1,1],matchPoint:[false,false],terminal:null};qa.set('presenterDuel',points)`);
+      await settle();
+      assert.deepEqual(await evaluate(`['left','right'].map(side=>({points:document.getElementById(side+'-health').textContent,pips:document.querySelectorAll('#'+side+'-pips .pip').length,filled:document.querySelectorAll('#'+side+'-pips .filled').length,damage:getComputedStyle(document.querySelector('.damage.'+side)).display}))`),
+        [{points:'1',pips:7,filled:1,damage:'none'},{points:'1',pips:7,filled:1,damage:'none'}]);
+      await screenshot('stream-pinpointing');
+      checks.push('stream: live match title, sponsor asset and authoritative Pinpointing counters');
+    }
     await evaluate(`qa.live('NM','rendered','none');const s=structuredClone(qa.initial.presenterDuel);s.rounds[0].startAtMs=qa.now+60000;qa.set('presenterDuel',s);qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'pre-round'});`);
     await settle();
     const preview = await evaluate(`({rect:qa.rect('preview-area'),panorama:qa.rect('preview-panorama'),hidden:document.getElementById('preview-area').hidden,timerHidden:document.getElementById('timer').hidden})`);
     ratio(preview.rect); ratio(preview.panorama); assert.equal(preview.rect.x + preview.rect.width / 2, 960); assert.equal(preview.hidden, false); assert.equal(preview.timerHidden, true);
     await screenshot(`${output}-preview`, led);
-    checks.push(`${output}: centered 16:9 preview and gold final countdown`);
+    checks.push(`${output}: centered 16:9 preview`);
 
     const result = structuredClone(state); result.manualRoundStart = false;
     result.players.forEach((player, i) => { player.results = [{ round: result.round, score: i ? 3200 : 4500, bestGuess: null,
@@ -178,15 +202,20 @@ try {
     await writeFile(path.join(artifacts, `${output}-motion.json`), JSON.stringify(tokens, null, 2));
     checks.push(`${output}: built scoring animation crosses impact continuously and settles authoritative HP`);
     // The production client deliberately never rewinds its synchronized clock.
-    // Sample the last ten seconds after scoring, without rewinding time.
-    await evaluate(`qa.live('NM','rendered','none');qa.now=${epoch + 29000}`); await settle();
-    assert.equal(await evaluate(`document.getElementById('timer-value').textContent`), '10');
+    // Sample the red threshold after scoring, without rewinding time.
+    await evaluate(`qa.live('NM','rendered','none');qa.now=${epoch + 24000}`); await settle();
+    assert.equal(await evaluate(`document.getElementById('timer-value').textContent`), led ? '15' : '00:15');
     assert.equal(await evaluate(`document.getElementById('timer').classList.contains('critical')`), true);
+    assert.equal(await evaluate(`getComputedStyle(document.getElementById('timer-value')).color`), 'rgb(255, 48, 48)');
+    if(!led) {
+      assert.equal(await evaluate(`getComputedStyle(document.querySelector('.timer-progress')).stroke`),'rgb(255, 48, 48)');
+      assert.equal(await evaluate(`Number(document.getElementById('timer').style.getPropertyValue('--timer-offset'))`),-75,'Clockwise elapsed perimeter follows the deadline');
+    }
     if (led) {
       const numeral = await evaluate(`qa.rect('timer-value')`);
       assert.ok(numeral.x >= 816 && numeral.x + numeral.width <= 1104, 'final countdown stays between LED views');
     }
-    await screenshot(`${output}-10`, led);
+    await screenshot(`${output}-15`, led);
   }
   assert.deepEqual(errors, [], 'uncaught browser errors');
   await writeFile(path.join(artifacts, 'report.json'), JSON.stringify({ checks, errors, layouts }, null, 2));

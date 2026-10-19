@@ -70,6 +70,33 @@ test('presenter delivery serves local then shared bytes and supports video range
   assert.equal((await fetch(base.replace('clip.webm','%2Foutside.webm'))).status,404);
 });
 
+test('KV background serves the requested local video with byte ranges and shared-root fallback', async t => {
+  const {roots} = fixture(t);
+  const video = (scope: 'appRoot' | 'sharedRoot', bytes: string) => {
+    const directory = path.join(roots[scope], 'assets/videos/KV');
+    mkdirSync(directory, {recursive: true});
+    const file = path.join(directory, 'RASHINBAN2026_loop_001.mp4');
+    writeFileSync(file, bytes);
+    return file;
+  };
+  video('sharedRoot', 'SHARED VIDEO');
+  const local = video('appRoot', 'LOCAL VIDEO');
+  const app = express(); app.use('/rashinban/media', createMediaRouter(roots));
+  const server = app.listen(0, '127.0.0.1'); await new Promise<void>(resolve => server.once('listening', resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const address = server.address(); assert.ok(address && typeof address === 'object');
+  const url = `http://127.0.0.1:${address.port}/rashinban/media/background/kv.mp4`;
+  const range = await fetch(url, {headers: {range: 'bytes=0-4'}});
+  assert.equal(range.status, 206);
+  assert.equal(range.headers.get('content-range'), 'bytes 0-4/11');
+  assert.equal(range.headers.get('content-type'), 'video/mp4');
+  assert.equal(await range.text(), 'LOCAL');
+  rmSync(local);
+  assert.equal(await (await fetch(url)).text(), 'SHARED VIDEO');
+  assert.equal((await fetch(url.replace('kv.mp4', 'another.mp4'))).status, 404);
+  assert.equal((await fetch(url, {headers: {range: 'bytes=999-1000'}})).status, 416);
+});
+
 test('stored canonical asset references map to delivery URLs without changing manifest identity', () => {
   assert.equal(mediaPlaybackUrl('/assets/rashinban/effects/a%20cue.wav'),'/rashinban/media/effects/a%20cue.wav');
   assert.equal(mediaPlaybackUrl('/already-owned/url.mp3'),'/already-owned/url.mp3');

@@ -15,6 +15,16 @@ Roster and settings changes are restricted to between games. Moderation includes
 
 Join codes are under **Join info**. The manager does not manage public/community discovery, account login, chat composition, or party deletion; those remain in the native GeoGuessr lobby.
 
+## Match Score
+
+**Match Score** edits the saved Current Match scores (formerly Series wins). **Shared > Current Match** shows the score in its summary; score editing lives here in Party. Enter whole numbers from 0 to 2 and choose **Apply Match Score**, or press **+1** beside a player to save an increment immediately. **Reset to 0–0** saves both scores together. These controls do not change GeoGuessr's in-game points or health.
+
+Remote score changes appear automatically when there are no unsaved edits. If another operator changes Current Match while a score draft is open, use **Discard score edits** before continuing.
+
+## Between-game stream view
+
+The **Live duel** card includes **Before-Game** and **End-of-Last-Game** controls for the stream presenter. Before-Game shows both cameras; End-of-Last-Game restores the last result for the current matchup and is unavailable until a game has completed. Gameplay takes priority over the selected between-game view. Input source and Pinpointing Duels configuration are in **Config > Duel Setup**.
+
 ## Tournament presets
 
 In **Next duel settings**, choose a preset from **Day 1** or **Day 2**. Selecting it immediately replaces the editable draft with that preset's settings. Review it and choose **Apply settings & rules** before starting the duel. Every preset selects 1v1 Duels, enables game master, resets per-team HP overrides, and enables **Half tie range**. Automatic round starts, party access, and unrelated presenter settings are preserved. BO3 series wins remain manual. To discard a draft and select the same preset again, use **Reload current settings**, then reselect the preset.

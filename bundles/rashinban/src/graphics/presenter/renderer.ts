@@ -13,7 +13,7 @@ export interface PanoramaSurface { render(panorama: Panorama | null, options?: P
 export interface RendererAdapter { map(slot: string): MapSurface; panorama(slot: string): PanoramaSurface }
 export function rendererPlan(mode: Mode, source: PlayerViewSource, phase: Phase): RendererPlan {
   const live = phase === 'live' && source !== 'chroma';
-  return { panoramas: live && source === 'rendered' ? mode === 'NMPZ' ? 1 : 2 : 0, playerMaps: live ? 2 : 0,
+  return { panoramas: live && source === 'rendered' ? 2 : 0, playerMaps: live ? 2 : 0,
     resultsMap: ['results-reveal', 'between-rounds', 'waiting-host', 'finished'].includes(phase) };
 }
 export function resultBounds(points: Point[]): Bounds | null {
@@ -36,6 +36,14 @@ export function paintResultMapLabel(root: ParentNode, frame: MapFrame | null, re
 }
 const sides = ['left', 'right'] as const;
 const colors = { left: '#458af2', right: '#f05060' };
+const streamColors = { left: '#ff3030', right: '#3083ff' };
+function mapColors(frame: MapFrame, output: RenderFrame['output']): MapFrame {
+  if (output !== 'stream') return frame;
+  const recolor = (color: string) => color === colors.left ? streamColors.left : color === colors.right ? streamColors.right : color;
+  return { ...frame, pins: frame.pins.map(pin => ({ ...pin, color: recolor(pin.color) })),
+    lines: frame.lines.map(line => ({ ...line, color: recolor(line.color) })),
+    tieRange: frame.tieRange && { ...frame.tieRange, circles: frame.tieRange.circles.map(circle => ({ ...circle, color: recolor(circle.color) })) } };
+}
 /** Geometry may be prepared while hidden; only the gated projection makes it visible. */
 export function resultMapFrame(state: DuelState, round: number | null, playerIds: RenderFrame['playerIds'], revealedAnswer?: Point): MapFrame | null {
   const panorama = state.rounds.find(item => item.number === round)?.panorama;
@@ -94,7 +102,7 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
         const live = projection.phase === 'live' && displayedRound === state.round && source !== 'chroma';
         const lock = lockLayout(frame);
         const locked = sides.map(side => lock === side || lock === 'both');
-        const slots = state.mode === 'NMPZ' && frame.output !== 'led' ? ['shared-panorama'] : ['left-view', 'right-view'];
+        const slots = ['left-view', 'right-view'];
         if (preview && !panos.has('preview-panorama')) panos.set('preview-panorama', adapter.panorama('preview-panorama'));
         for (const slot of slots) {
           if (prepare && source === 'rendered' && !panos.has(slot)) panos.set(slot, adapter.panorama(slot));
@@ -106,14 +114,13 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
             return;
           }
           const index = slot === 'right-view' ? 1 : 0;
-          const shared = slot === 'shared-panorama';
           const playerPanorama = state.mode === 'NMPZ' ? initial : players[index]?.panorama ?? initial;
           const value = prepare && slots.includes(slot)
-            ? shared ? (ids.some(Boolean) ? initial : null) : ids[index] ? playerPanorama : null
+            ? ids[index] ? playerPanorama : null
             : null;
-          const frozen = shared ? lock === 'both' : locked[index];
+          const frozen = locked[index];
           pano.render(value, { visible: live && source === 'rendered' && slots.includes(slot) && !frozen, frozen: frozen || frame.frozen,
-            identity: `${state.gameId}:${state.round}:${shared ? 'shared' : ids[index] ?? ''}` });
+            identity: `${state.gameId}:${state.round}:${ids[index] ?? ''}` });
         });
         if (plan.playerMaps) for (const slot of ['left-map', 'right-map']) {
           if (!maps.has(slot)) maps.set(slot, adapter.map(slot));
@@ -131,15 +138,15 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
             const point = submitted ?? (view ? view.pin : snapshotPlayer?.pin);
             if (point) pins.push({ point: { lat: point.lat, lng: point.lng }, color: colors[sides[j]], label: sides[j] });
           }
-          maps.get(`${sides[i]}-map`)?.render({ visible: live && !!ids[i] && (source === 'rendered' || locked[i]), inactive: !locked[i] && !player?.mapActive && !player?.mapSticky,
+          maps.get(`${sides[i]}-map`)?.render(mapColors({ visible: live && !!ids[i] && (source === 'rendered' || locked[i]), inactive: !locked[i] && !player?.mapActive && !player?.mapSticky,
             bounds: locked[i] ? resultBounds(pins.map(pin => pin.point)) : player?.mapBounds ?? null,
-            padding: locked[i] ? 45 : 0, pins, lines: [] });
+            padding: locked[i] ? 45 : 0, pins, lines: [] }, frame.output));
         }
         const resultFrame = plan.resultsMap && projection.answer
           ? resultMapFrame(state, displayedRound, frame.playerIds, projection.answer) : frame.preparedResults;
         if (resultFrame) {
           if (!maps.has('results-map')) maps.set('results-map', adapter.map('results-map'));
-          maps.get('results-map')!.render({ ...resultFrame, visible: plan.resultsMap && projection.answer !== null });
+          maps.get('results-map')!.render(mapColors({ ...resultFrame, visible: plan.resultsMap && projection.answer !== null }, frame.output));
         } else maps.get('results-map')?.render({ visible: false, bounds: null, pins: [], lines: [] });
         const previewMap = showPreview && frame.output !== 'led';
         if (previewMap && !maps.has('preview-map')) maps.set('preview-map', adapter.map('preview-map'));

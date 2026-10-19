@@ -1,6 +1,8 @@
-/* Translucent treatment shared by Stream and LED, over the KV video in OBS. */
+@import url('kv-background.css');
+
+/* Shared tint over each scene's embedded KV video. */
 .bracket-wrapper, #led-bracket {
-  background: transparent;
+  background: #111;
   isolation: isolate;
 }
 
@@ -10,7 +12,7 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 /* Red upper / blue lower bands; only the background is tinted. */

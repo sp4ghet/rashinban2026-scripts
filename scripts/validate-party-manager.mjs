@@ -1,6 +1,9 @@
 // Browser -> NodeCG message adapter -> real manager -> fixture GeoGuessr API -> browser.
 // No live account, party, NodeCG server, or credentials are used.
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
+import { registerMatch } from '../bundles/rashinban/src/extension/match.ts';
+import { EMPTY_INTERMISSION, selectIntermission } from '../bundles/rashinban/src/presenter/intermission.ts';
 import { readFile, writeFile, mkdir, mkdtemp } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -28,6 +31,23 @@ let members = [party.owner, ...duel.teams.map((team, i) => ({ ...party.owner, us
   { ...party.owner, userId: 'bench-player', nick: 'Next competitor', isBenched: true }];
 let snapshot, selection = { input: 'live', partyId: party.partyId }, mutationCount = 0, failNext = false;
 let fixtureSettings = structuredClone(DEFAULT_SETTINGS), fixtureRevision = 0;
+const matchReps = new Map(), matchHandlers = new Map();
+registerMatch({
+  Replicant(name, options) {
+    if (!matchReps.has(name)) {
+      const rep = new EventEmitter(); let value = options?.defaultValue;
+      Object.defineProperty(rep, 'value', { get: () => value, set: next => { value = next; rep.emit('change', next); } });
+      matchReps.set(name, rep);
+    }
+    return matchReps.get(name);
+  },
+  listenFor: (name, handler) => matchHandlers.set(name, handler),
+});
+const matchState = () => matchReps.get('matchState').value;
+const matchResolved = () => matchReps.get('matchResolved').value;
+const sendMatch = (name, value) => new Promise((resolve, reject) => matchHandlers.get(name)(value, (error, result) => error ? reject(error) : resolve(result)));
+await sendMatch('match:apply', { ...matchState(), label: 'Fixture final', left: { ...matchState().left, name: 'Player Blue' }, right: { ...matchState().right, name: 'Player Red' } });
+let fixtureIntermission = structuredClone(EMPTY_INTERMISSION);
 const manager = createPartyManager({ cookie: 'test-only', clientVersion: 'fixture', partyId: party.partyId }, {
   now: Date.now, selection: () => selection, publish: value => { snapshot = value; },
   presentation: { get: () => ({ settings: fixtureSettings, revision: String(fixtureRevision) }),
@@ -61,22 +81,24 @@ const manager = createPartyManager({ cookie: 'test-only', clientVersion: 'fixtur
   },
 });
 await manager.refresh();
-const preload = () => `window.fixtureValues=${JSON.stringify({ partyStatus: snapshot, presenterConnection: { input: 'live', selectedPartyId: party.partyId, warnings: [] }, presenterDuel: null,
+const preload = () => `window.fixtureValues=${JSON.stringify({ matchState: matchState(), matchResolved: matchResolved(), presenterIntermission: fixtureIntermission, partyStatus: snapshot, presenterConnection: { input: 'live', selectedPartyId: party.partyId, warnings: [] }, presenterDuel: null,
   presenterSettings: fixtureSettings, configurationStatus: { revision: String(fixtureRevision), scope: 'shared', overridden: [], error: null } })};
 const handlers=new Map();window.emit=(name,value)=>{fixtureValues[name]=value;for(const cb of handlers.get(name)||[])cb(value);};
-window.confirm=()=>true;window.nodecg={Replicant(name){return {get value(){return fixtureValues[name];},on(_event,cb){if(!handlers.has(name))handlers.set(name,[]);handlers.get(name).push(cb);queueMicrotask(()=>cb(fixtureValues[name]));}};},async sendMessage(name,data){const r=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,data})});const result=await r.json();emit('presenterSettings',result.settings);emit('configurationStatus',{...fixtureValues.configurationStatus,revision:result.revision});emit('partyStatus',result.state);if(result.error)throw result.error;}};`;
+window.confirm=()=>true;window.nodecg={Replicant(name){return {get value(){return fixtureValues[name];},on(_event,cb){if(!handlers.has(name))handlers.set(name,[]);handlers.get(name).push(cb);queueMicrotask(()=>cb(fixtureValues[name]));}};},async sendMessage(name,data){const r=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,data})});const result=await r.json();emit('presenterSettings',result.settings);emit('configurationStatus',{...fixtureValues.configurationStatus,revision:result.revision});emit('partyStatus',result.state);emit('matchState',result.match);emit('matchResolved',result.resolvedMatch);emit('presenterIntermission',result.intermission);if(result.error)throw result.error;return result.value;}};`;
 const server = createServer(async (req, res) => {
   try {
     if (req.url === '/message') {
       let body = ''; for await (const part of req) body += part;
-      const { name, data } = JSON.parse(body); let error;
+      const { name, data } = JSON.parse(body); let error, value;
       try {
         if (name === 'party:command') await manager.command(data);
         else if (name === 'party:refresh') await manager.refresh();
         else if (name === 'party:acknowledge') await manager.acknowledge(data);
+        else if (matchHandlers.has(name)) value = await sendMatch(name, data);
+        else if (name === 'presenter:control' && data.action === 'intermission') fixtureIntermission = selectIntermission(fixtureIntermission, data.body);
         else throw Error('Unexpected NodeCG message');
       } catch (cause) { error = { name: cause.name, message: cause.message }; }
-      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ state: snapshot, settings: fixtureSettings, revision: String(fixtureRevision), error })); return;
+      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ value, match: matchState(), resolvedMatch: matchResolved(), intermission: fixtureIntermission, state: snapshot, settings: fixtureSettings, revision: String(fixtureRevision), error })); return;
     }
     const name = req.url === '/' ? 'party-control.html' : req.url.slice(1);
     if (!['party-control.html', 'party-control.css', 'party-control.js', 'party-control.js.map'].includes(name)) { res.statusCode = 404; res.end(); return; }
@@ -120,6 +142,46 @@ try {
   await command('Page.navigate', { url: origin }); await until(`document.querySelector('#connection-status')?.textContent==='Host connected'`);
   assert.equal(await evaluate(`document.querySelector('#start-game').disabled`), false);
   assert.equal(await evaluate(`document.querySelectorAll('#tournament-preset option[value]:not([value=""])').length`), 12);
+  assert.equal(await evaluate(`document.querySelectorAll('#match-score-left,#match-score-right').length`), 2, 'Party exposes both shared match scores');
+  assert.equal(await evaluate(`document.querySelector('#match-score-left').value`), '0');
+  const mutationsBeforeScore = mutationCount;
+  await click('match-score-increment-left'); await until(`fixtureValues.matchState.left.wins===1 && !document.querySelector('#match-score-increment-left').disabled`);
+  assert.equal(matchState().right.wins, 0);
+  assert.equal(matchReps.get('presenterSeries').value.left.wins, 1);
+  await evaluate(`{const field=document.querySelector('#match-score-right');field.value='2';field.dispatchEvent(new Event('input',{bubbles:true}));}`);
+  await click('match-score-apply'); await until(`fixtureValues.matchState.right.wins===2 && !document.querySelector('#match-score-reset').disabled`);
+  assert.equal(matchState().label, 'Fixture final');
+  assert.equal(matchState().left.name, 'Player Blue');
+  assert.equal(matchState().left.wins, 1);
+  await click('match-score-reset'); await until(`fixtureValues.matchState.left.wins===0 && fixtureValues.matchState.right.wins===0 && !document.querySelector('#match-score-reset').disabled`);
+  // Both dashboards subscribe to the same authoritative values.
+  await sendMatch('match:apply', { ...matchState(), right: { ...matchState().right, wins: 1 } });
+  await evaluate(`emit('matchState',${JSON.stringify(matchState())});emit('matchResolved',${JSON.stringify(matchResolved())})`);
+  assert.equal(await evaluate(`document.querySelector('#match-score-right').value`), '1');
+  // Preserve a typed draft when another operator changes the match.
+  await evaluate(`{const field=document.querySelector('#match-score-left');field.value='2';field.dispatchEvent(new Event('input',{bubbles:true}));}`);
+  await sendMatch('match:apply', { ...matchState(), label: 'Changed elsewhere' });
+  await evaluate(`emit('matchState',${JSON.stringify(matchState())});emit('matchResolved',${JSON.stringify(matchResolved())})`);
+  assert.equal(await evaluate(`document.querySelector('#match-score-left').value`), '2');
+  assert.equal(await evaluate(`document.querySelector('#match-score-apply').disabled`), true);
+  await click('match-score-reload');
+  assert.equal(await evaluate(`document.querySelector('#match-score-left').value`), '0');
+  // Reject a server-side race even before the new Replicant snapshot arrives.
+  await sendMatch('match:apply', { ...matchState(), label: 'Race from Current Match' });
+  await click('match-score-increment-left');
+  await until(`document.querySelector('#match-score-error').textContent.includes('changed elsewhere')`);
+  assert.equal(matchState().left.wins, 0);
+  await click('match-score-reload');
+  for (const invalid of ['-1', '1.5', '']) {
+    const revision = matchState().revision;
+    await evaluate(`{const field=document.querySelector('#match-score-left');field.value=${JSON.stringify(invalid)};field.dispatchEvent(new Event('input',{bubbles:true}));}`);
+    await click('match-score-apply');
+    assert.equal(await evaluate(`document.querySelector('#match-score-left').checkValidity()`), false);
+    assert.equal(matchState().revision, revision);
+    await click('match-score-reload');
+  }
+  assert.equal(mutationCount, mutationsBeforeScore, 'match scoring never mutates GeoGuessr');
+  await screenshot('match-score-desktop');
   const mutationsBeforePreset = mutationCount;
   await evaluate(`document.querySelector('#tournament-preset').value='day2-moving';document.querySelector('#tournament-preset').dispatchEvent(new Event('change'))`);
   assert.equal(mutationCount, mutationsBeforePreset, 'loading a preset only fills a draft');
@@ -324,7 +386,7 @@ try {
   selection = { input: 'replay', partyId: null }; await manager.refresh(); await evaluate(`emit('partyStatus',${JSON.stringify(snapshot)})`);
   assert.equal(await evaluate(`document.querySelector('#start-game').disabled`), true);
   assert.deepEqual(errors, []);
-  console.log('Party browser flow passed: live pin predictions, knockout/continue, stale/settled suppression, tournament preset drafts, Half tie range, Pinpointing switching, config conflicts, lobby readiness, presenter scores, next-duel rules, unavailable scores, retained winner, settings, starts, pause/resume, rollback, abort, bench, unknown outcomes, replay, mobile. Mutations stayed inside fixture API.');
+  console.log('Party browser flow passed: shared Match Score increments, typed edits, reset, synchronization, stale edits, invalid input, live pin predictions, knockout/continue, stale/settled suppression, tournament preset drafts, Half tie range, Pinpointing switching, config conflicts, lobby readiness, presenter scores, next-duel rules, unavailable scores, retained winner, settings, starts, pause/resume, rollback, abort, bench, unknown outcomes, replay, mobile. Mutations stayed inside fixture API.');
   console.log('Screenshots: ' + artifacts);
 } catch (error) {
   if (socket?.readyState === WebSocket.OPEN) {

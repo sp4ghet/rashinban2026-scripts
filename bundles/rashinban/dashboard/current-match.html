@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
       body {
         margin: 0;
@@ -110,7 +111,7 @@
       input[type="number"] {
         width: 65px;
       }
-      #match-summary {
+      .match-summary {
         font-weight: 600;
       }
       small {
@@ -122,118 +123,53 @@
           grid-template-columns: 1fr;
         }
       }
+      .match-card { border: 1px solid #42505b; border-radius: 6px; padding: 12px; margin-bottom: 16px; }
+      .row { flex-wrap: wrap; }
+      .match-summary { overflow-wrap: anywhere; }
+      .error { color: #ffaaa2; white-space: pre-wrap; }
+      .error:empty { display: none; }
+      .slot-status { min-height: 1.4em; }
+      td .row { flex-wrap: nowrap; }
+      td button { white-space: nowrap; }
     </style>
   </head>
   <body>
-    <h2>Current match</h2>
-    <div id="match-summary" class="status">Loading…</div>
-    <form id="match-form">
-      <label
-        >Match label<input
-          id="match-label"
-          maxlength="160"
-          placeholder="e.g. Winners final"
-      /></label>
-      <div class="sides">
-        <fieldset>
-          <legend>Left / A</legend>
-          <label>Player<select id="left-select"></select></label
-          ><label
-            >Registration / player name<input
-              id="left-name"
-              maxlength="160" /></label
-          ><label
-            >Personal GeoGuessr UID / profile URL<input
-              id="left-uid"
-              placeholder="65fc3453702bba73b4c0a398" /></label
-          ><label
-            >Display name override<input
-              id="left-override"
-              maxlength="160"
-              placeholder="Use spreadsheet name" /></label
-          ><label
-            >Handle override<input
-              id="left-handle"
-              maxlength="160"
-              placeholder="Use spreadsheet handle" /></label
-          ><label
-            >Series wins<input
-              id="left-wins"
-              type="number"
-              min="0"
-              max="2"
-              value="0" /></label
-          ><small id="left-profile"></small>
-          <label>In-game account<select id="left-account"></select></label>
-          <small id="left-account-status"></small>
-        </fieldset>
-        <fieldset>
-          <legend>Right / B</legend>
-          <label>Player<select id="right-select"></select></label
-          ><label
-            >Registration / player name<input
-              id="right-name"
-              maxlength="160" /></label
-          ><label
-            >Personal GeoGuessr UID / profile URL<input
-              id="right-uid"
-              placeholder="GeoGuessr account ID" /></label
-          ><label
-            >Display name override<input
-              id="right-override"
-              maxlength="160"
-              placeholder="Use spreadsheet name" /></label
-          ><label
-            >Handle override<input
-              id="right-handle"
-              maxlength="160"
-              placeholder="Use spreadsheet handle" /></label
-          ><label
-            >Series wins<input
-              id="right-wins"
-              type="number"
-              min="0"
-              max="2"
-              value="0" /></label
-          ><small id="right-profile"></small>
-          <label>In-game account<select id="right-account"></select></label>
-          <small id="right-account-status"></small>
-        </fieldset>
-      </div>
-      <p class="help">
-        Choose a competitor or use Manual entry. Personal UIDs identify
-        spreadsheet profiles; in-game accounts can be different venue accounts.
-        By default, Left/A follows blue and Right/B follows red in the connected
-        party's duel. Empty overrides use spreadsheet details.
-      </p>
-      <div class="row">
-        <button class="primary" type="submit">Apply current match</button
-        ><button id="swap-match" type="button">Swap sides</button
-        ><button id="reload-match" type="button">Discard edits</button>
-      </div>
-    </form>
-    <p id="error" role="status"></p>
+    <section class="match-card" aria-labelledby="current-heading">
+      <h2 id="current-heading">Current Match</h2>
+      <div id="current-summary" class="status match-summary">Loading...</div>
+      <form id="current-form">
+        <label>Match label<input id="current-label" maxlength="160" placeholder="e.g. Winners final" /></label>
+        <div class="sides">
+          <fieldset><legend>Left / A</legend><label>Player<select id="current-left" required disabled></select></label><small id="current-left-profile"></small></fieldset>
+          <fieldset><legend>Right / B</legend><label>Player<select id="current-right" required disabled></select></label><small id="current-right-profile"></small></fieldset>
+        </div>
+        <p class="help">Choose players here; adjust Match Score in Party.</p>
+        <div class="row"><button id="current-apply" class="primary" type="submit" disabled>Apply current match</button><button id="current-swap" type="button" disabled>Swap sides</button><button id="current-reload" type="button" disabled>Discard edits</button></div>
+        <p id="current-status" class="help slot-status" role="status"></p>
+      </form>
+      <p id="current-error" class="error" role="alert"></p>
+    </section>
+    <section class="match-card" aria-labelledby="next-heading">
+      <h2 id="next-heading">Next Match</h2>
+      <div id="next-summary" class="status match-summary">Loading...</div>
+      <form id="next-form">
+        <label>Match label<input id="next-label" maxlength="160" placeholder="e.g. Winners final" /></label>
+        <div class="sides">
+          <fieldset><legend>Left / A</legend><label>Player<select id="next-left" required disabled></select></label><small id="next-left-profile"></small></fieldset>
+          <fieldset><legend>Right / B</legend><label>Player<select id="next-right" required disabled></select></label><small id="next-right-profile"></small></fieldset>
+        </div>
+        <p class="help">Prepare the next matchup here, then choose Make current when ready.</p>
+        <div class="row"><button id="next-apply" class="primary" type="submit" disabled>Save next match</button><button id="next-swap" type="button" disabled>Swap sides</button><button id="next-reload" type="button" disabled>Discard edits</button><button id="promote-next" class="primary" type="button" disabled>Make current</button></div>
+        <p id="next-status" class="help slot-status" role="status"></p>
+      </form>
+      <p id="next-error" class="error" role="alert"></p>
+    </section>
+    <p class="help">Player selections come from Google Sheets and start.gg. Tournament game accounts are mapped separately: Left/A follows blue and Right/B follows red by default.</p>
     <h2>Upcoming start.gg matches</h2>
-    <p class="help">
-      Loading a match copies its players and score into Current Match.
-      Refreshing start.gg never changes the selected matchup.
-    </p>
-    <button id="refresh-startgg">Refresh start.gg</button
-    ><span id="startgg-status"></span>
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Round / pool</th>
-            <th>Matchup</th>
-            <th>Score</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="upcoming"></tbody>
-      </table>
-    </div>
+    <p class="help">Load a matchup into Current Match or stage it in Next Match. Refreshing start.gg leaves both saved selections unchanged.</p>
+    <button id="refresh-startgg" type="button">Refresh start.gg</button><span id="startgg-status"></span>
+    <p id="error" class="error" role="alert"></p>
+    <div class="table-scroll"><table><thead><tr><th>Round / pool</th><th>Matchup</th><th>Score</th><th>Status</th><th>Load into</th></tr></thead><tbody id="upcoming"></tbody></table></div>
     <script src="current-match.js"></script>
   </body>
 </html>

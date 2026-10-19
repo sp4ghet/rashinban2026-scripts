@@ -106,7 +106,7 @@
       },
       {
         "name": "duel-setup",
-        "workspace": "shared",
+        "workspace": "config",
         "title": "Duel Setup",
         "file": "duel-setup.html",
         "width": 3,

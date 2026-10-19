@@ -9,6 +9,30 @@ import { CUE_KINDS, EMPTY_MEDIA } from '../media.ts';
 import { sample } from './fixtures.ts';
 import type { ConnectionDeps } from '../../extension/presenter/connection.ts';
 
+test('between-game controls share state without mutating gameplay, settings or the result timeline', () => {
+  const reps = new Map<string, any>(); const listeners = new Map<string, Function>();
+  registerPresenter({ bundleConfig: { presenter: { input: 'invalid' } },
+    Replicant(name: string, opts: any) { if (!reps.has(name)) reps.set(name, { value: opts.defaultValue }); return reps.get(name); },
+    Router: express.Router, mount() {}, listenFor: (name: string, fn: Function) => listeners.set(name, fn),
+  } as unknown as NodeCG.ServerAPI, { now: () => 100000, schedule: () => () => {} });
+  const send = (action: string, body: unknown) => {
+    let error: unknown; let result: any;
+    listeners.get('presenter:control')!({ action, body }, (err: unknown, value: unknown) => { error = err; result = value; });
+    if (error) throw error; return result;
+  };
+  assert.throws(() => send('intermission', { view: 'end-of-last-game' }), /No completed game/);
+  const duel = { gameId: 'completed', status: 'Finished', winnerTeamId: 'blue', isDraw: false, aborted: false,
+    players: [{ id: 'one', teamId: 'blue' }, { id: 'two', teamId: 'red' }] };
+  reps.get('presenterDuel').value = duel;
+  send('series', { id: 'match', source: 'manual', left: { id: 'a', name: 'A', handle: '', playerId: 'one', wins: 1 }, right: { id: 'b', name: 'B', handle: '', playerId: 'two', wins: 0 } });
+  assert.equal(reps.get('presenterIntermission').value.view, 'end-of-last-game');
+  const unchanged = ['presenterDuel', 'presenterTimeline', 'presenterSettings'].map(name => reps.get(name).value);
+  assert.equal(send('intermission', { view: 'before-game' }).intermission.view, 'before-game');
+  assert.equal(send('intermission', { view: 'end-of-last-game' }).intermission.lastGame.winnerCompetitorId, 'a');
+  assert.throws(() => send('intermission', { view: 'live' }), /Invalid/);
+  ['presenterDuel', 'presenterTimeline', 'presenterSettings'].forEach((name, i) => assert.equal(reps.get(name).value, unchanged[i]));
+});
+
 for (const malformed of ['empty rounds', 'missing current round']) test(`live ingestion rejects ${malformed} without replacing accepted presentation`, async () => {
   const first = sample('gs2-ws-DuelStarted-created-not-started.json') as any;
   const reps = new Map<string, { value: any }>();

@@ -27,6 +27,12 @@ export function registerMatch(nodecg: NodeCG.ServerAPI) {
     REPLICANTS.matchResolved,
     { defaultValue: null, persistent: false },
   );
+  const nextState = nodecg.Replicant<MatchState>(REPLICANTS.nextMatchState, {
+    defaultValue: emptyMatch(),
+  });
+  const nextResolved = nodecg.Replicant<ResolvedMatch | null>(REPLICANTS.nextMatchResolved, {
+    defaultValue: null, persistent: false,
+  });
   const profiles = nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players);
   const bracket = nodecg.Replicant<StartggBracket | null>(
     REPLICANTS.startggBracket,
@@ -105,6 +111,31 @@ export function registerMatch(nodecg: NodeCG.ServerAPI) {
         players: { A: value.left.name, B: value.right.name },
       };
   };
+  const resolveSelection = (next: MatchState) => {
+    const check = resolveMatch(next, profiles.value ?? []);
+    if (
+      check.left.profileStatus === "ambiguous" ||
+      check.right.profileStatus === "ambiguous"
+    )
+      throw new Error("Ambiguous spreadsheet profile; use a unique UID.");
+    if (check.left.uid && check.left.uid === check.right.uid)
+      throw new Error("Select two different players");
+    // Freeze discovered UIDs so a later tag rename cannot select a different account.
+    next.left.uid = check.left.uid;
+    next.right.uid = check.right.uid;
+    return next;
+  };
+  const publishNext = () => {
+    nextResolved.value = JSON.parse(JSON.stringify(resolveMatch(nextState.value, profiles.value ?? []))) as ResolvedMatch;
+  };
+  const commitNext = (value: MatchState, revision: number) => {
+    if (revision !== nextState.value.revision)
+      throw new Error("Next match changed elsewhere. Reload the next match before applying.");
+    const next = resolveSelection(parseMatch(value));
+    nextState.value = { ...next, revision: nextState.value.revision + 1 };
+    publishNext();
+    return nextState.value;
+  };
   const commit = (next: MatchState, revision: number) => {
     const current = state.value!;
     if (revision !== current.revision)
@@ -127,17 +158,7 @@ export function registerMatch(nodecg: NodeCG.ServerAPI) {
       throw new Error(
         "Reset Ban & Pick before replacing players or swapping sides.",
       );
-    const check = resolveMatch(next, profiles.value ?? []);
-    if (
-      check.left.profileStatus === "ambiguous" ||
-      check.right.profileStatus === "ambiguous"
-    )
-      throw new Error("Ambiguous spreadsheet profile; use a unique UID.");
-    if (check.left.uid && check.left.uid === check.right.uid)
-      throw new Error("Select two different players");
-    // Freeze discovered UIDs so a later tag rename cannot select a different account.
-    next.left.uid = check.left.uid;
-    next.right.uid = check.right.uid;
+    next = resolveSelection(next);
     state.value = { ...next, revision: current.revision + 1 };
     publish();
     return state.value;
@@ -164,6 +185,26 @@ export function registerMatch(nodecg: NodeCG.ServerAPI) {
   listen(MATCH_MESSAGES.swap, (value: { revision: number }) =>
     commit(swapMatch(state.value!), value.revision),
   );
+  listen(MATCH_MESSAGES.nextApply, (value: MatchState) => commitNext(value, value.revision));
+  listen(MATCH_MESSAGES.nextLoad, (value: { setId: number; revision: number }) => {
+    if (!bracket.value) throw new Error("Refresh start.gg first");
+    return commitNext(importSet(bracket.value, value.setId, profiles.value ?? []), value.revision);
+  });
+  listen(MATCH_MESSAGES.nextSwap, (value: { revision: number }) => commitNext(swapMatch(nextState.value), value.revision));
+  listen(MATCH_MESSAGES.promoteNext, (value: { revision: number; nextRevision: number }) => {
+    if (value.nextRevision !== nextState.value.revision)
+      throw new Error("Next match changed elsewhere. Reload the next match before applying.");
+    if (![nextState.value.left, nextState.value.right].every(side => side.name || side.tag || side.uid || side.entrantId))
+      throw new Error("Select both players in Next Match first.");
+    // Clone the snapshot so objects are never shared between Replicant proxies.
+    const promoted = commit(JSON.parse(JSON.stringify(nextState.value)) as MatchState, value.revision);
+    nextState.value = { ...emptyMatch(), revision: nextState.value.revision + 1 };
+    publishNext();
+    return promoted;
+  });
+  nextState.on("change", publishNext);
+  profiles.on("change", publishNext);
+  publishNext();
   // Re-publish if a legacy caller attempts to write the derived presenter names.
   state.on("change", publish);
   profiles.on("change", publish);

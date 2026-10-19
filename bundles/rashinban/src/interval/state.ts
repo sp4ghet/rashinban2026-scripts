@@ -1,5 +1,8 @@
+import { resolveMatch, type MatchState } from "../match/state.ts";
+import type { PlayerProfile } from "../sheet/players.ts";
+
 export type UpcomingMatch = { playerOne: string; playerTwo: string };
-export type IntervalContent = { title: string; upcomingLabel: string; matches: UpcomingMatch[] };
+export type IntervalContent = { title: string; upcomingLabel: string; matchSource: "manual" | "next"; matches: UpcomingMatch[] };
 export type IntervalTimer = { endsAtMs: number | null; remainingMs: number | null };
 export type IntervalState = { content: IntervalContent; timer: IntervalTimer };
 
@@ -9,7 +12,7 @@ const MAX_DATE_MS = 8_640_000_000_000_000;
 
 export function defaultInterval(): IntervalState {
   return {
-    content: { title: "INTERVAL", upcomingLabel: "COMING UP", matches: [] },
+    content: { title: "INTERVAL", upcomingLabel: "COMING UP", matchSource: "next", matches: [] },
     timer: { endsAtMs: null, remainingMs: null },
   };
 }
@@ -29,9 +32,13 @@ function text(value: unknown, max: number, name: string, required = false): stri
 export function updateContent(state: IntervalState, value: unknown): IntervalState {
   const data = record(value);
   if (!Array.isArray(data.matches) || data.matches.length > 4) throw new Error("Enter up to four upcoming matches.");
+  // Saved content from before Next Match support stays on the manual list.
+  const matchSource = data.matchSource ?? "manual";
+  if (matchSource !== "manual" && matchSource !== "next") throw new Error("Choose an upcoming match source.");
   const content: IntervalContent = {
     title: text(data.title, 40, "Title", true),
     upcomingLabel: text(data.upcomingLabel, 40, "Upcoming heading", true),
+    matchSource,
     matches: data.matches.map(value => {
       const match = record(value);
       return { playerOne: text(match.playerOne, 60, "Player 1", true),
@@ -39,6 +46,14 @@ export function updateContent(state: IntervalState, value: unknown): IntervalSta
     }),
   };
   return { ...state, content };
+}
+
+/** Derive names from the saved staging slot; never copy them into manual content. */
+export function upcomingMatches(content: IntervalContent, next: MatchState | null, profiles: PlayerProfile[]): UpcomingMatch[] {
+  if (content.matchSource === "manual") return content.matches;
+  if (!next || ![next.left, next.right].every(side => side.uid || side.entrantId || side.name || side.tag)) return [];
+  const resolved = resolveMatch(next, profiles);
+  return [{ playerOne: resolved.left.name, playerTwo: resolved.right.name }];
 }
 
 const validNumber = (value: unknown, max: number): value is number =>
@@ -80,6 +95,9 @@ export function timerCommand(state: IntervalState, value: unknown, now: number):
       }
       timer = { endsAtMs: now + command.durationSeconds * 1000, remainingMs: null };
       break;
+    case "startAtTime":
+      timer = { endsAtMs: nextJstTime(command.time, now), remainingMs: null };
+      break;
     case "startAt":
       if (!validNumber(command.endsAtMs, MAX_DATE_MS) || command.endsAtMs <= now) throw new Error("Choose a future restart time (JST).");
       timer = { endsAtMs: command.endsAtMs, remainingMs: null };
@@ -96,12 +114,12 @@ export function timerCommand(state: IntervalState, value: unknown, now: number):
   return { ...state, timer };
 }
 
-/** datetime-local has no timezone; the dashboard always labels this input JST. */
-export function parseJstDateTime(value: string): number {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error("Choose a restart date and time (JST).");
-  const ms = Date.parse(`${value}:00+09:00`);
-  if (!Number.isFinite(ms) || new Date(ms + 9 * 3600000).toISOString().slice(0, 16) !== value) {
-    throw new Error("Invalid restart date and time (JST).");
+/** Resolve HH:mm against the server's JST day, rolling past times to tomorrow. */
+export function nextJstTime(value: unknown, now: number): number {
+  if (typeof value !== "string" || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+    throw new Error("Choose a restart time (JST).");
   }
-  return ms;
+  const day = new Date(now + 9 * 3600000).toISOString().slice(0, 10);
+  const deadline = Date.parse(`${day}T${value}:00+09:00`);
+  return deadline > now ? deadline : deadline + DAY_MS;
 }

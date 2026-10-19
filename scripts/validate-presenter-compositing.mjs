@@ -10,6 +10,7 @@ import { applySnapshot } from '../bundles/rashinban/src/presenter/normalize.ts';
 import { seedViews } from '../bundles/rashinban/src/presenter/telemetry.ts';
 import { advanceTimeline, DEFAULT_TIMING } from '../bundles/rashinban/src/presenter/timeline.ts';
 import { DEFAULT_SETTINGS } from '../bundles/rashinban/src/presenter/settings.ts';
+import { EMPTY_INTERMISSION, updateIntermission } from '../bundles/rashinban/src/presenter/intermission.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifacts = path.join(root, 'artifacts/presenter-validation/compositing');
@@ -21,8 +22,8 @@ Object.assign(state.rounds[0], { startAtMs: epoch - 21000, timerStartAtMs: epoch
 const timeline = advanceTimeline(null, state, epoch, false, DEFAULT_TIMING);
 const initial = { presenterDuel: state, presenterViews: seedViews(state), presenterTimeline: timeline,
   presenterSettings: { ...DEFAULT_SETTINGS, viewSource: 'rendered', muted: true },
-  presenterSeries: { id: 'motion-qa', source: 'manual', left: { id: 'a', name: 'PLAYER LEFT', handle: '', wins: 1, playerId: state.players[0].id },
-    right: { id: 'b', name: 'PLAYER RIGHT', handle: '', wins: 2, playerId: state.players[1].id } },
+  presenterSeries: { id: 'motion-qa', source: 'manual', left: { id: 'a', name: 'PLAYER LEFT', handle: '@playerleft', wins: 1, playerId: state.players[0].id },
+    right: { id: 'b', name: 'PLAYER RIGHT', handle: '@playerright', wins: 2, playerId: state.players[1].id } },
   presenterClients: { clients: [], program: null }, presenterPublicConfig: { googleMapsApiKey: '' } };
 const bootstrap = `
 window.qa={now:${epoch},initial:${JSON.stringify(initial)}};
@@ -41,7 +42,7 @@ const server = createServer(async (req, res) => {
     if (!file.startsWith(path.join(root, 'bundles/rashinban/graphics') + path.sep)) throw Error('Invalid path');
     let data = await readFile(file);
     if (file.endsWith('.html')) data = data.toString().replace('<script src="presenter.js">', `<script>${bootstrap}</script><script src="presenter.js">`);
-    res.setHeader('Content-Type', { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.jpg': 'image/jpeg' }[path.extname(file)] || 'application/octet-stream');
+    res.setHeader('Content-Type', { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream');
     res.end(data);
   } catch (error) { res.writeHead(404); res.end(String(error)); }
 });
@@ -103,14 +104,37 @@ try {
   for (const output of ['stream', 'led']) {
     const led = output === 'led';
     await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/presenter${led ? '-led' : ''}.html?role=preview` });
-    for (let i=0;i<100;i++) { if(await evaluate(`document.getElementById('timer-value')?.textContent==='39'`))break;await delay(100); }
+    for (let i=0;i<100;i++) { if(await evaluate(`document.getElementById('timer-value')?.textContent==='${led ? '39' : '00:39'}'`))break;await delay(100); }
+    const viewY=led ? 300 : 400, cameraY=led ? 800 : 900;
     await evaluate(`qa.live('NM','chroma','none');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'transparent'})`);
     await settle();
-    const livePixels = await pixels([[100,300],[1800,300],[960,180],[300,800],[1600,800]]);
+    const livePixels = await pixels([[100,viewY],[1800,viewY],[960,180],[300,cameraY],[1600,cameraY]]);
     transparent(livePixels[0]); transparent(livePixels[1]); opaque(livePixels[2]);
     if(!led){transparent(livePixels[3]);transparent(livePixels[4]);}
     await screenshot(output+'-transparent-live',led);
     checks.push(output+': gameplay holes have zero alpha while the backdrop stays opaque');
+
+    // The cutout must end underneath the solid frame. Sharing its outer curve
+    // creates a translucent seam that exposes OBS footage outside the window.
+    const edgePoints=await evaluate(`['left-window','right-window'].flatMap(id=>{
+      const e=document.getElementById(id),r=e.getBoundingClientRect(),radius=parseFloat(getComputedStyle(e).borderTopLeftRadius),points=[];
+      for(const [cx,cy,start] of [[r.x+radius,r.y+radius,180],[r.right-radius,r.y+radius,270],[r.right-radius,r.bottom-radius,0],[r.x+radius,r.bottom-radius,90]])
+        for(let a=start;a<=start+90;a+=5)points.push([Math.floor(cx+(radius-.25)*Math.cos(a*Math.PI/180)),Math.floor(cy+(radius-.25)*Math.sin(a*Math.PI/180))]);
+      return points;
+    })`);
+    const edgePixels=await pixels(edgePoints);
+    let timerPixels=[];
+    if(!led){
+      await evaluate(`qa.now=${epoch+33000}`);await settle();
+      const timer=await evaluate(`qa.rect('timer')`);
+      timerPixels=await pixels([[Math.floor(timer.x+timer.width-2),timer.y+39],[Math.floor(timer.x+timer.width*.7),timer.y+2],[Math.floor(timer.x+timer.width/2),timer.y+timer.height-2]]);
+      await screenshot('stream-timer-six-seconds');
+      await evaluate(`qa.now=${epoch}`);await settle();
+    }
+    assert.deepEqual({translucentFramePixels:edgePixels.filter(rgba=>rgba[3]!==255).length,timerBackground:timerPixels},
+      {translucentFramePixels:0,timerBackground:led?[]:Array(3).fill([17,20,33,255])},
+      'Frame edges must remain opaque; the receded timer outline must reveal the full-size pill background');
+    checks.push(output+': rounded frame edges stay opaque and the timer keeps its complete silhouette');
 
     await evaluate(`qa.live('NM','chroma','left');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'transparent'})`);
     await settle();
@@ -121,8 +145,8 @@ try {
     const labelAlpha=(await pixels(labelPoints)).map(rgba=>rgba[3]);
     assert.equal(Math.max(...labelAlpha),255,'Lock text should render at full opacity');
     assert.equal(Math.min(...labelAlpha),102,'Lock text should have only the full-window overlay behind it');
-    const lockedPixels=await pixels([[100,300],[1800,300]]);
-    assert.deepEqual(lockedPixels[0],[0,0,0,102],'Locked window should have a 40% black overlay');
+    const lockedPixels=await pixels([[100,viewY],[1800,viewY]]);
+    assert.deepEqual(lockedPixels[0],led ? [0,0,0,102] : [255,255,255,102],'Locked window should have a 40% overlay');
     transparent(lockedPixels[1]);
     await screenshot(output+'-transparent-lock',led);
     checks.push(output+': full-opacity lock text over a 40% window overlay; unlocked feed stays transparent');
@@ -130,7 +154,7 @@ try {
     await evaluate(`qa.live('NM','chroma','none');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'transparent'});const next=structuredClone(qa.initial.presenterDuel);next.rounds[0].startAtMs=qa.now+60000;qa.set('presenterDuel',next);qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'pre-round'});`);
     await settle();
     assert.equal(await evaluate(`document.getElementById('preview-area').hidden`),false);
-    const preview=await pixels([[960,300],[100,300],[300,800],[1600,800]]);
+    const preview=await pixels([[960,viewY],[100,viewY],[300,cameraY],[1600,cameraY]]);
     opaque(preview[0]);opaque(preview[1]);
     if(!led){transparent(preview[2]);transparent(preview[3]);}
     assert.notDeepEqual(preview[0].slice(0,3),[255,0,255]);
@@ -144,7 +168,7 @@ try {
     await evaluate(`qa.set('presenterDuel',${JSON.stringify(result)});qa.set('presenterTimeline',${JSON.stringify(timing)});qa.now=${timing.revealAtMs+8000};`);
     await settle();
     assert.equal(await evaluate(`document.getElementById('results-area').hidden`),false);
-    const results=await pixels([[960,500],[300,800],[1600,800],[100,300]]);
+    const results=await pixels([[960,500],[300,cameraY],[1600,cameraY],[100,viewY]]);
     opaque(results[0]);opaque(results[3]);
     if(!led){transparent(results[1]);transparent(results[2]);}
     checks.push(output+': results close gameplay holes and preserve camera alpha over the map');
@@ -152,12 +176,71 @@ try {
     if(!led){
       await evaluate(`document.querySelectorAll('.camera').forEach(el=>{el.classList.remove('key-slot');el.classList.add('relay-camera')});`);
       await settle();
-      const cameras=await pixels([[300,800],[1600,800]]);cameras.forEach(opaque);
+      const cameras=await pixels([[300,cameraY],[1600,cameraY]]);cameras.forEach(opaque);
       checks.push('stream: relayed camera regions remain opaque');
+    }
+    const finished = { ...result, status: 'Finished', winnerTeamId: result.players[0].teamId };
+    const finalTiming = advanceTimeline(null, finished, epoch, true, DEFAULT_TIMING);
+    const between = updateIntermission(EMPTY_INTERMISSION, finished, initial.presenterSeries);
+    await evaluate(`qa.set('presenterDuel',${JSON.stringify(finished)});qa.set('presenterTimeline',${JSON.stringify(finalTiming)});qa.set('presenterIntermission',${JSON.stringify(between)});`);
+    await settle();
+    if (led) {
+      assert.equal(await evaluate(`[...document.querySelectorAll('.camera')].every(e=>getComputedStyle(e).display==='none')`),true);
+      assert.equal(await evaluate(`document.getElementById('summary-area').hidden`),false);
+      checks.push('LED: final summary retains the existing layout without cameras');
+    } else {
+      // A 1920x1080 chart makes centre cropping and aspect distortion visible.
+      await evaluate(`qa.cameraNodes=[...document.querySelectorAll('.camera')].map((el,i)=>{
+        const canvas=document.createElement('canvas');canvas.width=1920;canvas.height=1080;
+        const ctx=canvas.getContext('2d');ctx.fillStyle=i?'#34212b':'#1b3049';ctx.fillRect(0,0,1920,1080);
+        ctx.strokeStyle='#ffffff22';ctx.lineWidth=2;for(let x=0;x<1920;x+=120){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,1080);ctx.stroke();}
+        ctx.strokeStyle=i?'#f05060':'#458af2';ctx.lineWidth=10;ctx.beginPath();ctx.arc(960,440,210,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='48px sans-serif';ctx.fillText(i?'RIGHT CAMERA':'LEFT CAMERA',960,760);ctx.font='30px sans-serif';ctx.fillText('1920 × 1080 · centre crop',960,810);
+        const video=document.createElement('video');video.muted=true;video.autoplay=true;video.srcObject=canvas.captureStream(1);el.replaceChildren(video);el.dataset.state='ready';return video;
+      });`);
+      await settle();
+      const rects=()=>evaluate(`[...document.querySelectorAll('.camera')].map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,fit:getComputedStyle(e.querySelector('video')).objectFit,position:getComputedStyle(e.querySelector('video')).objectPosition}})`);
+      let cameras=await rects();
+      assert.equal(cameras[0].width,1049);assert.equal(cameras[1].width,717);
+      cameras.forEach(r=>{assert.equal(r.y,65);assert.equal(r.height,951);});
+      assert.equal(cameras[0].x,60);assert.equal(cameras[1].x,1143);
+      cameras.forEach(r=>{assert.equal(r.fit,'cover');assert.equal(r.position,'50% 50%');assert.ok(r.x>=0&&r.x+r.width<=1920&&r.y+r.height<=1080);});
+      assert.equal(await evaluate(`document.getElementById('summary-area').hidden`),true);
+      assert.equal(await evaluate(`document.getElementById('camera-scene-label').textContent`),'WINNER');
+      await screenshot('stream-post-game-left');
+      checks.push('stream: post-game panels match the design geometry; both 16:9 inputs crop at their centre');
+
+      await evaluate(`qa.set('presenterIntermission',{...nodecg.Replicant('presenterIntermission').value,view:'before-game'})`);
+      await settle();cameras=await rects();
+      cameras.forEach(r=>{assert.equal(r.width,960);assert.equal(r.height,1080);assert.equal(r.y,0);});
+      assert.equal(cameras[0].x,0);assert.equal(cameras[1].x,960);
+      assert.equal(cameras[0].x+cameras[0].width,cameras[1].x);
+      assert.equal(await evaluate(`getComputedStyle(document.getElementById('camera-scene-label')).display`),'none');
+      await screenshot('stream-before-game');
+      checks.push('stream: Before-Game cameras cover the screen edge to edge with no outer margins or gap');
+
+      await evaluate(`qa.set('presenterIntermission',{...nodecg.Replicant('presenterIntermission').value,view:'end-of-last-game',lastGame:{...nodecg.Replicant('presenterIntermission').value.lastGame,winnerCompetitorId:qa.initial.presenterSeries.right.id}})`);
+      await settle();cameras=await rects();
+      assert.equal(cameras[0].width,717);assert.equal(cameras[1].width,1049);
+      assert.equal(cameras[0].x,60);assert.equal(cameras[1].x,811);
+      await screenshot('stream-post-game-right');
+      checks.push('stream: a right-side winner mirrors the dominant camera layout');
+
+      await evaluate(`qa.set('presenterIntermission',{...nodecg.Replicant('presenterIntermission').value,lastGame:{...nodecg.Replicant('presenterIntermission').value.lastGame,winnerCompetitorId:null,draw:true}})`);
+      await settle();cameras=await rects();
+      assert.equal(cameras[0].width,cameras[1].width);
+      assert.equal(await evaluate(`document.getElementById('camera-scene-label').textContent`),'DRAW');
+      assert.equal(await evaluate(`qa.cameraNodes.every((v,i)=>v===document.querySelectorAll('.camera video')[i]&&v.srcObject.active)`),true);
+      checks.push('stream: draws are balanced and all scene switches preserve the video elements and streams');
     }
     await evaluate(`qa.live('NM','chroma','none');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'#00ff00'})`);
     await settle();
-    const keyed=await pixels([[100,300],[1800,300]]);
+    if(!led){
+      assert.equal(await evaluate(`document.body.dataset.intermission`),'none');
+      assert.equal(await evaluate(`document.querySelector('.camera').getBoundingClientRect().width`),374);
+      checks.push('stream: gameplay automatically restores the normal camera dock');
+    }
+    const keyed=await pixels([[100,viewY],[1800,viewY]]);
     keyed.forEach(rgba=>assert.deepEqual(rgba,[0,255,0,255]));
     checks.push(output+': switching back to green restores opaque key windows');
   }

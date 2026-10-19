@@ -21,9 +21,12 @@ import { verifyLedPages } from './led-browser-checks.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ledOnly = process.argv.includes('--led-only');
 const castersOnly = process.argv.includes('--casters-only');
+const cardsOnly = process.argv.includes('--cards-only');
 const artifacts = path.join(root, castersOnly ? 'artifacts/casters' : 'artifacts/player-cards');
 const adobeFonts = process.argv.includes('--adobe-fonts');
+const screenshotDirectory = cardsOnly && !adobeFonts ? path.join(artifacts, 'fallback-fonts') : artifacts;
 await mkdir(artifacts, { recursive: true });
+await mkdir(screenshotDirectory, { recursive: true });
 const now = Date.parse('2026-10-12T05:00:00Z');
 const profiles = [
   rowToProfile({ startgg_entrant_id: '10', startgg_tag: 'Stephen', name: 'Stephen', twitter: 'StephGeoGuessr', age: '29', rating: '1493', favorite_mode: '全モード', strengths: 'Movingの知識、カーメタ', favorite_food: '寿司(イワシ・サンマ)、超濃厚煮干しラーメン、マトンビリヤニ、ぼたん鍋', message: '前年度は解説として参加させていただきましたが、今年度は選手としていいプレーを少しでも見せれるように頑張ります！' }),
@@ -132,15 +135,25 @@ async function card(patch, output = 'stream') {
   await evaluate(`{const s=structuredClone(fixtureValues.${REPLICANTS.broadcast});Object.assign(s.${output}.program.playerCards,${JSON.stringify(patch)});emit('${REPLICANTS.broadcast}',s);}`);
   await delay(50);
 }
-async function screenshot(name) {
-  const shot = await command('Page.captureScreenshot', { format: 'png' });
-  await writeFile(path.join(artifacts, name + '.png'), Buffer.from(shot.data, 'base64'));
+async function screenshot(name, clip) {
+  const shot = await command('Page.captureScreenshot', { format: 'png', ...(clip ? { clip } : {}) });
+  await writeFile(path.join(screenshotDirectory, name + '.png'), Buffer.from(shot.data, 'base64'));
 }
 async function fits() {
   return evaluate(`[...document.querySelectorAll('.pcard:not([hidden])')].every(card=>{const r=card.getBoundingClientRect();const led=document.body.dataset.output==='led';return r.top>=0&&r.bottom<=(led?576:1080)&&(!led||(r.top===24&&r.height===528&&r.width===480&&r.left===(card.id==='card-1'?24:1416)))&&card.scrollWidth<=card.clientWidth&&[...card.querySelectorAll('.name,.twitter,.value,.result-row,.result-round,.result-opponent,.result-score,.results-empty')].filter(e=>e.getBoundingClientRect().height).every(e=>{const a=e.getBoundingClientRect();return a.left>=r.left&&a.right<=r.right&&a.top>=r.top&&a.bottom<=r.bottom;});})`);
 }
 async function sharedLayout() {
   return evaluate(`[...document.querySelectorAll('.pcard:not([hidden])')].map(card=>[card,...card.querySelectorAll('.head,.name,.twitter,.page-profile,.page-profile .pair,.page-profile .field,.page-profile .label,.page-profile .value')].map(el=>({rect:el.getBoundingClientRect().toJSON(),font:getComputedStyle(el).font})))`);
+}
+async function designerLayout() {
+  return evaluate(`(() => {
+    const card=document.querySelector('#card-1'), origin=card.getBoundingClientRect();
+    const scale=parseFloat(getComputedStyle(card).getPropertyValue('--card-scale'));
+    return [...card.querySelectorAll('.name,.twitter,.pair,.page-profile .label,.page-profile .value,.page-details .label,.page-details .value')].map(el=>{
+      const rect=el.getBoundingClientRect();
+      return {element:el.className,x:(rect.x-origin.x)/scale,y:(rect.y-origin.y)/scale,fontSize:parseFloat(getComputedStyle(el).fontSize)/scale};
+    });
+  })()`);
 }
 try {
   let port;
@@ -160,13 +173,38 @@ try {
     assert.deepEqual(errors, [], 'no browser exceptions');
     console.log('Caster browser checks passed. Screenshots: ' + artifacts);
   } else {
-  await verifyLedPages({ navigate, evaluate, until, screenshot, delay, command });
+  if (!cardsOnly) await verifyLedPages({ navigate, evaluate, until, screenshot, delay, command });
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await navigate('/bundles/rashinban/graphics/info-stream.html');
   if (adobeFonts) assert.ok(await evaluate(`[...document.fonts].some(font=>font.family.includes('kaneda-gothic')&&font.weight==='700'&&font.status==='loaded')`), 'Adobe Kaneda Gothic must be loaded for the online typography check');
+  await evaluate(`{const m=structuredClone(fixtureValues.${REPLICANTS.matchResolved});m.left.name='Shiina';m.left.handle='si417_';Object.assign(m.left.profile,{age:'32',rating:'2300',favoriteMode:'NO MOVE',strengths:'経験',favoriteFood:'おいしいもの',message:'自信無いですけど頑張ります'});emit('${REPLICANTS.matchResolved}',m);}`);
+  assert.ok(await fits(), 'designer reference profile fits');
+  await evaluate(`{const m=structuredClone(fixtureValues.${REPLICANTS.matchResolved});m.left.name='たいけい/Taikei';emit('${REPLICANTS.matchResolved}',m);}`);
+  assert.ok(await fits(), 'Japanese and Latin name fits with the Japanese fallback');
+  assert.equal(await evaluate(`document.querySelector('#card-1 .name').textContent`), 'たいけい/Taikei');
+  await evaluate(`{const m=structuredClone(fixtureValues.${REPLICANTS.matchResolved});m.left.name='Shiina';emit('${REPLICANTS.matchResolved}',m);}`);
+  const designerMatch = await evaluate(`structuredClone(fixtureValues.${REPLICANTS.matchResolved})`);
+  const streamDesignerLayout = await designerLayout();
+  for (const selector of ['.name', '.twitter']) {
+    assert.match(await evaluate(`getComputedStyle(document.querySelector('#card-1 ${selector}')).fontFamily`), /^"?kaneda-gothic/);
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('#card-1 ${selector}')).opacity`), '1');
+  }
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('#card-1 .page')].map(el=>getComputedStyle(el).opacity)`), ['1', '1', '1']);
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('#card-1')).backgroundColor`), 'rgba(255, 48, 48, 0.6)', 'only the supporting-info background is translucent');
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('#card-1 .head'),'::before').backgroundColor`), 'rgb(255, 48, 48)', 'name and handle have a solid background');
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('#card-1'),'::after').borderTopColor`), 'rgb(255, 48, 48)', 'the full card has a solid outline');
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('#card-1 .page-profile > .field .label')).backgroundColor`), 'rgba(255, 255, 255, 0.25)');
+  await screenshot('designer-reference', { x: 110, y: 110, width: 800, height: 900, scale: 1 });
+  await evaluate(`document.body.style.setProperty('background','transparent','important')`);
+  await command('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
+  await screenshot('designer-reference-alpha', { x: 110, y: 110, width: 800, height: 900, scale: 1 });
+  await evaluate(`document.body.style.removeProperty('background')`);
+  await command('Emulation.setDefaultBackgroundColorOverride');
+  await evaluate(`emit('${REPLICANTS.matchResolved}',${JSON.stringify(values[REPLICANTS.matchResolved])})`);
   assert.equal(await evaluate(`document.querySelectorAll('.pcard:not([hidden])').length`), 1);
   assert.equal(await evaluate(`document.querySelector('#card-1 .rating').textContent`), '1493');
-  assert.ok(await fits(), 'long Japanese profile fits'); await screenshot('01-profile');
+  await screenshot('01-profile');
+  assert.ok(await fits(), 'long Japanese profile fits');
   const streamProfileLayout = await sharedLayout();
   await card({ page: 'stats' });
   assert.equal(await evaluate(`document.querySelectorAll('#card-1 .result-row').length`), 3);
@@ -191,7 +229,7 @@ try {
       for (const position of ['left', 'right']) {
         await card({ page, player, position });
         const shown = await evaluate(`[...document.querySelectorAll('.pcard:not([hidden])')].map(el=>({name:el.querySelector('.name').textContent,x:el.getBoundingClientRect().x,color:getComputedStyle(el).backgroundColor}))`);
-        assert.deepEqual(shown, [{ name: player === 'left' ? 'Stephen' : 'eeeeeeeeeeee', x: position === 'left' ? 110 : 1010, color: player === 'left' ? 'rgb(204, 38, 38)' : 'rgb(38, 105, 204)' }], `${page}: ${player} player at ${position} position preserves identity and color`);
+        assert.deepEqual(shown, [{ name: player === 'left' ? 'Stephen' : 'eeeeeeeeeeee', x: position === 'left' ? 110 : 1010, color: player === 'left' ? 'rgba(255, 48, 48, 0.6)' : 'rgba(48, 131, 255, 0.6)' }], `${page}: ${player} player at ${position} position preserves identity and color`);
         assert.ok(await fits());
         if (page === 'profile' && player === 'left' && position === 'right') await screenshot('14-p1-right');
         if (page === 'profile' && player === 'right' && position === 'left') await screenshot('15-p2-left');
@@ -232,6 +270,26 @@ try {
 
   await navigate('/bundles/rashinban/graphics/info-led.html');
   assert.equal(await evaluate(`document.querySelectorAll('.pcard:not([hidden])').length`), 2);
+  await evaluate(`emit('${REPLICANTS.matchResolved}',${JSON.stringify(designerMatch)})`);
+  const ledDesignerLayout = await designerLayout();
+  for (const [index, element] of ledDesignerLayout.entries()) {
+    assert.equal(element.element, streamDesignerLayout[index].element);
+    for (const property of ['x', 'y', 'fontSize']) {
+      // Font metrics and each label border round independently at LED scale.
+      const tolerance = property === 'y' ? 4 : property === 'x' ? 2 : 0.01;
+      assert.ok(Math.abs(element[property] - streamDesignerLayout[index][property]) * (528 / 900) < tolerance,
+        `LED ${element.element} ${property} follows the scaled Stream design: ${element[property]} vs ${streamDesignerLayout[index][property]}`);
+    }
+  }
+  assert.ok(await fits(), 'scaled designer LED profile fits');
+  await screenshot('designer-reference-led', { x: 24, y: 24, width: 480, height: 528, scale: 1 });
+  await screenshot('designer-reference-led-layout', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
+  await evaluate(`document.body.style.setProperty('background','transparent','important')`);
+  await command('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
+  await screenshot('designer-reference-led-alpha', { x: 24, y: 24, width: 480, height: 528, scale: 1 });
+  await evaluate(`document.body.style.removeProperty('background')`);
+  await command('Emulation.setDefaultBackgroundColorOverride');
+  await evaluate(`emit('${REPLICANTS.matchResolved}',${JSON.stringify(values[REPLICANTS.matchResolved])})`);
   await screenshot('12-led-profile');
   assert.ok(await fits(), 'LED profiles fit the physical 576px band with 24px margins');
   const ledProfileLayout = await sharedLayout();
@@ -328,7 +386,7 @@ try {
     winner:el.querySelector('.winner')===el.querySelector('.match--player')?'top':el.querySelector('.winner')?'bottom':null,
     active:el.querySelector('.match-border').classList.contains('active')
   }))`);
-  for (const [page, height] of [['bracket-led', 576], ['brackets-finals', 1080]]) {
+  for (const [page, height] of cardsOnly ? [] : [['bracket-led', 576], ['brackets-finals', 1080]]) {
     await navigate(`/bundles/rashinban/graphics/${page}.html`, 'document.querySelector("#match1-top")?.textContent');
     assert.deepEqual(await bracketRows(), finals.rows, `${page}: names, scores, winners, and active matches`);
     assert.equal(await evaluate(`document.querySelector('#bracket').getBoundingClientRect().height`), height);
@@ -353,8 +411,10 @@ try {
     ...(output === 'stream' ? { casters: { titleBar: false } } : {}),
   }), output);
   values[REPLICANTS.broadcast] = state;
-  await verifyBanpick({ navigate, evaluate, until, screenshot, delay, command });
-  await verifyCasters({ navigate, evaluate, until, screenshot, delay, command });
+  if (!cardsOnly) {
+    await verifyBanpick({ navigate, evaluate, until, screenshot, delay, command });
+    await verifyCasters({ navigate, evaluate, until, screenshot, delay, command });
+  }
   await writeFile(path.join(artifacts, 'startgg-check.json'), JSON.stringify({
     source: liveStartgg ? 'fresh API responses' : 'saved API responses', sourceFiles,
     fetchedAt: sources.map(source => source.fetchedAt), loadedSets: Object.keys(realBracket.sets).length,
@@ -363,8 +423,8 @@ try {
   assert.deepEqual(errors, [], 'no browser exceptions');
   console.log('Player cards verified: independent player/position in every mode, position Preview/TAKE, identical Profile/Compact frame and shared-field positions, single stream player, two LED cards, latest five/three games, obsolete date/page ignored, missing data, dashboard selection and TAKE.');
   console.log(`start.gg replay verified from ${liveStartgg ? 'fresh' : 'saved'} API responses: 30 sets, latest five/three games across dates, current/later matches excluded.`);
-  console.log('Bracket verified: 1920x576 LED layout, independent 1080p dedicated graphic, shared data updates, reset visibility, stale-data clearing, always-on LED sources, Stream Program page sync, background-only tint transparency.');
-  console.log('Screenshots: ' + artifacts);
+  if (!cardsOnly) console.log('Bracket verified: 1920x576 LED layout, independent 1080p dedicated graphic, shared data updates, reset visibility, stale-data clearing, always-on LED sources, Stream Program page sync, background-only tint transparency.');
+  console.log('Screenshots: ' + screenshotDirectory);
   }
 } finally {
   socket?.close(); chrome.kill(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));

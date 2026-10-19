@@ -20,6 +20,7 @@ export type ToggleLayer = { visible: boolean };
 
 export type StreamLayers = {
   interval: ToggleLayer;
+  bracket: ToggleLayer;
   playerCards: PlayerCardsLayer;
   lowerThird: LowerThirdLayer;
   casters: CastersLayer;
@@ -73,6 +74,7 @@ const CARD_SPEC = { visible: "boolean", page: ["profile", "stats", "compact"], p
 const TOGGLE_SPEC = { visible: "boolean" } as const satisfies SpecOf<ToggleLayer>;
 const STREAM_SPEC = {
   interval: TOGGLE_SPEC,
+  bracket: TOGGLE_SPEC,
   playerCards: CARD_SPEC,
   lowerThird: { visible: "boolean", mode: ["match", "text"], title: "text", subtitle: "text" },
   casters: { titleBar: "boolean:true", slots: "booleanPair", center: "boolean", names: { left: "text", right: "text", center: "text" } },

@@ -5,6 +5,17 @@
   <div id="error" class="notice danger" role="alert" hidden></div>
   <div id="warning" class="notice" role="status"></div>
   <section class="source"><label>Party ID / broadcast URL<input id="party-id" placeholder="Blank uses the account’s active party" maxlength="180"></label><button id="connect">Connect live party</button><span id="identity" class="muted"></span><details><summary>Join info</summary><div id="join-info"></div></details></section>
+  <section class="card match-score" aria-labelledby="match-score-heading">
+    <div class="section-title"><h2 id="match-score-heading">Match Score</h2><span id="match-score-status" class="small muted" role="status">Loading current match...</span></div>
+    <form id="match-score-form">
+      <div class="match-score-players">
+        <div><label for="match-score-left" id="match-score-label-left">Left / A</label><div class="match-score-entry"><input id="match-score-left" type="number" inputmode="numeric" min="0" max="2" step="1" required value="0" disabled><button id="match-score-increment-left" type="button" class="primary" aria-label="Increment left Match Score" disabled>+1</button></div></div>
+        <div><label for="match-score-right" id="match-score-label-right">Right / B</label><div class="match-score-entry"><input id="match-score-right" type="number" inputmode="numeric" min="0" max="2" step="1" required value="0" disabled><button id="match-score-increment-right" type="button" class="primary" aria-label="Increment right Match Score" disabled>+1</button></div></div>
+      </div>
+      <div class="actions"><button id="match-score-apply" type="submit" disabled>Apply Match Score</button><button id="match-score-reset" type="button" disabled>Reset to 0–0</button><button id="match-score-reload" type="button" hidden>Discard score edits</button></div>
+      <div id="match-score-error" class="notice danger" role="alert" hidden></div>
+    </form>
+  </section>
   <div class="grid">
     <section class="card live"><div class="section-title"><h2>Live duel</h2><span id="game-type" class="badge">—</span></div>
       <div class="round-head"><div><span id="round-number" class="eyebrow">LOBBY</span><h3 id="phase">Waiting for party</h3><span id="map-name" class="muted"></span></div><strong id="timer">—</strong></div>
@@ -22,6 +33,11 @@
       <div class="actions"><button id="pause" disabled>Pause after round</button><button id="resume" disabled>Release held result</button><button id="abort" class="danger-button" disabled>Abort duel…</button></div>
       <p id="live-hint" class="muted small">Pause holds the result at the round deadline. Resume releases it without adding guess time.</p>
       <div id="presenter-warning" class="notice" hidden></div>
+      <section aria-labelledby="intermission-heading">
+        <h2 id="intermission-heading">Between games · stream</h2>
+        <div class="actions" role="group" aria-label="Between-game view"><button id="before-game" type="button" class="primary" aria-pressed="true">Before-Game</button><button id="end-of-last-game" type="button" aria-pressed="false" disabled>End-of-Last-Game</button></div>
+        <p id="intermission-status" class="small muted" role="status">Before-Game · both cameras</p>
+      </section>
       <details><summary>Recovery / rollback</summary><div class="actions"><label>Replay from round<input id="rollback-round" type="number" min="1" value="1"></label><button id="rollback" class="danger-button" disabled>Roll back…</button></div><p class="small muted">Requires a paused duel. Reuses the target location and restarts its timer. The result must be confirmed by GeoGuessr.</p></details>
       <details><summary>Game details</summary><div id="game-details" class="small muted"></div></details>
     </section>

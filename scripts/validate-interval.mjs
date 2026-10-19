@@ -1,6 +1,7 @@
 // Built dashboard -> real extension handlers -> replicated state -> built graphics.
 // Uses isolated NodeCG transport fixtures and a disposable headless browser.
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { readFile, writeFile, mkdir, mkdtemp } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -8,6 +9,12 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import { build } from 'esbuild';
+import { pathToFileURL } from 'node:url';
+import { createMediaRouter } from '../bundles/rashinban/src/extension/config/assets.ts';
+import { registerMatch } from '../bundles/rashinban/src/extension/match.ts';
+import { emptyMatch } from '../bundles/rashinban/src/match/state.ts';
+import { rowToProfile } from '../bundles/rashinban/src/sheet/players.ts';
 import { registerInterval } from '../bundles/rashinban/src/extension/interval.ts';
 import { registerBroadcast } from '../bundles/rashinban/src/extension/broadcast.ts';
 
@@ -15,17 +22,31 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const adobeFonts = process.argv.includes('--adobe-fonts');
 const artifacts = path.join(root, 'artifacts/interval', adobeFonts ? '' : 'offline');
 await mkdir(artifacts, { recursive: true });
-const values = {}, handlers = new Map();
+const values = {}, handlers = new Map(), reps = new Map();
 const nodecg = {
   Replicant(name, options) {
-    if (!(name in values) && options?.defaultValue !== undefined) values[name] = structuredClone(options.defaultValue);
-    return { get value() { return values[name]; }, set value(value) { values[name] = value; } };
+    if (!reps.has(name)) {
+      if (options?.defaultValue !== undefined) values[name] = structuredClone(options.defaultValue);
+      const rep = new EventEmitter();
+      Object.defineProperty(rep, 'value', { get: () => values[name], set: value => { values[name] = value; rep.emit('change', value); } });
+      reps.set(name, rep);
+    }
+    return reps.get(name);
   },
   listenFor(name, callback) { handlers.set(name, callback); },
   log: { warn() {}, error: console.error },
 };
+registerMatch(nodecg);
 registerInterval(nodecg);
 registerBroadcast(nodecg, express.Router());
+// Bundle the legacy extension's extensionless imports for Node's TS fixture runner.
+const bracketModule = path.join(artifacts, 'bracket-extension.mjs');
+await build({entryPoints: [path.join(root, 'bundles/rashinban/src/extension/bracket.ts')], outfile: bracketModule,
+  bundle: true, platform: 'node', format: 'esm', packages: 'external'});
+const { registerBracket } = await import(pathToFileURL(bracketModule).href);
+const nativeInterval = globalThis.setInterval;
+globalThis.setInterval = (...args) => nativeInterval(...args).unref();
+try { registerBracket(nodecg, express.Router()); } finally { globalThis.setInterval = nativeInterval; }
 const message = (name, data) => new Promise((resolve, reject) => {
   const handler = handlers.get(name);
   if (!handler) throw Error('Unregistered message: ' + name);
@@ -44,8 +65,11 @@ window.nodecg={bundleConfig:{},Replicant(name){return{get value(){return values[
 async sendMessage(name,data){const response=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,data})});const result=await response.json();if(!response.ok)throw result;sync(await fetch('/state').then(r=>r.json()));return result;}};
 setInterval(()=>fetch('/state').then(r=>r.json()).then(sync),100);
 `;
+const media = express();
+media.use('/rashinban/media', createMediaRouter({appRoot: root, sharedRoot: root, isWorktree: false}));
 const server = createServer(async (req, res) => {
   try {
+    if (req.url.startsWith('/rashinban/media/')) { media(req, res); return; }
     if (req.url === '/state') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(values)); return; }
     if (req.url === '/message') {
       let body = ''; for await (const chunk of req) body += chunk;
@@ -105,6 +129,10 @@ async function click(selector) { await evaluate(`document.querySelector(${JSON.s
 async function fill(selector, value) {
   await evaluate(`{const input=document.querySelector(${JSON.stringify(selector)});input.value=${JSON.stringify(value)};input.dispatchEvent(new Event('input',{bubbles:true}));}`);
 }
+async function chooseSource(value) {
+  await fill('#match-source', value);
+  await evaluate('document.querySelector("#match-source").dispatchEvent(new Event("change", { bubbles: true }))');
+}
 async function screenshot(name, clip) {
   await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
   // Let Chrome finish rasterizing loaded fonts/SVGs after revealing the layer.
@@ -127,11 +155,81 @@ try {
     } else if (result.method === 'Runtime.exceptionThrown') errors.push(result.params.exceptionDetails);
   };
   await command('Runtime.enable'); await command('Page.enable');
+  const range = await fetch(origin + '/rashinban/media/background/kv.mp4', {headers: {range: 'bytes=0-31'}});
+  assert.equal(range.status, 206);
+  assert.equal((await range.arrayBuffer()).byteLength, 32);
+  // Operate both scenes and their real controls without leaving the switcher.
+  await navigate('dashboard/switcher-stream.html', 1440, 1100);
+  await until('document.querySelector("[data-row=bracket] button") !== null');
+  const monitor = channel => `document.querySelector('.monitor[data-channel=${channel}] iframe.info').contentDocument`;
+  const sceneVideo = (channel, scene) => `${monitor(channel)}?.querySelector('#layer-${scene} video')`;
+  assert.equal(await evaluate('document.querySelector("#strip details, #strip iframe")'), null, 'scene dropdown panels are removed');
+  await until('document.querySelector("#interval-timer-controls")?.disabled === false');
+  const initialBus = structuredClone(values.broadcast);
+  await fill('#interval-minutes', '12.5');
+  await click('#interval-start');
+  await until('document.querySelector("#interval-timer-status").textContent === "Running"');
+  assert.equal(await evaluate('document.querySelector("#interval-countdown").textContent'), '12:30', 'server clock corrects the fixture client clock skew');
+  await click('#interval-pause');
+  await until('document.querySelector("#interval-pause").textContent === "Resume"');
+  const inlinePaused = values.interval.timer.remainingMs;
+  assert.ok(inlinePaused > 740000 && inlinePaused <= 750000);
+  await fill('#interval-minutes', '9');
+  await click('#interval-pause');
+  await until('document.querySelector("#interval-timer-status").textContent === "Running"');
+  assert.ok(values.interval.timer.endsAtMs - Date.now() > 740000, 'Resume keeps the original remaining time');
+  assert.equal(await evaluate('document.querySelector("#interval-minutes").value'), '9', 'timer updates preserve the next duration draft');
+  await click('#interval-clear');
+  await until('document.querySelector("#interval-timer-status").textContent === "Hidden"');
+  assert.equal(await evaluate('document.querySelector("#interval-pause").disabled && document.querySelector("#interval-clear").disabled'), true);
+  assert.deepEqual(values.broadcast, initialBus, 'live timer controls do not alter Preview or Program visibility');
+  await fill('#interval-minutes', '0');
+  await click('#interval-start');
+  await until('document.querySelector("#error").textContent.length > 0');
+  assert.equal(values.interval.timer.endsAtMs, null, 'invalid durations cannot start the timer');
+  await fill('#interval-minutes', '10');
+  await click('#interval-start');
+  await until('document.querySelector("#interval-timer-status").textContent === "Running"');
+  assert.equal(await evaluate('document.querySelector("#error").textContent'), '');
+  await message('bracket:setConfig', {source: 'sample'});
+  await until('fixtureValues.bracketFinals?.rows.length > 0 && !fixtureValues.bracketFinals.error');
+  await click('[data-row=interval] button');
+  await until(`${sceneVideo('preview', 'interval')}?.currentTime > .1`);
+  assert.equal(await evaluate(`${sceneVideo('program', 'interval')}.paused`), true);
+  await click('#take');
+  await until(`${sceneVideo('program', 'interval')}?.currentTime > .1`);
+  await click('[data-row=bracket] button');
+  await until(`${sceneVideo('preview', 'bracket')}?.currentTime > .1 && ${sceneVideo('preview', 'interval')}.paused`);
+  assert.equal(values.broadcast.stream.preview.interval.visible, false);
+  assert.equal(values.broadcast.stream.program.interval.visible, true);
+  assert.equal(await evaluate(`${sceneVideo('program', 'bracket')}.paused`), true);
+  await screenshot('switcher-bracket-preview');
+  await click('#revert');
+  await until(`${sceneVideo('preview', 'bracket')}.paused && !${sceneVideo('preview', 'interval')}.paused`);
+  await click('[data-row=bracket] button');
+  await until('fixtureValues.broadcast.stream.preview.bracket.visible && !document.querySelector("#take").disabled');
+  await click('#take');
+  await until(`${sceneVideo('program', 'bracket')}?.currentTime > .1 && ${sceneVideo('program', 'interval')}.paused`);
+  const playback = await evaluate(`{const v=${sceneVideo('program', 'bracket')}; ({muted:v.muted,loop:v.loop,inline:v.playsInline,width:v.videoWidth,height:v.videoHeight})}`);
+  assert.deepEqual(playback, {muted: true, loop: true, inline: true, width: 1920, height: 1080});
+  await evaluate(`{const v=${sceneVideo('program', 'bracket')}; v.currentTime = 19.8;}`);
+  await delay(800);
+  await until(`${sceneVideo('program', 'bracket')}.currentTime < 2 && !${sceneVideo('program', 'bracket')}.paused`);
+  for (const [file, height] of [['brackets-finals.html', 1080], ['bracket-led.html', 576]]) {
+    await navigate('graphics/' + file);
+    await until('document.querySelector("video")?.currentTime > .1');
+    assert.equal(await evaluate('document.querySelector("video").getBoundingClientRect().height'), height);
+    await screenshot(file.replace('.html', '-video'));
+  }
+  await message('broadcast:setPreview', {output: 'stream', patch: {interval: {visible: false}, bracket: {visible: false}}});
+  await message('broadcast:take', {output: 'stream'});
+  await message('interval:timer', {action: 'clear'});
   await navigate('graphics/interval-stream.html');
   assert.equal(await evaluate('document.querySelector("#layer-interval").hidden'), true);
   await navigate('dashboard/interval-control.html', 650, 650);
   await until('!document.querySelector("#content-controls").disabled');
   assert.equal(await evaluate('document.querySelector("#countdown-label, [aria-label*=Round]")'), null, 'removed labels have no dashboard controls');
+  await chooseSource('manual');
   await fill('[aria-label="Match 1 Player 1"]', 'SHIINA');
   await fill('[aria-label="Match 1 Player 2"]', 'EURYA');
   await click('#apply');
@@ -154,12 +252,19 @@ try {
   await until('document.querySelector("#timer-status").textContent === "Paused"');
   assert.equal(await evaluate(`document.querySelector('[aria-label="Match 1 Player 1"]').value`), 'SHIINA');
   await click('#clear'); await until('document.querySelector("#timer-status").textContent === "Hidden"');
-  await fill('#restart-at', '2020-01-01T12:00'); await click('#schedule');
-  await until('document.querySelector("#error").textContent.includes("future")');
+  assert.equal(await evaluate('document.querySelector("#restart-at").type'), 'time');
+  assert.match(await evaluate('document.querySelector("#restart-at").value'), /^\d{2}:\d{2}$/);
+  await fill('#restart-at', ''); await click('#schedule');
+  await until('document.querySelector("#error").textContent.includes("Choose a restart time")');
   const jst = new Date(Date.now() + 9 * 3600000 + 3600000).toISOString().slice(0, 16);
-  await fill('#restart-at', jst); await click('#schedule');
+  await fill('#restart-at', jst.slice(11)); await click('#schedule');
   await until('document.querySelector("#timer-status").textContent === "Running"');
   assert.equal(values.interval.timer.endsAtMs, Date.parse(jst + ':00+09:00'));
+  assert.equal(await evaluate('document.querySelector("#error").textContent'), '');
+  const tomorrowJst = new Date(Date.now() + 9 * 3600000 + 23 * 3600000).toISOString().slice(0, 16);
+  await fill('#restart-at', tomorrowJst.slice(11)); await click('#schedule');
+  await until(`fixtureValues.interval.timer.endsAtMs === ${Date.parse(tomorrowJst + ':00+09:00')}`);
+  assert.equal(values.interval.timer.endsAtMs, Date.parse(tomorrowJst + ':00+09:00'), 'a past time schedules its next JST occurrence');
   await fill('#duration', '46.1'); await click('#start'); await until('document.querySelector("#countdown").textContent.startsWith("46:")');
   await click('#pause'); await until('document.querySelector("#timer-status").textContent === "Paused"');
 
@@ -180,6 +285,8 @@ try {
     }
     await navigate(`graphics/interval-${output}.html${output === 'led' ? '?channel=preview' : ''}`);
     await until('document.querySelector("#layer-interval")?.hidden === false');
+    await until('document.querySelector("video")?.currentTime > .1');
+    assert.equal(await evaluate('document.querySelector("video").getBoundingClientRect().height'), output === 'led' ? 576 : 1080);
     if (output === 'led') {
       await message('broadcast:setPreview', { output: 'stream', patch: { interval: { visible: false } } });
       await message('broadcast:take', { output: 'stream' });
@@ -192,7 +299,13 @@ try {
     assert.equal(await evaluate('document.querySelector(".interval-match-players").textContent'), 'SHIINA VS EURYA');
     assert.equal(await evaluate('[...document.querySelectorAll("#layer-interval img")].every(img => img.complete && img.naturalWidth > 0)'), true);
     await screenshot(output);
-    if (output === 'led') await screenshot('led-band', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
+    if (output === 'led') {
+      await screenshot('led-band', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
+      assert.equal(await evaluate(`['.interval-topbar', '.interval-bottombar', '.interval-icon', '.interval-title', '.interval-sponsor-rotating'].every(selector => !document.querySelector(selector).checkVisibility())`), true, 'LED uses the unframed reference layout');
+      assert.equal(await evaluate('document.querySelector(".interval-sponsor-lead img").checkVisibility()'), true, 'LED keeps TAMURA BUILDS visible');
+      assert.equal(await evaluate('fixtureIntervals.some(timer => timer.ms === 12000)'), false, 'LED does not run a hidden sponsor rotation');
+      continue;
+    }
     // Sample actual painted opacity through a complete 12-second sponsor cycle.
     // This catches the old abrupt hidden/display swap even when all logos load.
     const fade = await evaluate(`new Promise(resolve => {
@@ -232,6 +345,62 @@ try {
     await writeFile(path.join(artifacts, output + '-sponsor-fade.json'), JSON.stringify({samples: fade, rotation}, null, 2));
   }
 
+  // Link Interval to the real saved Next Match and keep the manual list for later.
+  nodecg.Replicant('players').value = ['Alpha', 'Beta'].map((name, i) => rowToProfile({
+    name: name + ' Display', startgg_tag: name, geoguessr_player_uid: `65fc3453702bba73b4c0a39${i}`,
+  }));
+  const staged = emptyMatch();
+  staged.left.tag = 'Alpha'; staged.right.tag = 'Beta';
+  await message('match:next:apply', staged);
+  const savedTimer = structuredClone(values.interval.timer);
+  await navigate('dashboard/interval-control.html', 650, 700);
+  await until('!document.querySelector("#content-controls").disabled');
+  await chooseSource('next');
+  assert.equal(await evaluate('document.querySelector("#next-match-preview").textContent'), 'Alpha Display vs Beta Display');
+  assert.equal(values.interval.content.matchSource, 'manual', 'source changes are drafts until applied');
+  await click('#apply');
+  await until('document.querySelector("#draft-status").textContent === "Saved content"');
+  assert.equal(values.interval.content.matchSource, 'next');
+  assert.deepEqual(values.interval.content.matches, [{ playerOne: 'SHIINA', playerTwo: 'EURYA' }]);
+  assert.deepEqual(values.interval.timer, savedTimer);
+  await fill('#title', 'KEEP THIS DRAFT');
+  await message('match:next:swap', { revision: values.nextMatchState.revision });
+  await until('document.querySelector("#next-match-preview").textContent === "Beta Display vs Alpha Display"');
+  assert.equal(await evaluate('document.querySelector("#title").value'), 'KEEP THIS DRAFT');
+  await click('#reload');
+  await screenshot('dashboard-next-match');
+  await navigate('dashboard/interval-control.html', 350, 750);
+  await until('document.querySelector("#match-source").value === "next" && !document.querySelector("#content-controls").disabled');
+  assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true, 'narrow panel must fit');
+  await screenshot('dashboard-next-match-narrow');
+  for (const output of ['stream', 'led']) {
+    await navigate(`graphics/interval-${output}.html`);
+    await until('document.querySelector(".interval-match-players")?.textContent === "Beta Display VS Alpha Display"');
+    const current = emptyMatch(); current.revision = values.matchState.revision;
+    current.left.name = 'Current A'; current.right.name = 'Current B';
+    await message('match:apply', current);
+    await until('fixtureValues.matchState.left.name === "Current A"');
+    assert.equal(await evaluate('document.querySelector(".interval-match-players").textContent'), 'Beta Display VS Alpha Display', 'current match edits must not affect Interval');
+    nodecg.Replicant('players').value = values.players.map(profile => ({ ...profile, name: profile.name.replace('Alpha Display', 'Alpha Updated') }));
+    await until('document.querySelector(".interval-match-players")?.textContent === "Beta Display VS Alpha Updated"');
+    await screenshot(output + '-next-match');
+    const next = structuredClone(values.nextMatchState);
+    await message('match:next:promote', { revision: values.matchState.revision, nextRevision: next.revision });
+    await until('document.querySelector(".interval-upcoming").hidden');
+    assert.deepEqual(values.interval.timer, savedTimer, 'promotion must not change countdown');
+    await message('match:next:apply', { ...next, revision: values.nextMatchState.revision });
+    await until('document.querySelector(".interval-match-players")?.textContent === "Beta Display VS Alpha Updated"');
+    nodecg.Replicant('players').value = values.players.map(profile => ({ ...profile, name: profile.name.replace('Alpha Updated', 'Alpha Display') }));
+    await until('document.querySelector(".interval-match-players")?.textContent === "Beta Display VS Alpha Display"');
+  }
+  await navigate('dashboard/interval-control.html', 650, 650);
+  await until('!document.querySelector("#content-controls").disabled');
+  await chooseSource('manual');
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Match 1 Player 1"]').value`), 'SHIINA');
+  await click('#apply');
+  await until('document.querySelector("#draft-status").textContent === "Saved content"');
+  assert.equal(values.interval.content.matchSource, 'manual');
+
   // Simulate an older dashboard sending removed fields; neither may reappear.
   const longMatches = Array.from({ length: 4 }, (_, index) => ({ label: '準決勝', playerOne: index ? '長いプレイヤー名テスト' : '<img src=x onerror=alert(1)>', playerTwo: 'VeryLongCompetitorName' }));
   await message('interval:content', { ...values.interval.content, title: 'RASHINBAN 2026 GRAND FINALS INTERVAL', countdownLabel: '再開まで', matches: longMatches });
@@ -256,6 +425,7 @@ try {
       }
     }
     const fits = await evaluate(`[...document.querySelectorAll('#layer-interval [data-fit]')].every(span => {
+      if (!span.checkVisibility()) return true;
       const box=span.getBoundingClientRect(), parent=span.parentElement.getBoundingClientRect();
       return box.left >= parent.left - 1 && box.right <= parent.right + 1;
     })`);
@@ -269,8 +439,27 @@ try {
   await until('document.querySelector(".interval-timer").hidden');
   await message('interval:timer', { action: 'start', durationSeconds: .1 });
   await until('document.querySelector(".interval-countdown span").textContent === "00:00"');
+  // Recreate the designer's reference with fixture state only; production retains
+  // its live match/timer and transparent background over the venue KV video.
+  await message('interval:content', { ...values.interval.content, title: 'INTERVAL', upcomingLabel: 'COMING UP', matchSource: 'manual', matches: [{ playerOne: 'SP4GHET', playerTwo: 'SP4GHET' }] });
+  await message('interval:timer', { action: 'start', durationSeconds: 1800 });
+  await message('interval:timer', { action: 'pause' });
+  await navigate('graphics/interval-led.html');
+  await until('document.querySelector(".interval-countdown span").textContent === "30:00"');
+  const ledBounds = await evaluate(`Object.fromEntries(['upcoming', 'timer', 'slides', 'sponsors'].map(name => {
+    const { x, y, width, height } = document.querySelector('.interval-' + name).getBoundingClientRect();
+    return [name, { x, y, width, height }];
+  }))`);
+  assert.ok(ledBounds.upcoming.x + ledBounds.upcoming.width < ledBounds.timer.x, 'LED match column must clear the countdown');
+  assert.ok(ledBounds.timer.x + ledBounds.timer.width < ledBounds.slides.x, 'LED countdown must clear the slide');
+  assert.equal(ledBounds.timer.x + ledBounds.timer.width / 2, 960, 'LED countdown is centered on the wall');
+  assert.equal(ledBounds.sponsors.x + ledBounds.sponsors.width / 2, 960, 'LED sponsor is centered below the countdown');
+  assert.ok(ledBounds.timer.y + ledBounds.timer.height < ledBounds.sponsors.y, 'LED countdown must clear the sponsor');
+  assert.ok(Object.values(ledBounds).every(box => box.y >= 0 && box.y + box.height <= 576), 'LED content must fit the visible band');
+  await evaluate(`document.body.style.background = 'url("assets/presenter-kv-led.png") 0 0 / 1920px 576px no-repeat'; new Promise((resolve, reject) => { const image = new Image(); image.onload = resolve; image.onerror = reject; image.src = 'assets/presenter-kv-led.png'; })`);
+  await screenshot('led-reference', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
   assert.equal(errors.length, 0, JSON.stringify(errors));
-  console.log('Interval browser validation passed: dashboard saves, timer controls/JST, persistence, preview/revert/TAKE, both layouts, all logos, four matches, empty states, expiry, text safety.');
+  console.log('Interval/bracket browser validation passed: inline switcher timer start/pause/resume/clear and validation, preview/revert/TAKE, KV playback/loop/mute/hidden pause/range delivery, standalone Stream and LED, dashboard saves, Next Match/profile updates, timer controls/JST, sponsor fades, layout bounds and text safety.');
   console.log('Screenshots: ' + artifacts);
 } finally {
   socket?.close(); chrome.kill(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));

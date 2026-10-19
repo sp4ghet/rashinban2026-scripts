@@ -44,8 +44,8 @@ export function multiplierLabel(state: DuelState | null, timeline: Timeline, sid
   return values[0] === values[1] ? label(values[0]) : `L ${label(values[0])} · R ${label(values[1])}`;
 }
 
-export function layoutKind(mode: Mode, source: PlayerViewSource, led = false): 'shared' | 'dual' {
-  return !led && mode === 'NMPZ' && source === 'rendered' ? 'shared' : 'dual';
+export function layoutKind(_mode: Mode, _source: PlayerViewSource, _led = false): 'dual' {
+  return 'dual';
 }
 
 export function distanceLabel(distanceM: number | null | undefined, score: number | null | undefined): string {

@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, parseSettings } from '../settings.ts';
 
 test('chroma NMPZ uses two complete player windows', () => {
   assert.equal(layoutKind('NMPZ', 'chroma'), 'dual');
-  assert.equal(layoutKind('NMPZ', 'rendered'), 'shared');
+  assert.equal(layoutKind('NMPZ', 'rendered'), 'dual');
 });
 
 test('video inputs persist as a third presentation and keep independent feeds in every game mode', () => {

@@ -5,6 +5,7 @@ import type NodeCG from '@nodecg/types';
 import type { InstallationRoots } from '../../config/types.ts';
 import { isMediaCategory, isMediaFilename, MEDIA_CATEGORIES, type EffectiveAssetInventory, type MediaCategory } from '../../config/media-url.ts';
 import { REPLICANTS } from '../../types/replicants.ts';
+import { KV_VIDEO_FILENAME } from '../../config/scene-media.ts';
 
 const EXTENSIONS: Record<MediaCategory, readonly string[]> = {
   music: ['.wav', '.mp3', '.ogg', '.m4a'],
@@ -12,9 +13,9 @@ const EXTENSIONS: Record<MediaCategory, readonly string[]> = {
   video: ['.webm', '.mp4'],
 };
 
-function containedFile(root: string, category: MediaCategory, filename: string): string | null {
+function containedFile(root: string, category: string, filename: string, libraryPath = 'assets/rashinban'): string | null {
   try {
-    const library = realpathSync(path.join(root, 'assets/rashinban'));
+    const library = realpathSync(path.join(root, libraryPath));
     const resolved = realpathSync(path.join(library, category, filename));
     const relative = path.relative(library, resolved);
     if (!relative || relative.startsWith(`..${path.sep}`) || relative === '..' || path.isAbsolute(relative)) return null;
@@ -60,6 +61,19 @@ export function listMediaAssets(roots: InstallationRoots): EffectiveAssetInvento
 /** Mounted separately because NodeCG's built-in asset route terminates missing-file requests. */
 export function createMediaRouter(roots: InstallationRoots): express.Router {
   const router = express.Router();
+  // Fixed local production asset, outside NodeCG's uploaded presenter library.
+  router.get('/background/kv.mp4', (_req, res, next) => {
+    const file = containedFile(roots.appRoot, 'KV', KV_VIDEO_FILENAME, 'assets/videos')
+      ?? (roots.isWorktree ? containedFile(roots.sharedRoot, 'KV', KV_VIDEO_FILENAME, 'assets/videos') : null);
+    if (!file) { res.sendStatus(404); return; }
+    res.sendFile(file, error => {
+      if (!error) return;
+      // Browsers cancel in-flight byte ranges when hiding or unloading a scene.
+      if (res.destroyed || (error as NodeJS.ErrnoException).code === 'ECONNABORTED') return;
+      if (res.headersSent) { next(error); return; }
+      res.sendStatus((error as {status?: number}).status === 416 ? 416 : 404);
+    });
+  });
   router.get('/:category/:file', (req,res,next) => {
     const file = resolveMediaFile(roots, req.params.category, req.params.file);
     if (!file) { res.sendStatus(404); return; }

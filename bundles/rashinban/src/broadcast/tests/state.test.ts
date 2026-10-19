@@ -34,7 +34,25 @@ test("LED bracket visibility stays in preview until TAKE and can be reverted", (
   const taken = take(previewed, "led");
   assert.equal(taken.led.program.bracket.visible, true);
   assert.deepEqual(taken.stream, initial.stream);
-  assert.throws(() => setPreview(initial, "stream", { bracket: { visible: true } } as any), BroadcastError);
+});
+
+test("stream bracket is staged, reverted, and taken independently of LED", () => {
+  const initial = createInitialState();
+  const staged = setPreview(initial, "stream", { bracket: { visible: true } });
+  assert.equal(staged.stream.preview.bracket.visible, true);
+  assert.equal(staged.stream.program.bracket.visible, false);
+  assert.equal(revertPreview(staged, "stream").stream.preview.bracket.visible, false);
+  assert.equal(take(staged, "stream").stream.program.bracket.visible, true);
+  assert.deepEqual(take(staged, "stream").led, initial.led);
+});
+
+test("older stream buses acquire a hidden bracket without losing interval state", () => {
+  const old = { stream: { program: { interval: { visible: true } }, preview: { playerCards: { visible: true } } } };
+  const restored = withDefaults(old);
+  assert.equal(restored.stream.program.bracket.visible, false);
+  assert.equal(restored.stream.preview.bracket.visible, false);
+  assert.equal(restored.stream.program.interval.visible, true);
+  assert.equal(restored.stream.preview.playerCards.visible, true);
 });
 
 test("persisted LED buses without a bracket layer keep their other settings and default it hidden", () => {

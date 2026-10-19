@@ -52,7 +52,20 @@ test("rowDirty is true when any control in the row differs between preview and p
 test("led rows expose presenter and bracket visibility and no lower third", () => {
   const ids = controlRows("led").map((r) => r.id);
   assert.deepEqual(ids, ["presenter", "playerCards", "banpick", "bracket"]);
-  assert.ok(!controlRows("stream").some(r => r.id === "bracket"));
+  assert.ok(controlRows("stream").some(r => r.id === "bracket"));
+});
+
+test("selecting a fullscreen stream scene replaces the other scene only in preview", () => {
+  const initial = setPreview(createInitialState(), "stream", { interval: { visible: true } });
+  const bracket = setPreview(initial, "stream", patchAt(["bracket", "visible"], true, initial.stream.preview));
+  assert.equal(bracket.stream.preview.bracket.visible, true);
+  assert.equal(bracket.stream.preview.interval.visible, false);
+  assert.deepEqual(bracket.stream.program, initial.stream.program);
+  const interval = setPreview(bracket, "stream", patchAt(["interval", "visible"], true, bracket.stream.preview));
+  assert.equal(interval.stream.preview.interval.visible, true);
+  assert.equal(interval.stream.preview.bracket.visible, false);
+  assert.deepEqual(patchAt(["bracket", "visible"], false, bracket.stream.preview), { bracket: { visible: false } });
+  assert.deepEqual(patchAt(["bracket", "visible"], true, initial.led.preview), { bracket: { visible: true } });
 });
 
 test("every control path resolves to a defined value in the real layer shape", () => {

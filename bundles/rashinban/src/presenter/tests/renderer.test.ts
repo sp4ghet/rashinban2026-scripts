@@ -134,15 +134,17 @@ test('missing current telemetry uses current snapshot pin, while explicit null d
   f.views.round--; renderer.render(f);
   assert.deepEqual(fake.maps[0].frames.at(-1)!.pins[1].point, { lat: 2, lng: 3 });
 });
-test('NMPZ retains one panorama until both players lock and chroma has no lock layout', () => {
+test('NMPZ shows the same panorama in both viewports and freezes each locked side; chroma never resizes', () => {
   const f = frame(); const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
   renderer.render(f); lockPlayer(f, 0); renderer.render(f);
-  assert.equal(fake.panos.length, 1); assert.equal(fake.panos[0].options.at(-1).visible, true);
-  lockPlayer(f, 1); renderer.render(f); assert.equal(fake.panos[0].options.at(-1).visible, false);
+  assert.equal(fake.panos.length, 2);
+  assert.equal(fake.panos[0].options.at(-1).visible, false);
+  assert.equal(fake.panos[1].options.at(-1).visible, true);
+  lockPlayer(f, 1); renderer.render(f); assert.ok(fake.panos.every(pano => pano.options.at(-1).visible === false));
   f.source = 'chroma'; renderer.render(f); assert.ok(fake.maps.every(map => !map.frames.at(-1)!.visible));
 });
-test('shared NMPZ renders one panorama and two player maps', () => {
-  assert.deepEqual(rendererPlan('NMPZ', 'rendered', 'live'), { panoramas: 1, playerMaps: 2, resultsMap: false });
+test('NMPZ renders two matching panoramas and two player maps', () => {
+  assert.deepEqual(rendererPlan('NMPZ', 'rendered', 'live'), { panoramas: 2, playerMaps: 2, resultsMap: false });
   assert.deepEqual(rendererPlan('NMPZ', 'chroma', 'results-reveal'), { panoramas: 0, playerMaps: 0, resultsMap: true });
   assert.deepEqual(rendererPlan('MOVE', 'rendered', 'live'), { panoramas: 2, playerMaps: 2, resultsMap: false });
   for (const phase of ['waiting-game', 'pre-round', 'results-transition', 'aborted'] as const) assert.deepEqual(rendererPlan('NM', 'rendered', phase), { panoramas: 0, playerMaps: 0, resultsMap: false });
@@ -193,7 +195,7 @@ test('orchestrator retains fixed NMPZ POV, independent maps and explicit side sw
   left.panorama.heading = 999; left.mapActive = true; left.mapBounds = { north: 20, east: -170, south: 0, west: 170 }; left.pin = { lat: 1, lng: 179 };
   right.mapSticky = true; right.mapBounds = { north: 40, east: 50, south: 30, west: 40 }; right.pin = { lat: 35, lng: 45 };
   renderer.render(f); renderer.render(f);
-  assert.equal(fake.panos.length, 1); assert.equal(fake.maps.length, 2);
+  assert.equal(fake.panos.length, 2); assert.equal(fake.maps.length, 2);
   assert.deepEqual(fake.panos[0].frames.at(-1), f.state.rounds[0].panorama);
   assert.deepEqual(fake.maps[0].frames.at(-1)?.bounds, left.mapBounds);
   assert.deepEqual(fake.maps[1].frames.at(-1)?.pins[0].point, right.pin);
@@ -203,6 +205,23 @@ test('orchestrator retains fixed NMPZ POV, independent maps and explicit side sw
   f.playerIds = undefined; renderer.render(f);
   assert.equal(fake.maps[0].frames.at(-1)?.visible, false);
   assert.deepEqual(fake.maps[0].frames.at(-1)?.pins, []);
+});
+
+test('stream maps use the designer side colors after a player-side swap without mutating LED colors', () => {
+  const f = frame(); f.output = 'stream';
+  f.views.players[f.playerIds!.left!]!.pin = { lat: 1, lng: 2 };
+  f.views.players[f.playerIds!.right!]!.pin = { lat: 3, lng: 4 };
+  const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  renderer.render(f);
+  assert.equal(fake.maps[0].frames.at(-1)!.pins[0].color, '#ff3030');
+  assert.equal(fake.maps[1].frames.at(-1)!.pins[0].color, '#3083ff');
+  f.playerIds = { left: f.playerIds!.right, right: f.playerIds!.left };
+  renderer.render(f);
+  assert.deepEqual(fake.maps[0].frames.at(-1)!.pins[0].point, { lat: 3, lng: 4 });
+  assert.equal(fake.maps[0].frames.at(-1)!.pins[0].color, '#ff3030');
+  f.output = 'led'; renderer.render(f);
+  assert.equal(fake.maps[0].frames.at(-1)!.pins[0].color, '#458af2');
+  assert.equal(fake.maps[1].frames.at(-1)!.pins[0].color, '#f05060');
 });
 test('MOVE and NM retain per-slot Google objects across mode, source, phase and round changes', () => {
   const f = frame(); const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);

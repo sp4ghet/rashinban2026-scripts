@@ -5,7 +5,7 @@ legend { padding: 0; margin-bottom: 8px; font-size: 11px; letter-spacing: .15em;
 .help { margin: 0 0 12px; color: #aebfc9; font-size: 12px; line-height: 1.5; }
 .row { display: flex; gap: 8px; align-items: end; margin-bottom: 8px; }
 label { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
-input { box-sizing: border-box; width: 100%; min-width: 0; padding: 7px 8px; border: 1px solid #546e7a; border-radius: 4px; background: #303f49; color: #fff; font: inherit; }
+input, select { box-sizing: border-box; width: 100%; min-width: 0; padding: 7px 8px; border: 1px solid #546e7a; border-radius: 4px; background: #303f49; color: #fff; font: inherit; }
 button { padding: 8px 12px; border: 0; border-radius: 4px; font: 600 13px "Segoe UI", sans-serif; color: #fff; background: #37474f; cursor: pointer; white-space: nowrap; }
 button:hover { filter: brightness(1.2); }
 button:disabled { opacity: .45; cursor: default; }
@@ -21,3 +21,5 @@ button:disabled { opacity: .45; cursor: default; }
 details { margin-top: 8px; color: #aebfc9; font-size: 12px; }
 details p { margin: 8px 0; }
 a { color: #aed7ff; margin-right: 16px; }
+
+#next-match-preview { margin-bottom: 6px; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }

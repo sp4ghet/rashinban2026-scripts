@@ -1,19 +1,24 @@
 import { REPLICANTS, type PresenterConnection } from '../types/replicants.ts';
+import { bindMatchScore } from './party/match-score.ts';
 import type { DuelState, Views } from '../types/presenter.ts';
 import { EMPTY_PARTY_STATUS, PARTY_MESSAGES, type PartyAction, type PartyStatus, type Settings } from '../party/types.ts';
 import { lobbyStartBlockReason, phase } from '../party/state.ts';
 import { buildPartyScoreboard, type PartyScoreboard } from '../party/scoreboard.ts';
 import { predictRound } from '../party/prediction.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
+import { EMPTY_INTERMISSION, type Intermission } from '../presenter/intermission.ts';
 import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import type { ConfigStatus } from '../config/types.ts';
 import { TOURNAMENT_PRESETS, presetSettings, type PresetSettings, type PresenterRulesPatch } from '../party/presets.ts';
+
+bindMatchScore();
 
 const partyRep = nodecg.Replicant<PartyStatus>(REPLICANTS.partyStatus);
 const connection = nodecg.Replicant<PresenterConnection>(REPLICANTS.presenterConnection);
 const presenter = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const views = nodecg.Replicant<Views | null>(REPLICANTS.presenterViews);
 const presenterSettings = nodecg.Replicant<PresenterSettings>(REPLICANTS.presenterSettings);
+const intermission = nodecg.Replicant<Intermission>(REPLICANTS.presenterIntermission);
 const ruleContexts = nodecg.Replicant<RuleContexts>(REPLICANTS.presenterRuleContexts);
 const configuration = nodecg.Replicant<ConfigStatus>(REPLICANTS.configurationStatus);
 const el = (id: string) => document.getElementById(id)!;
@@ -286,6 +291,21 @@ function render() {
     }
     if (!state.activity.length) el('activity-list').textContent = 'No commands sent.';
   }
+}
+
+function showIntermission(value = intermission.value ?? EMPTY_INTERMISSION) {
+  for (const view of ['before-game', 'end-of-last-game'] as const) {
+    const button = el(view) as HTMLButtonElement;
+    button.setAttribute('aria-pressed', String(value.view === view));
+    button.classList.toggle('primary', value.view === view);
+    button.disabled = view === 'end-of-last-game' && !value.lastGame;
+  }
+  el('intermission-status').textContent = `${value.view === 'before-game' ? 'Before-Game · both cameras' : 'End-of-Last-Game · last result'} · shown between games; gameplay takes priority.`;
+}
+intermission.on('change', showIntermission);
+showIntermission();
+for (const view of ['before-game', 'end-of-last-game'] as const) {
+  el(view).addEventListener('click', () => { void message('presenter:control', { action: 'intermission', body: { view } }); });
 }
 
 partyRep.on('change', value => {

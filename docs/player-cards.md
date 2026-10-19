@@ -22,13 +22,24 @@ food/message section changes to recent games. The LED wall maps only the top
 Both LED cards are **480 × 528 px**, positioned at **y = 24 px** with 24 px
 clearance from the top, bottom, and outer edges, in every mode. Their left
 edges are **x = 24 px** and **x = 1416 px**, leaving **912 px** in the middle
-for ban-pick results. Results use horizontal rows to fit the mapped height
-while keeping opponent names readable.
+for ban-pick results. Their internal layout uses the same designer proportions
+as Stream, scaled by **528 / 900**: header, stats, labels, field spacing, and
+results all share the same styling. Only the outer width and placement differ.
 
-Known alphanumeric labels, including tournament rounds and result status text,
-use **Kaneda Gothic in uppercase**; numeric stats and scores also use Kaneda.
-Player names, handles, opponent names, and free-text profile answers use
-**Noto Sans JP** and preserve the submitted capitalization and Japanese text.
+Player cards follow the designer's rounded red/blue design. Names
+and handles use **Kaneda Gothic**, preserving submitted capitalization, with
+**Noto Sans JP** for Japanese glyphs. Known labels, tournament rounds, and result
+status text use **Kaneda Gothic in uppercase**; numeric stats and scores also
+use Kaneda. Opponent names and free-text answers use **Noto Sans JP**.
+
+The name/handle section has a **100% opaque background**, and the supporting-info
+section has a **60% opaque background**. A solid player-colored outline surrounds
+the entire card. All text and label outlines remain **100% opaque**. Field labels
+have a **25% white background fill**; Age and Rating remain unfilled.
+Stream cards use a 96 px name, 48 px handle, and 60 px corner radius; LED scales
+these to approximately 56 px, 28 px, and 35 px respectively.
+Long profiles tighten the header and field spacing without shrinking the text;
+the same spacing is retained in Compact. Compact results use horizontal rows.
 
 ## Modes
 
@@ -98,6 +109,9 @@ test background stands in for the video feed. No live NodeCG state is changed.
 The default check uses the bundled fallback fonts. Add `--adobe-fonts` to check
 the live Kaneda Gothic typography; this requires internet access and fails if
 the Adobe font does not load.
+Add `--cards-only` to check player cards and their switcher independently of the
+bracket, ban-pick, and caster graphics. `designer-reference.png` reproduces the
+supplied Shiina profile for visual comparison.
 
 The check also replays saved EVO Japan 2026 SF6 semifinal and final responses
 through the real start.gg normalizer and cards. Before Punk's Grand Final, Page 2

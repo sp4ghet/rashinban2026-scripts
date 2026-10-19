@@ -6,6 +6,7 @@ import { controlRows, monitorUrls, patchAt, rowDirty, valueAt, type Control, typ
 import type { ResolvedMatch } from "../match/state.ts";
 import { findCaster, type Caster } from "../casters/casters.ts";
 import { BROADCAST_MESSAGES, REPLICANTS } from "../types/replicants.ts";
+import { mountIntervalTimer } from "./components/interval-timer.ts";
 
 const output: BroadcastOutput = document.body.dataset.output === "led" ? "led" : "stream";
 const rep = nodecg.Replicant<BroadcastState>(REPLICANTS.broadcast);
@@ -84,6 +85,9 @@ function buildRow(row: Row): HTMLElement {
     }
   }
   section.append(title, controls);
+  if (output === "stream" && row.id === "interval") {
+    mountIntervalTimer(controls, message => { el("error").textContent = message; });
+  }
   return section;
 }
 strip.replaceChildren(...rows.map(buildRow));
@@ -153,7 +157,7 @@ el("revert").onclick = (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.ctrlKey || event.altKey || event.metaKey) return;
   const target = event.target as HTMLElement | null;
-  if (target && ["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(target.tagName)) return;
+  if (target && ["INPUT", "SELECT", "TEXTAREA", "BUTTON", "SUMMARY"].includes(target.tagName)) return;
   if (event.key === " " || event.key === "Enter") {
     event.preventDefault();
     el("take").click();

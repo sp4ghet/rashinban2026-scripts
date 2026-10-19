@@ -1,8 +1,12 @@
 import type { ToggleLayer } from "../../broadcast/state.ts";
-import { countdownText, defaultInterval, restoreInterval, type IntervalState } from "../../interval/state.ts";
+import { countdownText, defaultInterval, restoreInterval, upcomingMatches, type IntervalState } from "../../interval/state.ts";
 import { REPLICANTS } from "../../types/replicants.ts";
 import { startIntervalClock } from "../../interval/browser-clock.ts";
 import { mustQuery, type Layer } from "./layer.ts";
+import { mountKvBackground } from "./kv-background.ts";
+
+import type { MatchState } from "../../match/state.ts";
+import type { PlayerProfile } from "../../sheet/players.ts";
 
 const ROTATING_SPONSORS = [
   ["geo_logo.svg", "GeoGuessr", "logo-geoguessr"],
@@ -32,7 +36,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
           <div class="interval-countdown"><span data-fit></span></div>
         </section>
         <section class="interval-slides" aria-label="Interval slides">
-          <img src="assets/interval-slides/placeholder.svg" alt="RASHINBAN 2026 — slide placeholder" />
+          <img src="assets/interval-slides/${output === "led" ? "placeholder-led.svg" : "placeholder.svg"}" alt="RASHINBAN 2026 — slide placeholder" />
         </section>
         <section class="interval-sponsors" aria-label="Sponsors">
           <div class="interval-sponsor-lead"><img src="${sponsorPath}tamura-builds.svg" alt="TAMURA BUILDS" /></div>
@@ -44,6 +48,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
       </div>
     </section>`;
 
+  const background = mountKvBackground(mustQuery(host, ".interval-screen"));
   const title = mustQuery(host, ".interval-title span");
   const upcoming = mustQuery(host, ".interval-upcoming");
   const upcomingTitle = mustQuery(host, ".interval-upcoming h2 span");
@@ -53,7 +58,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
   const sponsor = host.querySelector<HTMLImageElement>(".interval-sponsor-rotating img")!;
   // Match 2025 sponsors.js: every 12 seconds fade out for 300ms, swap while
   // invisible, then fade in at 600ms. Cache every image before its first turn.
-  const sponsorImages = ROTATING_SPONSORS.map(([file]) => {
+  const sponsorImages = (output === "stream" ? ROTATING_SPONSORS : []).map(([file]) => {
     const image = new Image();
     image.src = sponsorPath + file;
     return image;
@@ -61,7 +66,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
   let sponsorIndex = 0;
   let swapTimeout: number | undefined;
   let fadeTimeout: number | undefined;
-  const sponsorRotation = window.setInterval(() => {
+  const sponsorRotation = output === "stream" ? window.setInterval(() => {
     sponsor.style.opacity = "0";
     swapTimeout = window.setTimeout(() => {
       const nextIndex = (sponsorIndex + 1) % ROTATING_SPONSORS.length;
@@ -74,8 +79,10 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
       sponsor.src = image.src;
     }, 300);
     fadeTimeout = window.setTimeout(() => { sponsor.style.opacity = "1"; }, 600);
-  }, 12000);
+  }, 12000) : undefined;
   let state = defaultInterval();
+  let nextMatch: MatchState | null = null;
+  let profiles: PlayerProfile[] = [];
   const clock = startIntervalClock();
 
   function fit() {
@@ -88,7 +95,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
       span.style.transform = `scaleX(${scale})`;
     }
     // Keep the original name sizes unless fallback font metrics make the list
-    // reach the countdown (or the LED's bottom bar).
+    // reach the countdown (or the bottom of the LED band).
     const list = matches.getBoundingClientRect();
     const boundary = output === "led" ? 560 : timer.hidden ? 931
       : timer.getBoundingClientRect().top;
@@ -106,13 +113,13 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
     }
   }
 
-  nodecg.Replicant<IntervalState>(REPLICANTS.interval).on("change", value => {
-    state = restoreInterval(value);
+  function renderContent() {
+    const upcomingList = upcomingMatches(state.content, nextMatch, profiles);
     title.textContent = state.content.title;
     upcomingTitle.textContent = state.content.upcomingLabel;
-    upcoming.hidden = state.content.matches.length === 0;
-    matches.dataset.count = String(state.content.matches.length);
-    matches.replaceChildren(...state.content.matches.map(match => {
+    upcoming.hidden = upcomingList.length === 0;
+    matches.dataset.count = String(upcomingList.length);
+    matches.replaceChildren(...upcomingList.map(match => {
       const row = document.createElement("div");
       row.className = "interval-match";
       // Only fixed markup goes through innerHTML. Dashboard text is always textContent.
@@ -126,6 +133,18 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
     }));
     tick();
     fit();
+  }
+  nodecg.Replicant<IntervalState>(REPLICANTS.interval).on("change", value => {
+    state = restoreInterval(value);
+    renderContent();
+  });
+  nodecg.Replicant<MatchState>(REPLICANTS.nextMatchState).on("change", value => {
+    nextMatch = value ?? null;
+    renderContent();
+  });
+  nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players).on("change", value => {
+    profiles = value ?? [];
+    renderContent();
   });
   const interval = window.setInterval(tick, 250);
   window.addEventListener("pagehide", event => {
@@ -137,5 +156,5 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
   });
   void document.fonts.ready.then(fit);
   document.fonts.addEventListener("loadingdone", fit);
-  return { apply(layer) { host.hidden = !layer.visible; tick(); fit(); } };
+  return { apply(layer) { host.hidden = !layer.visible; background.setVisible(layer.visible); tick(); fit(); } };
 }

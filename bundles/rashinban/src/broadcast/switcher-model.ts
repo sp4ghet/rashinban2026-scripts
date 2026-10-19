@@ -34,6 +34,10 @@ const INTERVAL: Row = {
   id: "interval", title: "Interval",
   controls: [{ kind: "toggle", path: ["interval", "visible"], label: "Visible" }],
 };
+const BRACKET: Row = {
+  id: "bracket", title: "Bracket",
+  controls: [{ kind: "toggle", path: ["bracket", "visible"], label: "Visible" }],
+};
 
 const STREAM_ROWS: readonly Row[] = [
   { ...CARDS, controls: [CARDS.controls[0]!,
@@ -73,12 +77,13 @@ const STREAM_ROWS: readonly Row[] = [
   },
   BANPICK,
   INTERVAL,
+  BRACKET,
 ];
 const LED_ROWS: readonly Row[] = [
   { id: "presenter", title: "Presenter", controls: [{ kind: "toggle", path: ["presenter", "visible"], label: "Visible" }] },
   CARDS,
   BANPICK,
-  { id: "bracket", title: "Bracket", controls: [{ kind: "toggle", path: ["bracket", "visible"], label: "Visible" }] },
+  BRACKET,
 ];
 
 export function controlRows(output: BroadcastOutput): readonly Row[] {
@@ -103,6 +108,11 @@ export function valueAt(obj: unknown, path: readonly string[]): unknown {
  */
 export function patchAt(path: readonly string[], value: unknown, layers: unknown): Record<string, unknown> {
   if (path.length === 0) throw new Error("patchAt: path must not be empty");
+  // Fullscreen stream scenes replace each other in preview; TAKE remains explicit.
+  if (path.length === 2 && path[1] === "visible" && value === true && valueAt(layers, ["interval"]) !== undefined) {
+    if (path[0] === "interval") return { interval: { visible: true }, bracket: { visible: false } };
+    if (path[0] === "bracket") return { bracket: { visible: true }, interval: { visible: false } };
+  }
   const keys = [...path];
   let leaf: unknown = value;
   const last = keys[keys.length - 1]!;

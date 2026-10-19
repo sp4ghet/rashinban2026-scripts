@@ -17,9 +17,10 @@
         <button id="clear" type="button">Clear</button>
       </div>
       <div class="row">
-        <label>Restart (JST) <input id="restart-at" type="datetime-local" /></label>
+        <label>Restart time (JST) <input id="restart-at" type="time" step="60" aria-describedby="restart-help" /></label>
         <button id="schedule" type="button">Set time</button>
       </div>
+      <p id="restart-help" class="help">Times already passed are scheduled for tomorrow.</p>
     </fieldset>
     <form id="content-form">
       <fieldset id="content-controls" disabled>
@@ -28,8 +29,20 @@
         <div class="row">
           <label>Upcoming heading <input id="upcoming-label" maxlength="40" required /></label>
         </div>
-        <div class="match-head"><span>Player 1</span><span>Player 2</span></div>
-        <div id="matches"></div>
+        <div class="row">
+          <label>Upcoming matches
+            <select id="match-source">
+              <option value="next">Saved Next Match (automatic)</option>
+              <option value="manual">Manual match list</option>
+            </select>
+          </label>
+        </div>
+        <div id="next-match-preview" role="status"></div>
+        <p id="next-match-help" class="help">Set players in Shared → Current Match → Next Match. After applying, Interval follows the saved players automatically.</p>
+        <div id="manual-matches" hidden>
+          <div class="match-head"><span>Player 1</span><span>Player 2</span></div>
+          <div id="matches"></div>
+        </div>
         <div class="row actions">
           <span id="draft-status" role="status"></span>
           <button id="reload" type="button">Reload saved</button>

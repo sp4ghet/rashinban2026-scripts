@@ -3,6 +3,7 @@
 // instead of retyping names/shapes.
 import type { DuelState, SeriesState, Timeline, Views } from './presenter.ts';
 import type { PresenterSettings } from '../presenter/settings.ts';
+import type { Intermission } from '../presenter/intermission.ts';
 import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import type { PartyStatus } from '../party/types.ts';
 import type { IntervalState } from '../interval/state.ts';
@@ -48,6 +49,8 @@ export const REPLICANTS = {
   currentMatch: "currentMatch",
   matchState: 'matchState',
   matchResolved: 'matchResolved',
+  nextMatchState: 'nextMatchState',
+  nextMatchResolved: 'nextMatchResolved',
   broadcast: "broadcast",
   interval: "interval",
   bracketConfig: "bracketConfig",
@@ -58,6 +61,7 @@ export const REPLICANTS = {
   presenterViews: 'presenterViews',
   presenterSeries: 'presenterSeries',
   presenterSettings: 'presenterSettings',
+  presenterIntermission: 'presenterIntermission',
   presenterRuleContexts: 'presenterRuleContexts',
   presenterTimeline: 'presenterTimeline',
   presenterRenderer: 'presenterRenderer',
@@ -82,6 +86,8 @@ export interface ReplicantMap {
   [REPLICANTS.currentMatch]: CurrentMatchSelection;
   [REPLICANTS.matchState]: MatchState;
   [REPLICANTS.matchResolved]: ResolvedMatch;
+  [REPLICANTS.nextMatchState]: MatchState;
+  [REPLICANTS.nextMatchResolved]: ResolvedMatch;
   [REPLICANTS.broadcast]: BroadcastState;
   [REPLICANTS.interval]: IntervalState;
   [REPLICANTS.bracketConfig]: BracketConfig;
@@ -92,6 +98,7 @@ export interface ReplicantMap {
   [REPLICANTS.presenterViews]: Views | null;
   [REPLICANTS.presenterSeries]: SeriesState;
   [REPLICANTS.presenterSettings]: PresenterSettings;
+  [REPLICANTS.presenterIntermission]: Intermission;
   [REPLICANTS.presenterRuleContexts]: RuleContexts;
   [REPLICANTS.presenterTimeline]: Timeline;
   [REPLICANTS.presenterRenderer]: PresenterRenderer;
@@ -137,6 +144,11 @@ export const MATCH_MESSAGES = {
   apply: 'match:apply',
   load: 'match:load',
   swap: 'match:swap',
+  nextApply: 'match:next:apply',
+  nextLoad: 'match:next:load',
+  nextSwap: 'match:next:swap',
+  /** { revision, nextRevision } - promote the saved next match and clear its slot. */
+  promoteNext: 'match:next:promote',
 } as const;
 
 /** Broadcast buses. output is "stream" | "led". */

@@ -4,8 +4,12 @@ function hole(element: HTMLElement): Hole | null {
   const rect = element.getBoundingClientRect();
   const style = getComputedStyle(element);
   if (!rect.width || !rect.height || style.visibility === 'hidden') return null;
-  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height,
-    radius: Math.min(parseFloat(style.borderTopLeftRadius) || 0, rect.width / 2, rect.height / 2) };
+  const frame = element.classList.contains('player-window') ? getComputedStyle(element, '::after') : style;
+  // Put the cutout edge beneath the opaque middle of the frame. If it shares
+  // the frame's outer curve, two antialiased edges create a translucent seam.
+  const inset = Math.min((parseFloat(frame.borderTopWidth) || 0) / 2, rect.width / 2, rect.height / 2);
+  return { x: rect.x + inset, y: rect.y + inset, width: rect.width - 2 * inset, height: rect.height - 2 * inset,
+    radius: Math.max(0, Math.min(parseFloat(style.borderTopLeftRadius) || 0, rect.width / 2, rect.height / 2) - inset) };
 }
 
 function cutouts(element: HTMLElement, holes: Hole[]) {
@@ -33,7 +37,7 @@ export function createChromaWindows(root: HTMLElement) {
     update(transparent: boolean) {
       // Fixed broadcast layouts only need new geometry on a scene/source change
       // or resize; avoid synchronous layout reads on every animation frame.
-      const signature = [transparent, root.dataset.source, root.dataset.layout, root.dataset.lock,
+      const signature = [transparent, root.dataset.source, root.dataset.layout, root.dataset.lock, root.dataset.intermission, root.dataset.cameraWinner,
         ...layers.map(layer => `${layer.hidden}:${layer.style.visibility}`), ...cameras.map(camera => camera.className)].join('|');
       if (signature === previous) return;
       previous = signature;

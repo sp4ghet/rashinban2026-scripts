@@ -5,6 +5,7 @@ import { eligibleCompletion, type ClientRole } from '../../presenter/clock.ts';
 import type { DuelState, SeriesState, Timeline, Views } from '../../types/presenter.ts';
 import { DEFAULT_SETTINGS, parseSettings, type PresenterSettings } from '../../presenter/settings.ts';
 import { parseSeries } from '../../presenter/series.ts';
+import { EMPTY_INTERMISSION, selectIntermission, updateIntermission, type Intermission } from '../../presenter/intermission.ts';
 import { applySnapshot, rollbackRound } from '../../presenter/normalize.ts';
 import { updateRuleContext, type RuleContexts } from '../../presenter/tie-range-context.ts';
 import { deriveTieRange } from '../../presenter/tie-range.ts';
@@ -80,6 +81,12 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
     }
   });
   const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel, { persistent: false, defaultValue: null });
+  const intermission = nodecg.Replicant<Intermission>(REPLICANTS.presenterIntermission, { persistent: false, defaultValue: { ...EMPTY_INTERMISSION } });
+  function syncIntermission() {
+    const next = updateIntermission(intermission.value, duel.value, series.value);
+    if (JSON.stringify(next) !== JSON.stringify(intermission.value)) intermission.value = JSON.parse(JSON.stringify(next)) as Intermission;
+  }
+  series.on?.('change', syncIntermission);
   const renderer = nodecg.Replicant<PresenterRenderer>(REPLICANTS.presenterRenderer, { persistent: false, defaultValue: { status: 'unreported', updatedAtMs: null } });
   const clients = nodecg.Replicant<PresenterClients>(REPLICANTS.presenterClients, { persistent: false, defaultValue: { clients: [], program: null } });
   let cancelExpiry: (() => void) | null = null; let audioToken = 0;
@@ -163,6 +170,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
 
   function tick(bootstrap = false): void {
     cancelWake?.(); cancelWake = null;
+    syncIntermission();
     const now = deps.now();
     let next = advanceTimeline(timeline.value, duel.value, now, bootstrap, settings.value.timing, {
       'single-5k': media.value.fiveK.single?.watchdogMs, 'double-5k': media.value.fiveK.double?.watchdogMs,
@@ -257,6 +265,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
   function startReplay(name: unknown, restore = false): void {
     // Validate and read before canceling an active replay.
     let rows = loadReplay(name);
+    intermission.value = { ...EMPTY_INTERMISSION };
     const saved = restore && ruleContexts.value.replayFixture === name ? ruleContexts.value.replay : null;
     const position = saved ? rows.reduce((found, row, index) => {
       const state = (row.message as { duel?: { state?: { gameId?: string; version?: number } } }).duel?.state;
@@ -283,6 +292,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
     }
     if ('fixture' in value) throw new Error('Replay is disabled in live mode');
     const nextPartyId = 'partyId' in value ? parsePartySelection(value.partyId) : selectionUsesDefault ? configuredPartyId : selectedPartyId;
+    if (input !== 'live' || nextPartyId !== selectedPartyId) intermission.value = { ...EMPTY_INTERMISSION };
     source?.stop(); reset();
     input = 'live'; selectedPartyId = nextPartyId;
     if ('partyId' in value) selectionUsesDefault = false;
@@ -298,6 +308,7 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
       source = createConnection(credentials, {
         onMessage: ingest,
         onStatus(status) {
+          if (status.partyId && connection.value.partyId && status.partyId !== connection.value.partyId) intermission.value = { ...EMPTY_INTERMISSION };
           connection.value = { ...connection.value, ...status };
           const terminal = duel.value?.status === 'Finished' || duel.value?.aborted;
           if ((status.state === 'disconnected' && status.gameId === null && !terminal) || status.state === 'unsupported'
@@ -309,11 +320,16 @@ export function registerPresenter(nodecg: NodeCG.ServerAPI, deps: Clock = clock,
       connection.value = { ...connection.value, state: 'auth-error', error: 'Check GEOGUESSR_NCFA in the shared installation .env and restart' };
     }
   }
-  function current() { return { settings: settings.value, series: series.value, connection: connection.value, timeline: timeline.value, clients: clients.value, media: media.value }; }
+  function current() { return { settings: settings.value, series: series.value, connection: connection.value, timeline: timeline.value, clients: clients.value, media: media.value, intermission: intermission.value }; }
   function control(action: PresenterAction, body: unknown, expectedRevision?: string): unknown {
     if (action === 'series') {
       if (nodecg.Replicant(REPLICANTS.matchState, {defaultValue: null}).value) throw new Error('Edit the series in Current Match');
       series.value = parseSeries(body);
+      syncIntermission();
+    }
+    else if (action === 'intermission') {
+      syncIntermission();
+      intermission.value = JSON.parse(JSON.stringify(selectIntermission(intermission.value, body))) as Intermission;
     }
     else if (action === 'settings') {
       const next = parseSettings(body);
