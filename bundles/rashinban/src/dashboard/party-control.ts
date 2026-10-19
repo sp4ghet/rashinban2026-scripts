@@ -68,7 +68,9 @@ async function message(name: string, body?: unknown) {
 }
 async function command(action: PartyAction, body: Record<string, unknown> = {}, confirmText?: string) {
   if (!(action === 'abort' ? canAbort() : available()) || !state.party) return;
-  const request = { id: crypto.randomUUID(), action, partyId: state.party.partyId, gameId: state.duel?.gameId ?? null,
+  // Command IDs are opaque deduplication keys. getRandomValues also works on HTTP LAN dashboards.
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
+  const request = { id, action, partyId: state.party.partyId, gameId: state.duel?.gameId ?? null,
     round: state.duel?.round ?? null, sourceGeneration: state.sourceGeneration, body, ...(action === 'settings' ? { settingsRevision: draftRevision } : {}) };
   if (confirmText && !window.confirm(confirmText)) return;
   if (action === 'settings') submittedSettingsId = request.id;

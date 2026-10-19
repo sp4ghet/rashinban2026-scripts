@@ -108,11 +108,15 @@ const server = createServer(async (req, res) => {
   } catch (error) { res.statusCode = 500; res.end(error.message); }
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-const origin = 'http://127.0.0.1:' + server.address().port;
+const insecureHttp = process.argv.includes('--http');
+const hostname = insecureHttp ? 'party-dashboard.test' : '127.0.0.1';
+const origin = 'http://' + hostname + ':' + server.address().port;
 const profile = await mkdtemp(path.join(os.tmpdir(), 'rb-party-browser-'));
 const chromePath = process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const chrome = spawn(chromePath, ['--headless=new', '--remote-debugging-port=0', '--user-data-dir=' + profile,
-  '--no-first-run', '--no-default-browser-check', '--disable-background-networking', 'about:blank'], { windowsHide: true, stdio: 'ignore' });
+  '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
+  ...(insecureHttp ? ['--host-resolver-rules=MAP party-dashboard.test 127.0.0.1', '--no-proxy-server'] : []),
+  'about:blank'], { windowsHide: true, stdio: 'ignore' });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 let socket, sequence = 0; const pending = new Map(), errors = [];
 async function command(method, params = {}) {
@@ -140,6 +144,9 @@ try {
   await command('Runtime.enable'); await command('Page.enable');
   await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1080, deviceScaleFactor: 1, mobile: false });
   await command('Page.navigate', { url: origin }); await until(`document.querySelector('#connection-status')?.textContent==='Host connected'`);
+  assert.equal(await evaluate('window.isSecureContext'), !insecureHttp);
+  assert.equal(await evaluate('typeof crypto.randomUUID'), insecureHttp ? 'undefined' : 'function');
+  assert.equal(await evaluate('typeof crypto.getRandomValues'), 'function');
   assert.equal(await evaluate(`document.querySelector('#start-game').disabled`), false);
   assert.equal(await evaluate(`document.querySelectorAll('#tournament-preset option[value]:not([value=""])').length`), 12);
   assert.equal(await evaluate(`document.querySelectorAll('#match-score-left,#match-score-right').length`), 2, 'Party exposes both shared match scores');
@@ -393,6 +400,7 @@ try {
     console.error(await evaluate(`JSON.stringify({phase:document.querySelector('#phase')?.textContent,error:document.querySelector('#error')?.textContent,state:fixtureValues.partyStatus})`));
     await screenshot('failure').catch(() => {});
   }
+  console.error('Browser exceptions:', JSON.stringify(errors));
   throw error;
 } finally {
   if (socket?.readyState === WebSocket.OPEN) { await command('Browser.close').catch(() => {}); socket.close(); }
