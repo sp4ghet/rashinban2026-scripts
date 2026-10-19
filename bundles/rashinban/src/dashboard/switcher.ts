@@ -7,6 +7,7 @@ import type { ResolvedMatch } from "../match/state.ts";
 import { findCaster, type Caster } from "../casters/casters.ts";
 import { BROADCAST_MESSAGES, REPLICANTS } from "../types/replicants.ts";
 import { mountIntervalTimer } from "./components/interval-timer.ts";
+import { recoverMonitor } from "./components/monitor-recovery.ts";
 
 const output: BroadcastOutput = document.body.dataset.output === "led" ? "led" : "stream";
 const rep = nodecg.Replicant<BroadcastState>(REPLICANTS.broadcast);
@@ -211,6 +212,7 @@ monitorsBox.onchange = () => {
   }
   applyMonitors();
 };
+for (const frame of document.querySelectorAll<HTMLIFrameElement>("iframe.info")) recoverMonitor(frame);
 applyMonitors();
 function fitMonitors() {
   for (const screen of document.querySelectorAll<HTMLElement>(".screen")) {

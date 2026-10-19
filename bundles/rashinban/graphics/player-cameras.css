@@ -36,14 +36,16 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: linear-gradient(135deg, #1b2533, #0e131b);
-  color: #edf1f8;
+  background: #ff00ff;
+  color: #1a001a;
 }
+/* P1/red uses magenta; P2/blue uses cyan in the dashboard. */
+#layer-player-cameras .camera.right .camera-placeholder { background: #00ffff; }
 #layer-player-cameras .camera-placeholder strong {
   font: 700 84px var(--heading);
   text-transform: uppercase;
 }
 #layer-player-cameras .camera-placeholder small {
   font: 28px var(--body);
-  color: #9bacc5;
+  color: inherit;
 }

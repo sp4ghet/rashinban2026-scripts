@@ -50,6 +50,14 @@ LED defaults: sources are always on; cards show Profile until a Stream
 Program page is selected. Missing match data still clears and hides cards. Text fields
 accept up to 120 characters. Invalid patches are rejected and nothing changes.
 
+### Monitor startup recovery
+
+If an embedded monitor finishes loading without the NodeCG client API, the
+switcher reloads only that monitor, up to twice. A persistent failure shows
+**Reload monitor**. Recovery does not send TAKE, change broadcast state, or
+reload the OBS graphic. Intentional NodeCG busy/killed pages remain visible.
+External font stylesheets load without blocking graphic startup.
+
 ### Layers
 
 | Output | Layer | Controls |
@@ -111,8 +119,20 @@ production check.
 In **Stream > Player cameras**, select **Player Camera 1** or **Player Camera 2**,
 check the Preview placeholder and overlay layout, then press **TAKE**. Each
 camera fills 1920x1080 with a centered crop. Selecting a camera deselects the other in Preview;
-clicking the selected camera again hides it. **Revert preview** restores
-Program's camera and relay name. There is no side-by-side mode here.
+clicking the selected camera again hides it and its player card. **Revert preview**
+restores Program's camera, card settings, and relay name. There is no side-by-side mode here.
+
+Camera selection and player cards are linked in the dashboard: enabling Camera 1
+shows P1's card, and enabling Camera 2 shows P2's card. The card's **Visible**
+control shows/hides its matching camera, and its **Player** selector changes the
+camera while preserving visibility. These changes are staged together until TAKE.
+
+Switching from **P1 / Left / Page 2** to P2 defaults to **P2 / Right / Page 1**.
+Switching from **P1 / Left / Compact** to P2 defaults to **P2 / Right / Compact**.
+Both the camera buttons and card player selector default position to **Left for
+P1** and **Right for P2** whenever the selected player changes. The **Position**
+dropdown remains available for emergency overrides; an override lasts until the
+next player swap. Other page selections are preserved.
 
 Start the existing [capture relay](presenter/video-inputs.md#share-inputs-through-the-webrtc-relay)
 and assign **Left player camera** for Camera 1 and **Right player camera**
@@ -123,7 +143,8 @@ or hyphens). Relay changes are also staged until TAKE.
 The cameras are the bottom layer of `info-stream.html`: cards, lower thirds,
 caster graphics, Ban & Pick, Interval and Bracket all remain above them.
 Both dashboard monitors show a labeled **Player Camera 1** or **Player Camera 2**
-placeholder. They use `cameraMode=placeholder` and never subscribe to the
+placeholder: **magenta for P1/red**, **cyan for P2/blue**. The solid colors make
+full-frame opacity obvious. They use `cameraMode=placeholder` and never subscribe to the
 camera relay, avoiding the extra encoding, network and decoding work of two
 more receivers. Placeholders show the selected layout, not camera availability;
 check the actual output or capture page to verify the camera feed.
@@ -310,3 +331,16 @@ Run `npm run typecheck`, `npm test`, `npm run build`, then
 Use `--led-only` for the focused LED check. It exercises built browser pages
 with isolated fixtures and saves screenshots under `artifacts/player-cards/`.
 Actual OBS/ATEM compositing and LED-wall acceptance still need a venue check.
+
+The Stream startup regression is
+`node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validate-info-cameras.mjs --startup-only`.
+It holds external font stylesheets pending while verifying both dashboard monitors
+render and accept Preview/TAKE changes, then checks that late styles still apply.
+Screenshots and results are saved under `artifacts/presenter-validation/info-startup/`.
+
+The missing-API recovery regression is
+`node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validate-info-cameras.mjs --recovery-only`.
+It injects the missing NodeCG constructor, verifies automatic and manual recovery,
+checks the retry limit and intentional redirects, and confirms that Preview and
+broadcast state remain unchanged while Program recovers. Results and screenshots
+are saved under `artifacts/presenter-validation/info-recovery/`.

@@ -5,9 +5,10 @@
     <title>RASHINBAN 2026 — Info (Stream)</title>
     <!-- kaneda-gothic comes from the same Adobe Fonts kit as the 2025 overlays; its licence forbids self-hosting.
          Vendored OFL fonts (scripts/fetch-fonts.mjs) provide Oswald as the offline fallback and Noto Sans JP for body text. -->
-    <link rel="stylesheet" href="https://use.typekit.net/ljs6bhu.css" />
+    <!-- Remote font CSS must not block NodeCG startup or leave a monitor blank. -->
+    <link rel="stylesheet" href="https://use.typekit.net/ljs6bhu.css" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="assets/fonts/fonts.css" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@900&amp;display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@900&amp;display=swap" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="info.css" />
     <link rel="stylesheet" href="player-cameras.css" />
     <link rel="stylesheet" href="interval.css" />

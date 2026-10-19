@@ -7,15 +7,35 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRelayBroker } from '../bundles/rashinban/src/extension/presenter/video-relay.ts';
 import { createInitialState, setPreview, take, revertPreview } from '../bundles/rashinban/src/broadcast/state.ts';
+import { emptyMatch, resolveMatch } from '../bundles/rashinban/src/match/state.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const out = path.join(root, 'artifacts/presenter-validation/info-cameras');
+const startupOnly = process.argv.includes('--startup-only');
+const recoveryOnly = process.argv.includes('--recovery-only');
+const monitorLoads = {preview:0,program:0};
+let failProgram = recoveryOnly;
+let redirectProgram = false;
+const out = path.join(root, 'artifacts/presenter-validation', startupOnly ? 'info-startup' : recoveryOnly ? 'info-recovery' : 'info-cameras');
+const stalledFonts = new Map();
+let fontsReleased = false;
+function finishFont(res, source) {
+  const provider = new URL(source).hostname === 'use.typekit.net' ? 'adobe' : 'google';
+  res.setHeader('Content-Type', 'text/css');
+  res.end(':root { --qa-font-' + provider + ': loaded; }');
+}
 await mkdir(out, { recursive: true });
 let broadcast = createInitialState();
+if (recoveryOnly) {
+  broadcast.stream.preview.bracket.visible = true;
+  broadcast.stream.program.interval.visible = true;
+}
 const broker = createRelayBroker(), subscribers = new Set(), checks = [], errors = [];
 const check = (label, actual, expected = true) => { assert.deepEqual(actual, expected, label); checks.push(label); };
+const match = emptyMatch();
+match.left.nameOverride = 'P1 Test'; match.right.nameOverride = 'P2 Test';
+const resolvedMatch = resolveMatch(match, []);
 const bootstrap = () => `
-window.qa={requests:[],streams:[],peers:[],messages:[],initial:{broadcast:${JSON.stringify(broadcast)}}};
+window.qa={requests:[],streams:[],peers:[],messages:[],initial:{broadcast:${JSON.stringify(broadcast)},matchResolved:${JSON.stringify(resolvedMatch)}}};
 const RealPeer=RTCPeerConnection;
 window.RTCPeerConnection=class extends RealPeer{constructor(...args){super(...args);qa.peers.push(this);}};
 const reps=new Map();
@@ -34,11 +54,23 @@ qa.frame=c=>document.querySelector('.monitor[data-channel='+c+'] iframe.info');
 qa.doc=c=>qa.frame(c).contentDocument;qa.win=c=>qa.frame(c).contentWindow;
 qa.camera=(c,s)=>qa.doc(c).querySelector('.camera.'+s);
 qa.showing=(c,s)=>!qa.doc(c).getElementById('layer-player-cameras').hidden&&!qa.camera(c,s).hidden&&qa.camera(c,s).querySelector('.camera-placeholder strong')?.textContent==='Player Camera '+(s==='left'?'1':'2');
+qa.cardShowing=(c,side)=>{const root=qa.doc(c).querySelector('#cards'),card=root?.querySelector('#card-'+(side==='left'?'1':'2'));return root?.classList.contains('visible')&&!card.hidden;};
+qa.cardSelect=(field,value)=>{const select=document.querySelectorAll('[data-row=playerCards] select')[{player:0,position:1,page:2}[field]];select.value=value;select.dispatchEvent(new Event('change'));};
 qa.button=label=>[...document.querySelectorAll('[data-row=playerCameras] button')].find(b=>b.textContent===label);
 `;
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/instance/killed.html') { res.setHeader('Content-Type','text/html'); res.end('<h1>Graphic killed</h1>'); return; }
+    if (redirectProgram && url.pathname.endsWith('/info-stream.html') && url.searchParams.get('channel') === 'program') {
+      res.writeHead(302, {Location:'/instance/killed.html'}).end(); return;
+    }
+    if (url.pathname === '/stalled-font.css') {
+      const source = url.searchParams.get('source');
+      if (fontsReleased) finishFont(res, source);
+      else { stalledFonts.set(res, source); req.on('close', () => stalledFonts.delete(res)); }
+      return;
+    }
     if (url.pathname === '/events') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
       res.write('data:' + JSON.stringify(broadcast) + '\n\n');
@@ -63,8 +95,22 @@ const server = createServer(async (req, res) => {
     const name = decodeURIComponent(url.pathname.slice(1));
     if (!/^[\w/.-]+$/.test(name) || name.includes('..')) { res.writeHead(404).end(); return; }
     let bytes = await readFile(path.join(root, name));
-    if (name.endsWith('.html')) bytes = Buffer.from(bytes.toString().replace(/<link[^>]+href="https:[^>]+>/g, '')
-      .replace('</head>', '<script>' + bootstrap() + '</script></head>'));
+    if (name.endsWith('.html')) {
+      let html = bytes.toString();
+      // Keep the real stylesheet tags and their load behavior; hold the responses open.
+      html = startupOnly ? html.replace(/href="(https:[^"]+)"/g, (_, href) => 'href="/stalled-font.css?source=' + encodeURIComponent(href) + '"')
+        : html.replace(/<link[^>]+href="https:[^>]+>/g, '');
+      let initialization = bootstrap();
+      if (recoveryOnly && name.endsWith('/info-stream.html')) {
+        const channel = url.searchParams.get('channel');
+        monitorLoads[channel]++;
+        if (channel === 'program' && failProgram) {
+          // Match a failed /api.js load: socket works, but API construction and app startup fail.
+          initialization = 'window.socket={connected:true};window.nodecg=new globalThis.NodeCG({name:"rashinban"},window.socket);';
+        }
+      }
+      bytes = Buffer.from(html.replace('</head>', '<script>' + initialization + '</script></head>'));
+    }
     const mime = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
     res.setHeader('Content-Type', mime[path.extname(name)] || 'application/octet-stream'); res.end(bytes);
   } catch (error) { res.writeHead(req.url === '/message' ? 400 : 404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: error.message })); }
@@ -102,11 +148,62 @@ async function page(url) {
   pages.push(p); await p.call('Runtime.enable'); await p.call('Page.enable');
   await p.call('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await p.call('Page.navigate', { url: base + url });
-  await p.until("document.readyState==='complete'&&typeof qa!=='undefined'", 'loaded ' + url); return p;
+  await p.until(startupOnly ? "typeof qa!=='undefined'" : "document.readyState==='complete'&&typeof qa!=='undefined'", 'loaded ' + url); return p;
 }
 try {
   for (let i = 0; i < 100; i++) { try { debugPort = Number((await readFile(path.join(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]); break; } catch { await delay(100); } }
   if (!debugPort) throw Error('Chrome did not start');
+  if (recoveryOnly) {
+    const unchanged = JSON.stringify(broadcast);
+    const panel = await page('/bundles/rashinban/dashboard/switcher-stream.html');
+    await panel.until("qa.doc('program')?.readyState==='complete'&&qa.win('program').socket?.connected===true&&!qa.win('program').nodecg", 'reproduced missing API with connected socket');
+    check('failed graphic socket is connected', await panel.eval("qa.win('program').socket.connected"));
+    failProgram = false;
+    await panel.until("qa.doc('preview')?.querySelector('#layer-bracket svg')&&!qa.doc('preview').getElementById('layer-bracket').hidden", 'Preview still shows bracket');
+    await panel.eval("qa.originalPreview=qa.doc('preview');");
+    await panel.until("!!qa.doc('program')?.querySelector('#layer-bracket svg')&&!qa.doc('program').getElementById('layer-interval').hidden", 'failed Program monitor automatically recovers to interval', 6000);
+    check('only failed monitor was reloaded', monitorLoads, {preview:1,program:2});
+    check('healthy Preview document is preserved', await panel.eval("qa.originalPreview===qa.doc('preview')"));
+    check('monitor recovery does not change broadcast state', JSON.stringify(broadcast), unchanged);
+    check('recovered monitor has no caster banner', await panel.eval("!qa.doc('program').querySelector('#casters .banner')"));
+    await panel.screenshot('recovered');
+    failProgram = true;
+    await panel.eval("qa.frame('program').src=qa.frame('program').src");
+    await panel.until("(()=>{const b=document.querySelector('[data-channel=program] .monitor-reload');return b&&!b.hidden&&!b.disabled;})()", 'persistent failure offers manual recovery', 8000);
+    const stoppedAt=monitorLoads.program;
+    await delay(2000);
+    check('automatic retries stop after two attempts', monitorLoads.program, 5);
+    check('persistent failure does not loop', monitorLoads.program, stoppedAt);
+    await panel.screenshot('retry-limit');
+    failProgram = false;
+    await panel.eval("document.querySelector('[data-channel=program] .monitor-reload').click()");
+    await panel.until("!!qa.doc('program')?.querySelector('#layer-bracket svg')&&!qa.doc('program').getElementById('layer-interval').hidden", 'manual reload recovers only the affected monitor');
+    failProgram = true;
+    await panel.eval("qa.frame('program').src=qa.frame('program').src");
+    await panel.until("qa.win('program').socket?.connected===true&&!qa.win('program').nodecg&&qa.frame('program').style.visibility==='hidden'", 'second missing API enters recovery');
+    redirectProgram = true;
+    await panel.until("qa.win('program').location.pathname==='/instance/killed.html'", 'retry can navigate to NodeCG killed page');
+    check('intentional NodeCG page stays visible', await panel.eval("qa.frame('program').style.visibility!== 'hidden'"));
+    check('ignored navigation clears stale retry status', await panel.eval("document.querySelector('[data-channel=program] .monitor-status').hidden"));
+    check('Preview is preserved through every recovery', await panel.eval("qa.originalPreview===qa.doc('preview')"));
+    check('recovery never sends TAKE or other broadcast edits', await panel.eval("qa.messages.filter(n=>n.startsWith('broadcast:')).length"),0);
+  } else if (startupOnly) {
+    const panel = await page('/bundles/rashinban/dashboard/switcher-stream.html');
+    await panel.until("['preview','program'].every(c=>qa.doc(c)?.querySelector('.camera-placeholder'))", 'both monitors render while external font stylesheets are stalled', 4000);
+    check('external font requests are still pending', stalledFonts.size >= 2);
+    await panel.eval("qa.button('Player Camera 1').click()");
+    await panel.until("qa.showing('preview','left')", 'Preview responds while fonts are stalled');
+    await panel.eval("document.getElementById('take').click()");
+    await panel.until("qa.showing('program','left')", 'TAKE responds while fonts are stalled');
+    await panel.screenshot('stalled-fonts');
+    fontsReleased = true;
+    for (const [res, source] of stalledFonts) finishFont(res, source);
+    await panel.until("['preview','program'].every(c=>['adobe','google'].every(provider=>qa.win(c).getComputedStyle(qa.doc(c).documentElement).getPropertyValue('--qa-font-'+provider).trim()==='loaded'))", 'late font stylesheets still apply to both monitors');
+    await panel.eval("qa.button('Player Camera 2').click()");
+    await panel.until("qa.showing('preview','right')", 'Preview responds after fonts arrive');
+    await panel.eval("document.getElementById('take').click()");
+    await panel.until("qa.showing('program','right')", 'TAKE responds after fonts arrive');
+  } else {
   const owner = await page('/bundles/rashinban/graphics/presenter-capture.html?relay=main');
   await owner.eval("document.getElementById('relay-start').click()");
   await owner.until("document.querySelectorAll('#video-camera-left-device option').length===4", 'fake cameras listed');
@@ -126,6 +223,11 @@ try {
   await program.eval(monitorWarmFrames);
   await panel.eval("qa.button('Player Camera 1').click()");
   await panel.until("qa.showing('preview','left')", 'camera 1 placeholder appears in dashboard Preview');
+  await panel.until("qa.cardShowing('preview','left')", 'P1 camera selects and shows the P1 card');
+  check('P1 uses opaque magenta', await panel.eval("qa.win('preview').getComputedStyle(qa.camera('preview','left').querySelector('.camera-placeholder')).backgroundColor"), 'rgb(255, 0, 255)');
+  check('P1 card stays off Program before TAKE', await panel.eval("!qa.cardShowing('program','left')"));
+  await panel.eval("qa.cardSelect('page','stats')");
+  await panel.until("qa.doc('preview').querySelector('#cards').dataset.page==='stats'", 'P1 Page 2 is staged');
   check('camera 1 placeholder is full screen', await panel.eval("(()=>{const r=qa.camera('preview','left').getBoundingClientRect();return [r.x,r.y,r.width,r.height];})()"), [0,0,1920,1080]);
   check('Preview leaves Program monitor transparent', await panel.eval("qa.doc('program').getElementById('layer-player-cameras').hidden"));
   check('Preview leaves actual Program transparent', await program.eval("document.getElementById('layer-player-cameras').hidden"));
@@ -133,22 +235,28 @@ try {
   await panel.eval("document.getElementById('take').click()");
   await panel.until("qa.showing('program','left')", 'TAKE puts camera 1 placeholder on Program monitor');
   await program.until("!document.getElementById('layer-player-cameras').hidden&&!document.querySelector('.camera.left').hidden", 'TAKE reveals actual camera 1');
+  await program.until("document.querySelector('#cards').classList.contains('visible')&&!document.querySelector('#card-1').hidden&&document.querySelector('#cards').dataset.page==='stats'", 'TAKE puts matching P1 Page 2 card on actual output');
   check('actual Program receives camera 1 identity', await program.eval("document.getElementById('camera-left-video').srcObject.getVideoTracks()[0].getSettings().deviceId"), cameraIds[0]);
   await program.eval("qa.hashVideo=()=>{const canvas=document.createElement('canvas');canvas.width=160;canvas.height=90;canvas.getContext('2d').drawImage(document.getElementById('camera-left-video'),0,0,160,90);return canvas.toDataURL();};qa.before=qa.hashVideo()");
   await program.until('qa.hashVideo()!==qa.before', 'actual camera pixels advance');
   await panel.eval("qa.button('Player Camera 2').click()");
   await panel.until("qa.showing('preview','right')&&qa.camera('preview','left').hidden", 'camera 2 replaces camera 1 placeholder in Preview');
+  await panel.until("qa.cardShowing('preview','right')&&qa.doc('preview').querySelector('#cards').dataset.position==='right'&&qa.doc('preview').querySelector('#cards').dataset.page==='profile'", 'P2 camera defaults from P1/Left/Page2 to P2/Right/Page1');
+  check('P2 uses opaque cyan', await panel.eval("qa.win('preview').getComputedStyle(qa.camera('preview','right').querySelector('.camera-placeholder')).backgroundColor"), 'rgb(0, 255, 255)');
+  check('P1 card stays on Program while P2 is staged', await panel.eval("qa.cardShowing('program','left')&&qa.doc('program').querySelector('#cards').dataset.page==='stats'"));
   check('Program stays on camera 1 while camera 2 is staged', await panel.eval("qa.showing('program','left')&&qa.camera('program','right').hidden"));
   check('actual Program stays on camera 1 while camera 2 is staged', await program.eval("!document.querySelector('.camera.left').hidden&&document.querySelector('.camera.right').hidden"));
   check('camera 2 placeholder is full screen', await panel.eval("(()=>{const r=qa.camera('preview','right').getBoundingClientRect();return [r.x,r.y,r.width,r.height];})()"), [0,0,1920,1080]);
   await panel.screenshot('camera-2-preview-camera-1-program');
   await panel.eval("document.getElementById('revert').click()");
   await panel.until("qa.showing('preview','left')&&qa.camera('preview','right').hidden", 'Revert restores camera 1 placeholder');
+  await panel.until("qa.cardShowing('preview','left')&&qa.doc('preview').querySelector('#cards').dataset.position==='left'&&qa.doc('preview').querySelector('#cards').dataset.page==='stats'", 'Revert restores P1 card position and page with its camera');
   await panel.eval("qa.button('Player Camera 2').click()");
   await panel.until("qa.showing('preview','right')", 'camera 2 can be selected again');
   await panel.eval("document.getElementById('take').click()");
   await panel.until("qa.showing('program','right')", 'TAKE puts camera 2 placeholder on Program monitor');
   await program.until("!document.querySelector('.camera.right').hidden&&document.querySelector('.camera.right').dataset.state==='ready'", 'standalone info-stream reveals the warm camera');
+  await program.until("document.querySelector('#cards').classList.contains('visible')&&!document.querySelector('#card-2').hidden&&document.querySelector('#cards').dataset.position==='right'&&document.querySelector('#cards').dataset.page==='profile'", 'TAKE puts matching P2/Right/Page1 card on actual output');
   check('actual Program receives camera 2 identity', await program.eval("document.getElementById('camera-right-video').srcObject.getVideoTracks()[0].getSettings().deviceId"), cameraIds[1]);
   check('actual Program switches preserve the original video streams', await program.eval("[...document.querySelectorAll('#layer-player-cameras video')].every((v,i)=>v.srcObject===qa.originalVideos[i])"));
   check('camera switches do not renegotiate', await program.eval('qa.peers.length'), 1);
@@ -178,10 +286,12 @@ try {
   await program.until(programReady, 'actual output reconnects after publisher restart');
   await panel.eval("qa.button('Player Camera 2').click()");
   await panel.until("qa.doc('preview').getElementById('layer-player-cameras').hidden", 'hiding cameras clears Preview placeholder');
+  check('hiding P2 camera also hides its preview card', await panel.eval("!qa.doc('preview').querySelector('#cards').classList.contains('visible')"));
   check('Program stays selected until TAKE', await panel.eval("qa.showing('program','right')"));
   await panel.eval("document.getElementById('take').click()");
   await panel.until("qa.doc('program').getElementById('layer-player-cameras').hidden", 'TAKE hides Program placeholder');
   await program.until("document.getElementById('layer-player-cameras').hidden&&"+programReady, 'actual Program keeps both hidden cameras ready');
+  await program.until("!document.querySelector('#cards').classList.contains('visible')", 'TAKE hides actual camera and card together');
   await program.eval('qa.coldFrames=[];qa.previousChecks=qa.visibleChecks');
   await panel.eval("qa.button('Player Camera 1').click()");
   await panel.until("!nodecg.Replicant('broadcast').value.stream.program.playerCameras.left&&qa.showing('preview','left')", 'hidden camera can be staged again');
@@ -207,13 +317,31 @@ try {
   await program.until("!document.querySelector('.camera.right').hidden&&document.querySelector('.camera.right').dataset.state!=='ready'", 'actual output shows unavailable state for an unassigned camera');
   await alternate.eval("document.getElementById('video-camera-right-device').selectedIndex=1;document.getElementById('video-apply').click()");
   await program.until(programReady, 'newly assigned camera recovers without output reload');
+  await panel.eval("qa.cardSelect('player','left')");
+  await panel.until("qa.showing('preview','left')&&qa.cardShowing('preview','left')", 'card player selector switches the matching camera');
+  check('P2 to P1 defaults Left and preserves Page1', await panel.eval("({position:qa.doc('preview').querySelector('#cards').dataset.position,page:qa.doc('preview').querySelector('#cards').dataset.page})"), {position:'left',page:'profile'});
+  await panel.eval("qa.cardSelect('position','right')");
+  await panel.until("qa.doc('preview').querySelector('#cards').dataset.position==='right'", 'emergency position override remains available');
+  await panel.eval("qa.cardSelect('position','left')");
+  await panel.until("qa.doc('preview').querySelector('#cards').dataset.position==='left'", 'manual position change still applies');
+  await panel.eval("qa.cardSelect('page','compact')");
+  await panel.until("qa.doc('preview').querySelector('#cards').dataset.page==='compact'", 'P1 Compact is staged');
+  await panel.eval("qa.cardSelect('player','right')");
+  await panel.until("qa.showing('preview','right')&&qa.cardShowing('preview','right')&&qa.doc('preview').querySelector('#cards').dataset.position==='right'&&qa.doc('preview').querySelector('#cards').dataset.page==='compact'", 'card selector defaults P1/Left/Compact to P2/Right/Compact');
+  await panel.eval("document.querySelector('[data-row=playerCards] button').click()");
+  await panel.until("qa.doc('preview').querySelector('#layer-player-cameras').hidden&&!qa.doc('preview').querySelector('#cards').classList.contains('visible')", 'card visibility hides both card and camera');
+  await panel.eval("document.querySelector('[data-row=playerCards] button').click()");
+  await panel.until("qa.showing('preview','right')&&qa.cardShowing('preview','right')", 'card visibility restores its matching camera');
+  await panel.screenshot('linked-card-compact');
   check('dashboard adds no camera subscriptions across all actions', await panel.eval("['preview','program'].every(c=>qa.win(c).qa.peers.length===0&&qa.win(c).qa.messages.filter(n=>n==='presenter:video-relay').length===0&&qa.doc(c).querySelectorAll('#layer-player-cameras video').length===0)"));
   await program.eval("qa.retainedTracks=[...document.querySelectorAll('#layer-player-cameras video')].flatMap(v=>v.srcObject.getTracks());dispatchEvent(new Event('pagehide'))");
   check('unloading releases the warm subscriptions', await program.eval("qa.retainedTracks.every(t=>t.readyState==='ended')&&qa.peers.every(pc=>pc.connectionState==='closed')"));
   await program.call('Page.navigate', { url: 'about:blank' });
   const livePreview = await page('/bundles/rashinban/graphics/info-stream.html?channel=preview');
   await livePreview.until(programReady, 'standalone Preview without placeholder mode still receives live cameras');
-  check('no runtime exceptions', errors, []);
+  }
+  if (recoveryOnly) check('only the deliberately injected API failures occurred', errors.every(e=>/NodeCG is not a constructor|nodecg is not defined/.test(e.exception?.description??e.text)));
+  else check('no runtime exceptions', errors, []);
   await writeFile(path.join(out,'report.json'), JSON.stringify({checks,errors},null,2)+'\n');
   console.log(JSON.stringify({passed:checks.length,out}));
 } catch(error) {
@@ -223,6 +351,7 @@ try {
   try{await pages[0]?.call('Browser.close');}catch{}
   for(const p of pages)p.socket.close();
   browser.kill(); for(const res of subscribers)res.end();
+  for(const res of stalledFonts.keys())res.destroy();
   server.closeAllConnections();
   await new Promise(resolve=>server.close(resolve));
 }

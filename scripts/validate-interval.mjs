@@ -224,8 +224,13 @@ try {
   await message('broadcast:setPreview', {output: 'stream', patch: {interval: {visible: false}, bracket: {visible: false}}});
   await message('broadcast:take', {output: 'stream'});
   await message('interval:timer', {action: 'clear'});
-  await navigate('graphics/interval-stream.html');
-  assert.equal(await evaluate('document.querySelector("#layer-interval").hidden'), true);
+  for (const query of ['', '?channel=preview']) {
+    await navigate('graphics/interval-stream.html' + query);
+    assert.equal(await evaluate('document.querySelector("#layer-interval").hidden'), false, 'standalone Stream is visible with the switcher off, including preview URLs');
+    await until('document.querySelector("video")?.currentTime > .1');
+  }
+  await navigate('graphics/info-stream.html');
+  assert.equal(await evaluate('document.querySelector("#layer-interval").hidden'), true, 'info-stream still follows the Stream switcher');
   await navigate('dashboard/interval-control.html', 650, 650);
   await until('!document.querySelector("#content-controls").disabled');
   assert.equal(await evaluate('document.querySelector("#countdown-label, [aria-label*=Round]")'), null, 'removed labels have no dashboard controls');
@@ -287,14 +292,13 @@ try {
     await until('document.querySelector("#layer-interval")?.hidden === false');
     await until('document.querySelector("video")?.currentTime > .1');
     assert.equal(await evaluate('document.querySelector("video").getBoundingClientRect().height'), output === 'led' ? 576 : 1080);
-    if (output === 'led') {
-      await message('broadcast:setPreview', { output: 'stream', patch: { interval: { visible: false } } });
-      await message('broadcast:take', { output: 'stream' });
-      await until('fixtureValues.broadcast.stream.program.interval.visible === false');
-      assert.equal(await evaluate('document.querySelector("#layer-interval").hidden'), false, 'LED is always on regardless of Stream visibility or a legacy preview URL');
-      await message('broadcast:setPreview', { output: 'stream', patch: { interval: { visible: true } } });
-      await message('broadcast:take', { output: 'stream' });
-    }
+    await message('broadcast:setPreview', { output: 'stream', patch: { interval: { visible: false } } });
+    await message('broadcast:take', { output: 'stream' });
+    await until('fixtureValues.broadcast.stream.program.interval.visible === false');
+    assert.equal(await evaluate('document.querySelector("#layer-interval").hidden'), false, `${output} standalone stays visible when the Stream switcher is turned off`);
+    assert.equal(await evaluate('document.querySelector("video").paused'), false, `${output} standalone video keeps playing with the switcher off`);
+    await message('broadcast:setPreview', { output: 'stream', patch: { interval: { visible: true } } });
+    await message('broadcast:take', { output: 'stream' });
     if (adobeFonts) console.log(`${output}: Adobe heading font loaded: ${await evaluate('document.fonts.check(\'700 112px "kaneda-gothic"\')')}`);
     assert.equal(await evaluate('document.querySelector(".interval-match-players").textContent'), 'SHIINA VS EURYA');
     assert.equal(await evaluate('[...document.querySelectorAll("#layer-interval img")].every(img => img.complete && img.naturalWidth > 0)'), true);

@@ -1,6 +1,6 @@
 // Declarative description of the switcher's layer strip, shared by both
 // outputs. The panel renders rows from this; tests check the data logic.
-import { layersEqual, type BroadcastOutput } from "./state.ts";
+import { layersEqual, type BroadcastOutput, type PlayerCardsLayer } from "./state.ts";
 
 export type Control =
   | { kind: "toggle"; path: readonly string[]; label: string }
@@ -108,21 +108,50 @@ export function valueAt(obj: unknown, path: readonly string[]): unknown {
   return cur;
 }
 
+/** Player swaps restore the matching side; same-player edits keep emergency overrides. */
+function selectCard(player: "left" | "right", layers: unknown): Partial<PlayerCardsLayer> {
+  const current = valueAt(layers, ["playerCards", "player"]);
+  const position = valueAt(layers, ["playerCards", "position"]);
+  const page = valueAt(layers, ["playerCards", "page"]);
+  if (current === "left" && player === "right" && position === "left") {
+    if (page === "stats") return { player, position: "right", page: "profile" };
+    if (page === "compact") return { player, position: "right", page: "compact" };
+  }
+  return current === player ? { player } : { player, position: player };
+}
+
 /**
- * Nested patch setting one control to `value`. Array leaves (caster slots)
- * cannot be patched by index, so a numeric last segment reads the current
- * pair from `layers` and the patch carries the full pair with that index
- * replaced. Calls without an index segment ignore `layers`.
+ * Patch a switcher control, including linked stream camera/card selections.
+ * Array leaves (caster slots) carry the current pair with one index replaced.
  */
 export function patchAt(path: readonly string[], value: unknown, layers: unknown): Record<string, unknown> {
   if (path.length === 0) throw new Error("patchAt: path must not be empty");
   if (path.length === 2 && path[0] === "casters" && path[1] === "slots" && typeof value === "boolean") {
     return { casters: { slots: [value, value] } };
   }
-  // Player cameras are alternate fullscreen views. Hiding one leaves both off.
-  if (path.length === 2 && path[0] === "playerCameras" && value === true) {
-    if (path[1] === "left") return { playerCameras: { left: true, right: false } };
-    if (path[1] === "right") return { playerCameras: { left: false, right: true } };
+  // Stream cameras and their matching cards are one staged selection.
+  if (path.length === 2 && valueAt(layers, ["playerCameras"]) !== undefined) {
+    const field = path[1];
+    if (path[0] === "playerCameras" && (field === "left" || field === "right") && typeof value === "boolean") {
+      return {
+        playerCameras: { left: value && field === "left", right: value && field === "right" },
+        playerCards: value ? { ...selectCard(field, layers), visible: true } : { visible: false },
+      };
+    }
+    if (path[0] === "playerCards" && field === "player" && (value === "left" || value === "right")) {
+      const visible = valueAt(layers, ["playerCards", "visible"]) === true;
+      return {
+        playerCameras: { left: visible && value === "left", right: visible && value === "right" },
+        playerCards: selectCard(value, layers),
+      };
+    }
+    if (path[0] === "playerCards" && field === "visible" && typeof value === "boolean") {
+      const player = valueAt(layers, ["playerCards", "player"]);
+      return {
+        playerCameras: { left: value && player === "left", right: value && player === "right" },
+        playerCards: { visible: value },
+      };
+    }
   }
   // Fullscreen stream scenes replace each other in preview; TAKE remains explicit.
   if (path.length === 2 && path[1] === "visible" && value === true && valueAt(layers, ["interval"]) !== undefined) {

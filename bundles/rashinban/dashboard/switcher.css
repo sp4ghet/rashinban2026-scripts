@@ -30,3 +30,7 @@ button.toggle.on { background: #2e7d32; border-color: #43a047; }
 #take { background: #c62828; border-color: #ef5350; }
 #swap { background: #8b311e; border-color: #e87952; }
 #take:disabled, #swap:disabled { opacity: .4; cursor: default; }
+
+.monitor-status { position: absolute; z-index: 1; top: 12px; left: 12px; right: 12px; display: flex; gap: 12px; align-items: center; padding: 12px; color: #fff; background: #1b2333; }
+.monitor-status[hidden] { display: none; }
+.monitor-status button { flex: none; }
