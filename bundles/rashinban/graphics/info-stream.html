@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="assets/fonts/fonts.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@900&amp;display=swap" />
     <link rel="stylesheet" href="info.css" />
+    <link rel="stylesheet" href="player-cameras.css" />
     <link rel="stylesheet" href="interval.css" />
     <link rel="stylesheet" href="assets/brackets.css" />
     <link rel="stylesheet" href="assets/bracket-matches.css" />
@@ -19,6 +20,7 @@
   </head>
   <body data-output="stream">
     <!-- Layer order on screen = DOM order (each host is its own stacking context). -->
+    <div class="layer" id="layer-player-cameras" hidden></div>
     <div class="layer" id="layer-casters"></div>
     <div class="layer" id="layer-banpick"></div>
     <div class="layer" id="layer-cards"></div>

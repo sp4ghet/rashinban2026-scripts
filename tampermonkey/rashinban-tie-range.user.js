@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.3.3
-// @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Set the same rules as the presenter before joining a duel.
+// @version      0.3.4
+// @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Automatically detects Moving duels above 50,000 starting HP.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
 // @noframes
@@ -869,10 +869,15 @@
     const currentRoundNumber = integer(raw.currentRoundNumber, "Current round number", 1);
     const sourceStatus = nonemptyString(raw.status, "Source status");
     const rules = decodeOptions(raw);
+    const movement = raw.options.movementOptions;
+    const autoPinpointing = rules.initialHealth > 5e4 && typeof movement === "object" && movement !== null && !Array.isArray(movement) && ["forbidMoving", "forbidZooming", "forbidRotating"].every(
+      (flag) => movement[flag] === false
+    );
     const teams = decodeTeams(raw);
     const roundStarts = decodeRoundStarts(raw, teams.rounds.length);
     return {
       gameId,
+      autoPinpointing,
       sourceVersion,
       currentRoundNumber,
       sourceStatus,
@@ -1006,11 +1011,13 @@
         rollbackPendingFrom = null;
       }
     }
+    const autoPinpointing = (activePrevious ?? decoded).autoPinpointing === true;
     const context = freezeContext({
       schemaVersion: PLAYER_TIE_RANGE_RULES_VERSION,
       gameId: decoded.gameId,
       mode: activePrevious?.mode ?? configuredMode,
-      pinpointing: activePrevious?.pinpointing ?? rules.pinpointing,
+      pinpointing: activePrevious?.pinpointing ?? (rules.pinpointing || autoPinpointing),
+      autoPinpointing,
       sourceVersion: decoded.sourceVersion,
       currentRoundNumber: decoded.currentRoundNumber,
       sourceStatus: decoded.sourceStatus,
@@ -1073,7 +1080,7 @@
           diagnostic: diagnostic("schema-mismatch", "Saved tie-range rules are from a different version")
         };
       }
-      if (parsed.mode !== "off" && parsed.mode !== "full" && parsed.mode !== "half" || typeof parsed.pinpointing !== "boolean" || parsed.gameId !== expectedGameId || expectedGameId.length === 0 || !Number.isInteger(parsed.sourceVersion) || parsed.sourceVersion < 0 || !Number.isInteger(parsed.currentRoundNumber) || parsed.currentRoundNumber < 1 || typeof parsed.sourceStatus !== "string" || parsed.sourceStatus.length === 0 || !Array.isArray(parsed.teamIds) || parsed.teamIds.length !== 2 || !Array.isArray(parsed.teamLabels) || !tupleEqual(parsed.teamLabels, ["blue", "red"]) || !Array.isArray(parsed.playerIds) || parsed.playerIds.length !== 2 || !Array.isArray(parsed.roundStarts)) {
+      if (parsed.mode !== "off" && parsed.mode !== "full" && parsed.mode !== "half" || typeof parsed.pinpointing !== "boolean" || parsed.autoPinpointing !== void 0 && typeof parsed.autoPinpointing !== "boolean" || parsed.autoPinpointing === true && !parsed.pinpointing || parsed.gameId !== expectedGameId || expectedGameId.length === 0 || !Number.isInteger(parsed.sourceVersion) || parsed.sourceVersion < 0 || !Number.isInteger(parsed.currentRoundNumber) || parsed.currentRoundNumber < 1 || typeof parsed.sourceStatus !== "string" || parsed.sourceStatus.length === 0 || !Array.isArray(parsed.teamIds) || parsed.teamIds.length !== 2 || !Array.isArray(parsed.teamLabels) || !tupleEqual(parsed.teamLabels, ["blue", "red"]) || !Array.isArray(parsed.playerIds) || parsed.playerIds.length !== 2 || !Array.isArray(parsed.roundStarts)) {
         throw new Error("invalid context");
       }
       if (parsed.teamIds.some((id) => typeof id !== "string" || id.length === 0) || parsed.teamIds[0] === parsed.teamIds[1]) {
@@ -1255,7 +1262,7 @@
         capturedMode: context?.mode ?? null,
         configuredPinpointing: configuredPinpointing(),
         capturedPinpointing: context?.pinpointing ?? null,
-        appliesToNextDuel: context !== null && (context.mode !== configured || context.pinpointing !== configuredPinpointing()),
+        appliesToNextDuel: context !== null && (context.mode !== configured || context.pinpointing !== (configuredPinpointing() || context.autoPinpointing === true)),
         localTeamId: localTeamId(),
         context,
         mapRounds,
@@ -2238,7 +2245,7 @@
     </section>
     <div class="terminal" data-rb="terminal" aria-live="assertive" hidden><strong data-rb="terminal-headline"></strong><span data-rb="terminal-detail"></span></div>
     <div class="settings" data-rb="settings-panel" role="dialog" aria-modal="true" aria-labelledby="rb-settings-title" hidden>
-      <div class="settings-card"><h2 id="rb-settings-title">RASHINBAN player rules</h2><label>Tie range<select data-rb="mode-select"><option value="off">Off</option><option value="full">Full</option><option value="half">Half</option></select></label><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-rb="pinpointing-check"> Pinpointing Duels</label><p>Pinpointing Duels replaces HP with points: a solo 5K scores 2, the faster of two 5Ks scores 1, otherwise the closer guess scores 1 (inside the tie band, when tie range is on, nothing). First to 7 wins. The selected rules are captured when a duel begins. Changes apply to the next duel.</p><button type="button" data-rb="settings-close">Close</button></div>
+      <div class="settings-card"><h2 id="rb-settings-title">RASHINBAN player rules</h2><label>Tie range<select data-rb="mode-select"><option value="off">Off</option><option value="full">Full</option><option value="half">Half</option></select></label><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-rb="pinpointing-check"> Force Pinpointing Duels</label><p>Moving duels with starting HP above 50,000 automatically use Pinpointing Duels. Tick the box to enable it for other settings too. Pinpointing Duels replaces HP with points: a solo 5K scores 2, the faster of two 5Ks scores 1, otherwise the closer guess scores 1 (inside the tie band, when tie range is on, nothing). First to 7 wins. Rules are captured when a duel begins. Changes apply to the next duel.</p><button type="button" data-rb="settings-close">Close</button></div>
     </div>`;
     (document2.body ?? document2.documentElement).append(host);
     const byRb = (name) => {

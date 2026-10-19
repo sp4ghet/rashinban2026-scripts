@@ -174,83 +174,83 @@ body[data-source="video"] .player-window { transition: top 350ms cubic-bezier(.0
 /* Between-game camera scenes use the same live videos as the gameplay dock. */
 #camera-scene-label { display: none; }
 .pregame-symbol { display: none; }
-body[data-intermission="before-game"] { --camera-inset: 0px; --camera-width: 960px; --camera-height: 1080px; --camera-border: 0px; }
-body[data-intermission]:not([data-intermission="none"]) .camera {
+body[data-output="stream"][data-intermission="before-game"] { --camera-inset: 0px; --camera-width: 960px; --camera-height: 1080px; --camera-border: 0px; }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .camera {
   top: var(--camera-top, var(--camera-inset, 28px)); bottom: auto; width: var(--camera-width, 928px); height: var(--camera-height, 1024px); border-width: var(--camera-border, 2px);
   border-radius: var(--camera-radius, 0px); overflow: hidden;
 }
-body[data-intermission]:not([data-intermission="none"]) .camera.left { left: var(--camera-inset, 28px); }
-body[data-intermission]:not([data-intermission="none"]) .camera.right { right: var(--camera-inset, 28px); }
-body[data-intermission]:not([data-intermission="none"]) .camera::after {
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .camera.left { left: var(--camera-inset, 28px); }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .camera.right { right: var(--camera-inset, 28px); }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .camera::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background: var(--camera-shade, linear-gradient(transparent 65%, #080d17cc 100%));
 }
-body[data-intermission="before-game"] .camera.left::after { border-right: 5px solid #ff3030; }
-body[data-intermission="before-game"] .camera.right::after { border-left: 5px solid #ff3030; }
+body[data-output="stream"][data-intermission="before-game"] .camera.left::after { border-right: 5px solid #ff3030; }
+body[data-output="stream"][data-intermission="before-game"] .camera.right::after { border-left: 5px solid #ff3030; }
 .relay-camera video { object-position: center center; }
-body[data-intermission]:not([data-intermission="none"]) .scoreboard { z-index: 6; }
-body[data-intermission]:not([data-intermission="none"]) .competitor {
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .scoreboard { z-index: 6; }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .competitor {
   bottom: 72px; width: 780px; gap: 16px; flex-wrap: wrap; align-items: center;
 }
-body[data-intermission]:not([data-intermission="none"]) .competitor.left { left: 76px; }
-body[data-intermission]:not([data-intermission="none"]) .competitor.right { right: 76px; }
-body[data-intermission]:not([data-intermission="none"]) .competitor strong { font-size: 56px; max-width: 100%; }
-body[data-intermission]:not([data-intermission="none"]) .handle { display: none; }
-body[data-intermission]:not([data-intermission="none"]) .wins { position: static; flex: 0 0 54px; width: 54px; height: 54px; font-size: 44px; background: transparent; border: 0; }
-body[data-intermission]:not([data-intermission="none"]) :is(.match-info, .health, .damage, #phase-label, #review-banner) { display: none; }
-body[data-intermission]:not([data-intermission="none"]) footer {
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .competitor.left { left: 76px; }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .competitor.right { right: 76px; }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .competitor strong { font-size: 56px; max-width: 100%; }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .handle { display: none; }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .wins { position: static; flex: 0 0 54px; width: 54px; height: 54px; font-size: 44px; background: transparent; border: 0; }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) :is(.match-info, .health, .damage, #phase-label, #review-banner) { display: none; }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) footer {
   left: 822px; right: auto; width: 276px; bottom: auto; top: 474px; z-index: 7;
 }
-body[data-intermission]:not([data-intermission="none"]) .presenter-logo { width: 220px; }
+body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .presenter-logo { width: 220px; }
 /* Pre-game follows the split-camera slate: corner identities and a compass at centre. */
-body[data-intermission="before-game"] .scoreboard .competitor {
+body[data-output="stream"][data-intermission="before-game"] .scoreboard .competitor {
   bottom: 64px; flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 8px;
   font-family: var(--presenter-latin); font-weight: 700; line-height: 1; text-transform: uppercase; color: #fff;
 }
-body[data-intermission="before-game"] .scoreboard .competitor.left { left: 70px; }
-body[data-intermission="before-game"] .scoreboard .competitor.right { right: 70px; align-items: flex-end; text-align: right; }
-body[data-intermission="before-game"] .scoreboard .competitor strong { font-size: 70px; text-shadow: none; }
-body[data-intermission="before-game"] .scoreboard .handle { display: block; order: 1; max-width: 100%; font-size: 36px; color: #fff; text-shadow: none; }
-body[data-intermission="before-game"] .scoreboard .handle:empty,
-body[data-intermission="before-game"] .scoreboard .wins,
-body[data-intermission="before-game"] .presenter-logo { display: none; }
-body[data-intermission="before-game"] .pregame-symbol { display: block; position: fixed; left: 50%; top: 50%; width: 150px; height: 151px; transform: translate(-50%, -50%); pointer-events: none; }
+body[data-output="stream"][data-intermission="before-game"] .scoreboard .competitor.left { left: 70px; }
+body[data-output="stream"][data-intermission="before-game"] .scoreboard .competitor.right { right: 70px; align-items: flex-end; text-align: right; }
+body[data-output="stream"][data-intermission="before-game"] .scoreboard .competitor strong { font-size: 70px; text-shadow: none; }
+body[data-output="stream"][data-intermission="before-game"] .scoreboard .handle { display: block; order: 1; max-width: 100%; font-size: 36px; color: #fff; text-shadow: none; }
+body[data-output="stream"][data-intermission="before-game"] .scoreboard .handle:empty,
+body[data-output="stream"][data-intermission="before-game"] .scoreboard .wins,
+body[data-output="stream"][data-intermission="before-game"] .presenter-logo { display: none; }
+body[data-output="stream"][data-intermission="before-game"] .pregame-symbol { display: block; position: fixed; left: 50%; top: 50%; width: 150px; height: 151px; transform: translate(-50%, -50%); pointer-events: none; }
 /* Post-game geometry follows the 1920x1080 design; side identities stay put. */
-body[data-intermission="end-of-last-game"] {
+body[data-output="stream"][data-intermission="end-of-last-game"] {
   --camera-inset: 60px; --camera-top: 65px; --camera-width: 883px; --camera-height: 951px;
   --camera-border: 8px; --camera-radius: 20px; --camera-shade: none;
 }
-body[data-intermission="end-of-last-game"] .backdrop { background: linear-gradient(#000000d6, #000000d6), url('assets/presenter-kv.jpg') center / cover no-repeat; }
-body[data-intermission="end-of-last-game"] .camera.left { border-color: #ff3030; }
-body[data-intermission="end-of-last-game"] .camera.right { border-color: #3083ff; }
-body[data-intermission="end-of-last-game"][data-camera-winner="left"] .camera.left,
-body[data-intermission="end-of-last-game"][data-camera-winner="right"] .camera.right { --camera-width: 1049px; }
-body[data-intermission="end-of-last-game"][data-camera-winner="left"] .camera.right,
-body[data-intermission="end-of-last-game"][data-camera-winner="right"] .camera.left { --camera-width: 717px; }
-body[data-intermission="end-of-last-game"] .scoreboard .competitor {
+body[data-output="stream"][data-intermission="end-of-last-game"] .backdrop { background: linear-gradient(#000000d6, #000000d6), url('assets/presenter-kv.jpg') center / cover no-repeat; }
+body[data-output="stream"][data-intermission="end-of-last-game"] .camera.left { border-color: #ff3030; }
+body[data-output="stream"][data-intermission="end-of-last-game"] .camera.right { border-color: #3083ff; }
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="left"] .camera.left,
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="right"] .camera.right { --camera-width: 1049px; }
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="left"] .camera.right,
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="right"] .camera.left { --camera-width: 717px; }
+body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .competitor {
   bottom: 104px; width: 801px; height: 40px;
   font: 700 40px/1 var(--presenter-latin); text-transform: uppercase; color: #fff;
 }
-body[data-intermission="end-of-last-game"] .scoreboard .competitor.left { left: 94px; }
-body[data-intermission="end-of-last-game"] .scoreboard .competitor.right { right: 108px; text-align: right; }
-body[data-intermission="end-of-last-game"] .scoreboard .competitor strong { position: absolute; bottom: 36px; font-size: 70px; line-height: 1; text-shadow: none; }
-body[data-intermission="end-of-last-game"] .scoreboard .handle { display: block; position: absolute; bottom: 0; max-width: 100%; font-size: 40px; line-height: 1; color: #fff; text-shadow: none; }
-body[data-intermission="end-of-last-game"] .scoreboard .competitor.left :is(strong, .handle) { left: 0; }
-body[data-intermission="end-of-last-game"] .scoreboard .competitor.right :is(strong, .handle) { right: 0; }
-body[data-intermission="end-of-last-game"][data-camera-winner="left"] .competitor.left,
-body[data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.right { width: 967px; }
-body[data-intermission="end-of-last-game"][data-camera-winner="left"] .competitor.right,
-body[data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.left { width: 635px; }
-body[data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.left { left: 108px; }
-body[data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.right { right: 94px; }
-body[data-intermission="end-of-last-game"][data-camera-winner="left"] .competitor.left strong,
-body[data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.right strong { bottom: 37px; font-size: 96px; }
-body[data-intermission="end-of-last-game"] .scoreboard .handle:empty,
-body[data-intermission="end-of-last-game"] .scoreboard .wins,
-body[data-intermission="end-of-last-game"] footer { display: none; }
-body[data-intermission="end-of-last-game"] #camera-scene-label {
+body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .competitor.left { left: 94px; }
+body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .competitor.right { right: 108px; text-align: right; }
+body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .competitor strong { position: absolute; bottom: 36px; font-size: 70px; line-height: 1; text-shadow: none; }
+body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .handle { display: block; position: absolute; bottom: 0; max-width: 100%; font-size: 40px; line-height: 1; color: #fff; text-shadow: none; }
+body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .competitor.left :is(strong, .handle) { left: 0; }
+body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .competitor.right :is(strong, .handle) { right: 0; }
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="left"] .competitor.left,
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.right { width: 967px; }
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="left"] .competitor.right,
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.left { width: 635px; }
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.left { left: 108px; }
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.right { right: 94px; }
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="left"] .competitor.left strong,
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="right"] .competitor.right strong { bottom: 37px; font-size: 96px; }
+body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .handle:empty,
+body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .wins,
+body[data-output="stream"][data-intermission="end-of-last-game"] footer { display: none; }
+body[data-output="stream"][data-intermission="end-of-last-game"] #camera-scene-label {
   display: block; position: absolute; left: 94px; top: 87px; z-index: 7;
   font: 700 128px/1 var(--presenter-latin); letter-spacing: normal; color: #fff; text-shadow: none;
 }
-body[data-intermission="end-of-last-game"][data-camera-winner="right"] #camera-scene-label { left: auto; right: 94px; }
-body[data-intermission="end-of-last-game"][data-camera-winner="none"] #camera-scene-label { left: 50%; transform: translateX(-50%); font-size: 96px; }
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="right"] #camera-scene-label { left: auto; right: 94px; }
+body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="none"] #camera-scene-label { left: 50%; transform: translateX(-50%); font-size: 96px; }

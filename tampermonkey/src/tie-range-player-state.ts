@@ -46,6 +46,8 @@ export type PlayerGameContext = {
   gameId: string;
   mode: TieRangeBandMode;
   pinpointing: boolean;
+  /** Captured automatic detection; absent on contexts saved before auto-detection. */
+  autoPinpointing?: boolean;
   sourceVersion: number;
   currentRoundNumber: number;
   sourceStatus: string;
@@ -343,10 +345,17 @@ function decodeSnapshot(rawValue: unknown): DecodedSnapshot {
   const currentRoundNumber = integer(raw.currentRoundNumber, 'Current round number', 1);
   const sourceStatus = nonemptyString(raw.status, 'Source status');
   const rules = decodeOptions(raw);
+  const movement = (raw.options as Record<string, unknown>).movementOptions;
+  const autoPinpointing = rules.initialHealth > 50000
+    && typeof movement === 'object' && movement !== null && !Array.isArray(movement)
+    && ['forbidMoving', 'forbidZooming', 'forbidRotating'].every(
+      flag => (movement as Record<string, unknown>)[flag] === false,
+    );
   const teams = decodeTeams(raw);
   const roundStarts = decodeRoundStarts(raw, teams.rounds.length);
   return {
     gameId,
+    autoPinpointing,
     sourceVersion,
     currentRoundNumber,
     sourceStatus,
@@ -525,11 +534,13 @@ export function acceptPlayerSnapshot(
     }
   }
 
+  const autoPinpointing = (activePrevious ?? decoded).autoPinpointing === true;
   const context = freezeContext({
     schemaVersion: PLAYER_TIE_RANGE_RULES_VERSION,
     gameId: decoded.gameId,
     mode: activePrevious?.mode ?? configuredMode,
-    pinpointing: activePrevious?.pinpointing ?? rules.pinpointing,
+    pinpointing: activePrevious?.pinpointing ?? (rules.pinpointing || autoPinpointing),
+    autoPinpointing,
     sourceVersion: decoded.sourceVersion,
     currentRoundNumber: decoded.currentRoundNumber,
     sourceStatus: decoded.sourceStatus,
@@ -606,6 +617,8 @@ function restoreContext(value: unknown, expectedGameId: string): PlayerContextRe
     }
     if ((parsed.mode !== 'off' && parsed.mode !== 'full' && parsed.mode !== 'half')
       || typeof parsed.pinpointing !== 'boolean'
+      || (parsed.autoPinpointing !== undefined && typeof parsed.autoPinpointing !== 'boolean')
+      || (parsed.autoPinpointing === true && !parsed.pinpointing)
       || parsed.gameId !== expectedGameId || expectedGameId.length === 0
       || !Number.isInteger(parsed.sourceVersion) || parsed.sourceVersion < 0
       || !Number.isInteger(parsed.currentRoundNumber) || parsed.currentRoundNumber < 1

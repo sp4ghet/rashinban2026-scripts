@@ -352,6 +352,16 @@ try {
   await screenshot('09-pinpointing-verdict');
   await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='complete'`,'Pinpointing verdict hold completes');
 
+  // High starting HP in Moving mode enables points with the manual override off.
+  await evaluate(`openSettings();var check=${shadow}.querySelector('[data-rb="pinpointing-check"]');check.checked=false;check.dispatchEvent(new Event('change'));fixture=structuredClone(manual.created);fixture.gameId='auto-points';fixture.options.initialHealth=1000000;fixture.options.movementOptions={forbidMoving:false,forbidZooming:false,forbidRotating:false};scene('playing');refresh()`);
+  await until(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="health"]').textContent==='0 / 7'`,'automatic Pinpointing HUD');
+  assert.equal(await evaluate(`saved['rb-tie-range:pinpointing']`),false,'automatic detection leaves the manual preference off');
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('[class*="hud_healthBars__"]')).visibility`),'hidden','automatic points hide native HP');
+  await evaluate(`fixture=structuredClone(manual.resolvedDamage);fixture.gameId='auto-points';fixture.options.initialHealth=1000000;fixture.options.movementOptions={forbidMoving:false,forbidZooming:false,forbidRotating:false};fixture.teams[0].roundResults.at(-1).score=5000;scene('result');refresh()`);
+  await until(`${shadow}.querySelector('[data-rb="team-0"] [data-rb="health"]').textContent==='2 / 7'`,'automatic Pinpointing scores a solo 5K');
+  await until(`${shadow}.querySelector('[data-rb="result"]').dataset.phase==='complete'`,'automatic Pinpointing verdict completes');
+  await screenshot('09-auto-pinpointing-verdict');
+
   // Reduced motion preserves cue timing and arithmetic without travel or flashes.
   await command('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
   await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
@@ -386,7 +396,7 @@ try {
   assert.equal(await evaluate('requests.length'),count,'no requests outside player routes');
   assert.deepEqual(await evaluate(`Array.from(new Set(requests.map(r=>r.method)))`),['GET'],'read-only player transport');
   assert.equal(errors.length,0,'no uncaught browser exceptions');
-  console.log('Player browser validation passed: bootstrap, live routing, disclosure, damage, remount, settings, real reload, next-duel mode, terminal/abort retention, Off, summary draw, stale, non-player, teardown, native count/collision/multiplier/impact timing, Kaneda font loading, token geometry, mid-impact cleanup, ties, Pinpointing verdict, reduced motion/mobile, delayed snapshot catch-up, read-only requests.');
+  console.log('Player browser validation passed: bootstrap, live routing, disclosure, damage, remount, settings, real reload, next-duel mode, terminal/abort retention, Off, summary draw, stale, non-player, teardown, native count/collision/multiplier/impact timing, Kaneda font loading, token geometry, mid-impact cleanup, ties, Pinpointing verdict, automatic high-HP Moving detection, reduced motion/mobile, delayed snapshot catch-up, read-only requests.');
   console.log('Screenshots: '+artifacts);
 } finally {
   if(socket?.readyState===WebSocket.OPEN){try{await command('Browser.close');}catch{}socket.close();}

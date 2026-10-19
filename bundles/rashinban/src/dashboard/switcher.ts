@@ -112,6 +112,12 @@ function render() {
     for (const control of row.controls) {
       const widget = widgets.get(control)!;
       const value = valueAt(preview, control.path);
+      if (row.id === "lowerThird") {
+        const mode = valueAt(preview, ["lowerThird", "mode"]);
+        const container = control.kind === "toggle" ? widget : widget.parentElement!;
+        container.hidden = control.path[1] === "comingUp" ? mode !== "match"
+          : control.kind === "text" && mode !== "text";
+      }
       if (control.kind === "select" && control.path[0] === "casters" && document.activeElement !== widget) {
         const select = widget as HTMLSelectElement;
         const selected = findCaster(casters, String(value ?? ""));

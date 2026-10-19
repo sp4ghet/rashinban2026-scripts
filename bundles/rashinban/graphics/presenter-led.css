@@ -1,4 +1,5 @@
 @import url('presenter.css');
+@import url('presenter-timer.css');
 /* LED wall: only the top 1920x576 is physically shown. Names and HP sit in a
    top band because the players on stage can cover the lower part. */
 :root { --stage-top: 104px; --stage-h: 460px; --presenter-kv: url('assets/presenter-kv-led.png'); --presenter-vignette-edge: #0005; }
@@ -6,34 +7,85 @@
 .celebration-video { height: 576px; }
 /* Keep local capture controls reachable in a 576px-high OBS Interact view. */
 #video-setup { top: 108px; max-height: 456px; overflow-y: auto; }
-/* No facecams on the wall. <footer> stays in the DOM because presenter.js writes #phase-label. */
+/* Cameras appear only between games. Keep #phase-label for the shared painter. */
 .camera, footer { display: none; }
-/* Row 1: identities and match info (y 0-52). */
-.competitor { bottom: auto; top: 8px; width: 560px; }
-.competitor.left { left: 24px; } .competitor.right { right: 24px; }
-.wins { top: 4px; width: 48px; height: 48px; font-size: 34px; border-bottom-width: 3px; }
-.left .wins { left: 660px; } .right .wins { right: 660px; }
-.match-info { top: 0; left: 720px; width: 480px; height: 52px; grid-template-columns: 90px 90px 1fr; gap: 8px; padding: 5px 16px; border-radius: 0 0 14px 14px; }
-.match-info .mode-info { width: 150px; }
-.match-info small, .damage small { font-size: 11px; }
-.match-info b { font-size: 22px; margin-top: 0; }
-/* Row 2: damage and HP (y 52-100). */
-.damage { top: 52px; width: 90px; }
-.damage.left { left: 24px; } .damage.right { right: 24px; }
-.damage small { display: none; }
-.damage b { font-size: 30px; line-height: 44px; }
-.health { bottom: auto; top: 52px; width: 580px; height: 44px; border-width: 3px; border-radius: 10px; }
-.health.left { left: 120px; } .health.right { right: 120px; }
-.health b { font-size: 30px; line-height: 36px; }
-#timer { --timer-size: 224px; --timer-font: 166px; --timer-dial-font: 148px; --timer-critical-font: 164px; --timer-long-font: 78px; top: 222px; }
-/* Fixed 16:9 cells leave a centre lane for the timer in every lock state. */
+.health { border-width: 3px; border-radius: 10px; }
+#timer { top: 286.5px; }
+/* Preserve the other non-live stage geometry. */
 .player-window { top: 109px; width: 800px; height: auto; }
 .player-window.left { left: 16px; } .player-window.right { right: 16px; }
 .shared-view, #transition, #preview-area, #waiting-area, #summary-area { top: var(--stage-top); left: 16px; width: 1888px; height: var(--stage-h); }
-#preview-area { left: 560px; top: 109px; width: 800px; height: 450px; }
+/* Fill the LED height below the header while retaining a centered 16:9 view. */
+#preview-area { left: 50%; top: 75px; width: calc(501px * 16 / 9); height: 501px; transform: translateX(-50%); }
 #results-map { top: var(--stage-top); left: 460px; width: 1000px; height: var(--stage-h); }
 .result { top: 300px; width: 420px; } .result.left { left: 20px; } .result.right { right: 20px; }
 #review-banner { top: 108px; }
 #preview-label, #preview-map { display: none; }
 body[data-lock="left"] .player-window.left, body[data-lock="left"] .player-window.right,
 body[data-lock="right"] .player-window.left, body[data-lock="right"] .player-window.right { top: 109px; width: 800px; height: auto; }
+
+/* Designer's header stays on screen in every phase. */
+body[data-output="led"] {
+  --left-color: #ff3030; --right-color: #3083ff;
+  --left-panel: #cc2626; --right-panel: #2669cc;
+  color: #fff;
+
+  .competitor { top: 0; bottom: auto; width: 824px; height: 75px; gap: 14px; align-items: center; }
+  .competitor.left { left: 0; padding: 0 24px 0 418px; justify-content: flex-end; background: var(--left-panel); }
+  .competitor.right { right: 0; padding: 0 418px 0 24px; justify-content: flex-start; background: var(--right-panel); }
+  .competitor strong { flex: 0 1 auto; min-width: 0; font: 700 40px/1 var(--presenter-latin); text-shadow: none; }
+  .handle { flex: 0 1 auto; min-width: 0; max-width: 200px; font-size: 20px; line-height: 1; font-weight: 700; color: #fff; }
+  .competitor.left .handle { order: 0; }
+  .handle:empty { display: none; }
+  .wins { top: 0; width: 75px; height: 75px; font: 700 64px/1 var(--presenter-latin); border: 0; padding: 0; }
+  .left .wins { left: 824px; background: var(--left-color); }
+  .right .wins { right: 824px; background: var(--right-color); }
+  .match-info { top: 0; left: 899px; width: 122px; height: 75px; display: block; padding: 12px 0 0; border-radius: 0; background: #fff; color: #171d29; }
+  .match-info > :not(.mode-info) { display: none; }
+  .match-info .mode-info { width: 100%; }
+  .match-info small { color: inherit; font-size: 14px; line-height: 1; letter-spacing: normal; }
+  .match-info b { margin-top: 1px; font-size: 40px; line-height: 1; white-space: nowrap; }
+
+  /* Preserve the existing rounded, skewed HP component and depletion direction. */
+  .health { top: 3px; bottom: auto; width: 382px; height: 69px; }
+  .health.left { left: 6px; }
+  .health.right { right: 6px; }
+  .health b { font-size: 48px; line-height: 63px; }
+  .damage { top: 133px; width: 157px; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 19px; color: #fff; text-shadow: none; }
+  .damage.left { left: 0; background: var(--left-color); }
+  .damage.right { right: 0; background: var(--right-color); }
+  .damage small { display: block; color: #fff; font-size: 16px; line-height: 1; letter-spacing: normal; }
+  .damage b { font-size: 36px; line-height: 1; }
+
+  &[data-ruleset="pinpointing"] {
+    .pips { gap: 8px; }
+    .pip { flex: 1 1 0; min-width: 0; max-width: 34px; height: auto; aspect-ratio: 1; }
+    .damage { width: 220px; gap: 12px; }
+    .damage b { font-size: 24px; }
+  }
+}
+
+/* Retain gameplay through the reveal lead-in beneath the persistent header. */
+body[data-output="led"]:is([data-scene="live"], [data-celebration-underlay="true"]) {
+  .player-window { top: 75px; width: 960px; height: 501px; aspect-ratio: auto; border-radius: 0; box-shadow: none; transition: none; }
+  .player-window.left { left: 0; }
+  .player-window.right { right: 0; }
+  .player-window::after { border: 0; }
+  .player-capture canvas { object-fit: cover; }
+  .player-map:empty { visibility: hidden; }
+  &[data-lock="both"] .player-window.left .player-map { left: 0; }
+}
+
+/* Equal 16:9 camera views, bottom-aligned in the 576px band. The header
+   covers their top 39px; the stream's 10px seam stays centered. */
+body[data-output="led"]:is([data-intermission="before-game"], [data-intermission="end-of-last-game"]) {
+  .scoreboard { z-index: 6; }
+  .camera { display: block; top: 36px; bottom: auto; width: 960px; height: 540px; border: 0; border-radius: 0; }
+  .camera.left { left: 0; }
+  .camera.right { right: 0; }
+  .camera::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+  .camera.left::after { border-right: 5px solid #ff3030; }
+  .camera.right::after { border-left: 5px solid #ff3030; }
+  .pregame-symbol { display: block; position: absolute; left: 50%; top: 288px; width: 150px; height: 151px; transform: translate(-50%, -50%); z-index: 6; pointer-events: none; }
+  .damage { display: none; }
+}

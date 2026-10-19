@@ -119,10 +119,24 @@ try {
   if (!cameraTest) assert.equal(await stream.eval("document.querySelectorAll('.camera.key-slot').length"), 2, 'legacy relay URL retains external-camera key regions');
   if (cameraTest) {
     await stream.until(camerasReady, 'stream displays both player cameras');
-    assert.deepEqual(await stream.eval("['left','right'].map(side=>{const r=document.querySelector('.camera.'+side).getBoundingClientRect();return [r.x,r.y,r.width,r.height];})"), [[60,756,360,260],[1500,756,360,260]], 'existing camera geometry is preserved');
+    assert.deepEqual(await stream.eval("['left','right'].map(side=>{const r=document.querySelector('.camera.'+side).getBoundingClientRect();return [r.x,r.y,r.width,r.height];})"), [[60,828,374,242],[1486,828,374,242]], 'existing camera geometry is preserved');
     assert.deepEqual(await stream.eval('qa.cameraSources()'), cameraIds, 'camera tracks have their own correct side identities');
     assert.equal(await stream.eval("['left','right'].every(side=>document.getElementById('camera-'+side+'-video').muted&&document.getElementById('camera-'+side+'-video').srcObject.getAudioTracks().length===0)"), true, 'relayed cameras are silent');
-    await led.until("qa.peers.some(pc=>pc.connectionState==='connected'&&pc.getTransceivers().filter(t=>t.currentDirection==='recvonly').length===2)", 'LED negotiates gameplay only');
+    await led.until(camerasReady, 'LED receives both player cameras alongside gameplay');
+    assert.deepEqual(await led.eval('qa.cameraSources()'),cameraIds,'LED camera sides match the stream');
+    assert.equal(await led.eval("['left','right'].every(side=>document.getElementById('camera-'+side+'-video').muted&&document.getElementById('camera-'+side+'-video').srcObject.getAudioTracks().length===0)"),true,'LED cameras are silent');
+    await led.until("qa.peers.some(pc=>pc.connectionState==='connected'&&pc.getTransceivers().filter(t=>t.currentDirection==='recvonly').length===4)", 'LED negotiates all four feeds on one connection');
+    await led.eval("qa.cameraNodes=[...document.querySelectorAll('.camera video')];qa.set('presenterDuel',{...qa.initial.presenterDuel,status:'Finished',winnerTeamId:qa.initial.presenterDuel.players[0].teamId});qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'finished'});qa.cameraBefore=qa.cameraHash('left')");
+    await led.until("document.body.dataset.intermission==='before-game'&&qa.cameraHash('left')!==qa.cameraBefore",'LED cameras advance in the before-game view');
+    await led.eval("qa.set('presenterIntermission',{context:JSON.stringify([qa.initial.presenterSeries.id,[qa.initial.presenterSeries.left.id,qa.initial.presenterSeries.right.id].sort()]),view:'end-of-last-game',ignoredGameId:null,lastGame:{gameId:qa.initial.presenterDuel.gameId,winnerCompetitorId:qa.initial.presenterSeries.right.id,draw:false,aborted:false}});qa.cameraBefore=qa.cameraHash('left')");
+    await led.until("document.body.dataset.intermission==='end-of-last-game'&&qa.cameraHash('left')!==qa.cameraBefore",'LED cameras stay live when switching to after-game');
+    assert.equal(await led.eval("qa.cameraNodes.every((v,i)=>v===document.querySelectorAll('.camera video')[i]&&v.srcObject.active)"),true,'Scene switches preserve the camera elements and tracks');
+    await led.eval("qa.set('presenterDuel',structuredClone(qa.initial.presenterDuel));qa.reset()");await led.until(ready,'LED returns to gameplay after camera scenes');
+    const cameraOnlyLed=await page('/presenter-led.html');
+    await cameraOnlyLed.eval("qa.mode('rendered')");await cameraOnlyLed.until(camerasReady,'Plain LED URL receives cameras from the main relay');
+    assert.equal(await cameraOnlyLed.eval('qa.requests.length'),0,'Default LED cameras never open physical devices');
+    await cameraOnlyLed.until("qa.peers.some(pc=>pc.connectionState==='connected'&&pc.getTransceivers().filter(t=>t.currentDirection==='recvonly').length===2)",'Default LED camera connection declines gameplay tracks');
+    await cameraOnlyLed.call('Page.navigate',{url:'about:blank'});
   }
   for (const viewer of [stream, led]) {
     assert.equal(await viewer.eval('qa.requests.length'), 0, 'receiver never opens hardware');
@@ -179,11 +193,14 @@ try {
   if (cameraTest) {
     const swappedCameras = await owner.eval("['camera-left','camera-right'].map(feed=>document.getElementById('video-'+feed+'-preview').srcObject.getVideoTracks()[0].id)");
     await stream.until(camerasReady + '&&JSON.stringify(qa.cameraSources())===' + JSON.stringify(JSON.stringify(swappedCameras)), 'swap moves camera and gameplay assignments together');
+    await led.until(camerasReady + '&&JSON.stringify(qa.cameraSources())===' + JSON.stringify(JSON.stringify(swappedCameras)), 'camera swap reaches LED with the same sides');
     await owner.eval("document.getElementById('video-camera-left-device').value='';document.getElementById('video-apply').click()");
     await stream.until("document.querySelector('.camera.left').dataset.state!=='ready'&&document.querySelector('.camera.right').dataset.state==='ready'", 'unassigned left camera leaves the right camera available');
+    await led.until("document.querySelector('.camera.left').dataset.state!=='ready'&&document.querySelector('.camera.right').dataset.state==='ready'", 'missing LED camera leaves the other side available');
     await stream.until(ready, 'missing camera does not hide gameplay');
     await owner.eval("document.getElementById('video-camera-left-device').selectedIndex=5;document.getElementById('video-apply').click()");
     await stream.until(camerasReady, 'camera returns after reassigning input');
+    await led.until(camerasReady, 'LED camera returns after reassigning input');
   }
   await owner.eval("document.getElementById('video-left-device').value='';document.getElementById('video-apply').click()");
   await owner.until('qa.active()===' + (inputCount - 1), 'one input can remain unassigned');
@@ -206,6 +223,7 @@ try {
   await owner.until('qa.active()===0', 'Stop releases all selected capture tracks');
   await led.until("document.getElementById('capture-left').dataset.hasFrame==='false'", 'publisher stop clears receiver pixels');
   if (cameraTest) await stream.until("['left','right'].every(side=>document.getElementById('camera-'+side+'-video').srcObject===null)", 'publisher stop clears both camera videos');
+  if (cameraTest) await led.until("['left','right'].every(side=>document.getElementById('camera-'+side+'-video').srcObject===null)", 'publisher stop clears LED cameras too');
   await stream.until("document.getElementById('video-setup-message').textContent.includes('Waiting for the capture page')", 'setup exposes missing publisher status');
   await owner.eval("document.getElementById('relay-start').click()");
   await stream.until(ready, 'stream reconnects after publisher restart'); await led.until(ready, 'LED reconnects after publisher restart');
@@ -213,11 +231,13 @@ try {
   await owner.until('qa.active()===0', 'signaling loss releases hardware before takeover');
   await led.until("document.getElementById('capture-left').dataset.hasFrame==='false'", 'signaling loss clears remote gameplay before recovery');
   if (cameraTest) await stream.until("['left','right'].every(side=>document.getElementById('camera-'+side+'-video').srcObject===null)", 'signaling loss clears remote cameras before recovery');
+  if (cameraTest) await led.until("['left','right'].every(side=>document.getElementById('camera-'+side+'-video').srcObject===null)", 'signaling loss clears LED cameras before recovery');
   await owner.eval('qa.blockSignal=false');
   await owner.until('qa.active()===' + inputCount, 'signaling recovery reacquires selected inputs');
   await led.until(ready, 'LED recovers after signaling resumes'); await stream.until(ready, 'stream recovers after signaling resumes');
   if (cameraTest) {
     await stream.until(camerasReady, 'cameras recover after signaling resumes');
+    await led.until(camerasReady, 'LED cameras recover after signaling resumes');
     await stream.eval("qa.noOwnership=true;qa.set('presenterClients',{clients:[],program:null})");
     await stream.until("['left','right'].every(side=>document.getElementById('camera-'+side+'-video').srcObject===null)", 'program ownership loss releases camera subscriptions');
     assert.equal(await owner.eval('qa.active()'), 4, 'ownership change does not close capture hardware');
@@ -231,13 +251,15 @@ try {
     assert.equal(await cameraPreview.eval('qa.peers.length'), 0, 'preview does not join the camera relay');
   }
   await led.eval("qa.vp8Only=true;document.getElementById('video-reconnect').click()");
-  await led.until("(async()=>{const peers=qa.peers.filter(p=>p.connectionState==='connected');return peers.length>0&&(await Promise.all(peers.map(async p=>{const stats=await p.getStats();const videos=[...stats.values()].filter(s=>s.type==='inbound-rtp'&&s.framesDecoded>0);return videos.length===2&&videos.every(s=>stats.get(s.codecId)?.mimeType==='video/VP8')}))).every(Boolean)})()", 'VP8-only receiver negotiates fallback and decodes both gameplay feeds');
+  await led.until("(async()=>{const peers=qa.peers.filter(p=>p.connectionState==='connected');return peers.length>0&&(await Promise.all(peers.map(async p=>{const stats=await p.getStats();const videos=[...stats.values()].filter(s=>s.type==='inbound-rtp'&&s.framesDecoded>0);return videos.length==="+inputCount+"&&videos.every(s=>stats.get(s.codecId)?.mimeType==='video/VP8')}))).every(Boolean)})()", 'VP8-only receiver negotiates fallback and decodes all subscribed feeds');
   await led.eval("qa.vp8Only=false;document.getElementById('video-reconnect').click()");
   await led.until(ready, 'receiver returns after VP8 fallback');
   await owner.until(prefersH264, 'H.264 preference survives reconnect after fallback');
   const preview = await page('/presenter-led.html?channel=preview&videoRelay=main');
   await delay(1200); assert.equal(await preview.eval('qa.requests.length'), 0);
   assert.equal(await preview.eval("document.getElementById('capture-left').dataset.hasFrame==='true'"), false, 'preview does not subscribe');
+  assert.equal(await preview.eval('qa.relayJoins'),0,'LED preview never joins the camera relay');
+  assert.equal(await preview.eval("['left','right'].every(side=>document.getElementById('camera-'+side+'-video').srcObject===null)"),true,'LED preview has no camera subscriptions');
   for (const [name, viewer] of [['stream', stream], ['led', led], ['capture', owner]]) {
     if (name !== 'capture') await viewer.eval("document.getElementById('video-close').click()");
     await viewer.call('Page.bringToFront'); await delay(100);

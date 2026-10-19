@@ -2,7 +2,7 @@
 <!-- Twin of presenter.html: presenter.js writes to every element id, so each id must exist in both pages. -->
 <html lang="en">
 <head><meta charset="utf-8"><title>RASHINBAN 2026 — Presenter (LED)</title><link rel="stylesheet" href="https://use.typekit.net/ljs6bhu.css"><link rel="stylesheet" href="assets/fonts/fonts.css"><link rel="stylesheet" href="presenter-led.css"></head>
-<body data-output="led" data-layout="dual" data-source="chroma" data-phase="waiting-game">
+<body data-output="led" data-intermission="none" data-layout="dual" data-source="chroma" data-phase="waiting-game">
   <div class="backdrop"></div>
 
   <header class="scoreboard">
@@ -36,7 +36,9 @@
   </section>
   <div id="scoring-layer" hidden aria-hidden="true"><strong id="score-token-left" class="score-token left" hidden></strong><strong id="score-token-right" class="score-token right" hidden></strong><b id="score-calculation" hidden></b><b id="verdict" hidden></b></div>
   <div id="transition" hidden>ROUND COMPLETE</div>
-  <div id="timer" hidden><span class="timer-dial" aria-hidden="true"></span><strong id="timer-value">60</strong></div>
+  <div id="timer" hidden><svg class="timer-pill" viewBox="0 0 195 78" aria-hidden="true"><rect x="0" y="0" width="195" height="78" rx="39"/><path class="timer-progress" pathLength="100" d="M97.5 4H156A35 35 0 0 1 156 74H39A35 35 0 0 1 39 4H97.5"/></svg><strong id="timer-value">01:00</strong></div>
+  <div class="camera left" aria-label="Left player camera"></div><div class="camera right" aria-label="Right player camera"></div>
+  <img class="pregame-symbol" src="assets/logos/rashinban-compass.png" alt="" width="150" height="151">
   <footer><div id="phase-label">WAITING FOR GAME</div><img class="presenter-logo" src="assets/logos/rashinban.svg" alt="RASHINBAN 2026" width="863" height="515"></footer>
   <section id="video-setup" role="dialog" aria-labelledby="video-setup-title" hidden>
     <header><strong id="video-setup-title">LED player video inputs · local setup</strong><button id="video-close" type="button">Close setup (F8)</button></header>

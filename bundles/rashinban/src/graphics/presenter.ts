@@ -47,13 +47,20 @@ const client = createPresenterClient({ clientId, role, wallNow: () => Date.now()
 const audioOutput = createAudioOutput(client);
 const ledOutput = document.body.dataset.output === 'led' || role === 'led';
 const relayParam = new URLSearchParams(location.search).get('videoRelay');
-const relayCameras = !ledOutput && new URLSearchParams(location.search).get('relayCameras') === '1';
+const relayCameras = ledOutput || new URLSearchParams(location.search).get('relayCameras') === '1';
 const relay = relayParam !== null ? createRelayReceiver({ room: relayName(relayParam), cameras: relayCameras,
   request: request => nodecg.sendMessage(RELAY_MESSAGE, request) as Promise<RelayResponse>,
   status(message) { document.body.dataset.relayStatus = message; capture.setRelayStatus(message); },
 }) : null;
 const capture = createCaptureUI(document.body, location.search, ledOutput ? 'led' : 'stream', { relay: relay ?? undefined });
-const cameras = relay && relayCameras ? createCameraOutput(document.body, relay) : null;
+// Plain LED URLs retain local gameplay capture and receive only the cameras
+// from the default room. A videoRelay URL shares its existing connection.
+const cameraRelay = ledOutput && !relay ? createRelayReceiver({ room: 'main', feeds: ['camera-left', 'camera-right'],
+  request: request => nodecg.sendMessage(RELAY_MESSAGE, request) as Promise<RelayResponse>,
+  status(message) { document.body.dataset.cameraRelayStatus = message; },
+}) : null;
+const cameraReceiver = relayCameras ? relay ?? cameraRelay : null;
+const cameras = cameraReceiver ? createCameraOutput(document.body, cameraReceiver) : null;
 const chromaWindows = createChromaWindows(document.body);
 let boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
 media.on('change', value => {
@@ -79,6 +86,7 @@ function reconcileVideo() {
   // lease. Switcher previews do not open devices, even on the LED page.
   const captureActive = client.playsVideo() && (!ledOutput || channelFromSearch(location.search) === 'program');
   relay?.setActive(captureActive && (options.viewSource === 'video' || !!cameras));
+  cameraRelay?.setActive(captureActive);
   capture.update(options.viewSource, captureActive);
   cameras?.update(captureActive);
   videoPlayer.update(timeline.value?.generation ?? null, client.playsVideo(), timeline.value?.effect ?? 'none', silent(options.muted), options.effectsGain);
@@ -117,7 +125,7 @@ function startRenderer(value?: PresenterPublicConfig) {
 }
 publicConfig.on('change', startRenderer);
 startRenderer(publicConfig.value);
-window.addEventListener('pagehide', () => { clearInterval(mediaGuard); chromaWindows.dispose(); capture.dispose(); cameras?.dispose(); relay?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
+window.addEventListener('pagehide', () => { clearInterval(mediaGuard); chromaWindows.dispose(); capture.dispose(); cameras?.dispose(); cameraRelay?.dispose(); relay?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {
   let captureFrame: RenderFrame | null = null;
@@ -145,7 +153,7 @@ function frame() {
     previousScene = scene;
     const visible = scene.projection;
     paintScene(document.body, scene, match);
-    if (!ledOutput) paintCameraScene(document.body, scene, intermission.value ?? EMPTY_INTERMISSION, match);
+    paintCameraScene(document.body, scene, intermission.value ?? EMPTY_INTERMISSION, match);
     const resultFrame = state?.gameId === timing.gameId
       ? resultMapFrame(state, timing.round, { left: match.left.playerId, right: match.right.playerId }, visible.answer ?? undefined) : null;
     const preparedResults = scene.kind === 'transition' ? resultFrame ?? undefined : undefined;
@@ -168,7 +176,7 @@ function frame() {
     element('transition').hidden = true;
     write('round-number', scene.previewRound === null ? timing.round === null ? '—' : String(timing.round) : String(scene.previewRound));
     const mode = state?.mode;
-    write('mode', ledOutput ? mode ?? '—' : mode === 'NM' ? 'NO MOVE' : mode === 'NMPZ' ? 'NMPZ' : mode === 'MOVE' ? 'MOVING' : '—');
+    write('mode', mode === 'NM' ? 'NO MOVE' : mode === 'NMPZ' ? 'NMPZ' : mode === 'MOVE' ? 'MOVING' : '—');
     if (!ledOutput) write('match-label', currentMatch.value?.id === match.id ? currentMatch.value.label : '');
     // Series wins count completed games; the active game is the next one.
     write('game-number', String(match.left.wins + match.right.wins + 1));
@@ -185,8 +193,7 @@ function frame() {
       const matchPoint = pinpointing !== null && player?.matchPoint === true;
       write(side === 'left' ? 'multiplier' : 'right-multiplier', pinpointing
         ? player ? pointsLabel(matchPoint, pinpointing.firstTo, player.points ?? 0) : '—'
-        : ledOutput ? sideMultipliers[side === 'left' ? 0 : 1]
-          : sideMultipliers[side === 'left' ? 0 : 1].replace(/×(\d+(?:\.\d+)?)/, (_, value: string) => `×${Number(value).toFixed(1)}`));
+        : sideMultipliers[side === 'left' ? 0 : 1].replace(/×(\d+(?:\.\d+)?)/, (_, value: string) => `×${Number(value).toFixed(1)}`));
       element(side === 'left' ? 'multiplier' : 'right-multiplier').parentElement!.dataset.matchPoint = String(matchPoint);
       write(`${side}-name`, competitor.name);
       const handle = competitor.handle.trim().replace(/^@+/, '');
@@ -242,6 +249,7 @@ function frame() {
     }
   }
   if (!timing || !match) {
+    document.body.dataset.scene = 'waiting';
     document.body.dataset.intermission = 'none';
     paintResultMapLabel(document.body, null, false);
     for (const id of ['preview-area', 'summary-area', 'results-area', 'live-area', 'transition', 'timer', 'scoring-layer', 'review-banner']) element(id).hidden = true;

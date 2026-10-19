@@ -97,8 +97,8 @@ export function createRelayPublisher(options: { room: string; request: RelayRequ
   };
 }
 
-export function createRelayReceiver(options: { room: string; cameras?: boolean; request: RelayRequestFn; status?(message: string): void }) {
-  const accepted = sides.filter(side => options.cameras || !side.startsWith('camera-'));
+export function createRelayReceiver(options: { room: string; cameras?: boolean; feeds?: readonly RelayFeed[]; request: RelayRequestFn; status?(message: string): void }) {
+  const accepted = options.feeds ?? sides.filter(side => options.cameras || !side.startsWith('camera-'));
   let enabled = false;
   let publisher: string | null = null;
   let current: { pc: RTCPeerConnection; connection: string } | null = null;
@@ -143,8 +143,8 @@ export function createRelayReceiver(options: { room: string; cameras?: boolean; 
     };
     try {
       await pc.setRemoteDescription({ type: 'offer', sdp: signal.sdp });
-      // LED and gameplay-only viewers decline camera tracks, avoiding unused
-      // camera encoding and transport while sharing the same physical capture.
+      // Each viewer declines unused tracks, including gameplay for camera-only
+      // info pages, while sharing the same physical capture.
       for (const transceiver of pc.getTransceivers()) {
         if (!accepted.some(side => signal.mids[side] === transceiver.mid)) transceiver.direction = 'inactive';
       }

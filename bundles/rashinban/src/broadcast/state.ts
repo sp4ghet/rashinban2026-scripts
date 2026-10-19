@@ -2,13 +2,15 @@
 // what its operator is lining up (preview). Pure functions; the extension
 // owns the replicant, the dashboard edits preview, TAKE copies it to program.
 
+import { relayName } from "../presenter/relay-protocol.ts";
+
 export type BroadcastOutput = "stream" | "led";
 export const BROADCAST_OUTPUTS: readonly BroadcastOutput[] = ["stream", "led"];
 
 // `stats` remains the persisted/Companion key for Page 2, now tournament results.
 export type CardPage = "profile" | "stats" | "compact";
 export type PlayerCardsLayer = { visible: boolean; page: CardPage; player: "left" | "right"; position: "left" | "right" };
-export type LowerThirdLayer = { visible: boolean; mode: "match" | "text"; title: string; subtitle: string };
+export type LowerThirdLayer = { visible: boolean; mode: "match" | "scores" | "text"; title: string; subtitle: string; comingUp: boolean };
 export type CastersLayer = {
   titleBar: boolean;
   /** Keep the existing pair for Companion's /casters/1 and /casters/2 routes. */
@@ -18,7 +20,10 @@ export type CastersLayer = {
 };
 export type ToggleLayer = { visible: boolean };
 
+export type PlayerCamerasLayer = { left: boolean; right: boolean; relay: string };
+
 export type StreamLayers = {
+  playerCameras: PlayerCamerasLayer;
   interval: ToggleLayer;
   bracket: ToggleLayer;
   playerCards: PlayerCardsLayer;
@@ -50,7 +55,7 @@ export const MAX_TEXT = 120;
 // "boolean:true" to true. Arrays are described by "booleanPair" because the
 // only array in the buses is the caster slot pair. A string list is an enum
 // whose first entry is the default.
-type Leaf = "boolean" | "boolean:true" | "text" | "booleanPair" | readonly string[];
+type Leaf = "boolean" | "boolean:true" | "text" | "relay" | "booleanPair" | readonly string[];
 type Spec = { [key: string]: Leaf | Spec };
 
 /**
@@ -65,7 +70,7 @@ type SpecOf<L> = {
       ? "booleanPair"
       : L[K] extends string
         ? string extends L[K]
-          ? "text"
+          ? "text" | "relay"
           : readonly L[K][]
         : SpecOf<L[K]>;
 };
@@ -73,10 +78,11 @@ type SpecOf<L> = {
 const CARD_SPEC = { visible: "boolean", page: ["profile", "stats", "compact"], player: ["left", "right"], position: ["left", "right"] } as const satisfies SpecOf<PlayerCardsLayer>;
 const TOGGLE_SPEC = { visible: "boolean" } as const satisfies SpecOf<ToggleLayer>;
 const STREAM_SPEC = {
+  playerCameras: { left: "boolean", right: "boolean", relay: "relay" },
   interval: TOGGLE_SPEC,
   bracket: TOGGLE_SPEC,
   playerCards: CARD_SPEC,
-  lowerThird: { visible: "boolean", mode: ["match", "text"], title: "text", subtitle: "text" },
+  lowerThird: { visible: "boolean", mode: ["match", "scores", "text"], title: "text", subtitle: "text", comingUp: "boolean" },
   casters: { titleBar: "boolean:true", slots: "booleanPair", center: "boolean", names: { left: "text", right: "text", center: "text" } },
   banpick: TOGGLE_SPEC,
 } as const satisfies SpecOf<StreamLayers>;
@@ -91,6 +97,7 @@ function defaultFor(spec: Leaf | Spec): unknown {
   if (spec === "boolean") return false;
   if (spec === "boolean:true") return true;
   if (spec === "text") return "";
+  if (spec === "relay") return "main";
   if (spec === "booleanPair") return [false, false];
   if (Array.isArray(spec)) return spec[0];
   const out: Record<string, unknown> = {};
@@ -99,6 +106,10 @@ function defaultFor(spec: Leaf | Spec): unknown {
 }
 
 function validLeaf(spec: Leaf, value: unknown): boolean {
+  if (spec === "relay") {
+    if (typeof value !== "string") return false;
+    try { relayName(value); return true; } catch { return false; }
+  }
   if (spec === "boolean" || spec === "boolean:true") return typeof value === "boolean";
   if (spec === "text") return typeof value === "string" && value.length <= MAX_TEXT;
   if (spec === "booleanPair") return Array.isArray(value) && value.length === 2 && value.every((v) => typeof v === "boolean");

@@ -98,10 +98,10 @@ try {
     const led = output === 'led';
     await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/presenter${led ? '-led' : ''}.html?role=preview` });
     for (let i = 0; i < 100; i++) {
-      if (await evaluate(`document.getElementById('timer-value')?.textContent==='${led ? '39' : '00:39'}'`)) break;
+      if (await evaluate(`document.getElementById('timer-value')?.textContent==='00:39'`)) break;
       await delay(100);
     }
-    assert.equal(await evaluate(`document.getElementById('timer-value').textContent`), led ? '39' : '00:39');
+    assert.equal(await evaluate(`document.getElementById('timer-value').textContent`), '00:39');
     await evaluate(`document.fonts.ready`);
     const fontDocument = await command('DOM.getDocument');
     const fontNode = await command('DOM.querySelector', { nodeId: fontDocument.root.nodeId, selector: '#timer-value' });
@@ -118,9 +118,11 @@ try {
       const current = await evaluate(`({timer:qa.rect('timer'),left:qa.rect('left-window'),right:qa.rect('right-window'),leftMap:qa.rect('left-map'),rightMap:qa.rect('right-map'),layout:document.body.dataset.layout,lock:document.body.dataset.lock})`);
       if (led || source === 'chroma') assert.deepEqual(current.timer, timer, `${output} fixed timer moved on ${mode}/${source}/${lock}`);
       if (led) {
-        ratio(current.left); ratio(current.right);
-        if (current.lock === 'left' || current.lock === 'both') ratio(current.leftMap);
-        if (current.lock === 'right' || current.lock === 'both') ratio(current.rightMap);
+        assert.deepEqual(current.left, {x:0,y:75,width:960,height:501});
+        assert.deepEqual(current.right, {x:960,y:75,width:960,height:501});
+        assert.deepEqual(current.timer, {x:862.5,y:286.5,width:195,height:78});
+        if (current.lock === 'left' || current.lock === 'both') assert.deepEqual(current.leftMap, current.left);
+        if (current.lock === 'right' || current.lock === 'both') assert.deepEqual(current.rightMap, current.right);
       } else {
         const singleLock = current.lock === 'left' || current.lock === 'right';
         assert.equal(current.timer.y, singleLock ? 229 : 557);
@@ -137,7 +139,7 @@ try {
       }
       if (led) {
         assert.equal(current.layout, 'dual');
-        assert.ok(current.left.x + current.left.width < timer.x && timer.x + timer.width < current.right.x);
+        assert.equal(current.left.x + current.left.width, current.right.x, 'LED gameplay meets at the center seam');
         assert.ok(current.left.y + current.left.height <= 576 && current.right.y + current.right.height <= 576);
       }
       layouts.push({ output, mode, source, lock, ...current });
@@ -145,6 +147,25 @@ try {
     checks.push(`${output}: source-aware timer and lock geometry across modes and both sides; chroma remains fixed`);
     await evaluate(`qa.live('NM','rendered','none')`); await settle(); await screenshot(`${output}-39`, led);
     await evaluate(`qa.live('NM','rendered','left')`); await settle(); await screenshot(`${output}-locked`, led);
+    const ledHeader = async () => evaluate(`['.competitor.left','.competitor.right','#left-wins','#right-wins','.match-info','.health.left','.health.right','.damage.left','.damage.right'].map(selector=>{const e=document.querySelector(selector),r=e.getBoundingClientRect(),s=getComputedStyle(e);return {selector,x:r.x,y:r.y,width:r.width,height:r.height,background:s.backgroundColor,font:s.fontFamily,border:s.border,transform:s.transform};})`);
+    const header = led ? await ledHeader() : null;
+    if (led) {
+      assert.deepEqual(header.slice(0,5).map(({x,y,width,height})=>({x,y,width,height})), [
+        {x:0,y:0,width:824,height:75},{x:1096,y:0,width:824,height:75},
+        {x:824,y:0,width:75,height:75},{x:1021,y:0,width:75,height:75},{x:899,y:0,width:122,height:75}]);
+      assert.equal(await evaluate(`document.getElementById('mode').textContent`),'NO MOVE');
+      assert.equal(await evaluate(`document.getElementById('multiplier').textContent`),'×1.0');
+      await evaluate(`qa.set('presenterSeries',{...qa.initial.presenterSeries,left:{...qa.initial.presenterSeries.left,name:'とても長いプレイヤー名の表示確認',handle:'long_player_handle_for_layout'},right:{...qa.initial.presenterSeries.right,name:'A VERY LONG PLAYER NAME FOR LAYOUT',handle:''}})`);
+      await settle();
+      const names = await evaluate(`['left','right'].map(side=>({name:qa.rect(side+'-name'),handle:qa.rect(side+'-handle')}))`);
+      for (const [i, side] of names.entries()) {
+        const start = i ? 1120 : 418, end = i ? 1502 : 800;
+        assert.ok(side.name.x >= start && side.name.x + side.name.width <= end, 'Long names stay between HP and wins');
+        if (side.handle.width) assert.ok(side.handle.x >= start && side.handle.x + side.handle.width <= end, 'Handles stay in their identity panel');
+      }
+      await screenshot('led-long-names',true);
+      await evaluate(`qa.set('presenterSeries',qa.initial.presenterSeries)`); await settle();
+    }
     if (!led) {
       assert.equal(await evaluate(`document.querySelector('.presenter-sponsor').naturalWidth`),575,'Sponsor must load as SVG');
       assert.equal(await evaluate(`document.getElementById('match-label').textContent`),'GRAND FINALS');
@@ -161,6 +182,12 @@ try {
     await settle();
     const preview = await evaluate(`({rect:qa.rect('preview-area'),panorama:qa.rect('preview-panorama'),hidden:document.getElementById('preview-area').hidden,timerHidden:document.getElementById('timer').hidden})`);
     ratio(preview.rect); ratio(preview.panorama); assert.equal(preview.rect.x + preview.rect.width / 2, 960); assert.equal(preview.hidden, false); assert.equal(preview.timerHidden, true);
+    if (led) {
+      assert.equal(preview.rect.y,75,'Round preview starts directly below the header');
+      assert.equal(preview.rect.height,501,'Round preview uses the full remaining LED height');
+      assert.equal(preview.rect.y+preview.rect.height,576,'Round preview reaches the bottom of the LED');
+      assert.deepEqual(await ledHeader(),header,'Designer header persists through round preview');
+    }
     await screenshot(`${output}-preview`, led);
     checks.push(`${output}: centered 16:9 preview`);
 
@@ -184,6 +211,10 @@ try {
     assert.deepEqual(await evaluate(`({liveHidden:document.getElementById('live-area').hidden,resultsVisibility:document.getElementById('results-area').style.visibility,transitionHidden:document.getElementById('transition').hidden,stage:document.body.dataset.scoring})`),
       {liveHidden:true,resultsVisibility:'visible',transitionHidden:true,stage:'entry'});
     checks.push(`${output}: final gameplay cuts directly to results and scoring without an interstitial`);
+    if (led) {
+      assert.deepEqual(await evaluate(`qa.rect('results-map')`),{x:460,y:104,width:1000,height:460});
+      assert.deepEqual(await ledHeader(),header,'Designer header persists through scoring');
+    }
     const tokens = [];
     for (const [name, offset] of [['count', 1585], ['anticipate', 3160], ['collision', 3360], ['multiplier', 4260], ['flight', 4960], ['multiplier-faded', 5160], ['impact-before', 5309], ['impact', 5310], ['impact-after', 5410], ['settled', 7310]]) {
       const now = scoring.revealAtMs + offset;
@@ -204,18 +235,36 @@ try {
     // The production client deliberately never rewinds its synchronized clock.
     // Sample the red threshold after scoring, without rewinding time.
     await evaluate(`qa.live('NM','rendered','none');qa.now=${epoch + 24000}`); await settle();
-    assert.equal(await evaluate(`document.getElementById('timer-value').textContent`), led ? '15' : '00:15');
+    assert.equal(await evaluate(`document.getElementById('timer-value').textContent`), '00:15');
     assert.equal(await evaluate(`document.getElementById('timer').classList.contains('critical')`), true);
     assert.equal(await evaluate(`getComputedStyle(document.getElementById('timer-value')).color`), 'rgb(255, 48, 48)');
-    if(!led) {
+    {
       assert.equal(await evaluate(`getComputedStyle(document.querySelector('.timer-progress')).stroke`),'rgb(255, 48, 48)');
       assert.equal(await evaluate(`Number(document.getElementById('timer').style.getPropertyValue('--timer-offset'))`),-75,'Clockwise elapsed perimeter follows the deadline');
     }
-    if (led) {
-      const numeral = await evaluate(`qa.rect('timer-value')`);
-      assert.ok(numeral.x >= 816 && numeral.x + numeral.width <= 1104, 'final countdown stays between LED views');
-    }
     await screenshot(`${output}-15`, led);
+    if (led) {
+      await evaluate(`qa.set('presenterDuel',{...nodecg.Replicant('presenterDuel').value,paused:true})`); await settle();
+      assert.equal(await evaluate(`document.getElementById('timer').hidden`),true);
+      assert.equal(await evaluate(`document.getElementById('review-banner').hidden`),false);
+      assert.deepEqual(await ledHeader(),header,'Header persists during review');
+      await screenshot('led-review',true);
+      await evaluate(`qa.set('presenterDuel',{...qa.initial.presenterDuel,status:'Finished',winnerTeamId:qa.initial.presenterDuel.players[0].teamId});qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'finished'})`); await settle();
+      assert.equal(await evaluate(`document.body.dataset.scene`),'summary');
+      const withoutDamage = items => items.filter(item => !item.selector.startsWith('.damage'));
+      assert.deepEqual(withoutDamage(await ledHeader()),withoutDamage(header),'Header persists on the winner summary');
+      assert.equal(await evaluate(`document.getElementById('summary-area').hidden`),true);
+      assert.equal(await evaluate(`document.body.dataset.intermission`),'before-game');
+      await screenshot('led-summary',true);
+      await evaluate(`qa.set('presenterDuel',{...qa.initial.presenterDuel,aborted:true})`); await settle();
+      assert.equal(await evaluate(`document.body.dataset.scene`),'aborted');
+      assert.deepEqual(withoutDamage(await ledHeader()),withoutDamage(header),'Header persists on cancellation');
+      await evaluate(`qa.set('presenterTimeline',null)`); await settle();
+      assert.equal(await evaluate(`document.body.dataset.scene`),'waiting');
+      assert.deepEqual(await ledHeader(),header,'Header persists while waiting');
+      assert.deepEqual(await evaluate(`qa.rect('waiting-area')`),{x:16,y:104,width:1888,height:460});
+      checks.push('led: persistent designer header across preview, scoring, review, summary, cancellation and waiting; long names stay contained');
+    }
   }
   assert.deepEqual(errors, [], 'uncaught browser errors');
   await writeFile(path.join(artifacts, 'report.json'), JSON.stringify({ checks, errors, layouts }, null, 2));

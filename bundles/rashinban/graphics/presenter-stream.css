@@ -1,3 +1,4 @@
+@import url('presenter-timer.css');
 /* Stream-only designer layout. Intermission and the LED keep their own geometry. */
 .presenter-sponsor, #match-label { display: none; }
 body[data-output="stream"][data-intermission="none"] {
@@ -53,14 +54,8 @@ body[data-output="stream"][data-intermission="none"] {
   &[data-lock="left"] .player-window.right, &[data-lock="right"] .player-window.left { top: 335px; width: 1278px; height: 522px; }
   &[data-lock="left"] .player-window.left .lock, &[data-lock="right"] .player-window.right .lock, &[data-lock="both"] .lock { font-size: 128px; }
 
-  #timer { top: 557px; width: 195px; height: 78px; z-index: 6; --timer-font: 46px; --timer-dial-font: 46px; --timer-critical-font: 46px; --timer-long-font: 46px; --timer-color: #7b4de3; }
+  #timer { top: 557px; }
   &[data-lock="left"] #timer, &[data-lock="right"] #timer { top: 229px; }
-  #timer-value { font-size: 46px; color: #fff; }
-  #timer.critical { --timer-color: #ff3030; }
-  #timer.critical #timer-value { color: #ff3030; }
-  .timer-pill { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .timer-pill rect { fill: #111421; }
-  .timer-progress { fill: none; stroke: var(--timer-color); stroke-width: 8; stroke-dasharray: 100 100; stroke-dashoffset: var(--timer-offset, 0); opacity: var(--timer-opacity, 1); }
 
   #results-map { left: 24px; top: 335px; width: 1872px; height: 522px; border: 8px solid #ff005d; border-radius: 20px; overflow: hidden; }
   .result { top: 535px; width: 291px; height: 79px; display: flex; align-items: center; justify-content: space-between; padding: 0 36px; }

@@ -544,16 +544,14 @@ body[data-output="led"] #banpick .bp-selection-map { font-size: 40px; }
 }
 
 /* ==== Lower third ======================================================== */
-/* Bottom-left title (match "A vs B" or operator text) with an optional
-   subtitle strip underneath; slides up when shown. */
+/* Designer references use a 1920x1080 transparent canvas. */
 
 #lower-third {
   position: absolute;
-  left: 110px;
-  bottom: 90px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  inset: 0;
+  color: #fff;
+  font-family: var(--heading);
+  font-weight: 700;
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
@@ -564,26 +562,24 @@ body[data-output="led"] #banpick .bp-selection-map { font-size: 40px; }
   transform: none;
 }
 
-#lower-third .lt-title {
-  padding: 10px 28px;
-  font-family: var(--heading);
-  font-size: 56px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  background: var(--p1);
-  border-left: 10px solid #fff;
+#lower-third [data-lt-fit] { display: inline-block; white-space: nowrap; transform-origin: left center; }
+#lower-third .lt-scores { position: absolute; left: 74px; bottom: 74px; width: 698px; }
+#lower-third .lt-score-row { display: flex; height: 81px; background: var(--p1); }
+#lower-third .lt-score-row[data-side="right"] { background: var(--p2); }
+#lower-third .lt-score { flex: 0 0 81px; display: flex; align-items: center; justify-content: center; background: var(--p1-light); font-size: 64px; line-height: 1; }
+#lower-third [data-side="right"] .lt-score { background: var(--p2-light); }
+#lower-third .lt-player { display: flex; align-items: center; gap: 22px; min-width: 0; padding: 0 39px; flex: 1; }
+#lower-third .lt-name { min-width: 0; max-width: 300px; font-size: 72px; line-height: 64px; transform: translateY(-1px) scaleY(.89); }
+#lower-third .lt-handle { flex: 0 1 auto; min-width: 0; font-family: var(--body); font-size: 28px; line-height: 1; letter-spacing: -.5px; }
+#lower-third .lt-compass { position: absolute; left: 52px; bottom: 52px; width: 130px; height: 130px; }
+#lower-third .lt-current { position: absolute; left: 199px; bottom: 66px; width: 1000px; }
+#lower-third .lt-title { font-size: 70px; line-height: 64px; text-transform: uppercase; }
+#lower-third .lt-subtitle { font-size: 36px; line-height: 38px; text-transform: uppercase; }
+#lower-third .lt-coming-up { position: absolute; right: 54px; bottom: 43px; display: flex; align-items: center; gap: 60px; max-width: 660px; font-size: 48px; line-height: 48px; }
+#lower-third .lt-coming-label { flex: none; white-space: nowrap; }
+#lower-third .lt-next { min-width: 0; text-transform: uppercase; }
+/* Free text uses the same compass and title/subtitle layout as match mode. */
+#lower-third [hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  #lower-third { transition: none; }
 }
-
-#lower-third .lt-subtitle {
-  align-self: flex-start;
-  padding: 6px 20px;
-  font-family: var(--heading);
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: #151b26ee;
-}
-
-#lower-third .lt-subtitle:empty { display: none; }

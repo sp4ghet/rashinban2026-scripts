@@ -17,7 +17,7 @@ affects the LED layout.
 | Page | Output | Shows |
 | --- | --- | --- |
 | `presenter.html?role=program` | stream | Duels presenter (unchanged, see [presenter/obs.md](presenter/obs.md)) |
-| `info-stream.html` | stream | Player cards, lower third, caster title bar / nameplates / sponsor banner, Ban & Pick, Interval, Bracket |
+| `info-stream.html` | stream | Fullscreen player camera, player cards, lower third, caster title bar / nameplates / sponsor banner, Ban & Pick, Interval, Bracket |
 | `presenter-led.html` | LED | Duels presenter in the LED layout (top 1920x576 band, black below) |
 | `info-led.html` | LED | Both player cards + Ban & Pick, always on |
 | `bracket-led.html` | LED | Finals bracket, always on; embedded KV video with translucent red/blue tint |
@@ -52,8 +52,9 @@ accept up to 120 characters. Invalid patches are rejected and nothing changes.
 
 | Output | Layer | Controls |
 | --- | --- | --- |
+| stream | Player cameras | Player Camera 1 / Player Camera 2; relay name |
 | stream | Player cards | visible; page `profile` / `stats` / `compact`; player; position |
-| stream | Lower third | visible; mode `match` (current match) / `text`; title; subtitle |
+| stream | Lower third | visible; mode `match` / `scores` / `text`; Coming up (match mode); title/subtitle (text mode) |
 | stream | Casters | title bar + sponsor banner; left/right/center visibility and name dropdowns |
 | stream | Ban & Pick | visible |
 | stream | Interval | visible; minutes, Start, Pause/Resume, Clear, live countdown |
@@ -71,6 +72,87 @@ Use **Stream → Interval** or **Stream → Bracket**, inspect Preview, then pre
 Interval and bracket embed the muted, looping `assets/videos/KV/RASHINBAN2026_loop_001.mp4`. Hidden scenes pause the video. NodeCG serves the existing local file at `/rashinban/media/background/kv.mp4`; restart after building to register this route. Worktrees inherit the shared installation's file when no local copy exists. No separate OBS video source is needed for these scenes.
 
 `bracket-led.html` keeps its top 1920x576 layout and transparency below the band, cropping the video to fill that band. Stream uses the original 1920x1080 designer layout in both `info-stream.html` and standalone `brackets-finals.html`. Bracket backgrounds retain the 50% black scrim and 10% red/blue bands; match boxes, text and connectors stay fully opaque. Choose live start.gg or recorded sample data in **Shared → Bracket**.
+
+### Lower thirds
+
+In **Stream → Lower third**, select the mode, turn **Visible** on, inspect
+Preview, then **TAKE**. Visibility, mode and **Coming up** are staged together;
+**Revert preview** restores all three from Program.
+
+- **Between games · Scores**: the designer's two 698×81 rows at the bottom
+  left. P1/current-match left is red, P2/right is blue. Names, handles and
+  series wins update live from **Shared → Current Match**. Empty handles disappear.
+- **Between matches · Matchup**: the supplied compass SVG, current match
+  label above the matchup, with no scores. **Coming up** independently shows
+  the upcoming matchup at the bottom right, using the **Next Match** selection.
+  It is hidden by default and only appears in this mode.
+- **Free text** uses the same compass, typography and positioning as Between
+  matches, with the operator's title and subtitle in place of the match data.
+
+Both designer layouts are transparent overlays for `info-stream.html`, using
+Kaneda Gothic from the existing Adobe Fonts kit. Long labels and names compress
+horizontally to fit. The supplied `Vector.svg` is stored unchanged as
+`graphics/assets/logos/lower-third-compass.svg`. Match content is live shared
+data; TAKE stages the layout controls, not a snapshot of the players or scores.
+Restart NodeCG after building so the extension accepts the new score mode and
+Coming up field, then refresh the switcher and OBS browser source.
+
+Visual and control validation (requires the Adobe font kit to load):
+`node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validate-player-cards.mjs --lower-thirds-only --adobe-fonts`.
+Screenshots are written to `artifacts/lower-thirds/`; the check covers both
+designs, coming-up visibility, score updates, long names, missing data, and
+the real switcher's Preview/TAKE/Revert flow. OBS compositing still needs a
+production check.
+
+### Fullscreen player cameras
+
+In **Stream > Player cameras**, select **Player Camera 1** or **Player Camera 2**,
+check the Preview placeholder and overlay layout, then press **TAKE**. Each
+camera fills 1920x1080 with a centered crop. Selecting a camera deselects the other in Preview;
+clicking the selected camera again hides it. **Revert preview** restores
+Program's camera and relay name. There is no side-by-side mode here.
+
+Start the existing [capture relay](presenter/video-inputs.md#share-inputs-through-the-webrtc-relay)
+and assign **Left player camera** for Camera 1 and **Right player camera**
+for Camera 2. Keep its capture page open. The switcher's **Relay** field
+must match that page's room (default `main`; 1-64 letters, digits, underscores
+or hyphens). Relay changes are also staged until TAKE.
+
+The cameras are the bottom layer of `info-stream.html`: cards, lower thirds,
+caster graphics, Ban & Pick, Interval and Bracket all remain above them.
+Both dashboard monitors show a labeled **Player Camera 1** or **Player Camera 2**
+placeholder. They use `cameraMode=placeholder` and never subscribe to the
+camera relay, avoiding the extra encoding, network and decoding work of two
+more receivers. Placeholders show the selected layout, not camera availability;
+check the actual output or capture page to verify the camera feed.
+
+The actual `info-stream.html` graphic receives live video by default. Both
+cameras stay connected and play silently in the background while it is open.
+Camera toggles, TAKE and Revert only change visibility, so a ready
+feed is revealed without a fresh connection. Hiding both cameras keeps them
+warm; changing the relay or unloading the page releases the old feeds.
+Keep the OBS browser source loaded to retain this preloading.
+Cameras only receive relay video; they do not open devices or take the
+presenter program/audio lease.
+Missing feeds show a neutral placeholder and reconnect when available.
+Both cameras default to hidden in existing saved broadcasts.
+
+After building, restart NodeCG to load the extended broadcast schema and
+refresh the Stream panel and info-stream browser source. The presenter
+camera layouts and LED sources keep their existing behavior.
+
+For a local browser check with synthetic cameras:
+
+```powershell
+node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/validate-info-cameras.mjs
+```
+
+The check verifies that both switcher iframes stay free of camera relay
+subscriptions while showing full-frame placeholders through TAKE/Revert and
+relay changes. It also checks live output negotiation, preloading, overlay
+ordering and publisher recovery. Evidence is in
+`artifacts/presenter-validation/info-cameras/`.
+Physical camera/OBS acceptance remains an event-machine check.
 
 ### Caster nameplates
 

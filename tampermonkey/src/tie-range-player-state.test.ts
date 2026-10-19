@@ -506,6 +506,76 @@ test('the completed live manual duel keeps settled HP instead of forced native l
 
 const BLUE_LOCK = '2026-09-10T12:23:20.552+00:00';
 
+test('automatically uses Pinpointing Duels only above 50,000 starting HP in Moving mode', () => {
+  const moving = { forbidMoving: false, forbidZooming: false, forbidRotating: false };
+  const cases = [
+    { name: 'ordinary Moving duel', hp: 6000, movement: moving, points: false },
+    { name: 'below threshold', hp: 49999, movement: moving, points: false },
+    { name: 'exact threshold', hp: 50000, movement: moving, points: false },
+    { name: 'above threshold', hp: 50001, movement: moving, points: true },
+    { name: 'high HP Moving', hp: 1000000, movement: moving, points: true },
+    { name: 'No Move', hp: 1000000, movement: { ...moving, forbidMoving: true }, points: false },
+    { name: 'NMPZ', hp: 1000000, movement: { forbidMoving: true, forbidZooming: true, forbidRotating: true }, points: false },
+    { name: 'zoom restricted', hp: 1000000, movement: { ...moving, forbidZooming: true }, points: false },
+    { name: 'pan restricted', hp: 1000000, movement: { ...moving, forbidRotating: true }, points: false },
+    { name: 'missing movement', hp: 1000000, movement: undefined, points: false },
+    { name: 'null movement', hp: 1000000, movement: null, points: false },
+    { name: 'incomplete movement', hp: 1000000, movement: { forbidMoving: false }, points: false },
+    { name: 'malformed movement', hp: 1000000, movement: { ...moving, forbidMoving: 'false' }, points: false },
+  ];
+  for (const { name, hp, movement, points } of cases) {
+    const accepted = acceptPlayerSnapshot(null, snapshot(value => {
+      value.initialHealth = hp;
+      value.options.initialHealth = hp;
+      value.options.movementOptions = movement;
+      // Remaining health must not determine the ruleset.
+      value.teams.forEach((team: any) => { team.health = 1000000; });
+    }), { mode: 'full', pinpointing: false });
+    assert.equal(accepted.accepted, true, name);
+    assert.equal(accepted.context?.pinpointing, points, name);
+    if (points) {
+      assert.equal(accepted.output, null, name);
+      assert.deepEqual(accepted.pinpointing?.totals, [0, 3], name);
+    } else {
+      assert.equal(accepted.pinpointing, null, name);
+      assert.ok(accepted.output, name);
+    }
+  }
+});
+
+test('auto-detection uses options starting HP even after remaining health falls below the threshold', () => {
+  const accepted = acceptPlayerSnapshot(null, snapshot(value => {
+    delete value.initialHealth;
+    value.options.initialHealth = 1000000;
+    value.teams.forEach((team: any) => { team.health = 100; });
+  }), { mode: 'off', pinpointing: false });
+  assert.equal(accepted.accepted, true);
+  assert.equal(accepted.context?.pinpointing, true);
+  assert.equal(accepted.output, null);
+  assert.deepEqual(accepted.pinpointing?.totals, [2, 3]);
+});
+
+test('auto-detection stays captured through reloads and is evaluated again for a new duel', async () => {
+  const highHp = snapshot(value => { value.initialHealth = value.options.initialHealth = 1000000; });
+  const first = acceptPlayerSnapshot(null, highHp, { mode: 'off', pinpointing: false });
+  assert.equal(first.context?.pinpointing, true);
+  const storage = new MemoryStorage();
+  await savePlayerContext(storage, first.context!);
+  const restored = await loadPlayerContext(storage, 'player-rest-full');
+  assert.equal(restored.context?.pinpointing, true);
+  const later = acceptPlayerSnapshot(restored.context, snapshot(value => {
+    value.initialHealth = value.options.initialHealth = 1000000;
+    value.version = 50;
+    delete value.options.movementOptions;
+  }), { mode: 'off', pinpointing: false });
+  assert.equal(later.accepted, true);
+  assert.deepEqual(later.pinpointing?.totals, [2, 3]);
+  const next = acceptPlayerSnapshot(later.context, snapshot(value => { value.gameId = 'next-duel'; }), { mode: 'off', pinpointing: false });
+  assert.equal(next.accepted, true);
+  assert.equal(next.context?.pinpointing, false);
+  assert.equal(next.pinpointing, null);
+});
+
 function withGuesses(value: any): void {
   // Blue locks in before the round-1 deadline; red's only guess is the auto-submitted timeout guess.
   value.teams[0].players[0].guesses = [{ roundNumber: 1, created: BLUE_LOCK, score: 4240 }];

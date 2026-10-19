@@ -19,7 +19,7 @@ export function timerPresentation(remainingMs: number | null, round?: Round, sty
 export function paintTimer(root: HTMLElement, remainingMs: number | null, round?: Round): void {
   const timer = root.querySelector<HTMLElement>('#timer')!;
   const value = root.querySelector<HTMLElement>('#timer-value')!;
-  const face = timerPresentation(remainingMs, round, root.dataset.output === 'stream' ? 'pill' : 'radial');
+  const face = timerPresentation(remainingMs, round, 'pill');
   timer.hidden = remainingMs === null;
   timer.classList.toggle('critical', face.critical);
   timer.classList.toggle('long', face.long);

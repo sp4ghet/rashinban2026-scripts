@@ -174,7 +174,7 @@ sender's `getStats()` (`frameWidth`, `frameHeight`, `framesPerSecond`,
 video size. OBS recording/streaming bitrate does not configure these browser
 WebRTC encoders. Configure unused input slots as **No input** to avoid
 capturing and encoding them. Four inputs shared with stream and LED can require
-six simultaneous encoders: four for stream and two gameplay feeds for LED.
+eight simultaneous encoders: four feeds for each output.
 
 ### Player cameras through the same relay
 
@@ -199,6 +199,19 @@ with a centered crop, and remain silent. They stay live during gameplay freezes,
 results, waiting scenes, and Rendered/Chroma modes. For cameras with rendered
 gameplay, leave both gameplay inputs unassigned and select Rendered in the
 dashboard; the camera subscription does not depend on Video input mode.
+
+The LED presenter receives the same cameras automatically. With
+`?videoRelay=main`, it uses the existing relay connection for all four feeds;
+without `videoRelay`, it subscribes only to cameras from room `main` and
+keeps its local gameplay capture configuration. A custom `videoRelay` room
+also supplies the LED cameras. No additional camera assignments are needed.
+
+LED before/after-game scenes use equal 960 × 540 camera views behind the
+75px header, with the stream's red center seam and compass. Both scenes keep
+names in the header and omit corner labels. Cameras are hidden during live
+play, preview and scoring, while staying connected for the next scene.
+LED cameras remain silent and independent of the stream's program lease;
+an expired clock or a preview URL disables their subscriptions.
 
 Program ownership loss or an expired server clock releases camera subscriptions.
 Stopping the capture owner clears both camera videos; restarting it reconnects

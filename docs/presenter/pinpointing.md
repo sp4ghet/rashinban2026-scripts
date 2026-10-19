@@ -49,10 +49,13 @@ calculation unavailable" warning until a complete snapshot arrives.
 
 ## Player userscript
 
-The [player userscript](player-tie-range.md) carries the same rules. Choose
-**RASHINBAN: Player settings** from the Tampermonkey menu (or the HUD button)
-and tick **Pinpointing Duels**; set tie range to match the host as well. Both
-are captured when the duel begins and changes apply to the next duel.
+The [player userscript](player-tie-range.md) carries the same rules. It
+automatically enables Pinpointing Duels for **Moving** games with starting HP
+**above 50,000**. Moving requires moving, panning, and zooming to be allowed.
+For other settings, choose **RASHINBAN: Player settings** from the Tampermonkey
+menu (or the HUD button) and tick **Force Pinpointing Duels**. Set tie range to
+match the host as well. Both rules are captured when the duel begins and
+preserved across reloads; changes apply to the next duel.
 
 The HUD shows `You 3 / 7` and `Opponent 2 / 7`, each above its own row of
 seven pips filled in the side's colour, with a MATCH POINT badge,

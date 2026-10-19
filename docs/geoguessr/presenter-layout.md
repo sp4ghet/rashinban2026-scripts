@@ -40,20 +40,48 @@ non-live scenes hide it.
 
 ## LED output
 
-Only the top 1920 × 576 is shown. Names, HP and match status remain in the
-top band. All live modes, including rendered NMPZ, use two equal views:
+Only the top 1920 × 576 is shown. The designer's 75px header remains in
+every phase: red left player, blue right player, outer HP bars, series wins
+beside the central white game-mode panel. HP retains its rounded, skewed
+component and fill direction. Round/game counters remain bound in the DOM
+but are hidden in this header. Damage badges sit at the outer edges at y=133.
+
+All live modes, including rendered NMPZ, use two equal edge-to-edge views:
 
 | Frame | Left, top | Width × height |
 | --- | --- | --- |
-| Left player, including locked map | 16, 109 | 800 × 450 |
-| Right player, including locked map | 1104, 109 | 800 × 450 |
-| Timer | 848, 222 | 224 × 224 |
-| Round preview | 560, 109 | 800 × 450 |
+| Left player, including locked map | 0, 75 | 960 × 501 |
+| Right player, including locked map | 960, 75 | 960 × 501 |
+| Timer | 862.5, 286.5 | 195 × 78 |
+| Round preview | 514.667, 75 | 890.667 × 501 |
+| Results map | 460, 104 | 1000 × 460 |
 
-Locking replaces the player's view with a map inside the same frame. The
-timer stays in the center gap. Both NMPZ panoramas use the round's fixed
-spawn camera, ignoring per-player POV telemetry. The preview is centered
-in the available stage below the top band.
+Locking replaces the player's view with a map inside the same frame. Video
+fills each viewport with a centered crop. External chroma sources need to
+be aligned to these bounds in OBS. Both NMPZ panoramas use the round's fixed
+spawn camera, ignoring per-player POV telemetry.
+
+The LED reuses the stream's 195 × 78 pill timer, centered over the gameplay
+seam. Both outputs share `presenter-timer.css` and deadline-derived `mm:ss`
+formatting, clockwise progress, and the red final fifteen seconds. Pauses
+and non-live scenes hide the timer. The retained gameplay stays in this
+layout until results reveal. Round preview fills the entire 501px height
+below the header, centered at 16:9. Scoring keeps its existing main-section
+geometry beneath the new header.
+
+Before-game and after-game views show the relayed player cameras in an equal
+50/50 split. Each camera is 960 × 540 at y=36, retaining 16:9 and ending at
+y=576; the persistent 75px header covers the upper 39px. The seam reuses the
+stream's 10px red divider and centered compass. Player identities remain in
+the header, with no names in the lower corners, winner-size changes, or damage
+badges over the cameras. The same video elements remain connected through
+phase changes, and cameras are hidden during gameplay, preview and scoring.
+
+`?videoRelay=main` receives gameplay and cameras over one connection. A plain
+LED URL receives only the two cameras from relay room `main`, while keeping
+its existing local gameplay inputs. LED cameras are silent, do not take the
+stream program lease, and remain inactive in preview URLs. Assign cameras
+once on the capture page, as described in [video inputs](../presenter/video-inputs.md#player-cameras-through-the-same-relay).
 
 The game number is derived from the manually maintained series wins:
 left wins + right wins + 1. Keep wins at the completed-game total while

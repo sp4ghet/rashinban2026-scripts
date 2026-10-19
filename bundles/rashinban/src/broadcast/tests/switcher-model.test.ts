@@ -118,7 +118,7 @@ test("cards expose manual modes and separate stream-only player and position sel
 test("monitorUrls opens the info page on the channel and a presenter that never takes program", () => {
   for (const channel of ["preview", "program"] as const) {
     const stream = monitorUrls("stream", channel);
-    assert.equal(stream.info, `/bundles/rashinban/graphics/info-stream.html?channel=${channel}`);
+    assert.equal(stream.info, `/bundles/rashinban/graphics/info-stream.html?channel=${channel}&cameraMode=placeholder`);
     assert.equal(stream.presenter, `/bundles/rashinban/graphics/presenter.html?role=preview&channel=${channel}`);
     const led = monitorUrls("led", channel);
     assert.equal(led.info, `/bundles/rashinban/graphics/info-led.html?channel=${channel}`);

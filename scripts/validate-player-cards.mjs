@@ -17,12 +17,14 @@ import { REPLICANTS, BROADCAST_MESSAGES, BANPICK_MESSAGES } from '../bundles/ras
 import { verifyBanpick } from './banpick-browser-checks.mjs';
 import { verifyCasters } from './casters-browser-checks.mjs';
 import { verifyLedPages } from './led-browser-checks.mjs';
+import { verifyLowerThirds } from './lower-thirds-browser-checks.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ledOnly = process.argv.includes('--led-only');
+const lowerThirdsOnly = process.argv.includes('--lower-thirds-only');
 const castersOnly = process.argv.includes('--casters-only');
 const cardsOnly = process.argv.includes('--cards-only');
-const artifacts = path.join(root, castersOnly ? 'artifacts/casters' : 'artifacts/player-cards');
+const artifacts = path.join(root, lowerThirdsOnly ? 'artifacts/lower-thirds' : castersOnly ? 'artifacts/casters' : 'artifacts/player-cards');
 const adobeFonts = process.argv.includes('--adobe-fonts');
 const screenshotDirectory = cardsOnly && !adobeFonts ? path.join(artifacts, 'fallback-fonts') : artifacts;
 await mkdir(artifacts, { recursive: true });
@@ -94,7 +96,7 @@ const server = createServer(async (req, res) => {
       if (!adobeFonts) content = content.replace(/<link[^>]+https:\/\/use\.typekit\.net[^>]+>/g, '');
       content = content.replace('<head>', '<head><style>body { background: #111827 !important; }</style><script>' + preload() + '</script>');
     }
-    res.setHeader('Content-Type', { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.woff2': 'font/woff2', '.png': 'image/png' }[ext] || 'application/octet-stream');
+    res.setHeader('Content-Type', { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.woff2': 'font/woff2', '.png': 'image/png', '.svg': 'image/svg+xml' }[ext] || 'application/octet-stream');
     res.end(content);
   } catch (error) { res.statusCode = 500; res.end(JSON.stringify({ error: error.message })); }
 });
@@ -164,7 +166,11 @@ try {
   await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   socket.onmessage = event => { const message = JSON.parse(event.data); if (message.id) { const call = pending.get(message.id); if (call) { pending.delete(message.id); message.error ? call.reject(Error(message.error.message)) : call.resolve(message.result); } } else if (message.method === 'Runtime.exceptionThrown') errors.push(message.params); };
   await command('Runtime.enable'); await command('Page.enable');
-  if (ledOnly) {
+  if (lowerThirdsOnly) {
+    await verifyLowerThirds({ navigate, evaluate, until, screenshot, delay, command });
+    assert.deepEqual(errors, [], 'no browser exceptions');
+    console.log('Lower-third browser checks passed. Screenshots: ' + artifacts);
+  } else if (ledOnly) {
     await verifyLedPages({ navigate, evaluate, until, screenshot, delay, command });
     assert.deepEqual(errors, [], 'no browser exceptions');
     console.log('LED page checks passed. Screenshots: ' + artifacts);

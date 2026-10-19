@@ -638,6 +638,37 @@ test('captures Pinpointing Duels from the configured rules and keeps it for the 
   h.controller.dispose();
 });
 
+test('automatically activates points from a Moving party duel without a pending manual change', async () => {
+  const value = structuredClone(captured);
+  value.initialHealth = value.options.initialHealth = 1000000;
+  value.status = 'Ongoing';
+  const fetch: PlayerFetch = activeFetch(async url => url.endsWith('/api/v4/parties/v2/active')
+    ? response({ partyId: 'party-1', lobbyId: value.gameId, gameState: 'Ongoing', gameType: 'Duels' })
+    : response(value));
+  const h = harness(fetch, { path: '/party/lobby', mode: 'off', pinpointing: false });
+  h.controller.start();
+  await flush();
+  const view = h.views.at(-1)!;
+  assert.equal(view.status, 'ready');
+  assert.equal(view.configuredPinpointing, false);
+  assert.equal(view.capturedPinpointing, true);
+  assert.equal(view.output, null);
+  assert.deepEqual(view.pinpointing?.totals, [2, 3]);
+  assert.equal(view.appliesToNextDuel, false);
+  h.controller.dispose();
+
+  const restored = harness(fetch, { mode: 'off', pinpointing: false, storage: h.storage });
+  restored.controller.start();
+  await flush();
+  assert.equal(restored.views.at(-1)?.capturedPinpointing, true);
+  assert.equal(restored.views.at(-1)?.appliesToNextDuel, false);
+  restored.setMode('half');
+  restored.controller.refresh();
+  await flush();
+  assert.equal(restored.views.at(-1)?.appliesToNextDuel, true);
+  restored.controller.dispose();
+});
+
 test('both rules off reports off while Pinpointing Duels alone is ready', async () => {
   const off = harness(activeFetch(async () => response(game())), { mode: 'off', pinpointing: false });
   off.controller.start();

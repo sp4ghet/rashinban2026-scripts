@@ -40,6 +40,14 @@ const BRACKET: Row = {
 };
 
 const STREAM_ROWS: readonly Row[] = [
+  {
+    id: "playerCameras", title: "Player cameras",
+    controls: [
+      { kind: "toggle", path: ["playerCameras", "left"], label: "Player Camera 1" },
+      { kind: "toggle", path: ["playerCameras", "right"], label: "Player Camera 2" },
+      { kind: "text", path: ["playerCameras", "relay"], label: "Relay" },
+    ],
+  },
   { ...CARDS, controls: [CARDS.controls[0]!,
     { kind: "select", path: ["playerCards", "player"], label: "Player", options: [["left", "P1 TBD"], ["right", "P2 TBD"]] },
     { kind: "select", path: ["playerCards", "position"], label: "Position", options: [["left", "Left"], ["right", "Right"]] },
@@ -54,10 +62,12 @@ const STREAM_ROWS: readonly Row[] = [
         path: ["lowerThird", "mode"],
         label: "Mode",
         options: [
-          ["match", "Current match"],
+          ["match", "Between matches · Matchup"],
+          ["scores", "Between games · Scores"],
           ["text", "Free text"],
         ],
       },
+      { kind: "toggle", path: ["lowerThird", "comingUp"], label: "Coming up" },
       { kind: "text", path: ["lowerThird", "title"], label: "Title" },
       { kind: "text", path: ["lowerThird", "subtitle"], label: "Subtitle" },
     ],
@@ -108,6 +118,11 @@ export function valueAt(obj: unknown, path: readonly string[]): unknown {
  */
 export function patchAt(path: readonly string[], value: unknown, layers: unknown): Record<string, unknown> {
   if (path.length === 0) throw new Error("patchAt: path must not be empty");
+  // Player cameras are alternate fullscreen views. Hiding one leaves both off.
+  if (path.length === 2 && path[0] === "playerCameras" && value === true) {
+    if (path[1] === "left") return { playerCameras: { left: true, right: false } };
+    if (path[1] === "right") return { playerCameras: { left: false, right: true } };
+  }
   // Fullscreen stream scenes replace each other in preview; TAKE remains explicit.
   if (path.length === 2 && path[1] === "visible" && value === true && valueAt(layers, ["interval"]) !== undefined) {
     if (path[0] === "interval") return { interval: { visible: true }, bracket: { visible: false } };
@@ -136,7 +151,7 @@ export function patchAt(path: readonly string[], value: unknown, layers: unknown
 export function monitorUrls(output: BroadcastOutput, channel: "preview" | "program"): { info: string; presenter: string } {
   const base = "/bundles/rashinban/graphics";
   return {
-    info: `${base}/info-${output}.html?channel=${channel}`,
+    info: `${base}/info-${output}.html?channel=${channel}${output === "stream" ? "&cameraMode=placeholder" : ""}`,
     presenter:
       output === "led"
         ? `${base}/presenter-led.html?channel=${channel}`

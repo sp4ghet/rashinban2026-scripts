@@ -11,12 +11,18 @@ connection or presenter credential is needed.
 2. In Tampermonkey, create a new script, replace its contents with that file,
    and save. Enable it for `https://www.geoguessr.com/`.
 3. Open GeoGuessr and choose **RASHINBAN: Player settings** from the
-   Tampermonkey menu. Select the same **Full** or **Half** setting as the host,
-   and tick **Pinpointing Duels** when the host runs that ruleset (see
-   [pinpointing.md](pinpointing.md)). The defaults are **Off** and unticked.
+   Tampermonkey menu. Select the same **Full** or **Half** setting as the host.
+   Moving duels with starting HP **above 50,000** automatically use
+   **Pinpointing Duels** (see [pinpointing.md](pinpointing.md)). Tick
+   **Force Pinpointing Duels** to enable it for other settings too.
+   The defaults are tie range **Off** and the force checkbox unticked.
    The HUD also provides a settings button.
 4. Configure before the duel is created. The first valid attachment captures
    the mode for that game, including a game waiting for its first round.
+
+Automatic detection requires moving, panning, and zooming to be allowed.
+Exactly 50,000 HP does not trigger it. Detection uses the party's starting HP,
+so losing health never switches a duel back to HP scoring.
 
 Changing the preference affects the **next duel**. Reloading preserves the
 current game's captured mode and recalculates its HP from saved scores. If a

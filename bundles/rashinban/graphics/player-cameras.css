@@ -1,0 +1,49 @@
+/* The first info-stream layer sits beneath every stream overlay. */
+#layer-player-cameras[hidden] { display: none; }
+#layer-player-cameras .camera {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #111;
+}
+#layer-player-cameras .camera[hidden] { display: none; }
+#layer-player-cameras video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#layer-player-cameras .camera span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 24px sans-serif;
+  color: #aaa;
+}
+#layer-player-cameras .camera:not([data-state="ready"]) video { visibility: hidden; }
+#layer-player-cameras .camera[data-state="ready"] span { display: none; }
+
+/* Dashboard-only selection preview: no video element or relay subscription. */
+#layer-player-cameras .camera-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #1b2533, #0e131b);
+  color: #edf1f8;
+}
+#layer-player-cameras .camera-placeholder strong {
+  font: 700 84px var(--heading);
+  text-transform: uppercase;
+}
+#layer-player-cameras .camera-placeholder small {
+  font: 28px var(--body);
+  color: #9bacc5;
+}

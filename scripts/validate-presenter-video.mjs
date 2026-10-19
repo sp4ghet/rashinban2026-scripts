@@ -55,6 +55,7 @@ const ledHtml = (await readFile(path.join(root, 'bundles/rashinban/graphics/pres
 const routes = { '/presenter.js': ['bundles/rashinban/graphics/presenter.js', 'text/javascript'],
   '/presenter.css': ['bundles/rashinban/graphics/presenter.css', 'text/css'],
   '/presenter-led.css': ['bundles/rashinban/graphics/presenter-led.css', 'text/css'],
+  '/presenter-timer.css': ['bundles/rashinban/graphics/presenter-timer.css', 'text/css'],
   '/assets/presenter-kv-stream.png': ['bundles/rashinban/graphics/assets/presenter-kv-stream.png', 'image/png'],
   '/assets/presenter-kv-led.png': ['bundles/rashinban/graphics/assets/presenter-kv-led.png', 'image/png'] };
 const server = createServer(async (req, res) => {
@@ -322,12 +323,12 @@ try {
   assert.equal(await evaluate(`JSON.parse(localStorage.getItem('rashinban:presenter-video-inputs:v1')).right`), 'missing-device', 'LED setup does not overwrite stream assignments');
   await evaluate(`document.getElementById('video-close').click();qa.beforeLED=qa.hash('left')`);
   await until(`qa.hash('left')!==qa.beforeLED`, 'LED frames continue with setup closed');
-  assert.deepEqual(await evaluate('qa.bounds()'), [{x:16,y:109,width:800,height:450},{x:1104,y:109,width:800,height:450}]);
+  assert.deepEqual(await evaluate('qa.bounds()'), [{x:0,y:75,width:960,height:501},{x:960,y:75,width:960,height:501}]);
   await screenshot('led-equal');
   await evaluate(`qa.lock('left')`); await delay(450);
   assert.equal(await evaluate(`getComputedStyle(document.getElementById('capture-left')).display`), 'none');
   assert.equal(await evaluate(`getComputedStyle(document.getElementById('left-map')).display`), 'block');
-  assert.deepEqual(await evaluate('qa.bounds()'), [{x:16,y:109,width:800,height:450},{x:1104,y:109,width:800,height:450}]);
+  assert.deepEqual(await evaluate('qa.bounds()'), [{x:0,y:75,width:960,height:501},{x:960,y:75,width:960,height:501}]);
   await screenshot('led-left-locked');
   await evaluate(`qa.reset();qa.beforeLED=qa.hash('right')`);
   await until(`qa.hash('right')!==qa.beforeLED`, 'LED live feeds resume for an unlocked round');

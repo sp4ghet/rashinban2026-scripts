@@ -104,11 +104,11 @@ try {
   for (const output of ['stream', 'led']) {
     const led = output === 'led';
     await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/presenter${led ? '-led' : ''}.html?role=preview` });
-    for (let i=0;i<100;i++) { if(await evaluate(`document.getElementById('timer-value')?.textContent==='${led ? '39' : '00:39'}'`))break;await delay(100); }
+    for (let i=0;i<100;i++) { if(await evaluate(`document.getElementById('timer-value')?.textContent==='00:39'`))break;await delay(100); }
     const viewY=led ? 300 : 400, cameraY=led ? 800 : 900;
     await evaluate(`qa.live('NM','chroma','none');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'transparent'})`);
     await settle();
-    const livePixels = await pixels([[100,viewY],[1800,viewY],[960,180],[300,cameraY],[1600,cameraY]]);
+    const livePixels = await pixels([[100,viewY],[1800,viewY],[960,led?20:180],[300,cameraY],[1600,cameraY]]);
     transparent(livePixels[0]); transparent(livePixels[1]); opaque(livePixels[2]);
     if(!led){transparent(livePixels[3]);transparent(livePixels[4]);}
     await screenshot(output+'-transparent-live',led);
@@ -118,21 +118,22 @@ try {
     // creates a translucent seam that exposes OBS footage outside the window.
     const edgePoints=await evaluate(`['left-window','right-window'].flatMap(id=>{
       const e=document.getElementById(id),r=e.getBoundingClientRect(),radius=parseFloat(getComputedStyle(e).borderTopLeftRadius),points=[];
+      if (!radius) return points;
       for(const [cx,cy,start] of [[r.x+radius,r.y+radius,180],[r.right-radius,r.y+radius,270],[r.right-radius,r.bottom-radius,0],[r.x+radius,r.bottom-radius,90]])
         for(let a=start;a<=start+90;a+=5)points.push([Math.floor(cx+(radius-.25)*Math.cos(a*Math.PI/180)),Math.floor(cy+(radius-.25)*Math.sin(a*Math.PI/180))]);
       return points;
     })`);
     const edgePixels=await pixels(edgePoints);
     let timerPixels=[];
-    if(!led){
+    {
       await evaluate(`qa.now=${epoch+33000}`);await settle();
       const timer=await evaluate(`qa.rect('timer')`);
       timerPixels=await pixels([[Math.floor(timer.x+timer.width-2),timer.y+39],[Math.floor(timer.x+timer.width*.7),timer.y+2],[Math.floor(timer.x+timer.width/2),timer.y+timer.height-2]]);
-      await screenshot('stream-timer-six-seconds');
+      await screenshot(output+'-timer-six-seconds',led);
       await evaluate(`qa.now=${epoch}`);await settle();
     }
     assert.deepEqual({translucentFramePixels:edgePixels.filter(rgba=>rgba[3]!==255).length,timerBackground:timerPixels},
-      {translucentFramePixels:0,timerBackground:led?[]:Array(3).fill([17,20,33,255])},
+      {translucentFramePixels:0,timerBackground:Array(3).fill([17,20,33,255])},
       'Frame edges must remain opaque; the receded timer outline must reveal the full-size pill background');
     checks.push(output+': rounded frame edges stay opaque and the timer keeps its complete silhouette');
 
@@ -185,9 +186,43 @@ try {
     await evaluate(`qa.set('presenterDuel',${JSON.stringify(finished)});qa.set('presenterTimeline',${JSON.stringify(finalTiming)});qa.set('presenterIntermission',${JSON.stringify(between)});`);
     await settle();
     if (led) {
-      assert.equal(await evaluate(`[...document.querySelectorAll('.camera')].every(e=>getComputedStyle(e).display==='none')`),true);
-      assert.equal(await evaluate(`document.getElementById('summary-area').hidden`),false);
-      checks.push('LED: final summary retains the existing layout without cameras');
+      assert.equal(await evaluate(`document.body.dataset.intermission`),'end-of-last-game');
+      assert.equal(await evaluate(`document.querySelectorAll('.camera').length`),2);
+      await evaluate(`qa.cameraNodes=[...document.querySelectorAll('.camera')].map((el,i)=>{
+        const canvas=document.createElement('canvas');canvas.width=1920;canvas.height=1080;
+        const ctx=canvas.getContext('2d');ctx.fillStyle=i?'#34212b':'#1b3049';ctx.fillRect(0,0,1920,1080);
+        ctx.strokeStyle=i?'#f05060':'#458af2';ctx.lineWidth=10;ctx.beginPath();ctx.arc(960,440,210,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='48px sans-serif';ctx.fillText(i?'RIGHT CAMERA':'LEFT CAMERA',960,760);
+        const video=el.querySelector('video');video.srcObject=canvas.captureStream(1);el.dataset.state='ready';return video;
+      });`);
+      const header = () => evaluate(`['.competitor.left','.competitor.right','.match-info','.health.left','.health.right','#left-wins','#right-wins'].map(s=>{const e=document.querySelector(s),r=e.getBoundingClientRect(),style=getComputedStyle(e);return {x:r.x,y:r.y,width:r.width,height:r.height,display:style.display};})`);
+      const expectedHeader = await header();
+      assert.equal(expectedHeader[0].y,0);assert.equal(expectedHeader[0].height,75);
+      assert.equal(expectedHeader[1].y,0);assert.equal(expectedHeader[1].height,75);
+      expectedHeader.forEach(r=>assert.notEqual(r.display,'none','Keep the complete LED header'));
+      for (const [view,winner] of [['before-game',null],['end-of-last-game',initial.presenterSeries.left.id],['end-of-last-game',initial.presenterSeries.right.id],['end-of-last-game',null]]) {
+        await evaluate(`qa.set('presenterIntermission',{...nodecg.Replicant('presenterIntermission').value,view:'${view}',lastGame:{...nodecg.Replicant('presenterIntermission').value.lastGame,winnerCompetitorId:${JSON.stringify(winner)},draw:${winner===null}}})`);
+        await settle();
+        const cameras=await evaluate(`[...document.querySelectorAll('.camera')].map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,display:getComputedStyle(e).display,fit:getComputedStyle(e.querySelector('video')).objectFit};})`);
+        assert.deepEqual(cameras,[{x:0,y:36,width:960,height:540,display:'block',fit:'cover'},{x:960,y:36,width:960,height:540,display:'block',fit:'cover'}]);
+        assert.deepEqual(await header(),expectedHeader,'No corner identities or winner-sized camera panels on LED');
+        assert.equal(await evaluate(`document.getElementById('summary-area').hidden`),true);
+        assert.equal(await evaluate(`document.querySelector('.pregame-symbol').getBoundingClientRect().y+document.querySelector('.pregame-symbol').getBoundingClientRect().height/2`),288);
+        const samples=await pixels([[957,100],[962,100],[970,5],[100,400],[1800,400],[100,700]]);
+        assert.deepEqual(samples.slice(0,3),[[255,48,48,255],[255,48,48,255],[255,255,255,255]]);
+        // Captured video passes through a color conversion; allow rounding in RGB.
+        for (const [index,expected] of [[3,[27,48,73]],[4,[52,33,43]]]) {
+          opaque(samples[index]);expected.forEach((channel,i)=>assert.ok(Math.abs(samples[index][i]-channel)<=3));
+        }
+        transparent(samples[5]);
+        await screenshot('led-'+view+'-'+(winner??'draw'),true);
+      }
+      assert.equal(await evaluate(`qa.cameraNodes.every((v,i)=>v===document.querySelectorAll('.camera video')[i]&&v.srcObject.active&&v.muted)`),true);
+      // A lobby with no duel retains the selected camera view and header names.
+      await evaluate(`qa.set('presenterDuel',null);qa.set('presenterIntermission',{...nodecg.Replicant('presenterIntermission').value,view:'before-game'})`);await settle();
+      assert.equal(await evaluate(`document.body.dataset.intermission`),'before-game');
+      assert.equal(await evaluate(`document.getElementById('left-name').textContent`),initial.presenterSeries.left.name);
+      checks.push('LED: before/after-game cameras stay 50/50 behind the full header, with the stream seam and compass, no corner names, and persistent silent videos');
     } else {
       // A 1920x1080 chart makes centre cropping and aspect distortion visible.
       await evaluate(`qa.cameraNodes=[...document.querySelectorAll('.camera')].map((el,i)=>{
@@ -239,6 +274,10 @@ try {
       assert.equal(await evaluate(`document.body.dataset.intermission`),'none');
       assert.equal(await evaluate(`document.querySelector('.camera').getBoundingClientRect().width`),374);
       checks.push('stream: gameplay automatically restores the normal camera dock');
+    } else {
+      assert.equal(await evaluate(`document.body.dataset.intermission`),'none');
+      assert.equal(await evaluate(`[...document.querySelectorAll('.camera')].every(e=>getComputedStyle(e).display==='none')`),true);
+      checks.push('LED: gameplay hides both intermission cameras and restores the existing player views');
     }
     const keyed=await pixels([[100,viewY],[1800,viewY]]);
     keyed.forEach(rgba=>assert.deepEqual(rgba,[0,255,0,255]));

@@ -10,9 +10,17 @@ import { mountInterval } from "./layers/interval.ts";
 import { mountBracket } from "./layers/bracket.ts";
 import { mountPlayerCards } from "./layers/player-cards.ts";
 
+import { mountPlayerCameras } from "./layers/player-cameras.ts";
+
 const channel = channelFromSearch(location.search);
 // Not styled: lets a switcher monitor or DevTools tell preview from program.
 document.body.dataset.channel = channel;
+
+// Switcher monitors show the camera selection without adding relay receivers.
+const playerCameras = mountPlayerCameras(mustQuery(document, "#layer-player-cameras"), {
+  placeholder: new URLSearchParams(location.search).get("cameraMode") === "placeholder",
+});
+window.addEventListener("pagehide", () => playerCameras.dispose());
 
 const casters = mountCasters(mustQuery(document, "#layer-casters"));
 const banpick = mountBanpick(mustQuery(document, "#layer-banpick"));
@@ -22,6 +30,7 @@ const interval = mountInterval(mustQuery(document, "#layer-interval"), "stream")
 const bracket = mountBracket(mustQuery(document, "#layer-bracket"), "stream");
 
 bindLayers("stream", channel, (layers) => {
+  playerCameras.apply(layers.playerCameras);
   casters.apply(layers.casters);
   banpick.apply(layers.banpick);
   cards.apply(layers.playerCards);

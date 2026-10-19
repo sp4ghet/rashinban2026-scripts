@@ -230,7 +230,8 @@ export function createPlayerTieRangeController(
       capturedMode: context?.mode ?? null,
       configuredPinpointing: configuredPinpointing(),
       capturedPinpointing: context?.pinpointing ?? null,
-      appliesToNextDuel: context !== null && (context.mode !== configured || context.pinpointing !== configuredPinpointing()),
+      appliesToNextDuel: context !== null && (context.mode !== configured
+        || context.pinpointing !== (configuredPinpointing() || context.autoPinpointing === true)),
       localTeamId: localTeamId(),
       context,
       mapRounds,

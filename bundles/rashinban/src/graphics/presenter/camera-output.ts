@@ -26,11 +26,13 @@ export function createCameraOutput(root: HTMLElement, relay: CameraRelay) {
       },
       status(value) { host.dataset.state = value.state; },
     });
-    return { feed, input };
+    return { side, feed, input };
   });
   const unsubscribe = relay.onAvailable(feed => { slots.find(slot => slot.feed === feed)?.input.retryAvailable(); });
   return {
-    update(active: boolean) { for (const slot of slots) slot.input.select(slot.feed, active); },
+    update(active: boolean | Record<'left' | 'right', boolean>) {
+      for (const slot of slots) slot.input.select(slot.feed, typeof active === 'boolean' ? active : active[slot.side]);
+    },
     dispose() { unsubscribe(); slots.forEach(slot => slot.input.dispose()); },
   };
 }
