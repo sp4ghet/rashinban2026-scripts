@@ -35,6 +35,23 @@ test("patchAt throws on an empty path", () => {
   assert.throws(() => patchAt([], true, createInitialState().stream.preview), /path/);
 });
 
+test("the caster pair control stages both side cards without changing center or names", () => {
+  const row = controlRows("stream").find(row => row.id === "casters")!;
+  const toggle = row.controls.find(control => control.kind === "toggle" && control.path[1] === "slots")!;
+  let state = setPreview(createInitialState(), "stream", { casters: {
+    slots: [true, false], center: true, names: { left: "Stephen", right: "Kai", center: "SD" },
+  } });
+  const before = structuredClone(state);
+  state = setPreview(state, "stream", patchAt(toggle.path, false, state.stream.preview));
+  assert.deepEqual(state.stream.preview.casters.slots, [false, false]);
+  state = setPreview(state, "stream", patchAt(toggle.path, true, state.stream.preview));
+  assert.deepEqual(state.stream.preview.casters.slots, [true, true]);
+  assert.equal(state.stream.preview.casters.center, true);
+  assert.deepEqual(state.stream.preview.casters.names, before.stream.preview.casters.names);
+  assert.deepEqual(state.stream.program, before.stream.program);
+  assert.equal(rowDirty(row, state.stream.preview, before.stream.preview), true);
+});
+
 test("patchAt throws when an index segment does not point at an array", () => {
   assert.throws(() => patchAt(["casters", "titleBar", "0"], true, createInitialState().stream.preview), /array/);
   assert.throws(() => patchAt(["casters", "slots", "0"], true, {}), /array/);

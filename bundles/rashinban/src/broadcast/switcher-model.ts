@@ -76,12 +76,10 @@ const STREAM_ROWS: readonly Row[] = [
     id: "casters",
     title: "Casters",
     controls: [
-      { kind: "toggle", path: ["casters", "titleBar"], label: "Title bar + banner" },
-      { kind: "toggle", path: ["casters", "slots", "0"], label: "Left card" },
+      { kind: "toggle", path: ["casters", "slots"], label: "L/R Caster" },
       { kind: "select", path: ["casters", "names", "left"], label: "Left", options: [["", "— none —"]] },
-      { kind: "toggle", path: ["casters", "slots", "1"], label: "Right card" },
       { kind: "select", path: ["casters", "names", "right"], label: "Right", options: [["", "— none —"]] },
-      { kind: "toggle", path: ["casters", "center"], label: "Center card" },
+      { kind: "toggle", path: ["casters", "center"], label: "Center Card" },
       { kind: "select", path: ["casters", "names", "center"], label: "Center", options: [["", "— none —"]] },
     ],
   },
@@ -118,6 +116,9 @@ export function valueAt(obj: unknown, path: readonly string[]): unknown {
  */
 export function patchAt(path: readonly string[], value: unknown, layers: unknown): Record<string, unknown> {
   if (path.length === 0) throw new Error("patchAt: path must not be empty");
+  if (path.length === 2 && path[0] === "casters" && path[1] === "slots" && typeof value === "boolean") {
+    return { casters: { slots: [value, value] } };
+  }
   // Player cameras are alternate fullscreen views. Hiding one leaves both off.
   if (path.length === 2 && path[0] === "playerCameras" && value === true) {
     if (path[1] === "left") return { playerCameras: { left: true, right: false } };

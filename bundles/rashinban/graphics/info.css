@@ -267,16 +267,11 @@ body[data-output="led"] #cards {
 body[data-output="led"] #cards .pcard { height: 528px; }
 
 /* ==== Casters desk ======================================================= */
-/* Caster desk overlay: red title bar, two name cards over the camera feed,
-   red sponsor banner. Geometry follows the 2025 interval overlay
-   (assets/interval.css .topbar/.bottombar) and casters.png. The camera feed
-   is composited behind the (transparent) page by OBS. */
+/* Caster name cards over the camera feed, composited behind this transparent page by OBS. */
 
 #casters {
   --red: var(--p1-light);
   --red-dark: var(--p1);
-  --topbar-h: 77px;
-  --banner-h: 200px;
   --card-w: 390px;
   --card-top: 180px;
   --jp: var(--body);
@@ -284,48 +279,6 @@ body[data-output="led"] #cards .pcard { height: 528px; }
   inset: 0;
   color: var(--ink);
   font-family: var(--jp);
-}
-
-/* ---- Title bar ---------------------------------------------------- */
-
-#casters .topbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1920px;
-  height: var(--topbar-h);
-  background: var(--red);
-  z-index: 1;
-}
-
-/* Straddles the bar's bottom edge: centred on it, so the lower half of
-   the compass and wordmark hangs below the red onto the camera feed. */
-#casters .mark {
-  position: absolute;
-  top: var(--topbar-h);
-  left: 0;
-  width: 1920px;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 22px;
-  z-index: 3;
-}
-
-#casters .mark .compass {
-  width: 62px;
-  height: 62px;
-  flex: 0 0 auto;
-}
-
-#casters .mark .wordmark {
-  font-family: var(--heading);
-  font-size: 58px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  text-transform: uppercase;
 }
 
 /* ---- Caster cards -------------------------------------------------- */
@@ -345,9 +298,6 @@ body[data-output="led"] #cards .pcard { height: 528px; }
 #casters #caster-3 { left: 765px; top: 729px; }
 
 #casters .caster[hidden] { display: none; }
-#casters .topbar[hidden],
-#casters .mark[hidden],
-#casters .banner[hidden] { display: none; }
 
 #casters .caster .band { position: relative; background: #fff; }
 #casters .caster .band[hidden] { display: none; }
@@ -416,33 +366,6 @@ body[data-output="led"] #cards .pcard { height: 528px; }
 }
 
 #casters .caster .handle .band-content { background: #fff; }
-
-/* ---- Sponsor banner ------------------------------------------------ */
-
-#casters .banner {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 1920px;
-  height: var(--banner-h);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 120px;
-  background: var(--red);
-  z-index: 1;
-}
-
-/* Per-logo scaling, carried over from the 2025 assets/sponsors.css so the
-   logos read as the same optical size despite different artwork heights. */
-#casters .banner img {
-  height: 84px;
-  object-fit: contain;
-  flex: 0 0 auto;
-}
-
-#casters .banner .logo-red-tokyo { height: 118px; }
-#casters .banner .logo-geoguessr-record { height: 42px; }
 
 /* ==== Ban & Pick ========================================================= */
 /* Newest-first strips; stream uses a camera-safe corner, LED uses the space

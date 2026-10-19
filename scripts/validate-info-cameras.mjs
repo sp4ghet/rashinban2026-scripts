@@ -157,7 +157,17 @@ try {
   check('camera videos are silent', await program.eval("[...document.querySelectorAll('#layer-player-cameras video')].every(v=>v.muted&&v.srcObject.getAudioTracks().length===0)"));
   check('physical captures opened only once', await owner.eval('qa.requests.length'), 2);
   check('receivers never request physical cameras', await panel.eval("qa.requests.length===0&&['preview','program'].every(c=>qa.win(c).qa.requests.length===0)"));
-  const overlayAboveCamera = selector => "(()=>{for(const e of document.querySelectorAll('.layer,.layer *'))e.style.pointerEvents='auto';const bar=document.querySelector('#casters .topbar'),r=bar.getBoundingClientRect(),stack=document.elementsFromPoint(r.x+r.width/2,r.y+r.height/2);return stack.indexOf(bar)>=0&&stack.indexOf(bar)<stack.indexOf(document.querySelector("+JSON.stringify(selector)+"));})()";
+  // Use a real nameplate now that the always-visible caster title bar is retired.
+  const casterFixture = JSON.stringify([{name:'Test caster',role:'Caster',twitter:''}]);
+  await program.eval("qa.set('casters',"+casterFixture+")");
+  await panel.eval("for(const channel of ['preview','program'])qa.win(channel).qa.set('casters',"+casterFixture+")");
+  await panel.eval("nodecg.sendMessage('broadcast:setPreview',{output:'stream',patch:{casters:{slots:[true,true],names:{left:'Test caster',right:'Test caster'}}}})");
+  await panel.eval("nodecg.sendMessage('broadcast:take',{output:'stream'})");
+  await program.until("document.querySelector('#caster-1').dataset.visible==='true'", 'caster nameplate appears above live camera');
+  await panel.until("qa.doc('preview').querySelector('#caster-1').dataset.visible==='true'", 'caster nameplate appears above preview camera');
+  await program.eval("document.querySelector('#casters').getAnimations({subtree:true}).forEach(a=>a.finish())");
+  await panel.eval("qa.doc('preview').querySelector('#casters').getAnimations({subtree:true}).forEach(a=>a.finish())");
+  const overlayAboveCamera = selector => "(()=>{for(const e of document.querySelectorAll('.layer,.layer *'))e.style.pointerEvents='auto';const card=document.querySelector('#caster-1 .name'),r=card.getBoundingClientRect(),stack=document.elementsFromPoint(r.x+r.width/2,r.y+r.height/2);return stack.indexOf(card)>=0&&stack.indexOf(card)<stack.indexOf(document.querySelector("+JSON.stringify(selector)+"));})()";
   check('caster overlay paints above actual camera', await program.eval(overlayAboveCamera('.camera.right video')));
   check('caster overlay paints above dashboard placeholder', await panel.eval('qa.win("preview").eval('+JSON.stringify(overlayAboveCamera('.camera.right .camera-placeholder'))+')'));
   await program.screenshot('camera-2-under-stream-overlays');

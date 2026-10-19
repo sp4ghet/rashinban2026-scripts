@@ -1,5 +1,5 @@
 // Switcher panel: one per output (body[data-output]). Edits go to the
-// output's preview bus; TAKE copies preview to program. The monitors are
+// output's preview bus; TAKE copies preview to program and SWAP exchanges them. The monitors are
 // the real graphics pages opened on the preview/program channel.
 import { MAX_TEXT, withDefaults, layersEqual, type BroadcastOutput, type BroadcastState } from "../broadcast/state.ts";
 import { controlRows, monitorUrls, patchAt, rowDirty, valueAt, type Control, type Row } from "../broadcast/switcher-model.ts";
@@ -25,6 +25,8 @@ async function send(name: string, body: unknown) {
   }
 }
 const layers = () => state[output];
+// Companion can still set one caster independently; clicking an active pair hides both.
+const toggleOn = (value: unknown) => Array.isArray(value) ? value.some(v => v === true) : value === true;
 function edit(control: Control, value: unknown) {
   const patch = patchAt(control.path, value, layers().preview);
   void send(BROADCAST_MESSAGES.setPreview, { output, patch });
@@ -52,7 +54,7 @@ function buildRow(row: Row): HTMLElement {
       button.className = "toggle";
       button.textContent = control.label;
       button.onclick = (event) => {
-        edit(control, !(valueAt(layers().preview, control.path) as boolean));
+        edit(control, !toggleOn(valueAt(layers().preview, control.path)));
         blurAfterMouse(event);
       };
       widgets.set(control, button);
@@ -76,12 +78,7 @@ function buildRow(row: Row): HTMLElement {
       input.onblur = () => render();
       widgets.set(control, input);
       label.append(input);
-      if (control.path[0] === "casters" && control.kind === "select") {
-        const group = document.createElement("div");
-        group.className = "caster-choice";
-        group.append(controls.lastElementChild!, label);
-        controls.append(group);
-      } else controls.append(label);
+      controls.append(label);
     }
   }
   section.append(title, controls);
@@ -130,14 +127,16 @@ function render() {
         select.replaceChildren(...options);
       }
       if (control.kind === "toggle") {
-        widget.classList.toggle("on", value === true);
-        widget.setAttribute("aria-pressed", String(value === true));
+        widget.classList.toggle("on", toggleOn(value));
+        widget.setAttribute("aria-pressed", String(toggleOn(value)));
       } else if (document.activeElement !== widget) {
         widget.value = String(value ?? "");
       }
     }
   }
   (el("take") as HTMLButtonElement).disabled = layersEqual(preview, program);
+  const swap = document.getElementById("swap") as HTMLButtonElement | null;
+  if (swap) swap.disabled = layersEqual(preview, program);
 }
 render();
 rep.on("change", (value) => {
@@ -160,6 +159,13 @@ el("revert").onclick = (event) => {
   void send(BROADCAST_MESSAGES.revertPreview, { output });
   blurAfterMouse(event);
 };
+for (const [id, message] of [["swap", BROADCAST_MESSAGES.swap], ["clear-preview", BROADCAST_MESSAGES.clearPreview]] as const) {
+  const button = document.getElementById(id);
+  if (button) button.onclick = (event) => {
+    void send(message, { output });
+    blurAfterMouse(event);
+  };
+}
 document.addEventListener("keydown", (event) => {
   if (event.ctrlKey || event.altKey || event.metaKey) return;
   const target = event.target as HTMLElement | null;

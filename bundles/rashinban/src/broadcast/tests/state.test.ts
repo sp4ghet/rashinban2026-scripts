@@ -11,14 +11,14 @@ import {
   withDefaults,
 } from "../state.ts";
 
-test("initial state hides every layer on both buses and keeps the caster title bar on", () => {
+test("initial state hides every layer on both buses without a caster title bar", () => {
   const s = createInitialState();
   assert.deepEqual(s.stream.program, s.stream.preview);
   assert.deepEqual(s.led.program, s.led.preview);
   assert.equal(s.stream.program.playerCards.visible, false);
   assert.equal(s.stream.program.playerCards.page, "profile");
   assert.equal(s.stream.program.lowerThird.mode, "match");
-  assert.equal(s.stream.program.casters.titleBar, true);
+  assert.equal(Object.hasOwn(s.stream.program.casters, "titleBar"), false);
   assert.deepEqual(s.stream.program.casters.slots, [false, false]);
   assert.equal(s.led.program.presenter.visible, false);
   assert.equal(s.led.program.banpick.visible, false);
@@ -149,13 +149,15 @@ test("caster names and the centered card stay in preview until TAKE and revert t
 
 test("legacy caster selections migrate once on both buses without changing visibility", () => {
   const legacy = { slots: [{ name: "Stephen" }, { name: "Kai" }] };
-  const raw = { stream: { program: { casters: { slots: [true, false] } }, preview: { casters: { slots: [false, true] } } } };
+  const raw = { stream: { program: { casters: { titleBar: true, slots: [true, false] } }, preview: { casters: { titleBar: false, slots: [false, true] } } } };
   const migrated = withDefaults(raw, legacy);
   assert.deepEqual(migrated.stream.program.casters.names, { left: "Stephen", right: "Kai", center: "" });
   assert.deepEqual(migrated.stream.preview.casters.names, migrated.stream.program.casters.names);
   assert.deepEqual(migrated.stream.program.casters.slots, [true, false]);
   assert.deepEqual(migrated.stream.preview.casters.slots, [false, true]);
   assert.equal(migrated.stream.program.casters.center, false);
+  assert.equal(Object.hasOwn(migrated.stream.program.casters, "titleBar"), false);
+  assert.equal(Object.hasOwn(migrated.stream.preview.casters, "titleBar"), false);
   const cleared = setPreview(migrated, "stream", { casters: { names: { left: "" } } });
   assert.equal(withDefaults(cleared, legacy).stream.preview.casters.names.left, "");
 });

@@ -67,6 +67,91 @@ test("invalid payloads are rejected via the ack and leave state unchanged", () =
   assert.equal(JSON.stringify(a.state()), before);
 });
 
+test("swap exchanges both buses in one update and can restore the previous program", () => {
+  for (const output of ["stream", "led"]) {
+    const a = app();
+    a.message(BROADCAST_MESSAGES.setPreview, { output, patch: { playerCards: { visible: true, page: "stats" } } });
+    a.message(BROADCAST_MESSAGES.take, { output });
+    a.message(BROADCAST_MESSAGES.setPreview, { output, patch: { playerCards: { visible: false }, banpick: { visible: true } } });
+    const original = a.state();
+    const before = structuredClone(original);
+    let updates = 0;
+    a.replicants.get(REPLICANTS.broadcast)!.on("change", () => updates++);
+    const response = a.message("broadcast:swap", { output });
+    assert.equal(response.error, null);
+    assert.equal(updates, 1);
+    assert.deepEqual(response.value, a.state());
+    assert.deepEqual(a.state()[output].program, before[output].preview);
+    assert.deepEqual(a.state()[output].preview, before[output].program);
+    const other = output === "stream" ? "led" : "stream";
+    assert.deepEqual(a.state()[other], before[other]);
+    assert.deepEqual(original, before);
+    assert.notEqual(a.state()[output].program.playerCards, original[output].preview.playerCards);
+    assert.equal(a.message("broadcast:swap", { output }).error, null);
+    assert.deepEqual(a.state(), before);
+  }
+});
+
+test("clear preview hides every layer while preserving selections and program", () => {
+  const a = app();
+  a.message(BROADCAST_MESSAGES.setPreview, { output: "stream", patch: {
+    playerCameras: { left: true, right: true, relay: "other" },
+    playerCards: { visible: true, page: "stats", player: "right", position: "right" },
+    lowerThird: { visible: true, mode: "text", title: "Title", subtitle: "Subtitle", comingUp: true },
+    casters: { slots: [true, true], center: true, names: { left: "Stephen", right: "Kai", center: "SD" } },
+    interval: { visible: true }, bracket: { visible: true }, banpick: { visible: true },
+  } });
+  a.message(BROADCAST_MESSAGES.take, { output: "stream" });
+  const original = a.state();
+  const before = structuredClone(original);
+  const response = a.message("broadcast:clearPreview", { output: "stream" });
+  assert.equal(response.error, null);
+  assert.deepEqual(response.value, a.state());
+  assert.deepEqual(a.state().stream.preview, {
+    playerCameras: { left: false, right: false, relay: "other" },
+    playerCards: { visible: false, page: "stats", player: "right", position: "right" },
+    lowerThird: { visible: false, mode: "text", title: "Title", subtitle: "Subtitle", comingUp: true },
+    casters: { slots: [false, false], center: false, names: { left: "Stephen", right: "Kai", center: "SD" } },
+    interval: { visible: false }, bracket: { visible: false }, banpick: { visible: false },
+  });
+  assert.deepEqual(a.state().stream.program, before.stream.program);
+  assert.deepEqual(a.state().led, before.led);
+  assert.deepEqual(original, before);
+  const cleared = structuredClone(a.state());
+  a.message("broadcast:clearPreview", { output: "stream" });
+  assert.deepEqual(a.state(), cleared);
+  a.message(BROADCAST_MESSAGES.revertPreview, { output: "stream" });
+  assert.deepEqual(a.state(), before);
+});
+
+test("clear LED preview preserves card settings and leaves stream untouched", () => {
+  const a = app();
+  a.message(BROADCAST_MESSAGES.setPreview, { output: "led", patch: {
+    playerCards: { visible: true, page: "compact" }, presenter: { visible: true },
+    banpick: { visible: true }, bracket: { visible: true },
+  } });
+  a.message(BROADCAST_MESSAGES.take, { output: "led" });
+  const before = structuredClone(a.state());
+  assert.equal(a.message("broadcast:clearPreview", { output: "led" }).error, null);
+  assert.deepEqual(a.state().led.preview, {
+    playerCards: { visible: false, page: "compact", player: "left", position: "left" },
+    presenter: { visible: false }, banpick: { visible: false }, bracket: { visible: false },
+  });
+  assert.deepEqual(a.state().led.program, before.led.program);
+  assert.deepEqual(a.state().stream, before.stream);
+});
+
+test("swap and clear reject invalid outputs and payloads without changing either bus", () => {
+  const a = app();
+  const before = structuredClone(a.state());
+  for (const name of ["broadcast:swap", "broadcast:clearPreview"]) {
+    for (const payload of [null, "junk", {}, { output: "radio" }]) {
+      assert.ok(a.message(name, payload).error instanceof Error);
+      assert.deepEqual(a.state(), before);
+    }
+  }
+});
+
 test("Companion routes cut the stream program directly and take/revert per output", async () => {
   const a = app();
   const server = a.http.listen(0, "127.0.0.1");

@@ -16,10 +16,10 @@ export async function verifyCasters({ navigate, evaluate, until, screenshot, del
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await navigate('/bundles/rashinban/graphics/info-stream.html', 'document.querySelector("#casters")');
   const initial = createInitialState().stream.preview;
-  initial.casters.titleBar = false;
   await message('broadcast:setPreview', { output: 'stream', patch: initial });
   await take();
   await delay(600); // Let the previously visible fixture layers finish hiding.
+  assert.equal(await evaluate(`document.querySelectorAll('#casters .topbar,#casters .mark,#casters .banner').length`), 0, 'caster title and sponsor banner are removed');
   await evaluate(`emit('casters',${JSON.stringify(directory)})`);
   await patch({ slots: [true, true], names: { left: 'Stephen', right: 'Kai' } });
   assert.equal(await evaluate(`document.querySelector('#caster-1').hidden`), true, 'preview selection does not put program on air');
@@ -103,6 +103,30 @@ export async function verifyCasters({ navigate, evaluate, until, screenshot, del
   await evaluate(`document.querySelector('#take').click()`);
   await until(`${program}.querySelector('#caster-3 .name').textContent==='SD'`);
   await delay(3800); await screenshot('casters-stream-controller');
+  const clickPair = () => evaluate(`document.querySelector('[data-row=casters] button').click()`);
+  await clickPair();
+  await until(`fixtureValues.broadcast.stream.preview.casters.slots.every(Boolean)`);
+  assert.deepEqual(await evaluate(`fixtureValues.broadcast.stream.program.casters.slots`), [false, false]);
+  assert.equal(await evaluate(`document.querySelector('[data-row=casters] button').getAttribute('aria-pressed')`), 'true');
+  assert.equal(await evaluate(`fixtureValues.broadcast.stream.preview.casters.center`), true);
+  await evaluate(`document.querySelector('#swap').click()`);
+  await until(`fixtureValues.broadcast.stream.program.casters.slots.every(Boolean)&&fixtureValues.broadcast.stream.preview.casters.slots.every(v=>!v)`);
+  await until(`${program}.querySelector('#caster-1').dataset.visible==='true'&&${program}.querySelector('#caster-2').dataset.visible==='true'`);
+  await evaluate(`document.querySelector('#swap').click()`);
+  await until(`fixtureValues.broadcast.stream.preview.casters.slots.every(Boolean)&&fixtureValues.broadcast.stream.program.casters.slots.every(v=>!v)`);
+  await evaluate(`document.querySelector('#clear-preview').click()`);
+  await until(`!fixtureValues.broadcast.stream.preview.casters.center&&fixtureValues.broadcast.stream.preview.casters.slots.every(v=>!v)`);
+  await until(`${preview}.querySelector('#caster-1').hidden&&${preview}.querySelector('#caster-2').hidden&&${preview}.querySelector('#caster-3').hidden`);
+  assert.equal(await evaluate(`fixtureValues.broadcast.stream.preview.casters.names.center`), 'SD');
+  assert.equal(await evaluate(`${program}.querySelector('#caster-3').hidden`), false, 'clear preview leaves program on air');
+  await screenshot('casters-cleared-preview');
+  await evaluate(`document.querySelector('#revert').click()`);
+  await until(`fixtureValues.broadcast.stream.preview.casters.center&&document.querySelector('#swap').disabled`);
+  // A legacy/Companion half-pair still counts as on and one click hides both.
+  await patch({ slots: [false, true] });
+  assert.equal(await evaluate(`document.querySelector('[data-row=casters] button').getAttribute('aria-pressed')`), 'true');
+  await clickPair();
+  await until(`fixtureValues.broadcast.stream.preview.casters.slots.every(v=>!v)`);
   await choose(2, ''); await until(`fixtureValues.broadcast.stream.preview.casters.names.center===''`);
   assert.equal(await evaluate(`${program}.querySelector('#caster-3').hidden`), false);
   await evaluate(`document.querySelector('#take').click()`);
@@ -112,5 +136,5 @@ export async function verifyCasters({ navigate, evaluate, until, screenshot, del
   assert.equal(await evaluate(`document.querySelectorAll('[data-row=casters] select img').length`), 0, 'sheet names are text, never markup');
   await evaluate(`emit('casters',[])`);
   assert.equal(await evaluate(`document.querySelectorAll('[data-row=casters] select')[0].value`), 'Missing caster', 'empty directory preserves operator selection');
-  console.log('Casters verified: staggered masked reveal, pair/center geometry, no replay on refresh, rapid hide/show, missing rows, Japanese names, reduced motion, three dropdowns, Preview/TAKE/revert, safe option text.');
+  console.log('Casters verified: staggered masked reveal, pair/center geometry, no title/banner, no replay on refresh, rapid hide/show, missing rows, Japanese names, reduced motion, paired toggle, three dropdowns, Preview/TAKE/SWAP/clear/revert, safe option text.');
 }

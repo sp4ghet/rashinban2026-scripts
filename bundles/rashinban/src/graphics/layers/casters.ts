@@ -1,5 +1,4 @@
-// Caster desk layer. The title bar and sponsor banner are static markup;
-// the name cards come from the casters sheet tab. Selection and visibility
+// Caster desk layer. Name cards come from the casters sheet tab. Selection and visibility
 // belong to the output's broadcast bus, so preview edits cannot change program.
 import { findCaster, type Caster } from "../../casters/casters.ts";
 import { defaultLayers, type CastersLayer } from "../../broadcast/state.ts";
@@ -13,24 +12,9 @@ const cardMarkup = (id: string) => `<div class="caster" id="${id}" hidden>
 </div>`;
 
 const TEMPLATE = `<div id="casters">
-  <div class="topbar"></div>
-  <div class="mark">
-    <img class="compass" src="assets/images/icon.svg" alt="" />
-    <span class="wordmark">RASHINBAN 2026</span>
-  </div>
-
   ${cardMarkup("caster-1")}
   ${cardMarkup("caster-2")}
   ${cardMarkup("caster-3")}
-
-  <!-- Static for now: three confirmed sponsors, no rotation. The 2025 page
-       rotated a fourth+ logo through the right slot; add that back when the
-       2026 sponsor list is final. -->
-  <div class="banner">
-    <img class="logo-red-tokyo" src="assets/logos/red-tokyo-logo.svg" alt="RED° Tokyo Tower" />
-    <img src="assets/logos/tamura-builds-white.svg" alt="TAMURA BUILDS" />
-    <img class="logo-geoguessr-record" src="assets/logos/geoguessr-record.svg" alt="GeoGuessr Record" />
-  </div>
 </div>`;
 
 /** Kana/kanji need the Noto face; latin names use the condensed heading face. */
@@ -45,7 +29,6 @@ export function mountCasters(host: HTMLElement): Layer<CastersLayer> {
     name: "",
     animations: [] as Animation[],
   }));
-  const chrome = host.querySelectorAll<HTMLElement>(".topbar, .mark, .banner");
 
   let casters: Caster[] = [];
   let layer: CastersLayer = defaultLayers("stream").casters;
@@ -102,7 +85,6 @@ export function mountCasters(host: HTMLElement): Layer<CastersLayer> {
   }
 
   function render() {
-    for (const el of chrome) el.hidden = !layer.titleBar;
     for (const [index, card] of cards.entries()) {
       const caster = findCaster(casters, layer.names[card.side]);
       const visible = Boolean((index === 2 ? layer.center : layer.slots[index]) && caster);

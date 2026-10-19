@@ -17,7 +17,7 @@ affects the LED layout.
 | Page | Output | Shows |
 | --- | --- | --- |
 | `presenter.html?role=program` | stream | Duels presenter (unchanged, see [presenter/obs.md](presenter/obs.md)) |
-| `info-stream.html` | stream | Fullscreen player camera, player cards, lower third, caster title bar / nameplates / sponsor banner, Ban & Pick, Interval, Bracket |
+| `info-stream.html` | stream | Fullscreen player camera, player cards, lower third, caster nameplates, Ban & Pick, Interval, Bracket |
 | `presenter-led.html` | LED | Duels presenter in the LED layout (top 1920x576 band, black below) |
 | `info-led.html` | LED | Both player cards + Ban & Pick, always on |
 | `bracket-led.html` | LED | Finals bracket, always on; embedded KV video with translucent red/blue tint |
@@ -33,7 +33,9 @@ Unchanged: `banpick-player.html` (tablet),
 The `broadcast` replicant retains `{ stream, led }` for persisted-state and
 API compatibility, but only the **stream** bus controls these graphics.
 The Stream switcher edits `stream.preview`; **TAKE** copies it to
-`stream.program`; **Revert preview** restores preview from program.
+`stream.program`; **SWAP** exchanges preview and program, keeping the old program
+ready in preview. **Clear preview** hides every preview layer while retaining
+names, card settings, relay and text. **Revert preview** restores preview from program.
 Companion routes cut Stream Program directly. Only the card page selection
 (`profile`, `stats` for Results, or `compact`) also changes the LED cards.
 Legacy `led` bus fields and routes no longer affect any LED source.
@@ -43,7 +45,7 @@ Shared tab: the current match (players, round), the finals
 bracket, and the Ban & Pick state (picks, bans, next game, undo, reset). Only visibility is
 switched.
 
-Stream defaults: every layer hidden except the caster title bar (on).
+Stream defaults: every layer hidden.
 LED defaults: sources are always on; cards show Profile until a Stream
 Program page is selected. Missing match data still clears and hides cards. Text fields
 accept up to 120 characters. Invalid patches are rejected and nothing changes.
@@ -55,7 +57,7 @@ accept up to 120 characters. Invalid patches are rejected and nothing changes.
 | stream | Player cameras | Player Camera 1 / Player Camera 2; relay name |
 | stream | Player cards | visible; page `profile` / `stats` / `compact`; player; position |
 | stream | Lower third | visible; mode `match` / `scores` / `text`; Coming up (match mode); title/subtitle (text mode) |
-| stream | Casters | title bar + sponsor banner; left/right/center visibility and name dropdowns |
+| stream | Casters | L/R Caster toggle, Left dropdown, Right dropdown, Center Card toggle, Center dropdown |
 | stream | Ban & Pick | visible |
 | stream | Interval | visible; minutes, Start, Pause/Resume, Clear, live countdown |
 | stream | Bracket | visible |
@@ -157,8 +159,9 @@ Physical camera/OBS acceptance remains an event-machine check.
 ### Caster nameplates
 
 Choose **Left**, **Right**, and **Center** in the Stream controller's Casters
-row. The options come from the Google Sheet casters tab. Enable each card's
-button, check Preview, and press **TAKE**. Names and visibility are staged
+row. The options come from the Google Sheet casters tab. **L/R Caster** toggles
+both side cards together; **Center Card** toggles the center independently.
+Check Preview, then press **TAKE** or **SWAP**. Names and visibility are staged
 together; **Revert preview** restores both. Choose **none** to clear a slot.
 The Center slot is an independent single nameplate in the lower center of
 the picture, so it can be used alone or alongside the two upper cards.
@@ -173,7 +176,7 @@ Blank roles and handles are omitted. A name missing from the sheet stays
 marked **not in sheet** in the dropdown and its card is hidden.
 
 On a 1920x1080 output, the 390px cards start at (330, 180), (1200, 180), and
-(765, 729). The title bar and sponsor banner retain their separate control.
+(765, 729). The caster title bar and sponsor banner have been removed.
 Existing left/right selections migrate from `castersState` into both buses
 once; the center starts empty and hidden. Restart NodeCG after updating to
 remove the old Shared Casters panel, then refresh the controller and graphics.
@@ -232,7 +235,7 @@ NodeCG lists workspaces alphabetically:
 | Stream | Stream switcher (fullbleed) | stream operator |
 
 The Stream switcher tab has PREVIEW (left) and PROGRAM (right) monitors, the layer
-strip, **TAKE** and **Revert preview**. The monitors are scaled iframes of
+strip, **Clear preview**, **Revert preview**, **SWAP** and **TAKE**. The monitors are scaled iframes of
 the info page; ticking **Presenter monitors** also loads the presenter page
 (it loads Google Maps, so it is off by default and remembered per browser).
 Rows whose preview differs from program are highlighted. **Space** or

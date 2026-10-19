@@ -12,7 +12,6 @@ export type CardPage = "profile" | "stats" | "compact";
 export type PlayerCardsLayer = { visible: boolean; page: CardPage; player: "left" | "right"; position: "left" | "right" };
 export type LowerThirdLayer = { visible: boolean; mode: "match" | "scores" | "text"; title: string; subtitle: string; comingUp: boolean };
 export type CastersLayer = {
-  titleBar: boolean;
   /** Keep the existing pair for Companion's /casters/1 and /casters/2 routes. */
   slots: [boolean, boolean];
   center: boolean;
@@ -83,7 +82,7 @@ const STREAM_SPEC = {
   bracket: TOGGLE_SPEC,
   playerCards: CARD_SPEC,
   lowerThird: { visible: "boolean", mode: ["match", "scores", "text"], title: "text", subtitle: "text", comingUp: "boolean" },
-  casters: { titleBar: "boolean:true", slots: "booleanPair", center: "boolean", names: { left: "text", right: "text", center: "text" } },
+  casters: { slots: "booleanPair", center: "boolean", names: { left: "text", right: "text", center: "text" } },
   banpick: TOGGLE_SPEC,
 } as const satisfies SpecOf<StreamLayers>;
 const LED_SPEC = { playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC, bracket: TOGGLE_SPEC } as const satisfies SpecOf<LedLayers>;
@@ -244,6 +243,28 @@ export function take(state: BroadcastState, output: BroadcastOutput): BroadcastS
 export function revertPreview(state: BroadcastState, output: BroadcastOutput): BroadcastState {
   const o = parseOutput(output);
   return replaceBus(state, o, { preview: copy(state[o].program) });
+}
+
+/** Exchange the two buses together, retaining the old program in preview. */
+export function swap(state: BroadcastState, output: BroadcastOutput): BroadcastState {
+  const o = parseOutput(output);
+  return replaceBus(state, o, { program: copy(state[o].preview), preview: copy(state[o].program) });
+}
+
+/** Hide all preview layers while keeping their content and configuration. */
+export function clearPreview(state: BroadcastState, output: BroadcastOutput): BroadcastState {
+  const o = parseOutput(output);
+  if (o === "stream") return setPreview(state, o, {
+    playerCameras: { left: false, right: false },
+    playerCards: { visible: false },
+    lowerThird: { visible: false },
+    casters: { slots: [false, false], center: false },
+    interval: { visible: false }, bracket: { visible: false }, banpick: { visible: false },
+  });
+  return setPreview(state, o, {
+    presenter: { visible: false }, playerCards: { visible: false },
+    banpick: { visible: false }, bracket: { visible: false },
+  });
 }
 
 export function layersEqual(a: unknown, b: unknown): boolean {

@@ -157,6 +157,10 @@ export const BROADCAST_MESSAGES = {
   setPreview: "broadcast:setPreview",
   /** { output } — program = preview. */
   take: "broadcast:take",
+  /** { output } — exchange preview and program. */
+  swap: "broadcast:swap",
+  /** { output } — hide every preview layer, retaining selections. */
+  clearPreview: "broadcast:clearPreview",
   /** { output } — preview = program. */
   revertPreview: "broadcast:revertPreview",
 } as const;

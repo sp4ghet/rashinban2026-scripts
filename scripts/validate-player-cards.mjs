@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createInitialState, setPreview, take, revertPreview } from '../bundles/rashinban/src/broadcast/state.ts';
+import { createInitialState, setPreview, take, swap, clearPreview, revertPreview } from '../bundles/rashinban/src/broadcast/state.ts';
 import { emptyMatch, resolveMatch } from '../bundles/rashinban/src/match/state.ts';
 import { rowToProfile } from '../bundles/rashinban/src/sheet/players.ts';
 import { normalizeEvent } from '../bundles/rashinban/src/startgg/normalize.ts';
@@ -41,7 +41,6 @@ let state = createInitialState();
 for (const output of ['stream', 'led']) {
   state = take(setPreview(state, output, { playerCards: { visible: true } }), output);
 }
-state = take(setPreview(state, 'stream', { casters: { titleBar: false } }), 'stream');
 const makeSet = (id, when, round, ownScore = 2, opponentScore = 0) => ({
   id, groupId: 1, phaseId: 1, identifier: String(id), round: id, side: 'winners', roundText: round,
   state: 'completed', stateCode: 3, winnerEntrantId: ownScore > opponentScore ? 10 : 20, loserEntrantId: ownScore > opponentScore ? 20 : 10,
@@ -82,6 +81,8 @@ const server = createServer(async (req, res) => {
       if (name === BROADCAST_MESSAGES.setPreview) state = setPreview(state, data.output, data.patch);
       else if (name === BROADCAST_MESSAGES.take) state = take(state, data.output);
       else if (name === BROADCAST_MESSAGES.revertPreview) state = revertPreview(state, data.output);
+      else if (name === BROADCAST_MESSAGES.swap) state = swap(state, data.output);
+      else if (name === BROADCAST_MESSAGES.clearPreview) state = clearPreview(state, data.output);
       else throw Error('Unexpected message ' + name);
       values[REPLICANTS.broadcast] = state;
       res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ replicant: REPLICANTS.broadcast, value: state })); return;
@@ -414,7 +415,6 @@ try {
   state = createInitialState();
   for (const output of ['stream', 'led']) state = take(setPreview(state, output, {
     banpick: { visible: true }, playerCards: { visible: output === 'led' },
-    ...(output === 'stream' ? { casters: { titleBar: false } } : {}),
   }), output);
   values[REPLICANTS.broadcast] = state;
   if (!cardsOnly) {

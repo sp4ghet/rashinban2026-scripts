@@ -5,7 +5,7 @@ export async function verifyLowerThirds({ navigate, evaluate, until, screenshot,
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await navigate('/bundles/rashinban/graphics/info-stream.html', 'document.querySelector("#lower-third")');
   const apply = async patch => {
-    await evaluate(`{const s=structuredClone(fixtureValues.broadcast);s.stream.program.playerCards.visible=false;s.stream.program.casters.titleBar=false;Object.assign(s.stream.program.lowerThird,${JSON.stringify(patch)});emit('broadcast',s);}`);
+    await evaluate(`{const s=structuredClone(fixtureValues.broadcast);s.stream.program.playerCards.visible=false;Object.assign(s.stream.program.lowerThird,${JSON.stringify(patch)});emit('broadcast',s);}`);
     await delay(500);
   };
   await evaluate(`{const m=structuredClone(fixtureValues.matchResolved);m.label='GRANDFINALS';for(const side of ['left','right'])Object.assign(m[side],{name:'tozangezan',handle:'@TSoutherpacks',wins:1});emit('matchResolved',m);const next=structuredClone(m);next.left.name='Player';next.right.name='Player';emit('nextMatchResolved',next);}`);

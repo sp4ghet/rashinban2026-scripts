@@ -6,11 +6,13 @@ import type { Request, Response } from "express";
 
 import {
   BroadcastError,
+  clearPreview,
   createInitialState,
   cutProgram,
   parseOutput,
   revertPreview,
   setPreview,
+  swap,
   take,
   withDefaults,
   type BroadcastOutput,
@@ -62,6 +64,10 @@ export function registerBroadcast(nodecg: NodeCG.ServerAPI, router: ReturnType<N
     }));
   nodecg.listenFor(BROADCAST_MESSAGES.take, (data: unknown, ack) =>
     mutate(ack, (s) => take(s, parseOutput(record(data).output))));
+  nodecg.listenFor(BROADCAST_MESSAGES.swap, (data: unknown, ack) =>
+    mutate(ack, (s) => swap(s, parseOutput(record(data).output))));
+  nodecg.listenFor(BROADCAST_MESSAGES.clearPreview, (data: unknown, ack) =>
+    mutate(ack, (s) => clearPreview(s, parseOutput(record(data).output))));
   nodecg.listenFor(BROADCAST_MESSAGES.revertPreview, (data: unknown, ack) =>
     mutate(ack, (s) => revertPreview(s, parseOutput(record(data).output))));
 
