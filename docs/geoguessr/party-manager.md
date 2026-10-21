@@ -13,9 +13,13 @@ The NodeCG **Party** tab controls the GeoGuessr party associated with the existi
 
 Roster and settings changes are restricted to between games. Moderation includes kick, ban/unban, mute/unmute, and eligible host transfer. Transfer removes this account's ability to manage the party. Team Duels can be controlled here, but the existing broadcast presenter supports two single-player teams only.
 
-Join codes are under **Join info**. The manager does not manage public/community discovery, account login, chat composition, or party deletion; those remain in the native GeoGuessr lobby.
+Join codes are under **Join info**. The manager does not manage public/community discovery, account login, or party deletion; those remain in the native GeoGuessr lobby.
 
-**Party chat** sits beside Live duel (below it on narrow screens). It shows live text and emotes with sender names and timestamps, retaining the latest 200 messages while NodeCG is running. It follows new messages when scrolled to the bottom; scrolling up keeps your place. Chat is read only; send messages from GeoGuessr. Players & bench is below Next duel settings, immediately above Recent commands.
+**Party chat** sits beside Live duel (below it on narrow screens). It shows live text and native emote artwork with sender names and timestamps, retaining the latest 200 messages while NodeCG is running. Emotes embedded in text also render as images; unknown shortcodes stay readable as text. It follows new messages when scrolled to the bottom; scrolling up keeps your place. Players & bench is below Next duel settings, immediately above Recent commands.
+
+Type up to 100 characters and press **Send** or Enter, or use the seven lobby emote buttons. Messages go to everyone in the selected party as the configured GeoGuessr account, whose name appears below the composer. The account must belong to that party and be allowed to chat. Text is disabled in emotes-only parties, and emote buttons respect the account's unlocked inventory. Sending is disabled during reconnects and replay. A shared one-second cooldown and one pending message at a time prevent rapid duplicate sends across dashboards.
+
+**Sent** appears only after the message echoes back through the party feed. If delivery cannot be confirmed, the draft is kept: check the feed before sending again. Timeout/disconnect never triggers an automatic retry. Switching parties or entering replay clears the draft; edits made while waiting for confirmation are preserved.
 
 Chat starts when the selected live party connects. GeoGuessr does not supply older messages through this subscription, and messages sent during a disconnection may be missed. Connection, disabled-chat, and access-denied states appear in the card. Changing parties or entering replay clears the feed. In-game messages arrive here when GeoGuessr routes them to party chat; isolated in-game chat is separate. The chat token and account cookie stay on the server, and the feed is not persisted to disk.
 

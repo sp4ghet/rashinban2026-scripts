@@ -45,7 +45,13 @@
       <p id="chat-detail" class="small muted">Waiting for a live party.</p>
       <div id="chat-messages" class="chat-messages" role="log" aria-label="Party messages" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
       <p id="chat-empty" class="small muted">No messages received yet.</p>
-      <p class="small muted">Read only · Send messages from the GeoGuessr lobby.</p>
+      <form id="chat-form" class="chat-composer">
+        <div id="chat-emotes" class="chat-emotes" role="group" aria-label="Send a party emote"></div>
+        <label for="chat-input">Message to party</label>
+        <div class="chat-compose-row"><input id="chat-input" type="text" maxlength="100" autocomplete="off" placeholder="Write a message…" disabled><button id="chat-send" type="submit" class="primary" disabled>Send</button></div>
+        <div class="chat-compose-meta small muted"><span id="chat-sender">Connect to live party chat to send.</span><span id="chat-count">0 / 100</span></div>
+        <p id="chat-send-status" class="small" role="status" hidden></p>
+      </form>
     </section>
     <section class="card settings"><div class="section-title"><h2>Next duel settings</h2><span id="draft-status" class="muted small">Waiting for party</span></div>
       <div class="preset-controls"><label>Tournament preset<select id="tournament-preset"><option value="" disabled>Choose a game…</option></select></label></div>

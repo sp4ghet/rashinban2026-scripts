@@ -5,7 +5,7 @@ import { EMPTY_PARTY_STATUS, PARTY_MESSAGES, type PartyStatus } from '../../part
 import { loadConnectionConfig } from '../presenter/secrets.ts';
 import { createPartyManager } from './manager.ts';
 import { createPartyChat } from './chat.ts';
-import { EMPTY_PARTY_CHAT, type PartyChat } from '../../party/chat.ts';
+import { CHAT_SEND_MESSAGE, EMPTY_PARTY_CHAT, type PartyChat } from '../../party/chat.ts';
 
 export function registerParty(nodecg: NodeCG.ServerAPI, store: ConfigStore): void {
   const connection = nodecg.Replicant<PresenterConnection>(REPLICANTS.presenterConnection);
@@ -25,6 +25,7 @@ export function registerParty(nodecg: NodeCG.ServerAPI, store: ConfigStore): voi
     manager = createPartyManager(credentials, {
       fetch: globalThis.fetch, now: Date.now, selection, publish(value) { status.value = value; },
       chatSource: source => { chat!.setSource(source); },
+      chatSend: request => chat!.sendMessage(request),
       presentation: { get: () => ({ settings: store.get().presenter.settings, revision: store.status().revision }),
         save: (settings, revision) => store.save('presenterSettings', settings, revision) },
     });
@@ -45,6 +46,14 @@ export function registerParty(nodecg: NodeCG.ServerAPI, store: ConfigStore): voi
   }
   nodecg.listenFor(PARTY_MESSAGES.refresh, (_request, ack) => {
     void refresh().then(() => { if (ack && !ack.handled) ack(null); });
+  });
+  nodecg.listenFor(CHAT_SEND_MESSAGE, (request: unknown, ack) => {
+    void (async () => {
+      if (selection().input === 'replay') throw new Error('Replay mode — chat sending disabled.');
+      await getManager().sendChat(request);
+    })().then(() => { if (ack && !ack.handled) ack(null); }, error => {
+      if (ack && !ack.handled) ack(error instanceof Error ? error : new Error('Chat message failed'));
+    });
   });
   nodecg.listenFor(PARTY_MESSAGES.command, (request: unknown, ack) => {
     void (async () => {

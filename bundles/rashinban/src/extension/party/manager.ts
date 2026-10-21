@@ -5,12 +5,14 @@ import { identifier, lobbyStartBlockReason, parseCommand, parseDuel, parseMember
 import { EMPTY_PARTY_STATUS, type Activity, type Member, type PartyCommand, type PartyStatus } from '../../party/types.ts';
 import { parseSettings, type PresenterSettings } from '../../presenter/settings.ts';
 import type { PartyChatSource } from './chat.ts';
+import { unlockedEmotes } from '../../party/emotes.ts';
 
 export type ManagerDeps = {
   fetch: typeof fetch; now(): number;
   selection(): { input: 'live' | 'replay'; partyId: string | null; generation?: string };
   publish(status: PartyStatus): void;
   chatSource?(source: PartyChatSource | null): void;
+  chatSend?(request: unknown): Promise<void>;
   presentation?: { get(): { settings: PresenterSettings; revision: string }; save(settings: PresenterSettings, revision: string): void };
 };
 type Pending = { id: string; deadline: number; verify(value: PartyStatus): boolean; complete?(): void; completionFailed?: boolean };
@@ -28,6 +30,8 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
   let rawParty: Record<string, unknown> | null = null;
   let chatSelectionKey: string | null = null;
   let chatPartyId: string | null = null;
+  let chatAuthorizationKey: string | null = null;
+  let emoteInventory: unknown = [], inventoryAccount: string | null = null, inventoryExpires = 0;
   let refreshWork: Promise<void> | null = null;
   let pending: Pending | null = null;
   let locked = false;
@@ -59,6 +63,7 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
   }
   async function read() {
     const key = selectionKey(); const selection = deps.selection();
+    chatAuthorizationKey = null;
     if (chatSelectionKey !== key) { deps.chatSource?.(null); chatSelectionKey = key; chatPartyId = null; }
     if (selection.input === 'replay') {
       rawParty = null;
@@ -89,10 +94,23 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
         if (members.length < total || new Set(members.map(member => member.userId)).size !== members.length) throw new Error('Incomplete roster');
       }
       if (key !== selectionKey()) return;
+      if (deps.chatSource && party && (inventoryAccount !== accountId || deps.now() >= inventoryExpires)) {
+        try { emoteInventory = await client.request('https://www.geoguessr.com/api/v4/avatar/assets/inventory'); inventoryExpires = deps.now() + 60000; }
+        catch { emoteInventory = []; inventoryExpires = deps.now() + 5000; }
+        inventoryAccount = accountId;
+      }
+      if (key !== selectionKey()) return;
       const chatToken = raw ? record(raw).chatAccessToken : null;
       deps.chatSource?.(party ? { partyId: party.partyId, members,
+        accountId, sender: typeof account.nick === 'string' ? account.nick : accountId,
+        sendDisabledReason: active?.partyId !== party.partyId ? 'Join this party with the configured account to send.'
+          : profile.chatBan === true ? 'The configured account has a chat ban.'
+          : party.mutedPlayerIds.includes(accountId) ? 'The configured account is muted in this party.'
+          : party.bannedPlayerIds.includes(accountId) ? 'The configured account is banned from this party.' : null,
+        allowedEmotes: unlockedEmotes(emoteInventory, account.type === 'Elite'),
         accessToken: typeof chatToken === 'string' ? chatToken : null,
         level: String(party.settings.allowedCommunication ?? 'None') } : null);
+      chatAuthorizationKey = party ? key : null;
       let duel: PartyStatus['duel'] = null;
       if (party?.lobbyId && party.gameState === 'Ongoing' && ['Duels', 'TeamDuels'].includes(party.gameType)) {
         const phone = record(await client.request(`https://www.geoguessr.com/api/v4/game-server/phonebook/${identifier(party.lobbyId)}`));
@@ -115,7 +133,7 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
       checkPending();
     } catch (error) {
       if (key !== selectionKey()) return;
-      if (error instanceof RejectedRequest) deps.chatSource?.(null);
+      if (error instanceof RejectedRequest && chatAuthorizationKey !== key) deps.chatSource?.(null);
       status = { ...status, state: 'error', canManage: false, disabledReason: 'State unavailable — refresh before sending commands.',
         error: error instanceof RejectedRequest ? error.message : 'Unable to read complete GeoGuessr state. Check the connection and refresh.' };
       checkPending();
@@ -287,5 +305,14 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
     } finally { locked = false; publish(); }
   }
   publish();
-  return { refresh, command, acknowledge };
+  async function sendChat(request: unknown) {
+    const key = selectionKey();
+    if (deps.selection().input === 'replay') throw new Error('Replay mode — chat sending disabled.');
+    await refresh();
+    if (key !== selectionKey()) throw new Error('Party source changed. Review the current party before sending.');
+    if (chatAuthorizationKey !== key) throw new Error('Refresh the party connection before sending.');
+    if (!deps.chatSend) throw new Error('Chat sending is unavailable.');
+    await deps.chatSend(request);
+  }
+  return { refresh, command, acknowledge, sendChat };
 }

@@ -279,6 +279,24 @@ Topic format: `chat:<context>:<level>:<roomId>` where context is
 - Map `sourceId` to a nick with `GET /api/v4/player-identities/<id>` or the
   party member list.
 
+Sending format checked against GeoGuessr's lobby client on 2026-10-22:
+`{ code: "ChatMessage" | "ChatEmote", topic, payload, accessToken, client: "web" }`.
+Unlike the inbound envelope, outgoing `payload` is the raw text or emote
+shortcode, not a JSON-encoded message object. The native text field has a
+100-character limit. Known emote shortcodes can also occur inside text.
+The client checks profile `chatBan`, party mute/ban lists, and emote ownership.
+`GET /api/v4/avatar/assets/inventory` supplies emotes with `slot: 24`,
+`unlocked: true`, and `type: "EMOTE_GG"` etc.; `isEliteExclusive` additionally
+requires profile `user.type === "Elite"`.
+
+The dashboard sends through the server's existing site WebSocket after a fresh
+party permission check. It binds requests to the current party and subscription
+session, deduplicates request IDs, and confirms only a matching account/type/text
+echo. No correlation ID or durable delivery receipt is available in this format;
+an eight-second timeout reports uncertainty without replaying the message.
+Outgoing delivery is covered by fixture tests; implementation verification did
+not send test messages to the live party.
+
 ## Other useful REST endpoints
 
 - `GET /api/v4/parties/v2/active` — the caller's current party.

@@ -10,6 +10,9 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import os from 'node:os';
 import { createPartyManager } from '../bundles/rashinban/src/extension/party/manager.ts';
+import { createPartyChat } from '../bundles/rashinban/src/extension/party/chat.ts';
+import { PARTY_EMOTES } from '../bundles/rashinban/src/party/emotes.ts';
+import { EMPTY_PARTY_CHAT } from '../bundles/rashinban/src/party/chat.ts';
 import { applySnapshot } from '../bundles/rashinban/src/presenter/normalize.ts';
 import { deriveTieRange } from '../bundles/rashinban/src/presenter/tie-range.ts';
 import { derivePinpointing } from '../bundles/rashinban/src/presenter/pinpointing.ts';
@@ -48,14 +51,39 @@ const matchResolved = () => matchReps.get('matchResolved').value;
 const sendMatch = (name, value) => new Promise((resolve, reject) => matchHandlers.get(name)(value, (error, result) => error ? reject(error) : resolve(result)));
 await sendMatch('match:apply', { ...matchState(), label: 'Fixture final', left: { ...matchState().left, name: 'Player Blue' }, right: { ...matchState().right, name: 'Player Red' } });
 let fixtureIntermission = structuredClone(EMPTY_INTERMISSION);
+let chatSnapshot, failChat = false, chatSequence = 0;
+const chatWrites = [];
+const chat = createPartyChat({ cookie: 'test-only', clientVersion: 'fixture', partyId: party.partyId }, value => { chatSnapshot = value; }, {
+  schedule(callback, ms) { const timer = setTimeout(callback, ms === 8000 ? 400 : ms); timer.unref(); return () => clearTimeout(timer); },
+  openSocket() {
+    let receive;
+    return {
+      onOpen(callback) { queueMicrotask(callback); }, onMessage(callback) { receive = callback; }, onClose() {}, close() {},
+      send(raw) {
+        const message = JSON.parse(raw);
+        if (message.code === 'Subscribe') queueMicrotask(() => receive(JSON.stringify({ code: 'Subscribed', topic: message.topic })));
+        else if (['ChatMessage', 'ChatEmote'].includes(message.code)) {
+          chatWrites.push(message);
+          if (failChat) { failChat = false; return; }
+          setTimeout(() => receive(JSON.stringify({ code: 'ChatMessage', topic: message.topic, payload: JSON.stringify({
+            id: `sent-${++chatSequence}`, payloadType: message.code === 'ChatEmote' ? 'Emote' : 'Text', textPayload: message.payload,
+            sourceType: 'User', sourceId: party.owner.userId, sentAt: new Date().toISOString(), roomId: party.partyId, context: 'Party',
+          }) })), 150);
+        }
+      },
+    };
+  },
+});
 const manager = createPartyManager({ cookie: 'test-only', clientVersion: 'fixture', partyId: party.partyId }, {
   now: Date.now, selection: () => selection, publish: value => { snapshot = value; },
+  chatSource: source => chat.setSource(source), chatSend: request => chat.sendMessage(request),
   presentation: { get: () => ({ settings: fixtureSettings, revision: String(fixtureRevision) }),
     save(settings, revision) { assert.equal(revision, String(fixtureRevision)); fixtureSettings = settings; fixtureRevision++; } },
   fetch: async (input, init) => {
     const url = String(input), method = init?.method ?? 'GET', body = init?.body ? JSON.parse(init.body) : {};
     if (method === 'GET') {
-      if (url.endsWith('/profiles/')) return Response.json({ user: { id: party.owner.userId } });
+      if (url.endsWith('/profiles/')) return Response.json({ user: { id: party.owner.userId, nick: party.owner.nick }, chatBan: false });
+      if (url.endsWith('/avatar/assets/inventory')) return Response.json(PARTY_EMOTES.slice(0, 7).map(emote => ({ type: `EMOTE_${emote.slug.toUpperCase()}`, slot: 24, unlocked: true })));
       if (url.includes('/members?')) return Response.json({ members, totalCount: members.length });
       if (url.includes('/phonebook/')) return Response.json({ gameId: duel.gameId, gameServerNodeId: duel.gameServerNodeId, status: 'Active' });
       if (url.endsWith('/game-master')) return Response.json(duel);
@@ -81,10 +109,11 @@ const manager = createPartyManager({ cookie: 'test-only', clientVersion: 'fixtur
   },
 });
 await manager.refresh();
-const preload = () => `window.fixtureValues=${JSON.stringify({ matchState: matchState(), matchResolved: matchResolved(), presenterIntermission: fixtureIntermission, partyStatus: snapshot, presenterConnection: { input: 'live', selectedPartyId: party.partyId, warnings: [] }, presenterDuel: null,
+const preload = () => `window.fixtureValues=${JSON.stringify({ partyChat: chatSnapshot, matchState: matchState(), matchResolved: matchResolved(), presenterIntermission: fixtureIntermission, partyStatus: snapshot, presenterConnection: { input: 'live', selectedPartyId: party.partyId, warnings: [] }, presenterDuel: null,
   presenterSettings: fixtureSettings, configurationStatus: { revision: String(fixtureRevision), scope: 'shared', overridden: [], error: null } })};
 const handlers=new Map();window.emit=(name,value)=>{fixtureValues[name]=value;for(const cb of handlers.get(name)||[])cb(value);};
-window.confirm=()=>true;window.nodecg={Replicant(name){return {get value(){return fixtureValues[name];},on(_event,cb){if(!handlers.has(name))handlers.set(name,[]);handlers.get(name).push(cb);queueMicrotask(()=>cb(fixtureValues[name]));}};},async sendMessage(name,data){const r=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,data})});const result=await r.json();emit('presenterSettings',result.settings);emit('configurationStatus',{...fixtureValues.configurationStatus,revision:result.revision});emit('partyStatus',result.state);emit('matchState',result.match);emit('matchResolved',result.resolvedMatch);emit('presenterIntermission',result.intermission);if(result.error)throw result.error;return result.value;}};`;
+window.confirm=()=>true;window.nodecg={Replicant(name){return {get value(){return fixtureValues[name];},on(_event,cb){if(!handlers.has(name))handlers.set(name,[]);handlers.get(name).push(cb);queueMicrotask(()=>cb(fixtureValues[name]));}};},async sendMessage(name,data){const r=await fetch('/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,data})});const result=await r.json();emit('presenterSettings',result.settings);emit('configurationStatus',{...fixtureValues.configurationStatus,revision:result.revision});emit('partyStatus',result.state);emit('partyChat',result.chat);emit('matchState',result.match);emit('matchResolved',result.resolvedMatch);emit('presenterIntermission',result.intermission);if(result.error)throw result.error;return result.value;}};`;
+const socketPreload = `const events=new EventTarget();nodecg.socket={connected:true,on(name,cb){events.addEventListener(name,cb);},once(name,cb){events.addEventListener(name,cb,{once:true});},off(name,cb){events.removeEventListener(name,cb);}};window.fixtureDisconnect=()=>{nodecg.socket.connected=false;events.dispatchEvent(new Event('disconnect'));};window.fixtureReconnect=()=>{nodecg.socket.connected=true;events.dispatchEvent(new Event('connect'));};`;
 const server = createServer(async (req, res) => {
   try {
     if (req.url === '/message') {
@@ -92,19 +121,20 @@ const server = createServer(async (req, res) => {
       const { name, data } = JSON.parse(body); let error, value;
       try {
         if (name === 'party:command') await manager.command(data);
+        else if (name === 'party:chat:send') await manager.sendChat(data);
         else if (name === 'party:refresh') await manager.refresh();
         else if (name === 'party:acknowledge') await manager.acknowledge(data);
         else if (matchHandlers.has(name)) value = await sendMatch(name, data);
         else if (name === 'presenter:control' && data.action === 'intermission') fixtureIntermission = selectIntermission(fixtureIntermission, data.body);
         else throw Error('Unexpected NodeCG message');
       } catch (cause) { error = { name: cause.name, message: cause.message }; }
-      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ value, match: matchState(), resolvedMatch: matchResolved(), intermission: fixtureIntermission, state: snapshot, settings: fixtureSettings, revision: String(fixtureRevision), error })); return;
+      res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ value, chat: chatSnapshot, match: matchState(), resolvedMatch: matchResolved(), intermission: fixtureIntermission, state: snapshot, settings: fixtureSettings, revision: String(fixtureRevision), error })); return;
     }
     const name = req.url === '/' ? 'party-control.html' : req.url.slice(1);
-    if (!['party-control.html', 'party-control.css', 'party-control.js', 'party-control.js.map'].includes(name)) { res.statusCode = 404; res.end(); return; }
+    if (!['party-control.html', 'party-control.css', 'party-control.js', 'party-control.js.map', ...PARTY_EMOTES.map(emote => `assets/emotes/${emote.slug}.webp`)].includes(name)) { res.statusCode = 404; res.end(); return; }
     let content = await readFile(path.join(root, 'bundles/rashinban/dashboard', name));
-    if (name.endsWith('.html')) content = content.toString().replace('<head>', '<head><script>' + preload() + '</script>');
-    res.setHeader('Content-Type', name.endsWith('.html') ? 'text/html' : name.endsWith('.css') ? 'text/css' : 'text/javascript'); res.end(content);
+    if (name.endsWith('.html')) content = content.toString().replace('<head>', '<head><script>' + preload() + socketPreload + '</script>');
+    res.setHeader('Content-Type', name.endsWith('.html') ? 'text/html' : name.endsWith('.css') ? 'text/css' : name.endsWith('.webp') ? 'image/webp' : 'text/javascript'); res.end(content);
   } catch (error) { res.statusCode = 500; res.end(error.message); }
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -144,10 +174,10 @@ try {
   await command('Runtime.enable'); await command('Page.enable');
   await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1080, deviceScaleFactor: 1, mobile: false });
   await command('Page.navigate', { url: origin }); await until(`document.querySelector('#connection-status')?.textContent==='Host connected'`);
-  // Read-only party chat: placement, safe text, updates, scrolling, and source changes.
+  // Party chat: placement, safe text, artwork, updates, scrolling, and source changes.
   assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.grid > .card > .section-title > h2'), el=>el.textContent)`),
     ['Live duel', 'Party chat', 'Next duel settings', 'Players & bench', 'Recent commands']);
-  const chatState = { partyId: party.partyId, state: 'live', detail: 'Live messages from this connection · latest 200 retained.', messages: [
+  const chatState = { ...chatSnapshot, messages: [
     { id: 'text', userId: 'blue', name: 'Player Blue', kind: 'Text', text: '準備できました！ <img src=x onerror=alert(1)>', sentAtMs: Date.now(), channel: null },
     { id: 'emote', userId: 'red', name: 'Player Red', kind: 'Emote', text: ':gg:', sentAtMs: Date.now() + 1, channel: null },
   ] };
@@ -155,8 +185,10 @@ try {
   assert.equal(await evaluate(`document.querySelectorAll('.chat-message').length`), 2);
   assert.equal(await evaluate(`document.querySelector('#chat-status').textContent`), 'Live');
   assert.equal(await evaluate(`document.querySelector('.chat-text').textContent`), chatState.messages[0].text);
-  assert.equal(await evaluate(`document.querySelectorAll('#chat-messages img').length`), 0);
-  assert.equal(await evaluate(`document.querySelector('.chat-emote').textContent`), ':gg:');
+  assert.equal(await evaluate(`document.querySelectorAll('#chat-messages img[src="x"]').length`), 0);
+  await until(`document.querySelector('.chat-emote img')?.naturalWidth===256`);
+  assert.equal(await evaluate(`document.querySelector('.chat-emote img').alt`), 'GG');
+  assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('#chat-emotes button'), el=>el.dataset.emote)`), PARTY_EMOTES.slice(0, 7).map(emote => emote.tag));
   assert.equal(await evaluate(`document.querySelector('.party-chat').getBoundingClientRect().top===document.querySelector('.live').getBoundingClientRect().top`), true);
   await screenshot('chat-desktop');
   const chatMutations = mutationCount;
@@ -185,6 +217,64 @@ try {
   await evaluate(`emit('presenterConnection',{...fixtureValues.presenterConnection,selectedPartyId:${JSON.stringify(party.partyId)}});emit('partyChat',{...fixtureValues.partyChat,messages:[]})`);
   assert.equal(await evaluate(`document.querySelector('#chat-empty').hidden`), false);
   assert.equal(mutationCount, chatMutations, 'chat display never sends party commands');
+  // Exercise browser -> manager permission refresh -> native socket envelope -> echoed feed -> acknowledgement.
+  await evaluate(`emit('partyChat',${JSON.stringify(chatSnapshot)})`);
+  async function typeChat(text) { await evaluate(`{const input=document.querySelector('#chat-input');input.value=${JSON.stringify(text)};input.dispatchEvent(new Event('input',{bubbles:true}));}`); }
+  assert.equal(await evaluate(`document.querySelector('#chat-input').maxLength`), 100);
+  assert.match(await evaluate(`document.querySelector('#chat-sender').textContent`), /Broadcast host/);
+  await typeChat('準備できました！ :wave:');
+  await click('chat-send'); await click('chat-send');
+  await until(`document.querySelector('#chat-send-status').textContent==='Sent.'`);
+  assert.equal(chatWrites.length, 1, 'double click sends once');
+  assert.equal(chatWrites[0].payload, '準備できました！ :wave:');
+  assert.equal(chatWrites[0].code, 'ChatMessage');
+  assert.equal(await evaluate(`document.querySelector('#chat-input').value`), '');
+  await until(`document.querySelector('#chat-messages img')?.naturalWidth===256`);
+  assert.equal(await evaluate(`document.querySelector('#chat-messages img').alt`), 'Wave');
+  await until(`!document.querySelector('#chat-emotes button[data-emote=":wave:"]').disabled`);
+  await evaluate(`document.querySelector('#chat-emotes button[data-emote=":wave:"]').click()`);
+  await until(`document.querySelector('#chat-send-status').textContent==='Sent.'`);
+  assert.equal(chatWrites[1].code, 'ChatEmote'); assert.equal(chatWrites[1].payload, ':wave:');
+  await typeChat('Keep this draft'); await until(`!document.querySelector('#chat-send').disabled`);
+  failChat = true; await click('chat-send');
+  await until(`document.querySelector('#chat-send-status').textContent.includes('Delivery was not confirmed')`);
+  assert.equal(await evaluate(`document.querySelector('#chat-input').value`), 'Keep this draft');
+  assert.equal(chatWrites.length, 3, 'uncertain message was not retried');
+  assert.equal(await evaluate(`document.querySelectorAll('.chat-message').length`), 2, 'uncertain message has no optimistic feed row');
+  await screenshot('chat-send-uncertain');
+  await until(`!document.querySelector('#chat-send').disabled`);
+  await click('chat-send'); await typeChat('Next draft');
+  await until(`document.querySelector('#chat-send-status').textContent==='Sent.'`);
+  assert.equal(await evaluate(`document.querySelector('#chat-input').value`), 'Next draft', 'confirmation preserves edits made while sending');
+  await until(`!document.querySelector('#chat-send').disabled`);
+  await screenshot('chat-send-desktop');
+  await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await screenshot('chat-send-mobile');
+  assert.equal(await evaluate('document.documentElement.scrollWidth<=window.innerWidth'), true, 'composer and emotes fit mobile');
+  await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1080, deviceScaleFactor: 1, mobile: false });
+  // A transport acknowledgement can disappear even when the request reached the server.
+  await evaluate(`window.realSend=nodecg.sendMessage;window.realTimeout=window.setTimeout;nodecg.sendMessage=(...args)=>realSend(...args).then(()=>new Promise(()=>{}));window.setTimeout=(fn,ms,...args)=>realTimeout(fn,ms===20000?500:ms,...args);`);
+  await typeChat('Keep after lost acknowledgement'); await click('chat-send');
+  await until(`document.querySelector('#chat-send-status').textContent.includes('Delivery was not confirmed')`);
+  assert.equal(await evaluate(`document.querySelector('#chat-input').value`), 'Keep after lost acknowledgement');
+  await until(`!document.querySelector('#chat-send').disabled`);
+  await evaluate(`window.setTimeout=realTimeout`);
+  await typeChat('Keep across same-party reconnect'); await click('chat-send');
+  await until(`fixtureValues.partyChat.messages.at(-1)?.text==='Keep across same-party reconnect'`);
+  await evaluate(`emit('partyChat',${JSON.stringify(EMPTY_PARTY_CHAT)});fixtureDisconnect()`);
+  await until(`document.querySelector('#chat-send-status').textContent.includes('Delivery was not confirmed')`);
+  assert.equal(await evaluate(`document.querySelector('#chat-input').value`), 'Keep across same-party reconnect');
+  assert.equal(await evaluate(`document.querySelector('#chat-send').disabled`), true);
+  const disconnectedWrites = chatWrites.length; await click('chat-send');
+  assert.equal(chatWrites.length, disconnectedWrites, 'disconnected sends are never queued');
+  await evaluate(`nodecg.sendMessage=realSend;emit('partyChat',${JSON.stringify(chatSnapshot)});fixtureReconnect()`);
+  await until(`!document.querySelector('#chat-send').disabled`);
+  assert.equal(await evaluate(`document.querySelector('#chat-input').value`), 'Keep across same-party reconnect');
+  await evaluate(`emit('presenterConnection',{...fixtureValues.presenterConnection,input:'replay'})`);
+  assert.equal(await evaluate(`document.querySelector('#chat-input').disabled`), true);
+  assert.equal(await evaluate(`document.querySelector('#chat-input').value`), '', 'source change clears draft');
+  assert.equal(await evaluate(`Array.from(document.querySelectorAll('#chat-emotes button')).every(el=>el.disabled)`), true);
+  await evaluate(`emit('presenterConnection',{...fixtureValues.presenterConnection,input:'live'})`);
   assert.equal(await evaluate('window.isSecureContext'), !insecureHttp);
   assert.equal(await evaluate('typeof crypto.randomUUID'), insecureHttp ? 'undefined' : 'function');
   assert.equal(await evaluate('typeof crypto.getRandomValues'), 'function');
@@ -434,7 +524,7 @@ try {
   selection = { input: 'replay', partyId: null }; await manager.refresh(); await evaluate(`emit('partyStatus',${JSON.stringify(snapshot)})`);
   assert.equal(await evaluate(`document.querySelector('#start-game').disabled`), true);
   assert.deepEqual(errors, []);
-  console.log('Party browser flow passed: read-only chat layout, safe text, emotes, scrolling, source changes, shared Match Score increments, typed edits, reset, synchronization, stale edits, invalid input, live pin predictions, knockout/continue, stale/settled suppression, tournament preset drafts, Half tie range, Pinpointing switching, config conflicts, lobby readiness, presenter scores, next-duel rules, unavailable scores, retained winner, settings, starts, pause/resume, rollback, abort, bench, unknown outcomes, replay, mobile. Mutations stayed inside fixture API.');
+  console.log('Party browser flow passed: chat layout, safe text, native emote artwork, text/emote sending, confirmed delivery, duplicate prevention, retained drafts, scrolling, source changes, shared Match Score increments, typed edits, reset, synchronization, stale edits, invalid input, live pin predictions, knockout/continue, stale/settled suppression, tournament preset drafts, Half tie range, Pinpointing switching, config conflicts, lobby readiness, presenter scores, next-duel rules, unavailable scores, retained winner, settings, starts, pause/resume, rollback, abort, bench, unknown outcomes, replay, mobile. Mutations stayed inside fixture API.');
   console.log('Screenshots: ' + artifacts);
 } catch (error) {
   if (socket?.readyState === WebSocket.OPEN) {
@@ -445,5 +535,5 @@ try {
   throw error;
 } finally {
   if (socket?.readyState === WebSocket.OPEN) { await command('Browser.close').catch(() => {}); socket.close(); }
-  chrome.kill(); server.close();
+  chat.reset(); chrome.kill(); server.close();
 }

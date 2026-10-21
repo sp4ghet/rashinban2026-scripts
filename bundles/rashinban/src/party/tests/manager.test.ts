@@ -21,6 +21,8 @@ function harness() {
   let state: PartyStatus; let now = 100000; let selection = { input: 'live' as 'live' | 'replay', partyId: 'party' as string | null, generation: 'initial' };
   let chatSource: PartyChatSource | null = null;
   const chatSources: (PartyChatSource | null)[] = [];
+  const chatSent: unknown[] = [];
+  let chatBan = false;
   const calls: { url: string; method: string; body: any }[] = [];
   let mutate: (url: string, body: any) => Response | Promise<Response> = () => new Response(null, { status: 204 });
   let activeId = 'party';
@@ -29,6 +31,7 @@ function harness() {
   const manager = createPartyManager({ cookie: 'SECRET', clientVersion: 'fixture', partyId: null }, {
     now: () => now, selection: () => selection, publish: value => { state = value; },
     chatSource: value => { chatSource = value; chatSources.push(value); },
+    chatSend: async value => { if (chatSource?.sendDisabledReason) throw Error(chatSource.sendDisabledReason); chatSent.push(value); },
     presentation: { get: () => ({ settings: presentation, revision: String(presentationRevision) }),
       save(settings: PresenterSettings, revision: string) {
         presentationSaves++;
@@ -42,7 +45,12 @@ function harness() {
       calls.push({ url, method, body });
       if (method !== 'GET') return mutate(url, body);
       await beforeRead(url);
-      if (url.endsWith('/profiles/')) return Response.json({ user: { id: 'host', nick: 'Host' } });
+      if (url.endsWith('/profiles/')) return Response.json({ user: { id: 'host', nick: 'Host' }, chatBan });
+      if (url.endsWith('/avatar/assets/inventory')) return Response.json([
+        { slot: 24, type: 'EMOTE_GG', unlocked: true, isEliteExclusive: false },
+        { slot: 24, type: 'EMOTE_COOL', unlocked: false },
+        { slot: 24, type: 'EMOTE_GOAT', unlocked: true, isEliteExclusive: true },
+      ]);
       if (url.endsWith('/active')) return Response.json({ ...party, partyId: activeId });
       if (url.includes('/members?')) return Response.json({ members, totalCount: members.length });
       if (url.includes('/phonebook/')) return Response.json({ gameId: duel.gameId, gameServerNodeId: 'node', status: 'Active' });
@@ -53,6 +61,7 @@ function harness() {
   return { manager, party, duel, members, calls, get state() { return state!; }, set mutate(fn: typeof mutate) { mutate = fn; },
     get chatSource() { return chatSource; },
     chatSources,
+    chatSent, banChat: () => { chatBan = true; },
     get presentation() { return presentation; }, get presentationRevision() { return String(presentationRevision); }, get presentationSaves() { return presentationSaves; },
     editPresentation(patch: Partial<PresenterSettings>) { presentation = { ...presentation, ...patch }; presentationRevision++; },
     failPresentation() { failPresentation = true; },
@@ -99,6 +108,32 @@ test('chat stays connected when the initial duel snapshot is not ready across mu
   const count = h.chatSources.length;
   await h.manager.refresh();
   assert.equal(h.chatSources.slice(count).includes(null), false, 'same party must not clear the healthy chat source');
+});
+
+test('chat refresh checks membership, mute/ban and source changes independently of host controls', async () => {
+  const h = harness(); await h.manager.refresh();
+  assert.deepEqual(h.chatSource?.allowedEmotes, [':gg:']);
+  assert.equal(h.chatSource?.sender, 'Host');
+  await h.manager.sendChat({ text: 'hello' }); assert.equal(h.chatSent.length, 1);
+  h.party.mutedPlayerIds = ['host']; await assert.rejects(h.manager.sendChat({ text: 'muted' }), /muted/i);
+  h.party.mutedPlayerIds = []; h.banChat(); await assert.rejects(h.manager.sendChat({ text: 'banned' }), /chat ban/i);
+  h.select('replay'); await assert.rejects(h.manager.sendChat({ text: 'replay' }), /replay/i);
+  assert.equal(h.chatSent.length, 1);
+  const changed = harness(); await changed.manager.refresh();
+  changed.onRead(() => { changed.select('live'); });
+  await assert.rejects(changed.manager.sendChat({ text: 'stale' }), /changed/i);
+  assert.equal(changed.chatSent.length, 0);
+});
+
+test('fresh chat authorization allows sending during duel read failures but not party read failures', async () => {
+  const h = harness(); await h.manager.refresh();
+  h.onRead(url => { if (url.includes('/phonebook/')) throw new RejectedRequest('Game is starting'); });
+  await h.manager.sendChat({ text: 'ready' });
+  assert.equal(h.chatSent.length, 1); assert.ok(h.chatSource);
+  assert.equal(h.state.state, 'error', 'duel controls still report their unavailable state');
+  h.onRead(url => { if (url.endsWith('/active')) throw Error('Party read failed'); });
+  await assert.rejects(h.manager.sendChat({ text: 'stale' }), /refresh/i);
+  assert.equal(h.chatSent.length, 1, 'old chat permissions do not authorize a new send');
 });
 
 test('a present player still in game/results blocks the next duel until they return to the lobby', async () => {
