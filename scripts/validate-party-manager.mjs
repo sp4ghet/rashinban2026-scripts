@@ -144,6 +144,47 @@ try {
   await command('Runtime.enable'); await command('Page.enable');
   await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1080, deviceScaleFactor: 1, mobile: false });
   await command('Page.navigate', { url: origin }); await until(`document.querySelector('#connection-status')?.textContent==='Host connected'`);
+  // Read-only party chat: placement, safe text, updates, scrolling, and source changes.
+  assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.grid > .card > .section-title > h2'), el=>el.textContent)`),
+    ['Live duel', 'Party chat', 'Next duel settings', 'Players & bench', 'Recent commands']);
+  const chatState = { partyId: party.partyId, state: 'live', detail: 'Live messages from this connection · latest 200 retained.', messages: [
+    { id: 'text', userId: 'blue', name: 'Player Blue', kind: 'Text', text: '準備できました！ <img src=x onerror=alert(1)>', sentAtMs: Date.now(), channel: null },
+    { id: 'emote', userId: 'red', name: 'Player Red', kind: 'Emote', text: ':gg:', sentAtMs: Date.now() + 1, channel: null },
+  ] };
+  await evaluate(`emit('partyChat',${JSON.stringify(chatState)})`);
+  assert.equal(await evaluate(`document.querySelectorAll('.chat-message').length`), 2);
+  assert.equal(await evaluate(`document.querySelector('#chat-status').textContent`), 'Live');
+  assert.equal(await evaluate(`document.querySelector('.chat-text').textContent`), chatState.messages[0].text);
+  assert.equal(await evaluate(`document.querySelectorAll('#chat-messages img').length`), 0);
+  assert.equal(await evaluate(`document.querySelector('.chat-emote').textContent`), ':gg:');
+  assert.equal(await evaluate(`document.querySelector('.party-chat').getBoundingClientRect().top===document.querySelector('.live').getBoundingClientRect().top`), true);
+  await screenshot('chat-desktop');
+  const chatMutations = mutationCount;
+  for (let i = 0; i < 50; i++) chatState.messages.push({ ...chatState.messages[0], id: `chat-${i}`, text: `Message ${i}`, sentAtMs: Date.now() + i + 2 });
+  await evaluate(`emit('partyChat',${JSON.stringify(chatState)})`);
+  assert.equal(await evaluate(`{const log=document.querySelector('#chat-messages');log.scrollHeight-log.scrollTop-log.clientHeight<2}`), true, 'new messages follow when at the bottom');
+  await evaluate(`document.querySelector('#chat-messages').scrollTop=80`);
+  chatState.messages.push({ ...chatState.messages[0], id: 'new-message', text: 'Latest message' });
+  await evaluate(`emit('partyChat',${JSON.stringify(chatState)})`);
+  assert.equal(await evaluate(`document.querySelector('#chat-messages').scrollTop`), 80, 'reading older messages preserves scroll');
+  await evaluate(`emit('partyStatus',fixtureValues.partyStatus)`);
+  assert.equal(await evaluate(`document.querySelector('#chat-messages').scrollTop`), 80, 'party polling preserves scroll');
+  await evaluate(`emit('partyChat',{...fixtureValues.partyChat,state:'reconnecting',detail:'Chat disconnected. Reconnecting…'})`);
+  assert.equal(await evaluate(`document.querySelector('#chat-status').textContent`), 'Reconnecting…');
+  assert.equal(await evaluate(`document.querySelectorAll('.chat-message').length`), 53);
+  chatState.messages.push({ ...chatState.messages[0], id: 'long-message', text: '長いメッセージ'.repeat(100) });
+  await evaluate(`emit('partyChat',${JSON.stringify(chatState)})`);
+  await command('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  assert.equal(await evaluate('document.documentElement.scrollWidth<=window.innerWidth'), true, 'party chat fits mobile');
+  await screenshot('chat-mobile');
+  await command('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1080, deviceScaleFactor: 1, mobile: false });
+  await evaluate(`emit('presenterConnection',{...fixtureValues.presenterConnection,input:'replay'})`);
+  assert.equal(await evaluate(`document.querySelectorAll('.chat-message').length`), 0, 'replay hides live chat immediately');
+  await evaluate(`emit('presenterConnection',{...fixtureValues.presenterConnection,input:'live',selectedPartyId:'another-party'})`);
+  assert.equal(await evaluate(`document.querySelectorAll('.chat-message').length`), 0, 'party selection hides old chat immediately');
+  await evaluate(`emit('presenterConnection',{...fixtureValues.presenterConnection,selectedPartyId:${JSON.stringify(party.partyId)}});emit('partyChat',{...fixtureValues.partyChat,messages:[]})`);
+  assert.equal(await evaluate(`document.querySelector('#chat-empty').hidden`), false);
+  assert.equal(mutationCount, chatMutations, 'chat display never sends party commands');
   assert.equal(await evaluate('window.isSecureContext'), !insecureHttp);
   assert.equal(await evaluate('typeof crypto.randomUUID'), insecureHttp ? 'undefined' : 'function');
   assert.equal(await evaluate('typeof crypto.getRandomValues'), 'function');
@@ -393,7 +434,7 @@ try {
   selection = { input: 'replay', partyId: null }; await manager.refresh(); await evaluate(`emit('partyStatus',${JSON.stringify(snapshot)})`);
   assert.equal(await evaluate(`document.querySelector('#start-game').disabled`), true);
   assert.deepEqual(errors, []);
-  console.log('Party browser flow passed: shared Match Score increments, typed edits, reset, synchronization, stale edits, invalid input, live pin predictions, knockout/continue, stale/settled suppression, tournament preset drafts, Half tie range, Pinpointing switching, config conflicts, lobby readiness, presenter scores, next-duel rules, unavailable scores, retained winner, settings, starts, pause/resume, rollback, abort, bench, unknown outcomes, replay, mobile. Mutations stayed inside fixture API.');
+  console.log('Party browser flow passed: read-only chat layout, safe text, emotes, scrolling, source changes, shared Match Score increments, typed edits, reset, synchronization, stale edits, invalid input, live pin predictions, knockout/continue, stale/settled suppression, tournament preset drafts, Half tie range, Pinpointing switching, config conflicts, lobby readiness, presenter scores, next-duel rules, unavailable scores, retained winner, settings, starts, pause/resume, rollback, abort, bench, unknown outcomes, replay, mobile. Mutations stayed inside fixture API.');
   console.log('Screenshots: ' + artifacts);
 } catch (error) {
   if (socket?.readyState === WebSocket.OPEN) {

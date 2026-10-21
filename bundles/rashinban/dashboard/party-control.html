@@ -41,9 +41,11 @@
       <details><summary>Recovery / rollback</summary><div class="actions"><label>Replay from round<input id="rollback-round" type="number" min="1" value="1"></label><button id="rollback" class="danger-button" disabled>Roll back…</button></div><p class="small muted">Requires a paused duel. Reuses the target location and restarts its timer. The result must be confirmed by GeoGuessr.</p></details>
       <details><summary>Game details</summary><div id="game-details" class="small muted"></div></details>
     </section>
-    <section class="card roster"><div class="section-title"><h2>Players & bench</h2><span id="roster-count" class="badge">0</span></div><p id="roster-hint" class="small muted">Roster changes apply between games. Order determines Duels slots.</p><div id="members" class="members"></div>
-      <div class="swap-row"><select id="swap-first" aria-label="First player"></select><span>⇄</span><select id="swap-second" aria-label="Second player"></select><button id="swap" disabled>Swap</button></div>
-      <details><summary>Moderation / host</summary><div class="actions"><select id="moderation-player" aria-label="Player to moderate"></select><select id="moderation-action" aria-label="Moderation action"><option value="kick">Kick player</option><option value="ban">Ban player</option><option value="mute">Mute chat</option><option value="unmute">Unmute chat</option><option value="host">Transfer host</option></select><button id="moderate" class="danger-button" disabled>Apply…</button></div><div id="banned" class="small"></div></details>
+    <section class="card party-chat" aria-labelledby="chat-heading"><div class="section-title"><h2 id="chat-heading">Party chat</h2><span id="chat-status" class="badge" role="status">Waiting</span></div>
+      <p id="chat-detail" class="small muted">Waiting for a live party.</p>
+      <div id="chat-messages" class="chat-messages" role="log" aria-label="Party messages" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
+      <p id="chat-empty" class="small muted">No messages received yet.</p>
+      <p class="small muted">Read only · Send messages from the GeoGuessr lobby.</p>
     </section>
     <section class="card settings"><div class="section-title"><h2>Next duel settings</h2><span id="draft-status" class="muted small">Waiting for party</span></div>
       <div class="preset-controls"><label>Tournament preset<select id="tournament-preset"><option value="" disabled>Choose a game…</option></select></label></div>
@@ -69,6 +71,10 @@
           <label>Red initial HP<input type="number" data-group="gameSettings" data-key="initialHealthTeamTwo" min="0" max="1000000000"></label>
         </div><div class="checks"><label><input type="checkbox" data-group="gameSettings" data-key="individualInitialHealth"> Individual initial HP</label><label><input type="checkbox" data-group="gameSettings" data-key="countAllGuesses"> Count all team guesses</label><label><input type="checkbox" data-group="settings" data-key="allowGuests"> Allow guests</label><label><input type="checkbox" data-group="settings" data-key="allowSwitchingTeams"> Allow team switching</label><label><input type="checkbox" data-group="settings" data-key="isolateInGameChat"> Isolate in-game chat</label><label><input type="checkbox" data-group="settings" data-key="hideJoinInfo"> Hide join info</label></div></details>
       </fieldset><div class="actions"><button id="save-settings" type="submit" class="primary" disabled>Apply settings</button><button id="reload-settings" type="button" disabled>Reload current settings</button><span class="small muted">Applies in the lobby before starting a duel.</span></div></form>
+    </section>
+    <section class="card roster"><div class="section-title"><h2>Players & bench</h2><span id="roster-count" class="badge">0</span></div><p id="roster-hint" class="small muted">Roster changes apply between games. Order determines Duels slots.</p><div id="members" class="members"></div>
+      <div class="swap-row"><select id="swap-first" aria-label="First player"></select><span>⇄</span><select id="swap-second" aria-label="Second player"></select><button id="swap" disabled>Swap</button></div>
+      <details><summary>Moderation / host</summary><div class="actions"><select id="moderation-player" aria-label="Player to moderate"></select><select id="moderation-action" aria-label="Moderation action"><option value="kick">Kick player</option><option value="ban">Ban player</option><option value="mute">Mute chat</option><option value="unmute">Unmute chat</option><option value="host">Transfer host</option></select><button id="moderate" class="danger-button" disabled>Apply…</button></div><div id="banned" class="small"></div></details>
     </section>
     <section class="card activity"><div class="section-title"><h2>Recent commands</h2><button id="acknowledge" hidden>State checked — clear pending…</button></div><ol id="activity-list"><li class="muted">No commands sent.</li></ol></section>
   </div>

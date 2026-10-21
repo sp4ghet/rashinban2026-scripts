@@ -4,11 +4,13 @@ import { createPartyClient, PARTY_API, RejectedRequest } from './client.ts';
 import { identifier, lobbyStartBlockReason, parseCommand, parseDuel, parseMember, parseParty, record, settingsPatch } from '../../party/state.ts';
 import { EMPTY_PARTY_STATUS, type Activity, type Member, type PartyCommand, type PartyStatus } from '../../party/types.ts';
 import { parseSettings, type PresenterSettings } from '../../presenter/settings.ts';
+import type { PartyChatSource } from './chat.ts';
 
 export type ManagerDeps = {
   fetch: typeof fetch; now(): number;
   selection(): { input: 'live' | 'replay'; partyId: string | null; generation?: string };
   publish(status: PartyStatus): void;
+  chatSource?(source: PartyChatSource | null): void;
   presentation?: { get(): { settings: PresenterSettings; revision: string }; save(settings: PresenterSettings, revision: string): void };
 };
 type Pending = { id: string; deadline: number; verify(value: PartyStatus): boolean; complete?(): void; completionFailed?: boolean };
@@ -24,6 +26,8 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
   const client = createPartyClient(config, deps.fetch, deps.now);
   let status: PartyStatus = structuredClone(EMPTY_PARTY_STATUS);
   let rawParty: Record<string, unknown> | null = null;
+  let chatSelectionKey: string | null = null;
+  let chatPartyId: string | null = null;
   let refreshWork: Promise<void> | null = null;
   let pending: Pending | null = null;
   let locked = false;
@@ -55,8 +59,10 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
   }
   async function read() {
     const key = selectionKey(); const selection = deps.selection();
+    if (chatSelectionKey !== key) { deps.chatSource?.(null); chatSelectionKey = key; chatPartyId = null; }
     if (selection.input === 'replay') {
       rawParty = null;
+      deps.chatSource?.(null);
       status = { ...status, state: 'replay', error: null, canManage: false, disabledReason: 'Replay mode — remote controls disabled', party: null, duel: null, members: [], updatedAtMs: null };
       checkPending(); publish(); return;
     }
@@ -68,6 +74,8 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
       const selectedId = selection.partyId ?? active?.partyId;
       const raw = selectedId ? (active?.partyId === selectedId ? activeRaw : await client.request(`${PARTY_API}/${identifier(selectedId)}`)) : null;
       const party = raw ? parseParty(raw) : null;
+      if (key !== selectionKey()) return;
+      if ((party?.partyId ?? null) !== chatPartyId) { deps.chatSource?.(null); chatPartyId = party?.partyId ?? null; }
       const members: Member[] = [];
       if (party && active?.partyId === party.partyId) {
         let total = Infinity;
@@ -80,6 +88,11 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
         }
         if (members.length < total || new Set(members.map(member => member.userId)).size !== members.length) throw new Error('Incomplete roster');
       }
+      if (key !== selectionKey()) return;
+      const chatToken = raw ? record(raw).chatAccessToken : null;
+      deps.chatSource?.(party ? { partyId: party.partyId, members,
+        accessToken: typeof chatToken === 'string' ? chatToken : null,
+        level: String(party.settings.allowedCommunication ?? 'None') } : null);
       let duel: PartyStatus['duel'] = null;
       if (party?.lobbyId && party.gameState === 'Ongoing' && ['Duels', 'TeamDuels'].includes(party.gameType)) {
         const phone = record(await client.request(`https://www.geoguessr.com/api/v4/game-server/phonebook/${identifier(party.lobbyId)}`));
@@ -102,6 +115,7 @@ export function createPartyManager(config: ConnectionConfig, deps: ManagerDeps) 
       checkPending();
     } catch (error) {
       if (key !== selectionKey()) return;
+      if (error instanceof RejectedRequest) deps.chatSource?.(null);
       status = { ...status, state: 'error', canManage: false, disabledReason: 'State unavailable — refresh before sending commands.',
         error: error instanceof RejectedRequest ? error.message : 'Unable to read complete GeoGuessr state. Check the connection and refresh.' };
       checkPending();

@@ -7,6 +7,8 @@ import type { PartyStatus } from '../types.ts';
 import { decodeSnapshot } from '../../presenter/protocol.ts';
 import { DEFAULT_SETTINGS, type PresenterSettings } from '../../presenter/settings.ts';
 import { presetSettings } from '../presets.ts';
+import type { PartyChatSource } from '../../extension/party/chat.ts';
+import { RejectedRequest } from '../../extension/party/client.ts';
 
 const sample = (name: string) => JSON.parse(readFileSync(new URL(`../../../../../docs/geoguessr/samples/${name}`, import.meta.url), 'utf8'));
 function harness() {
@@ -17,6 +19,8 @@ function harness() {
   duel.context = { type: 'Party', id: 'party' }; duel.gameMasterId = 'host'; duel.gameServerNodeId = 'node';
   const members = [{ ...party.owner, userId: 'blue', isBenched: false }, { ...party.owner, userId: 'red', isBenched: false }];
   let state: PartyStatus; let now = 100000; let selection = { input: 'live' as 'live' | 'replay', partyId: 'party' as string | null, generation: 'initial' };
+  let chatSource: PartyChatSource | null = null;
+  const chatSources: (PartyChatSource | null)[] = [];
   const calls: { url: string; method: string; body: any }[] = [];
   let mutate: (url: string, body: any) => Response | Promise<Response> = () => new Response(null, { status: 204 });
   let activeId = 'party';
@@ -24,6 +28,7 @@ function harness() {
   let presentation = structuredClone(DEFAULT_SETTINGS), presentationRevision = 0, presentationSaves = 0, failPresentation = false, ignorePresentation = false;
   const manager = createPartyManager({ cookie: 'SECRET', clientVersion: 'fixture', partyId: null }, {
     now: () => now, selection: () => selection, publish: value => { state = value; },
+    chatSource: value => { chatSource = value; chatSources.push(value); },
     presentation: { get: () => ({ settings: presentation, revision: String(presentationRevision) }),
       save(settings: PresenterSettings, revision: string) {
         presentationSaves++;
@@ -46,6 +51,8 @@ function harness() {
     },
   });
   return { manager, party, duel, members, calls, get state() { return state!; }, set mutate(fn: typeof mutate) { mutate = fn; },
+    get chatSource() { return chatSource; },
+    chatSources,
     get presentation() { return presentation; }, get presentationRevision() { return String(presentationRevision); }, get presentationSaves() { return presentationSaves; },
     editPresentation(patch: Partial<PresenterSettings>) { presentation = { ...presentation, ...patch }; presentationRevision++; },
     failPresentation() { failPresentation = true; },
@@ -64,6 +71,34 @@ test('public snapshots omit credentials, join tokens and future panoramas', () =
   const publicDuel = parseDuel(h.duel);
   assert.equal(publicDuel.round, h.duel.currentRoundNumber);
   assert.equal(JSON.stringify(publicDuel).includes('FUTURE'), false);
+});
+
+test('polling supplies private chat access separately and clears it on replay', async () => {
+  const h = harness(); h.party.chatAccessToken = 'PRIVATE-CHAT'; await h.manager.refresh();
+  assert.equal(h.chatSource?.accessToken, 'PRIVATE-CHAT');
+  assert.equal(h.chatSource?.partyId, 'party');
+  assert.equal(h.chatSource?.members[0].userId, 'blue');
+  assert.equal(JSON.stringify(h.state).includes('PRIVATE-CHAT'), false);
+  h.select('replay'); await h.manager.refresh(); assert.equal(h.chatSource, null);
+});
+
+test('transient party polling failures preserve chat, but changed sources and lost access clear it', async () => {
+  const h = harness(); h.party.chatAccessToken = 'PRIVATE-CHAT'; await h.manager.refresh();
+  h.onRead(() => { throw Error('network unavailable'); }); await h.manager.refresh();
+  assert.equal(h.state.state, 'error'); assert.equal(h.chatSource?.accessToken, 'PRIVATE-CHAT');
+  h.select('live'); await h.manager.refresh(); assert.equal(h.chatSource, null);
+  h.onRead(() => {}); await h.manager.refresh(); assert.ok(h.chatSource);
+  h.onRead(() => { throw new RejectedRequest('Authentication rejected'); }); await h.manager.refresh();
+  assert.equal(h.chatSource, null);
+});
+
+test('chat stays connected when the initial duel snapshot is not ready across multiple polls', async () => {
+  const h = harness(); h.party.gameState = 'Ongoing';
+  h.onRead(url => { if (url.includes('/phonebook/')) throw Error('Game starting'); });
+  await h.manager.refresh(); assert.ok(h.chatSource); assert.equal(h.state.state, 'error');
+  const count = h.chatSources.length;
+  await h.manager.refresh();
+  assert.equal(h.chatSources.slice(count).includes(null), false, 'same party must not clear the healthy chat source');
 });
 
 test('a present player still in game/results blocks the next duel until they return to the lobby', async () => {

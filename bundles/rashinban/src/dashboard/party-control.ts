@@ -1,5 +1,6 @@
 import { REPLICANTS, type PresenterConnection } from '../types/replicants.ts';
 import { bindMatchScore } from './party/match-score.ts';
+import { bindPartyChat } from './party/chat.ts';
 import type { DuelState, Views } from '../types/presenter.ts';
 import { EMPTY_PARTY_STATUS, PARTY_MESSAGES, type PartyAction, type PartyStatus, type Settings } from '../party/types.ts';
 import { lobbyStartBlockReason, phase } from '../party/state.ts';
@@ -12,6 +13,7 @@ import type { ConfigStatus } from '../config/types.ts';
 import { TOURNAMENT_PRESETS, presetSettings, type PresetSettings, type PresenterRulesPatch } from '../party/presets.ts';
 
 bindMatchScore();
+bindPartyChat();
 
 const partyRep = nodecg.Replicant<PartyStatus>(REPLICANTS.partyStatus);
 const connection = nodecg.Replicant<PresenterConnection>(REPLICANTS.presenterConnection);

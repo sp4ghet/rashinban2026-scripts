@@ -6,6 +6,7 @@ import type { PresenterSettings } from '../presenter/settings.ts';
 import type { Intermission } from '../presenter/intermission.ts';
 import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import type { PartyStatus } from '../party/types.ts';
+import type { PartyChat } from '../party/chat.ts';
 import type { IntervalState } from '../interval/state.ts';
 import type { ConnectionStatus } from '../extension/presenter/connection.ts';
 import type { ClientReady, Lease } from '../presenter/clock.ts';
@@ -57,6 +58,7 @@ export const REPLICANTS = {
   bracketFinals: "bracketFinals",
   presenterConnection: 'presenterConnection',
   partyStatus: 'partyStatus',
+  partyChat: 'partyChat',
   presenterDuel: 'presenterDuel',
   presenterViews: 'presenterViews',
   presenterSeries: 'presenterSeries',
@@ -94,6 +96,7 @@ export interface ReplicantMap {
   [REPLICANTS.bracketFinals]: BracketFinals;
   [REPLICANTS.presenterConnection]: PresenterConnection;
   [REPLICANTS.partyStatus]: PartyStatus;
+  [REPLICANTS.partyChat]: PartyChat;
   [REPLICANTS.presenterDuel]: DuelState | null;
   [REPLICANTS.presenterViews]: Views | null;
   [REPLICANTS.presenterSeries]: SeriesState;

@@ -15,6 +15,10 @@ Roster and settings changes are restricted to between games. Moderation includes
 
 Join codes are under **Join info**. The manager does not manage public/community discovery, account login, chat composition, or party deletion; those remain in the native GeoGuessr lobby.
 
+**Party chat** sits beside Live duel (below it on narrow screens). It shows live text and emotes with sender names and timestamps, retaining the latest 200 messages while NodeCG is running. It follows new messages when scrolled to the bottom; scrolling up keeps your place. Chat is read only; send messages from GeoGuessr. Players & bench is below Next duel settings, immediately above Recent commands.
+
+Chat starts when the selected live party connects. GeoGuessr does not supply older messages through this subscription, and messages sent during a disconnection may be missed. Connection, disabled-chat, and access-denied states appear in the card. Changing parties or entering replay clears the feed. In-game messages arrive here when GeoGuessr routes them to party chat; isolated in-game chat is separate. The chat token and account cookie stay on the server, and the feed is not persisted to disk.
+
 ## Match Score
 
 **Match Score** edits the saved Current Match scores (formerly Series wins). **Shared > Current Match** shows the score in its summary; score editing lives here in Party. Enter whole numbers from 0 to 2 and choose **Apply Match Score**, or press **+1** beside a player to save an increment immediately. **Reset to 0–0** saves both scores together. These controls do not change GeoGuessr's in-game points or health.
@@ -79,7 +83,7 @@ The server serializes commands and checks the selected party against the authent
 
 An HTTP success means **accepted**. Only subsequent authoritative state can make a command **confirmed**. A pause may remain accepted until its round deadline; **Abort duel** can explicitly supersede that pause request. After an unconfirmed timeout, or an ambiguous transport failure, the command remains **uncertain** and blocks other writes. Inspect the live state, refresh, then use **State checked — clear pending** to acknowledge that uncertainty. This never retries or undoes the operation. Definite HTTP rejections are reported as failed. Neither automatic polling nor reconnect resubmits a write. Reconnecting changes the control token, invalidating commands from the previous connection even when reconnecting to the same party.
 
-State is polled every 2.5 seconds, with a fresh read before each command. Timers interpolate the server deadline using the GeoGuessr server-clock offset. Unavailable/stale state disables controls. The manager publishes only the roster, selected settings, current duel summary and command outcomes; cookies, chat access tokens, guesses' coordinates and future panoramas are not published.
+State is polled every 2.5 seconds, with a fresh read before each command. Timers interpolate the server deadline using the GeoGuessr server-clock offset. Unavailable/stale state disables controls. The manager publishes the roster, selected settings, current duel summary and command outcomes; a separate nonpersistent `partyChat` Replicant receives sanitized chat messages over the site WebSocket. Cookies, chat access tokens, guesses' coordinates and future panoramas are not published.
 
 The activity list and pending-command lock are in memory. After restarting NodeCG, inspect the party before sending a new command. HTTP requests cannot atomically bind the website's session-scoped mutation to the preceding read; avoid simultaneously operating the same party from multiple controllers.
 

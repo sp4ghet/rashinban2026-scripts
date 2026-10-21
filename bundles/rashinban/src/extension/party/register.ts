@@ -4,10 +4,14 @@ import { REPLICANTS, type PresenterConnection } from '../../types/replicants.ts'
 import { EMPTY_PARTY_STATUS, PARTY_MESSAGES, type PartyStatus } from '../../party/types.ts';
 import { loadConnectionConfig } from '../presenter/secrets.ts';
 import { createPartyManager } from './manager.ts';
+import { createPartyChat } from './chat.ts';
+import { EMPTY_PARTY_CHAT, type PartyChat } from '../../party/chat.ts';
 
 export function registerParty(nodecg: NodeCG.ServerAPI, store: ConfigStore): void {
   const connection = nodecg.Replicant<PresenterConnection>(REPLICANTS.presenterConnection);
   const status = nodecg.Replicant<PartyStatus>(REPLICANTS.partyStatus, { persistent: false, defaultValue: structuredClone(EMPTY_PARTY_STATUS) });
+  const chatStatus = nodecg.Replicant<PartyChat>(REPLICANTS.partyChat, { persistent: false, defaultValue: structuredClone(EMPTY_PARTY_CHAT) });
+  let chat: ReturnType<typeof createPartyChat> | null = null;
   let manager: ReturnType<typeof createPartyManager> | null = null;
   let ticking = false;
   const selection = () => ({ input: connection.value?.input ?? store.get().presenter.input,
@@ -16,8 +20,11 @@ export function registerParty(nodecg: NodeCG.ServerAPI, store: ConfigStore): voi
   function getManager() {
     if (manager) return manager;
     const config = store.get().presenter;
-    manager = createPartyManager(loadConnectionConfig({ partyId: null, clientVersion: config.clientVersion }), {
+    const credentials = loadConnectionConfig({ partyId: null, clientVersion: config.clientVersion });
+    chat = createPartyChat(credentials, value => { chatStatus.value = value; });
+    manager = createPartyManager(credentials, {
       fetch: globalThis.fetch, now: Date.now, selection, publish(value) { status.value = value; },
+      chatSource: source => { chat!.setSource(source); },
       presentation: { get: () => ({ settings: store.get().presenter.settings, revision: store.status().revision }),
         save: (settings, revision) => store.save('presenterSettings', settings, revision) },
     });
@@ -31,6 +38,7 @@ export function registerParty(nodecg: NodeCG.ServerAPI, store: ConfigStore): voi
         status.value = { ...structuredClone(EMPTY_PARTY_STATUS), state: 'replay', disabledReason: 'Replay mode — remote controls disabled' };
       } else await getManager().refresh();
     } catch {
+      chat?.reset('Party chat is unavailable. Check the party connection.');
       status.value = { ...status.value, state: 'error', canManage: false, disabledReason: 'GeoGuessr credentials unavailable.',
         error: 'Check GEOGUESSR_NCFA in the shared installation .env and restart NodeCG.' };
     } finally { ticking = false; }
@@ -53,6 +61,7 @@ export function registerParty(nodecg: NodeCG.ServerAPI, store: ConfigStore): voi
   });
   connection.on('change', (value, old) => {
     if (value?.input !== old?.input || value?.selectedPartyId !== old?.selectedPartyId || value?.controlGeneration !== old?.controlGeneration) {
+      chat?.reset();
       status.value = { ...status.value, canManage: false, state: 'loading', disabledReason: 'Refreshing selected party…' };
       void refresh();
     }
