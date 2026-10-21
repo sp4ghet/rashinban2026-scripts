@@ -2,6 +2,13 @@
 html, body { margin: 0; height: 100%; background: #141a22; color: #edf1f8; font: 14px "Segoe UI", sans-serif; }
 .switcher { display: grid; grid-template-rows: auto 1fr auto; gap: 14px; height: 100%; padding: 14px; }
 .monitors { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.monitors.resizable { row-gap: 6px; align-content: start; }
+.monitors.resizable .monitor { width: var(--monitor-width, 100%); max-width: 100%; min-width: 0; justify-self: center; }
+.monitor-resize { grid-column: 1 / -1; height: 14px; padding: 0; border: 0; background: transparent; cursor: ns-resize; touch-action: none; }
+.monitor-resize::after { content: ""; display: block; width: 56px; height: 4px; margin: auto; border-radius: 2px; background: #52637d; }
+.monitor-resize:hover::after, .monitor-resize:focus-visible::after, .resizing .monitor-resize::after { background: #bbc8dd; }
+.monitor-resize:focus-visible { outline: 2px solid #bbc8dd; outline-offset: 1px; }
+.monitors.resizing { user-select: none; }
 .monitor h3 { margin: 0 0 6px; font-size: 13px; letter-spacing: .15em; color: #9bacc5; }
 .monitor[data-channel="program"] h3 { color: #ff6b6b; }
 .screen { position: relative; aspect-ratio: 16 / 9; background: #000; border: 2px solid #2c3950; overflow: hidden; }

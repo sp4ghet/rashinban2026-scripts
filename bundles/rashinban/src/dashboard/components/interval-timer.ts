@@ -11,7 +11,7 @@ export function mountIntervalTimer(host: HTMLElement, reportError: (message: str
   controls.setAttribute("aria-label", "Live interval timer");
   controls.title = "Timer changes apply live to Stream and LED.";
   controls.innerHTML = `
-    <label>Minutes <input id="interval-minutes" type="number" min="0.1" max="1440" step="0.1" value="10" /></label>
+    <label>Minutes <input id="interval-minutes" type="number" min="1" max="1440" step="1" value="10" /></label>
     <button id="interval-start" type="button">Start</button>
     <button id="interval-pause" type="button">Pause</button>
     <button id="interval-clear" type="button">Clear</button>

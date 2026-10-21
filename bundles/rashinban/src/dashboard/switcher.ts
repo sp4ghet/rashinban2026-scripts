@@ -8,6 +8,7 @@ import { findCaster, type Caster } from "../casters/casters.ts";
 import { BROADCAST_MESSAGES, REPLICANTS } from "../types/replicants.ts";
 import { mountIntervalTimer } from "./components/interval-timer.ts";
 import { recoverMonitor } from "./components/monitor-recovery.ts";
+import { mountMonitorResize } from "./components/monitor-resize.ts";
 
 const output: BroadcastOutput = document.body.dataset.output === "led" ? "led" : "stream";
 const rep = nodecg.Replicant<BroadcastState>(REPLICANTS.broadcast);
@@ -214,10 +215,12 @@ monitorsBox.onchange = () => {
 };
 for (const frame of document.querySelectorAll<HTMLIFrameElement>("iframe.info")) recoverMonitor(frame);
 applyMonitors();
+if (output !== "led") mountMonitorResize(document.querySelector<HTMLElement>(".monitors")!, output);
 function fitMonitors() {
   for (const screen of document.querySelectorAll<HTMLElement>(".screen")) {
-    screen.style.setProperty("--scale", String(screen.clientWidth / 1920));
+    screen.style.setProperty("--scale", String(Math.min(screen.clientWidth / 1920, screen.clientHeight / 1080)));
   }
 }
-new ResizeObserver(fitMonitors).observe(document.body);
+const monitorObserver = new ResizeObserver(fitMonitors);
+for (const screen of document.querySelectorAll<HTMLElement>(".screen")) monitorObserver.observe(screen);
 fitMonitors();
