@@ -406,7 +406,7 @@ body[data-output="led"] #cards .pcard { height: 528px; --header-bottom-gap: 24px
 }
 #banpick .bp-match { min-width: 0; overflow: hidden; }
 #banpick .bp-match:empty { display: none; }
-#banpick .bp-stage { flex-shrink: 0; font-weight: 900; font-style: italic; }
+#banpick .bp-stage { flex-shrink: 0; font-weight: 700; font-style: italic; }
 #banpick .bp-stack { display: flex; flex-direction: column; gap: var(--bp-row-gap); }
 #banpick .bp-stack-entry {
   --selection-color: var(--p1-light);
@@ -428,7 +428,7 @@ body[data-output="led"] #cards .pcard { height: 528px; --header-bottom-gap: 24px
   flex-shrink: 0;
   font-size: var(--bp-text);
   line-height: 1;
-  font-weight: 900;
+  font-weight: 700;
   font-style: italic;
 }
 #banpick .bp-selection-map {
@@ -444,7 +444,7 @@ body[data-output="led"] #cards .pcard { height: 528px; --header-bottom-gap: 24px
   margin-left: 12px;
   font-size: var(--bp-mode);
   line-height: 1;
-  font-weight: 900;
+  font-weight: 700;
   font-style: italic;
 }
 #banpick .bp-stack-entry[data-status="banned"] :is(.bp-selection-kind, .bp-selection-mode) { font-style: normal; }

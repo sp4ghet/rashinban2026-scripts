@@ -2,6 +2,14 @@ import assert from 'node:assert/strict';
 
 // Runs inside validate-player-cards.mjs's isolated fixture server and browser.
 export async function verifyBanpick({ navigate, evaluate, until, screenshot, delay, command, adobeFonts = false }) {
+  await command('DOM.enable');
+  await command('CSS.enable');
+  const renderedFaces = async selector => {
+    const { root } = await command('DOM.getDocument');
+    const { nodeId } = await command('DOM.querySelector', { nodeId: root.nodeId, selector });
+    const { fonts } = await command('CSS.getPlatformFontsForNode', { nodeId });
+    return fonts.filter(font => font.glyphCount > 0);
+  };
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   const message = (name, data) => evaluate(`nodecg.sendMessage(${JSON.stringify(name)},${JSON.stringify(data) ?? 'undefined'})`);
   const select = id => message('banpick:act', { optionId: id });
@@ -55,7 +63,14 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
     await select(4); await select(7); await select(1);
     if (adobeFonts) {
       await evaluate('document.fonts.ready');
-      for (const [weight, style] of [['400', 'normal'], ['700', 'normal'], ['900', 'normal'], ['900', 'italic']]) {
+      for (const [selector, face] of [
+        ['.bp-stack-entry[data-status="banned"] .bp-selection-mode', 'KanedaGothic-Bold'],
+        ['.bp-stack-entry[data-status="banned"] .bp-selection-kind', 'KanedaGothic-Bold'],
+        ['.bp-stack-entry[data-status="picked"] .bp-selection-mode', 'KanedaGothic-BoldItalic'],
+        ['.bp-stack-entry[data-status="picked"] .bp-selection-kind', 'KanedaGothic-BoldItalic'],
+        ['.bp-stage', 'KanedaGothic-BoldItalic'],
+      ]) assert.deepEqual((await renderedFaces(selector)).map(font=>font.postScriptName), [face], `${output}: ${selector} uses the actual designer Bold face`);
+      for (const [weight, style] of [['400', 'normal'], ['700', 'normal'], ['700', 'italic']]) {
         assert.ok(await evaluate(`[...document.fonts].some(font=>font.family.includes('kaneda-gothic')&&font.weight==='${weight}'&&font.style==='${style}'&&font.status==='loaded')`), `${output}: real Kaneda ${weight} ${style} is loaded, without relying on a substituted weight or synthetic italic`);
       }
     }
@@ -90,6 +105,8 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
       await evaluate(`(async()=>{const bg=new Image();bg.src='assets/presenter-kv.jpg';await bg.decode();})()`);
       await checkFits(output);
       await screenshot('banpick-led-designer-layout', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
+      const modeCrop = await evaluate(`(()=>{const r=document.querySelector('.bp-stack-entry[data-id="3"]').getBoundingClientRect();return{x:r.right-160,y:r.y,width:160,height:r.height,scale:2};})()`);
+      await screenshot('banpick-led-move-bold', modeCrop);
       const designer = await evaluate(`(() => {
         const cards=[...document.querySelectorAll('.pcard')],rows=[...document.querySelectorAll('.bp-stack-entry')];
         return {cards:cards.map(card=>{const r=card.getBoundingClientRect(),head=card.querySelector('.head'),h=head.getBoundingClientRect(),s=getComputedStyle(head,'::before');return {x:r.x,y:r.y,width:r.width,height:r.height,headerHeight:h.bottom-parseFloat(s.bottom)-r.top};}),rows:rows.map(row=>{const r=row.getBoundingClientRect();return {y:r.y,height:r.height};})};
@@ -114,14 +131,7 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
   // The screen edge follows the acting player even on the other player's tablet.
   await message('banpick:reset');
   await navigate('/bundles/rashinban/graphics/banpick-player.html?player=B', 'document.querySelectorAll(".bp-card").length===9');
-  await command('DOM.enable');
-  await command('CSS.enable');
-  const renderedFonts = async selector => {
-    const { root } = await command('DOM.getDocument');
-    const { nodeId } = await command('DOM.querySelector', { nodeId: root.nodeId, selector });
-    const { fonts } = await command('CSS.getPlatformFontsForNode', { nodeId });
-    return fonts.filter(font => font.glyphCount > 0).map(font => font.familyName);
-  };
+  const renderedFonts = async selector => (await renderedFaces(selector)).map(font => font.familyName);
   assert.ok((await renderedFonts('.bp-card-map')).some(font => /Akshar/i.test(font)), 'tablet map names actually render in Akshar');
   const cardAppearance = id => evaluate(`(() => {
     const card=document.querySelector('.bp-card[data-id="${id}"]'),map=card.querySelector('.bp-card-map'),tag=card.querySelector('.bp-card-tag');
