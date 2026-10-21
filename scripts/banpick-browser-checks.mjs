@@ -50,6 +50,12 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
       await evaluate('document.fonts.ready');
     }
     await select(4); await select(7); await select(1);
+    if (adobeFonts) {
+      await evaluate('document.fonts.ready');
+      for (const [weight, style] of [['400', 'normal'], ['700', 'normal'], ['900', 'normal'], ['900', 'italic']]) {
+        assert.ok(await evaluate(`[...document.fonts].some(font=>font.family.includes('kaneda-gothic')&&font.weight==='${weight}'&&font.style==='${style}'&&font.status==='loaded')`), `${output}: real Kaneda ${weight} ${style} is loaded, without relying on a substituted weight or synthetic italic`);
+      }
+    }
     assert.deepEqual((await entries()).map(row => row.id), [1, 7, 4]);
     assert.equal(await evaluate(`document.querySelector('.bp-selection-kind').textContent`), 'PICK /');
     await checkFits(output); await screenshot(`banpick-${output}-game-1`);
