@@ -1,6 +1,7 @@
 // Isolated built-page checks with a controlled presenter clock. No live game,
 // camera, Google API or NodeCG runtime is changed by this script.
 import assert from 'node:assert/strict';
+import { validateSponsorRotation } from './lib/validate-sponsor-rotation.mjs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -28,6 +29,9 @@ const initial = { presenterDuel: state, presenterViews: seedViews(state), presen
     right: { id: 'b', name: 'PLAYER RIGHT', handle: '@playerright', wins: 2, playerId: state.players[1].id } },
   presenterClients: { clients: [], program: null }, presenterPublicConfig: { googleMapsApiKey: '' } };
 const bootstrap = `
+const nativeSetInterval=window.setInterval;
+window.fixtureIntervals=[];
+window.setInterval=(callback,ms,...args)=>{const id=nativeSetInterval(callback,ms,...args);window.fixtureIntervals.push({id,callback,ms});return id;};
 window.qa={now:${epoch},initial:${JSON.stringify(initial)}};
 Date.now=()=>qa.now;performance.now=()=>qa.now-${epoch};
 const reps=new Map();
@@ -111,7 +115,8 @@ try {
     await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/presenter${led ? '-led' : ''}.html?role=preview` });
     for (let i=0;i<100;i++) { if(await evaluate(`document.getElementById('timer-value')?.textContent==='00:39'`))break;await delay(100); }
     if (led) {
-      for (let i=0;i<100;i++) { if(await evaluate(`document.querySelector('.backdrop video')?.readyState>=2`))break;await delay(100); }
+      // A decoded frame can precede the asynchronous autoplay event.
+      for (let i=0;i<100;i++) { if(await evaluate(`(()=>{const v=document.querySelector('.backdrop video');return v?.readyState>=2&&!v.paused;})()`))break;await delay(100); }
       const kv=await evaluate(`(()=>{qa.kv=document.querySelector('.backdrop video');const v=qa.kv,r=v.getBoundingClientRect();return {src:new URL(v.currentSrc).pathname,muted:v.muted,loop:v.loop,autoplay:v.autoplay,inline:v.playsInline,paused:v.paused,ready:v.readyState>=2,width:v.videoWidth,height:v.videoHeight,fit:getComputedStyle(v).objectFit,rect:{x:r.x,y:r.y,width:r.width,height:r.height},time:v.currentTime};})()`);
       assert.equal(kv.src,'/rashinban/media/background/presenter-led-kv.mp4');
       assert.equal(kv.muted,true);assert.equal(kv.loop,true);assert.equal(kv.autoplay,true);assert.equal(kv.inline,true);
@@ -127,6 +132,11 @@ try {
       assert.equal(await evaluate(`document.querySelector('.backdrop video')`),null);
       assert.match(await evaluate(`getComputedStyle(document.querySelector('.backdrop')).backgroundImage`),/presenter-kv\.jpg/);
       checks.push('stream: original static KV image retained without a background video');
+      await validateSponsorRotation(evaluate, async name => {
+        const shot = await command('Page.captureScreenshot', { format: 'png' });
+        await writeFile(path.join(artifacts, name + '.png'), Buffer.from(shot.data, 'base64'));
+      }, 'presenter');
+      checks.push('stream: Tamura, GeoGuessr and Voicemod rotate with fades at the reference sizes and x positions');
     }
     const viewY=led ? 300 : 400, cameraY=led ? 800 : 900;
     await evaluate(`qa.live('NM','chroma','none');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'transparent'})`);

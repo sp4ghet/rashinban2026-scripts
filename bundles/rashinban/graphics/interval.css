@@ -1,4 +1,5 @@
 @import url('assets/kv-background.css');
+@import url('assets/sponsor-rotation.css');
 
 html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
 #layer-interval { position: absolute; inset: 0; isolation: isolate; pointer-events: none; }
@@ -31,14 +32,8 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 .interval-countdown { font-size: 200px; line-height: 138px; }
 .interval-slides { position: absolute; left: 782px; top: 308px; width: 998px; height: 562px; border-radius: 30px; }
 .interval-slides img { width: 100%; height: 100%; border-radius: inherit; display: block; }
-/* The original unframed sponsor row: fixed logo(s) left, one fading logo right. */
-.interval-sponsors { --logo-h: 64px; position: absolute; left: 780px; bottom: 128px; width: 1014px; transform: translateY(50%); display: flex; align-items: center; gap: 44px; z-index: 10; }
-.interval-sponsors img { height: var(--logo-h); object-fit: contain; flex: 0 0 auto; }
-.interval-sponsor-lead { display: flex; align-items: center; }
-.interval-sponsor-rotating { display: flex; justify-content: center; align-items: center; flex: 1; min-width: 0; }
-.interval-sponsor-rotating img { max-width: 100%; opacity: 1; transition: opacity 300ms ease-in-out; }
-.interval-sponsors .logo-geoguessr { height: calc(var(--logo-h) * .75); }
-.interval-sponsors .logo-geoguessr-record, .interval-sponsors .logo-chofu { height: calc(var(--logo-h) * .5); }
+/* Each slide keeps its reference x/size; all share the on-screen vertical center. */
+.interval-sponsors { position: absolute; left: 0; top: 956.5px; width: 1920px; height: 0; z-index: 10; }
 /* Scale unusually long dashboard text as one line, keeping natural name spacing. */
 #layer-interval [data-fit] { display: inline-block; width: max-content; white-space: nowrap; transform-origin: left center; }
 
@@ -47,8 +42,7 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 .interval-output[data-layout="led"] .interval-topbar,
 .interval-output[data-layout="led"] .interval-bottombar,
 .interval-output[data-layout="led"] .interval-icon,
-.interval-output[data-layout="led"] .interval-title,
-.interval-output[data-layout="led"] .interval-sponsor-rotating { display: none; }
+.interval-output[data-layout="led"] .interval-title { display: none; }
 .interval-output[data-layout="led"] .interval-upcoming { left: 144px; top: 204px; width: 363px; }
 .interval-output[data-layout="led"] .interval-upcoming h2 { font-size: 96px; line-height: 66px; }
 .interval-output[data-layout="led"] .interval-rule { width: 100%; margin: 30px 0; }
@@ -60,4 +54,4 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 .interval-output[data-layout="led"] .interval-countdown { display: flex; justify-content: center; font-size: 410px; line-height: 290px; text-shadow: 0 4px 12px rgb(0 0 0 / 50%); }
 #layer-interval .interval-output[data-layout="led"] .interval-countdown [data-fit] { flex: 0 0 auto; transform-origin: center; }
 .interval-output[data-layout="led"] .interval-slides { left: 1371px; top: 163px; width: 450px; height: 253.125px; border-radius: 30px; }
-.interval-output[data-layout="led"] .interval-sponsors { --logo-h: 41px; left: 640px; top: 484px; bottom: auto; width: 640px; height: 41px; transform: none; justify-content: center; gap: 0; }
+.interval-output[data-layout="led"] .interval-sponsors { top: 504.5px; }

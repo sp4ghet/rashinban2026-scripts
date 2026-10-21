@@ -23,6 +23,10 @@ import { RELAY_MESSAGE, relayName, type RelayResponse } from '../presenter/relay
 import type { PresenterPublicConfig } from '../config/types.ts';
 import type { ResolvedMatch } from '../match/state.ts';
 import { boundMediaState, changedVideoBindings, mediaAssetsForCategory, type EffectiveAssetInventory } from '../config/media-url.ts';
+import { mountSponsorRotation } from './sponsors/rotation.ts';
+
+const sponsorImage = document.querySelector<HTMLImageElement>('.presenter-sponsor');
+if (sponsorImage) mountSponsorRotation(sponsorImage, 'presenter');
 
 const duel = nodecg.Replicant<DuelState | null>(REPLICANTS.presenterDuel);
 const series = nodecg.Replicant<SeriesState>(REPLICANTS.presenterSeries);

@@ -1,5 +1,6 @@
 @import url('presenter-timer.css');
 @import url('presenter-pips.css');
+@import url('assets/sponsor-rotation.css');
 /* Stream-only designer layout. Intermission and the LED keep their own geometry. */
 .presenter-sponsor, #match-label { display: none; }
 body[data-output="stream"][data-intermission="none"] {
@@ -76,9 +77,9 @@ body[data-output="stream"][data-intermission="none"] {
   .camera { top: 828px; bottom: auto; width: 374px; height: 242px; border: 8px solid var(--left-color); border-radius: 22px; overflow: hidden; }
   .camera.left { left: 60px; }
   .camera.right { right: 60px; border-color: var(--right-color); }
-  footer { left: 672.5px; right: auto; top: 913px; bottom: auto; width: 575px; height: 84px; }
+  footer { left: 0; right: auto; top: 955px; bottom: auto; width: 1920px; height: 0; }
   footer .presenter-logo { display: none; }
-  .presenter-sponsor { display: block; width: 575px; height: 84px; }
+  .presenter-sponsor { display: block; }
   #preview-area { left: 496px; top: 335px; width: 928px; height: 522px; border-radius: 20px; }
   #preview-area::after { border-width: 8px; border-color: #ff005d; }
   #preview-map { display: none; }

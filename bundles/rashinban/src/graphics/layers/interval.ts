@@ -4,19 +4,10 @@ import { REPLICANTS } from "../../types/replicants.ts";
 import { startIntervalClock } from "../../interval/browser-clock.ts";
 import { mustQuery, type Layer } from "./layer.ts";
 import { mountKvBackground } from "./kv-background.ts";
+import { mountSponsorRotation } from "../sponsors/rotation.ts";
 
 import type { MatchState } from "../../match/state.ts";
 import type { PlayerProfile } from "../../sheet/players.ts";
-
-const ROTATING_SPONSORS = [
-  ["geo_logo.svg", "GeoGuessr", "logo-geoguessr"],
-  ["ajinomoto.gif", "味の素株式会社", ""],
-  ["geoguessr-record.svg", "GeoGuessr Record", "logo-geoguessr-record"],
-  ["chofu-hernia-clinic.svg", "調布駅前そけいヘルニアクリニック", "logo-chofu"],
-  ["bfcc.png", "BFCC — Powered by バラジオ放送局", ""],
-  ["kawaii-shisshi.svg", "かわいいしっしー", ""],
-] as const;
-const sponsorPath = "assets/interval-sponsors/";
 
 /** One shared renderer for standalone sources and the switcher info pages. */
 export function mountInterval(host: HTMLElement, output: "stream" | "led"): Layer<ToggleLayer> {
@@ -39,10 +30,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
           <img src="assets/interval-slides/${output === "led" ? "placeholder-led.svg" : "placeholder.svg"}" alt="RASHINBAN 2026 — slide placeholder" />
         </section>
         <section class="interval-sponsors" aria-label="Sponsors">
-          <div class="interval-sponsor-lead"><img src="${sponsorPath}tamura-builds.svg" alt="TAMURA BUILDS" /></div>
-          <div class="interval-sponsor-rotating">
-            <img class="logo-geoguessr" src="${sponsorPath}geo_logo.svg" alt="GeoGuessr" />
-          </div>
+          <img src="assets/sponsor-logos/tamura-builds.svg" alt="TAMURA BUILDS" />
         </section>
         <div class="interval-bottombar"></div>
       </div>
@@ -55,31 +43,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
   const matches = mustQuery(host, ".interval-matches");
   const timer = mustQuery(host, ".interval-timer");
   const countdown = mustQuery(host, ".interval-countdown span");
-  const sponsor = host.querySelector<HTMLImageElement>(".interval-sponsor-rotating img")!;
-  // Match 2025 sponsors.js: every 12 seconds fade out for 300ms, swap while
-  // invisible, then fade in at 600ms. Cache every image before its first turn.
-  const sponsorImages = (output === "stream" ? ROTATING_SPONSORS : []).map(([file]) => {
-    const image = new Image();
-    image.src = sponsorPath + file;
-    return image;
-  });
-  let sponsorIndex = 0;
-  let swapTimeout: number | undefined;
-  let fadeTimeout: number | undefined;
-  const sponsorRotation = output === "stream" ? window.setInterval(() => {
-    sponsor.style.opacity = "0";
-    swapTimeout = window.setTimeout(() => {
-      const nextIndex = (sponsorIndex + 1) % ROTATING_SPONSORS.length;
-      const image = sponsorImages[nextIndex]!;
-      if (!image.complete || image.naturalWidth === 0) return;
-      sponsorIndex = nextIndex;
-      const [, name, className] = ROTATING_SPONSORS[sponsorIndex]!;
-      sponsor.className = className;
-      sponsor.alt = name;
-      sponsor.src = image.src;
-    }, 300);
-    fadeTimeout = window.setTimeout(() => { sponsor.style.opacity = "1"; }, 600);
-  }, 12000) : undefined;
+  mountSponsorRotation(host.querySelector<HTMLImageElement>(".interval-sponsors img")!, output);
   let state = defaultInterval();
   let nextMatch: MatchState | null = null;
   let profiles: PlayerProfile[] = [];
@@ -150,9 +114,6 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
   window.addEventListener("pagehide", event => {
     if (event.persisted) return;
     window.clearInterval(interval);
-    window.clearInterval(sponsorRotation);
-    window.clearTimeout(swapTimeout);
-    window.clearTimeout(fadeTimeout);
   });
   void document.fonts.ready.then(fit);
   document.fonts.addEventListener("loadingdone", fit);

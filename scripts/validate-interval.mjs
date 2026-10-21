@@ -1,6 +1,7 @@
 // Built dashboard -> real extension handlers -> replicated state -> built graphics.
 // Uses isolated NodeCG transport fixtures and a disposable headless browser.
 import assert from 'node:assert/strict';
+import { validateSponsorRotation } from './lib/validate-sponsor-rotation.mjs';
 import { EventEmitter } from 'node:events';
 import { readFile, writeFile, mkdir, mkdtemp } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -305,48 +306,10 @@ try {
     await screenshot(output);
     if (output === 'led') {
       await screenshot('led-band', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
-      assert.equal(await evaluate(`['.interval-topbar', '.interval-bottombar', '.interval-icon', '.interval-title', '.interval-sponsor-rotating'].every(selector => !document.querySelector(selector).checkVisibility())`), true, 'LED uses the unframed reference layout');
-      assert.equal(await evaluate('document.querySelector(".interval-sponsor-lead img").checkVisibility()'), true, 'LED keeps TAMURA BUILDS visible');
-      assert.equal(await evaluate('fixtureIntervals.some(timer => timer.ms === 12000)'), false, 'LED does not run a hidden sponsor rotation');
-      continue;
+      assert.equal(await evaluate(`['.interval-topbar', '.interval-bottombar', '.interval-icon', '.interval-title'].every(selector => !document.querySelector(selector).checkVisibility())`), true, 'LED uses the unframed reference layout');
     }
-    // Sample actual painted opacity through a complete 12-second sponsor cycle.
-    // This catches the old abrupt hidden/display swap even when all logos load.
-    const fade = await evaluate(`new Promise(resolve => {
-      const started = performance.now(), samples = [];
-      function sample() {
-        samples.push({ time: performance.now() - started, logos: [...document.querySelectorAll('.interval-sponsors img')].map(img => ({
-          name: img.alt, opacity: img.checkVisibility() ? Number(getComputedStyle(img).opacity) : 0,
-        })) });
-        if (performance.now() - started < 13000) requestAnimationFrame(sample); else resolve(samples);
-      }
-      sample();
-    })`);
-    assert.ok(fade.some(sample => sample.logos.some(logo => logo.opacity > .05 && logo.opacity < .95)), `${output}: sponsors must visibly fade, not cut`);
-    const outgoing = fade.map(sample => sample.logos.find(logo => logo.name === 'GeoGuessr')?.opacity);
-    const incoming = fade.map(sample => sample.logos.find(logo => logo.name === '味の素株式会社')?.opacity);
-    assert.ok(outgoing.some(opacity => opacity > .05 && opacity < .95), `${output}: outgoing logo must fade out`);
-    assert.ok(incoming.some(opacity => opacity > .05 && opacity < .95), `${output}: incoming logo must fade in`);
-    assert.ok(fade.every(sample => sample.logos.find(logo => logo.name === 'TAMURA BUILDS')?.opacity === 1), 'fixed sponsor stays visible');
-    const rotation = await evaluate(`new Promise(async resolve => {
-      const timer = fixtureIntervals.find(timer => timer.ms === 12000);
-      clearInterval(timer.id);
-      const img = document.querySelector('.interval-sponsor-rotating img');
-      const changes = [], visible = [];
-      const observer = new MutationObserver(() => changes.push({name: img.alt, opacity: Number(getComputedStyle(img).opacity)}));
-      observer.observe(img, {attributes: true, attributeFilter: ['src']});
-      for (let i = 0; i < 6; i++) {
-        timer.callback();
-        await new Promise(done => setTimeout(done, 1000));
-        const box = img.getBoundingClientRect(), parent = img.parentElement.getBoundingClientRect();
-        visible.push({name: img.alt, loaded: img.complete && img.naturalWidth > 0, opacity: Number(getComputedStyle(img).opacity), fits: box.left >= parent.left - 1 && box.right <= parent.right + 1});
-      }
-      observer.disconnect(); resolve({changes, visible});
-    })`);
-    assert.deepEqual(rotation.visible.map(logo => logo.name), ['GeoGuessr Record', '調布駅前そけいヘルニアクリニック', 'BFCC — Powered by バラジオ放送局', 'かわいいしっしー', 'GeoGuessr', '味の素株式会社']);
-    assert.ok(rotation.changes.every(logo => logo.opacity < .01), `${output}: swap logo only while invisible`);
-    assert.ok(rotation.visible.every(logo => logo.loaded && logo.fits && logo.opacity === 1), `${output}: each sponsor loads, fits and fades fully in`);
-    await writeFile(path.join(artifacts, output + '-sponsor-fade.json'), JSON.stringify({samples: fade, rotation}, null, 2));
+    const rotation = await validateSponsorRotation(evaluate, screenshot, output);
+    await writeFile(path.join(artifacts, output + '-sponsor-fade.json'), JSON.stringify(rotation, null, 2));
   }
 
   // Link Interval to the real saved Next Match and keep the manual list for later.
@@ -450,15 +413,14 @@ try {
   await message('interval:timer', { action: 'pause' });
   await navigate('graphics/interval-led.html');
   await until('document.querySelector(".interval-countdown span").textContent === "30:00"');
-  const ledBounds = await evaluate(`Object.fromEntries(['upcoming', 'timer', 'slides', 'sponsors'].map(name => {
+  const ledBounds = await evaluate(`Object.fromEntries(['upcoming', 'timer', 'slides'].map(name => {
     const { x, y, width, height } = document.querySelector('.interval-' + name).getBoundingClientRect();
     return [name, { x, y, width, height }];
   }))`);
   assert.ok(ledBounds.upcoming.x + ledBounds.upcoming.width < ledBounds.timer.x, 'LED match column must clear the countdown');
   assert.ok(ledBounds.timer.x + ledBounds.timer.width < ledBounds.slides.x, 'LED countdown must clear the slide');
   assert.equal(ledBounds.timer.x + ledBounds.timer.width / 2, 960, 'LED countdown is centered on the wall');
-  assert.equal(ledBounds.sponsors.x + ledBounds.sponsors.width / 2, 960, 'LED sponsor is centered below the countdown');
-  assert.ok(ledBounds.timer.y + ledBounds.timer.height < ledBounds.sponsors.y, 'LED countdown must clear the sponsor');
+  assert.ok(ledBounds.timer.y + ledBounds.timer.height < 475.5, 'LED countdown must clear every sponsor slide');
   assert.ok(Object.values(ledBounds).every(box => box.y >= 0 && box.y + box.height <= 576), 'LED content must fit the visible band');
   await evaluate(`document.body.style.background = 'url("assets/presenter-kv-led.png") 0 0 / 1920px 576px no-repeat'; new Promise((resolve, reject) => { const image = new Image(); image.onload = resolve; image.onerror = reject; image.src = 'assets/presenter-kv-led.png'; })`);
   await screenshot('led-reference', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });

@@ -1,0 +1,9 @@
+.sponsor-rotation {
+  position: absolute;
+  top: 0;
+  display: block;
+  object-fit: contain;
+  transform: translateY(-50%);
+  opacity: 1;
+  transition: opacity 300ms ease-in-out;
+}
