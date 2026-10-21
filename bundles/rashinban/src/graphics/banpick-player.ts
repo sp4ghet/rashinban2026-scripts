@@ -3,7 +3,7 @@
 // whose turn it is and accepts input for either player.
 import { createInitialState, type BanPickState, type OptionView, type Player } from "../banpick/rules";
 import { BANPICK_MESSAGES, REPLICANTS } from "../types/replicants";
-import { playerName, renderBoard, shortMode, stepText } from "./banpick/board";
+import { cardTag, playerName, renderBoard, shortMode, stepText } from "./banpick/board";
 
 const params = new URLSearchParams(location.search);
 const lockedPlayer: Player | undefined =
@@ -24,7 +24,7 @@ let submitting = false;
 let toastTimer: number | undefined;
 
 function fitHeadings() {
-  for (const label of [nameA, nameB, stepEl]) {
+  for (const label of [nameA, nameB, stepEl, ...board.querySelectorAll<HTMLElement>('.bp-card[data-status="banned"] .bp-card-tag')]) {
     label.style.fontSize = "";
     const parent = label.parentElement!;
     const padding = getComputedStyle(parent);
@@ -46,6 +46,7 @@ function showToast(message: string) {
 function render() {
   const view = renderBoard(board, state, {
     modeLabel: mode => mode === "NM" ? "NO MOVE" : shortMode(mode),
+    tagLabel: v => v.status === "banned" && v.by ? `${playerName(state, v.by)} - BAN` : cardTag(v),
     selectedId: selected?.option.id ?? null,
     onSelect: (v) => {
       if (submitting) return;

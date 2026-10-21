@@ -3,7 +3,7 @@
   --player-a: #ff3030;
   --player-b: #3083ff;
   --heading: "kaneda-gothic", "Oswald", "Noto Sans JP", sans-serif;
-  --body: "Oswald", "Noto Sans JP", sans-serif;
+  --body: "Akshar", "Noto Sans JP", sans-serif;
 }
 
 html, body {
@@ -114,12 +114,27 @@ header { display: grid; grid-template-columns: 1fr calc(130 * var(--unit)) 1fr; 
 .bp-card.bp-selected { border-color: #fff; background: #282b40; }
 .bp-card-num { display: none; }
 .bp-card-map { font-size: calc(36 * var(--unit)); font-weight: 500; line-height: 1.2; overflow-wrap: anywhere; }
-.bp-card-tag { position: absolute; bottom: calc(10 * var(--unit)); left: 0; right: 0; font-size: calc(22 * var(--unit)); font-weight: 600; line-height: 1; }
+/* Picks and the decider use their borders, while their labels remain accessible. */
+.bp-card-tag { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .bp-card[data-by="A"] { --selection-color: var(--player-a); }
 .bp-card[data-by="B"] { --selection-color: var(--player-b); }
 .bp-card[data-by] .bp-card-tag { color: var(--selection-color); }
-.bp-card[data-status="banned"] { border-color: var(--selection-color); }
-.bp-card[data-status="banned"] .bp-card-map { opacity: 0.45; text-decoration: line-through; }
+.bp-card[data-status="banned"] { background: #000; }
+.bp-card[data-status="banned"] .bp-card-map { opacity: 0.2; }
+.bp-card[data-status="banned"] .bp-card-tag {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  font-family: var(--heading);
+  font-size: calc(52 * var(--unit));
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
 .bp-card[data-status="picked"] { border-color: var(--selection-color); }
 .bp-card[data-status="remaining"] { border-color: #fff; }
 

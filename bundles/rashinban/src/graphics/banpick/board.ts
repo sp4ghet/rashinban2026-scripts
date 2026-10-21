@@ -15,6 +15,8 @@ export interface BoardOptions {
   selectedId?: number | null;
   /** Short labels for the mode group headers. */
   modeLabel?: (mode: string) => string;
+  /** Override the visible state label for a particular output. */
+  tagLabel?: (view: OptionView) => string;
 }
 
 export const shortMode = (mode: string) => (mode.startsWith("Move") ? "MOVE" : mode);
@@ -84,7 +86,7 @@ export function renderBoard(container: HTMLElement, state: BanPickState, opts: B
       map.textContent = v.option.map;
       const tag = document.createElement("span");
       tag.className = "bp-card-tag";
-      tag.textContent = cardTag(v);
+      tag.textContent = (opts.tagLabel ?? cardTag)(v);
       card.append(num, map, tag);
 
       if (opts.onSelect) {
