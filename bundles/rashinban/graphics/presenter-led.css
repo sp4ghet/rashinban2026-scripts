@@ -38,7 +38,7 @@ body[data-output="led"] {
   .competitor.left { left: 0; padding: 0 24px 0 418px; justify-content: flex-end; background: var(--left-panel); }
   .competitor.right { right: 0; padding: 0 418px 0 24px; justify-content: flex-start; background: var(--right-panel); }
   .competitor strong { flex: 0 1 auto; min-width: 0; font: 700 40px/1 var(--presenter-latin); text-shadow: none; }
-  .handle { flex: 0 1 auto; min-width: 0; max-width: 200px; font-size: 20px; line-height: 1; font-weight: 700; color: #fff; }
+  .handle { flex: 0 1 auto; min-width: 0; max-width: 200px; font: 700 20px/1 "Akshar", "Noto Sans JP", sans-serif; color: #fff; }
   .competitor.left .handle { order: 0; }
   .handle:empty { display: none; }
   .wins { top: 0; width: 75px; height: var(--led-header-h); font: 700 56px/1 var(--presenter-latin); border: 0; padding: 0; }

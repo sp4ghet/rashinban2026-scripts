@@ -172,7 +172,7 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       const music = ended ? 'idle' : timeline.music;
       const fadeMs = timeline.phase === 'finished' ? media.fadeMs.end ?? media.fadeMs.idle : media.fadeMs[music];
       for (const node of nodes) {
-        const target = settings.muted || ended ? 0 : node.stem.gains[music] * settings.musicGain;
+        const target = settings.muted || ended || timeline.phase === 'waiting-game' ? 0 : node.stem.gains[music] * settings.musicGain;
         if (target === node.target && settings.muted === node.muted && music === node.music) continue;
         node.target = target; node.muted = settings.muted; node.music = music;
         fade(node.gain.gain, target, time, settings.muted ? time : time + fadeMs / 1000);

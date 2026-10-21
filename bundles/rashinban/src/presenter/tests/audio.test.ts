@@ -73,6 +73,25 @@ test('all stems share a scheduled start and muted layers advance through context
   p.context.currentTime = 12; p.audio.sync({ ...timeline, phase: 'aborted' }, DEFAULT_SETTINGS, 15500);
   assert.equal(base.output.gain.at(13), 0); assert.equal(p.sources.length, 2);
 });
+test('pre-game stays silent with an audible idle mix and gameplay music resumes normally', async () => {
+  const p = port();
+  await p.audio.load({ ...manifest, stems: manifest.stems.map(stem => ({ ...stem, gains: { ...stem.gains, idle: 1 } })) });
+  p.audio.lease(30000, 1000);
+  const beforeGame = advanceTimeline(null, null, 1000, false, DEFAULT_SETTINGS.timing);
+  p.audio.sync(beforeGame, DEFAULT_SETTINGS, 1000);
+  assert.ok(p.sources.every(source => source.output.gain.at(11) === 0), 'idle stem settings cannot make pre-game audible');
+
+  p.context.currentTime = 11;
+  p.audio.sync(timeline, DEFAULT_SETTINGS, 2000);
+  const playing = p.sources.slice(-2);
+  assert.equal(playing[0].output.gain.at(12), 0.7, 'normal round music starts when gameplay begins');
+
+  p.context.currentTime = 12;
+  p.audio.sync(advanceTimeline(timeline, null, 3000, false, DEFAULT_SETTINGS.timing), DEFAULT_SETTINGS, 3000);
+  assert.ok(playing.every(source => source.stops === 1), 'old gameplay sources stop on return to pre-game');
+  assert.ok(p.sources.slice(-2).every(source => source.output.gain.at(13) === 0), 'returning to pre-game cannot restart idle music');
+});
+
 test('a finished duel fades the music with the end fade; abort keeps the idle fade', async () => {
   for (const [phase, fadeMs, silentAt] of [['finished', { ...manifest.fadeMs, end: 4000 }, 16], ['finished', manifest.fadeMs, 12.1], ['aborted', { ...manifest.fadeMs, end: 4000 }, 12.1]] as const) {
     const p = port(); await p.audio.load({ ...manifest, fadeMs }); p.audio.lease(30000, 13500); p.audio.sync(timeline, DEFAULT_SETTINGS, 13500);

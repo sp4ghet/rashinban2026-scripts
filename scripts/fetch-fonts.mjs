@@ -6,7 +6,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const OUT = "bundles/rashinban/graphics/assets/fonts";
-const FAMILIES = ["Oswald:wght@500;700", "Noto+Sans+JP:wght@400;700"];
+const FAMILIES = ["Oswald:wght@500;700", "Noto+Sans+JP:wght@400;700", "Akshar:wght@300..700"];
 // A modern UA makes Google return woff2 with unicode-range subsets.
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 

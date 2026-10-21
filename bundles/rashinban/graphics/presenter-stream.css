@@ -13,9 +13,11 @@ body[data-output="stream"][data-intermission="none"] {
   .competitor.left { left: 60px; justify-content: flex-end; background: var(--left-panel); }
   .competitor.right { right: 60px; justify-content: flex-start; background: var(--right-panel); }
   .competitor strong { flex: 0 1 auto; min-width: 0; max-width: 380px; font: 700 64px/1 var(--presenter-latin); text-shadow: none; }
-  .handle { flex: 0 1 auto; min-width: 0; max-width: 300px; font: 700 44px/1 var(--presenter-latin); color: #fff; }
+  .handle { flex: 0 1 auto; min-width: 0; max-width: 300px; font: 600 32px/1 "Akshar", "Noto Sans JP", sans-serif; color: #fff; }
   .competitor.left .handle { order: 0; }
   .handle:empty { display: none; }
+  /* Composite Akshar text separately to avoid desktop subpixel color fringes. */
+  .handle, .match-info small, .damage small, .result small { transform: translateZ(0); }
   .wins { top: 75px; width: 123px; height: 123px; font: 700 100px/1 var(--presenter-latin); border: 0; padding: 0; }
   .left .wins { left: 737px; background: var(--left-color); }
   .right .wins { right: 737px; background: var(--right-color); }
@@ -24,15 +26,16 @@ body[data-output="stream"][data-intermission="none"] {
   .match-info .round-info { left: 672px; }
   .match-info .game-info { right: 672px; }
   .match-info small, .match-info b { margin: 0; color: #fff; font-size: 32px; font-weight: 700; letter-spacing: normal; line-height: 1; }
+  .match-info small { font-size: 28px; font-weight: 500; transform: translate3d(0, 2px, 0); }
   .match-info .mode-info { position: absolute; left: 860px; top: 75px; width: 200px; height: 123px; padding-top: 20px; background: #fff; color: #171d29; }
-  .match-info .mode-info small { color: inherit; font-size: 24px; }
+  .match-info .mode-info small { color: inherit; font-size: 20px; }
   .match-info .mode-info b { margin-top: 1px; color: inherit; font-size: 64px; white-space: nowrap; }
   #match-label { display: block; position: absolute; left: 832px; top: 16px; width: 256px; height: 42px; text-align: center; font: 700 36px/42px var(--presenter-latin); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .damage { top: 237px; width: 240px; height: 59px; display: flex; align-items: center; justify-content: space-between; padding: 0 29px; color: #fff; text-shadow: none; }
   .damage.left { left: 60px; background: var(--left-color); }
   .damage.right { right: 60px; background: var(--right-color); }
-  .damage small { font-size: 24px; line-height: 1; letter-spacing: normal; color: #fff; }
+  .damage small { font-size: 20px; line-height: 1; letter-spacing: normal; color: #fff; }
   .damage b { font-size: 52px; line-height: 1; }
   /* Keep the original rounded, skewed HP bars in the new header positions. */
   .health { top: 233px; bottom: auto; width: 394px; height: 70px; }
@@ -62,7 +65,7 @@ body[data-output="stream"][data-intermission="none"] {
   .result { top: 535px; width: 291px; height: 79px; display: flex; align-items: center; justify-content: space-between; padding: 0 36px; }
   .result.left { left: 343px; background: var(--left-panel); }
   .result.right { right: 343px; background: var(--right-panel); flex-direction: row-reverse; }
-  .result small { position: static; width: auto; font: 700 28px/1 var(--presenter-latin); text-transform: uppercase; white-space: nowrap; }
+  .result small { position: static; width: auto; font: 500 24px/1 "Akshar", "Noto Sans JP", sans-serif; text-transform: uppercase; white-space: nowrap; }
   .result strong { font: 700 64px/1 var(--presenter-latin); }
   .score-token { font-size: 64px; font-weight: 700; text-shadow: none; }
   #score-calculation { color: #fff; text-shadow: none; }
