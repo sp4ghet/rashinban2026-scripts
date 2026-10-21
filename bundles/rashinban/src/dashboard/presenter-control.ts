@@ -97,6 +97,7 @@ function applyMedia(value: MediaManifest | undefined) {
   if (!value) return;
   for (const variant of ['single', 'double'] as const) {
     const asset = value.fiveK[variant]; assetOptions(select(`${variant}-video`), 'video', asset?.url ?? '');
+    assetOptions(select(`${variant}-led-video`), 'video', asset?.ledUrl ?? '');
     select(`${variant}-soundtrack`).value = asset?.soundtrack ?? 'embedded'; input(`${variant}-watchdog`).value = String(asset?.watchdogMs ?? 10000);
   }
   element('media-stems').replaceChildren(); value.stems.forEach(addStem);
@@ -114,7 +115,8 @@ element('media-form').addEventListener('submit', event => {
   const next = structuredClone(EMPTY_MEDIA);
   for (const variant of ['single', 'double'] as const) {
     const url = select(`${variant}-video`).value;
-    next.fiveK[variant] = url ? { url, watchdogMs: Number(input(`${variant}-watchdog`).value), soundtrack: select(`${variant}-soundtrack`).value as 'embedded' | 'cue' | 'silent' } : null;
+    const ledUrl = select(`${variant}-led-video`).value;
+    next.fiveK[variant] = url ? { url, ...(ledUrl ? { ledUrl } : {}), watchdogMs: Number(input(`${variant}-watchdog`).value), soundtrack: select(`${variant}-soundtrack`).value as 'embedded' | 'cue' | 'silent' } : null;
   }
   for (const row of document.querySelectorAll<HTMLElement>('.media-stem')) {
     const read = (key: string) => (row.querySelector(`[data-field="${key}"]`) as HTMLInputElement).value;

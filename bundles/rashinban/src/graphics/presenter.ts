@@ -10,7 +10,7 @@ import { createCelebrationUnderlay } from './presenter/celebration.ts';
 import { createGoogleRenderer } from './presenter/google.ts';
 import { paintResultMapLabel, resultMapFrame, type GameRenderer, type RenderFrame } from './presenter/renderer.ts';
 import { clientRole, createPresenterClient } from './presenter/client.ts';
-import { celebrationAsset, EMPTY_MEDIA, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
+import { celebrationAsset, EMPTY_MEDIA, mediaForOutput, parseMedia, type AssetInventory, type MediaManifest } from '../presenter/media.ts';
 import { createVideoPlayer } from './presenter/video.ts';
 import { createAudioOutput } from './presenter/audio-output.ts';
 import { channelFromSearch } from '../broadcast/channel.ts';
@@ -64,7 +64,7 @@ const cameras = cameraReceiver ? createCameraOutput(document.body, cameraReceive
 const chromaWindows = createChromaWindows(document.body);
 let boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
 media.on('change', value => {
-  try { selectedMedia = parseMedia(value); } catch { selectedMedia = EMPTY_MEDIA; }
+  try { selectedMedia = mediaForOutput(parseMedia(value), ledOutput ? 'led' : 'stream'); } catch { selectedMedia = EMPTY_MEDIA; }
   boundAssets = boundMediaState(selectedMedia, presenterAssets.value);
   videoPlayer.preload(selectedMedia, boundAssets.versions);
   void audioOutput.load(selectedMedia, boundAssets.versions);

@@ -3,7 +3,7 @@ export type Stem = { id: string; url: string; loopStartS: number; loopEndS: numb
 export const AUDIO_STATES = ['unreported', 'loading', 'ready', 'silent', 'partial', 'error', 'suspended'] as const;
 export type AudioState = typeof AUDIO_STATES[number];
 export type AudioStatus = { state: AudioState; missing: string[] };
-export type EffectAsset = { url: string; watchdogMs: number; soundtrack: 'embedded' | 'cue' | 'silent' };
+export type EffectAsset = { url: string; ledUrl?: string; watchdogMs: number; soundtrack: 'embedded' | 'cue' | 'silent' };
 export type MediaManifest = { stems: Stem[]; fadeMs: Record<MusicContext, number> & { end?: number }; sounds: Partial<Record<CueKind, string>>; fiveK: { single: EffectAsset | null; double: EffectAsset | null } };
 export const EMPTY_MEDIA: MediaManifest = { stems: [], fadeMs: { idle: 0, round: 0, urgent: 0, results: 0 }, sounds: {}, fiveK: { single: null, double: null } };
 export const MUSIC_CONTEXTS = ['idle', 'round', 'urgent', 'results'] as const;
@@ -46,15 +46,25 @@ export function parseMedia(input: unknown): MediaManifest {
   const fiveK = record(value.fiveK, ['single', 'double']);
   function effect(input: unknown): EffectAsset | null {
     if (input === null) return null;
-    const value = record(input, ['url', 'watchdogMs', 'soundtrack']);
+    const value = record(input, ['url', 'ledUrl', 'watchdogMs', 'soundtrack']);
     if (value.soundtrack !== 'embedded' && value.soundtrack !== 'cue' && value.soundtrack !== 'silent') throw new Error('Invalid soundtrack');
     if (value.soundtrack === 'cue' && !sounds['five-k']) throw new Error('Cue soundtrack needs a five-k sound');
-    return { url: assetUrl(value.url, 'video'), watchdogMs: number(value.watchdogMs, 500, 120000), soundtrack: value.soundtrack };
+    return { url: assetUrl(value.url, 'video'),
+      ...(value.ledUrl === undefined ? {} : { ledUrl: assetUrl(value.ledUrl, 'video') }),
+      watchdogMs: number(value.watchdogMs, 500, 120000), soundtrack: value.soundtrack };
   }
   // `end` is optional: the finished-duel fade falls back to the idle fade.
   const { end, ...fades } = record(value.fadeMs, [...MUSIC_CONTEXTS, 'end']);
   const fadeMs = end === undefined ? contexts(fades, 120000) : { ...contexts(fades, 120000), end: number(end, 0, 120000) };
   return { stems, fadeMs, sounds, fiveK: { single: effect(fiveK.single), double: effect(fiveK.double) } };
+}
+
+/** Resolve before preloading and version tracking so each output binds only its own clips. */
+export function mediaForOutput(media: MediaManifest, output: 'stream' | 'led'): MediaManifest {
+  if (output === 'stream') return media;
+  const led = (asset: EffectAsset | null): EffectAsset | null => asset
+    ? { ...asset, url: asset.ledUrl ?? asset.url, soundtrack: 'silent' } : null;
+  return { ...media, fiveK: { single: led(media.fiveK.single), double: led(media.fiveK.double) } };
 }
 
 /** Resolve exactly one variant; a double never substitutes the single asset. */

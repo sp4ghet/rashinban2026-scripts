@@ -4,9 +4,11 @@ Upload files in NodeCG's **Assets** tab, under **Presenter music**, **Presenter 
 
 Single and double 5K use independent videos. Two perfect scores select exactly one double video. If that selection is empty or missing, results reveal normally; the presenter never substitutes two single videos. The media status shows missing files, playback failures, natural completion, and watchdog expiry.
 
+Each effect has separate **Stream** and **LED** selections. The stream uses `url` with the configured soundtrack; the LED uses optional `ledUrl` silently. With no LED selection, older configurations keep using the stream video on LED. A selected but unavailable LED file does not fall back to a different clip.
+
 The explicitly active `presenter.html?role=program` source plays celebrations. Preview sources preload selections but stay silent and do not play or complete effects. A program that takes over after a cue has started does not replay that clip. Losing ownership, changing rounds, aborting, or closing the page stops playback. Cancellation suppresses stale completion callbacks.
 
-The clip fills the 1920×1080 graphic above all other content, including both camera windows. Its opaque black backing also covers cameras when the source has transparency or a different aspect ratio. Cameras return when the clip ends. Score reveal/counting and then damage begin at the shared timestamps published after effective completion, with the configured lead between completion and reveal.
+The clip fills the 1920×1080 stream graphic or 1920×576 LED graphic above all other content, including both camera windows. Transparent pixels reveal the celebration underlay. Score reveal/counting and then damage begin at the shared timestamps published after effective completion, with the configured lead between completion and reveal.
 
 ## Soundtrack and duration
 
@@ -56,10 +58,13 @@ A selected video has this form:
 ```json
 {
   "url": "/assets/rashinban/video/single-5k.webm",
+  "ledUrl": "/assets/rashinban/video/single-5k-led.webm",
   "watchdogMs": 10000,
   "soundtrack": "embedded"
 }
 ```
+
+For the supplied RASHINBAN 2026 clips, assign `RASHINBAN2026_5K_with_audio.webm` / `RASHINBAN2026_5K_LED.webm` to single, and `RASHINBAN2026_10K_with_audio.webm` / `RASHINBAN2026_10K_LED.webm` to double. Use embedded audio and a 10000 ms maximum wait. Convert the MOV sources in `assets/videos` with VP9 (`libvpx-vp9`, `yuva420p`, CRF 18) and Opus (192 kbps), keeping the original dimensions and frame rate. Do not use `-shortest`: the stream clips have audio tails beyond the five-second animation. Place playback copies in `assets/rashinban/video`; both asset folders and local media configuration are gitignored.
 
 Music stems contain `id`, `url`, `loopStartS`, `loopEndS`, and gains for `idle`, `round`, `urgent`, and `results`. IDs must be unique, nonempty, and contain only letters, digits, underscores or hyphens (80 characters maximum). All gains are finite values from 0 to 1. Loop bounds are finite seconds from 0 to 86400, with end strictly after start; decoding and loop-to-file-duration checks belong to the music player. Fade values, including the optional `end`, are finite milliseconds from 0 to 120000. At most 32 stems are accepted.
 
