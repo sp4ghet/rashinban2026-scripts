@@ -170,7 +170,7 @@ try {
     assert.equal(Math.max(...labelAlpha),255,'Lock text should render at full opacity');
     assert.equal(Math.min(...labelAlpha),102,'Lock text should have only the full-window overlay behind it');
     const lockedPixels=await pixels([[100,viewY],[1800,viewY]]);
-    assert.deepEqual(lockedPixels[0],led ? [0,0,0,102] : [255,255,255,102],'Locked window should have a 40% overlay');
+    assert.deepEqual(lockedPixels[0],[255,255,255,102],'Both outputs use the matching 40% white lock overlay');
     transparent(lockedPixels[1]);
     await screenshot(output+'-transparent-lock',led);
     checks.push(output+': full-opacity lock text over a 40% window overlay; unlocked feed stays transparent');
@@ -228,7 +228,7 @@ try {
         ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='48px sans-serif';ctx.fillText(i?'RIGHT CAMERA':'LEFT CAMERA',960,760);
         const video=el.querySelector('video');video.srcObject=canvas.captureStream(1);el.dataset.state='ready';return video;
       });`);
-      const header = () => evaluate(`['.competitor.left','.competitor.right','.match-info','.health.left','.health.right','#left-wins','#right-wins'].map(s=>{const e=document.querySelector(s),r=e.getBoundingClientRect(),style=getComputedStyle(e);return {x:r.x,y:r.y,width:r.width,height:r.height,display:style.display};})`);
+      const header = () => evaluate(`['.competitor.left','.competitor.right','.match-info','#left-wins','#right-wins'].map(s=>{const e=document.querySelector(s),r=e.getBoundingClientRect(),style=getComputedStyle(e);return {x:r.x,y:r.y,width:r.width,height:r.height,display:style.display};})`);
       const expectedHeader = await header();
       assert.equal(expectedHeader[0].y,0);assert.equal(expectedHeader[0].height,54);
       assert.equal(expectedHeader[1].y,0);assert.equal(expectedHeader[1].height,54);
@@ -239,6 +239,7 @@ try {
         const cameras=await evaluate(`[...document.querySelectorAll('.camera')].map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,display:getComputedStyle(e).display,fit:getComputedStyle(e.querySelector('video')).objectFit};})`);
         assert.deepEqual(cameras,[{x:0,y:36,width:960,height:540,display:'block',fit:'cover'},{x:960,y:36,width:960,height:540,display:'block',fit:'cover'}]);
         assert.deepEqual(await header(),expectedHeader,'No corner identities or winner-sized camera panels on LED');
+        assert.equal(await evaluate(`[...document.querySelectorAll('.health')].every(e=>getComputedStyle(e).display==='none')`),true,'Pre/post-game LED views hide both HP/pip bars');
         assert.equal(await evaluate(`document.getElementById('summary-area').hidden`),true);
         assert.equal(await evaluate(`document.querySelector('.pregame-symbol').getBoundingClientRect().y+document.querySelector('.pregame-symbol').getBoundingClientRect().height/2`),288);
         const samples=await pixels([[957,100],[962,100],[970,5],[100,400],[1800,400],[100,700]]);
@@ -254,8 +255,9 @@ try {
       // A lobby with no duel retains the selected camera view and header names.
       await evaluate(`qa.set('presenterDuel',null);qa.set('presenterIntermission',{...nodecg.Replicant('presenterIntermission').value,view:'before-game'})`);await settle();
       assert.equal(await evaluate(`document.body.dataset.intermission`),'before-game');
+      assert.equal(await evaluate(`[...document.querySelectorAll('.health')].every(e=>getComputedStyle(e).display==='none')`),true,'No HP bars in the pre-game lobby');
       assert.equal(await evaluate(`document.getElementById('left-name').textContent`),initial.presenterSeries.left.name);
-      checks.push('LED: before/after-game cameras stay 50/50 behind the full header, with the stream seam and compass, no corner names, and persistent silent videos');
+      checks.push('LED: before/after-game cameras keep the scoreboard, seam and compass, with hidden HP/pip bars and persistent silent videos');
     } else {
       // A 1920x1080 chart makes centre cropping and aspect distortion visible.
       await evaluate(`qa.cameraNodes=[...document.querySelectorAll('.camera')].map((el,i)=>{
@@ -314,6 +316,7 @@ try {
     } else {
       assert.equal(await evaluate(`document.body.dataset.intermission`),'none');
       assert.equal(await evaluate(`[...document.querySelectorAll('.camera')].every(e=>getComputedStyle(e).display==='none')`),true);
+      assert.equal(await evaluate(`[...document.querySelectorAll('.health')].every(e=>getComputedStyle(e).display!=='none')`),true,'Gameplay restores both HP bars');
       checks.push('LED: gameplay hides both intermission cameras and restores the existing player views');
     }
     const keyed=await pixels([[100,viewY],[1800,viewY]]);

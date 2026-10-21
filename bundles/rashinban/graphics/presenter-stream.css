@@ -1,4 +1,5 @@
 @import url('presenter-timer.css');
+@import url('presenter-pips.css');
 /* Stream-only designer layout. Intermission and the LED keep their own geometry. */
 .presenter-sponsor, #match-label { display: none; }
 body[data-output="stream"][data-intermission="none"] {
@@ -80,16 +81,8 @@ body[data-output="stream"][data-intermission="none"] {
   #preview-map { display: none; }
 
   &[data-ruleset="pinpointing"] {
-    .damage { display: none; }
-    .health { top: 237px; width: 426px; height: 60px; background: transparent; border: 5px solid var(--left-color); border-radius: 32px; clip-path: none; transform: none; box-shadow: none; }
+    .health { top: 237px; width: 426px; }
     .health.left { left: 60px; }
-    .health.right { right: 60px; border-color: var(--right-color); }
-    .pips { left: 28px; right: 80px; gap: 0; justify-content: space-between; transform: none; }
-    .health.right .pips { left: 80px; right: 28px; flex-direction: row-reverse; transform: none; }
-    .pip { flex: 0 1 25px; height: auto; aspect-ratio: 1; border: 0; background: #ffffff4d; box-shadow: none; }
-    .health.left .pip.filled { background: var(--left-color); box-shadow: none; }
-    .health.right .pip.filled { background: var(--right-color); box-shadow: none; }
-    .health b { position: absolute; top: -5px; right: -5px; width: 60px; height: 60px; font: 700 48px/60px var(--presenter-latin); transform: none; background: var(--left-color); }
-    .health.right b { right: auto; left: -5px; background: var(--right-color); }
+    .health.right { right: 60px; }
   }
 }

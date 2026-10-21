@@ -1,5 +1,6 @@
 @import url('presenter.css');
 @import url('presenter-timer.css');
+@import url('presenter-pips.css');
 /* LED wall: only the top 1920x576 is physically shown. Names and HP sit in a
    top band because the players on stage can cover the lower part. */
 :root { --stage-top: 104px; --stage-h: 460px; --led-header-h: 54px; --led-view-h: calc(576px - var(--led-header-h)); }
@@ -60,12 +61,16 @@ body[data-output="led"] {
   .damage small { display: block; color: #fff; font-size: 16px; line-height: 1; letter-spacing: normal; }
   .damage b { font-size: 36px; line-height: 1; }
 
-  &[data-ruleset="pinpointing"] {
-    .pips { gap: 8px; }
-    .pip { flex: 1 1 0; min-width: 0; max-width: 34px; height: auto; aspect-ratio: 1; }
-    .damage { width: 220px; gap: 12px; }
-    .damage b { font-size: 24px; }
-  }
+  /* Match the stream's lock treatment within the LED gameplay windows. */
+  .player-window:has(> .lock:not([hidden]))::before { background: rgb(255 255 255 / 40%); }
+  &[data-lock] .player-window .lock { font: italic 900 128px/1 var(--presenter-latin); color: var(--left-color); }
+  &[data-lock] .player-window.right .lock { color: var(--right-color); }
+
+  /* Keep the full points award below the header, including its pop animation. */
+  &[data-ruleset="pinpointing"] .score-token { margin-top: 32px; }
+
+  #verdict[data-side="left"] { color: var(--left-color); border-color: var(--left-color); }
+  #verdict[data-side="right"] { color: var(--right-color); border-color: var(--right-color); }
 }
 
 /* Retain gameplay through the reveal lead-in beneath the persistent header. */
@@ -90,5 +95,5 @@ body[data-output="led"]:is([data-intermission="before-game"], [data-intermission
   .camera.left::after { border-right: 5px solid #ff3030; }
   .camera.right::after { border-left: 5px solid #ff3030; }
   .pregame-symbol { display: block; position: absolute; left: 50%; top: 288px; width: 150px; height: 151px; transform: translate(-50%, -50%); z-index: 6; pointer-events: none; }
-  .damage { display: none; }
+  .damage, .health { display: none; }
 }

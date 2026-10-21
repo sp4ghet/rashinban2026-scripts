@@ -4,7 +4,7 @@ import { applySnapshot } from '../normalize.ts';
 import { advanceTimeline, DEFAULT_TIMING, finishEffect } from '../timeline.ts';
 import { project } from '../projection.ts';
 import { sample } from './fixtures.ts';
-import { scoreMotion } from '../../graphics/presenter/scoring-motion.ts';
+import { pointAwardMotion, scoreMotion } from '../../graphics/presenter/scoring-motion.ts';
 
 function result(multiplier = 1, tied = false) {
   const state = structuredClone(applySnapshot(null, sample('gs2-ws-DuelRoundTimedOut-nopin.json')).state!);
@@ -158,6 +158,17 @@ test('Pinpointing Duels scoring counts, then shows the verdict with the new tota
   assert.equal(at(15660).phase, 'between-rounds');
   assert.deepEqual(at(15660).players.map(p => p.health), [6000, 5784], 'server HP is passed through, never animated');
   assert.deepEqual(t.cues.map(c => [c.kind, c.atMs]), [['results', 10200], ['count', 11410], ['collision', 13160]]);
+});
+
+test('point awards pop beside the bar and fade on the shared scoring clock', () => {
+  const state = pinpointing(); const t = advanceTimeline(null, state, 10000, false, DEFAULT_TIMING);
+  const at = (offset: number) => pointAwardMotion(project(state, t, t.scoring!.verdictAtMs! + offset).scoring!);
+  assert.equal(at(0).scale, 0.6);
+  assert.ok(at(200).scale > at(0).scale);
+  assert.equal(at(500).opacity, 1, 'the award remains readable after the points update');
+  assert.ok(at(800).opacity > 0 && at(800).opacity < 1);
+  assert.equal(at(1000).opacity, 0);
+  assert.equal(at(2000).opacity, 0, 'joining late must not replay the award');
 });
 
 test('a Pinpointing Duels tie keeps the totals and plays the tie cue at the verdict', () => {

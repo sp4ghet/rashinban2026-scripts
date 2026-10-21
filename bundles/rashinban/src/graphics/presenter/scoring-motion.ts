@@ -43,3 +43,12 @@ export function scoreMotion(s: ScoreProjection) {
     multiplierOpacity: 1 - s.multiplierFadeProgress,
   };
 }
+
+/** Hold the points award for 600ms, then fade over 400ms on the shared clock. */
+export function pointAwardMotion(s: ScoreProjection) {
+  return {
+    scale: 0.6 + 0.4 * spring(s.verdictProgress * 0.4, true),
+    // differenceProgress starts at the points verdict and spans one second.
+    opacity: Math.min(1, (1 - s.differenceProgress) / 0.4),
+  };
+}

@@ -6,6 +6,8 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import express from 'express';
+import { createMediaRouter } from '../bundles/rashinban/src/extension/config/assets.ts';
 import { applySnapshot } from '../bundles/rashinban/src/presenter/normalize.ts';
 import { seedViews } from '../bundles/rashinban/src/presenter/telemetry.ts';
 import { advanceTimeline, DEFAULT_TIMING } from '../bundles/rashinban/src/presenter/timeline.ts';
@@ -34,8 +36,11 @@ window.nodecg={Replicant(name){if(!reps.has(name))reps.set(name,{value:qa.initia
 qa.rect=id=>{const r=document.getElementById(id).getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};};
 qa.live=(mode,source,lock)=>{qa.now=${epoch};const s=structuredClone(qa.initial.presenterDuel);s.mode=mode;for(const [i,side] of ['left','right'].entries())if(lock===side||lock==='both')s.players[i].guesses=[{round:s.round,lat:1,lng:2,score:4000,distanceM:10,createdAtMs:qa.now}];qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:source});qa.set('presenterDuel',s);qa.set('presenterTimeline',structuredClone(qa.initial.presenterTimeline));};
 `;
+const media = express();
+media.use('/rashinban/media', createMediaRouter({appRoot: root, sharedRoot: root, isWorktree: false}));
 const server = createServer(async (req, res) => {
   try {
+    if (req.url.startsWith('/rashinban/media/')) { media(req, res); return; }
     const url = new URL(req.url, 'http://localhost');
     if (url.pathname === '/favicon.ico') { res.writeHead(204); res.end(); return; }
     const file = path.resolve(root, 'bundles/rashinban/graphics', '.' + url.pathname);
@@ -73,6 +78,18 @@ async function screenshot(name, led = false) {
   await writeFile(path.join(artifacts, `${name}.png`), Buffer.from(r.data, 'base64'));
 }
 const ratio = r => assert.ok(Math.abs(r.width / r.height - 16 / 9) < 0.001, `Expected 16:9: ${JSON.stringify(r)}`);
+const pipDesign = () => evaluate(`['left','right'].map(side=>{
+  const bar=document.querySelector('.health.'+side),s=getComputedStyle(bar),n=getComputedStyle(bar.querySelector('b')),p=getComputedStyle(bar.querySelector('.pip'));
+  return {height:s.height,border:s.borderTopWidth,color:s.borderTopColor,radius:s.borderTopLeftRadius,background:s.backgroundColor,transform:s.transform,
+    count:{width:n.width,height:n.height,font:n.fontSize,lineHeight:n.lineHeight,background:n.backgroundColor,transform:n.transform},
+    pip:{width:p.width,height:p.height,border:p.borderTopWidth,shadow:p.boxShadow}};
+})`);
+let streamPipDesign;
+const streamLockDesigns = new Map();
+const lockDesign = () => evaluate(`['left','right'].map(side=>{
+  const e=document.getElementById(side+'-lock'),s=getComputedStyle(e),shade=getComputedStyle(e.parentElement,'::before');
+  return {hidden:e.hidden,font:s.font,color:s.color,shadow:s.textShadow,shade:shade.backgroundColor,content:shade.content};
+})`);
 try {
   let target;
   for (let i = 0; i < 100; i++) {
@@ -113,9 +130,12 @@ try {
     await evaluate(`const initial56=structuredClone(qa.initial.presenterDuel);Object.assign(initial56.rounds[0],{startAtMs:qa.now-4000,timerStartAtMs:qa.now-4000,endAtMs:qa.now+56000});qa.set('presenterDuel',initial56);`);
     await settle(); await screenshot(`${output}-56`, led);
     const timer = await evaluate(`qa.rect('timer')`);
-    for (const mode of ['NM', 'NMPZ']) for (const source of ['rendered', 'video', 'chroma']) for (const lock of ['none', 'left', 'right', 'both']) {
+    for (const mode of ['MOVE', 'NM', 'NMPZ']) for (const source of ['rendered', 'video', 'chroma']) for (const lock of ['none', 'left', 'right', 'both']) {
       await evaluate(`qa.live('${mode}','${source}','${lock}')`); await settle();
       const current = await evaluate(`({timer:qa.rect('timer'),left:qa.rect('left-window'),right:qa.rect('right-window'),leftMap:qa.rect('left-map'),rightMap:qa.rect('right-map'),layout:document.body.dataset.layout,lock:document.body.dataset.lock})`);
+      const lockKey=`${mode}/${source}/${lock}`,design=await lockDesign();
+      if(led) assert.deepEqual(design,streamLockDesigns.get(lockKey),`LED lock typography, player colors and overlay match the stream for ${lockKey}`);
+      else streamLockDesigns.set(lockKey,design);
       if (led || source === 'chroma') assert.deepEqual(current.timer, timer, `${output} fixed timer moved on ${mode}/${source}/${lock}`);
       if (led) {
         assert.deepEqual(current.left, {x:0,y:54,width:960,height:522});
@@ -143,8 +163,10 @@ try {
         assert.ok(current.left.y + current.left.height <= 576 && current.right.y + current.right.height <= 576);
       }
       layouts.push({ output, mode, source, lock, ...current });
+      if(mode==='MOVE'&&source==='rendered'&&['left','right','both'].includes(lock))await screenshot(`${output}-locked-${lock}`,led);
     }
     checks.push(`${output}: source-aware timer and lock geometry across modes and both sides; chroma remains fixed`);
+    if(led) checks.push('LED: LOCKED IN matches stream typography, player colors and light overlay across all modes, sources and lock states');
     await evaluate(`qa.live('NM','rendered','none')`); await settle(); await screenshot(`${output}-39`, led);
     await evaluate(`qa.live('NM','rendered','left')`); await settle(); await screenshot(`${output}-locked`, led);
     const ledHeader = async () => evaluate(`['.competitor.left','.competitor.right','#left-wins','#right-wins','.match-info','.health.left','.health.right','.damage.left','.damage.right'].map(selector=>{const e=document.querySelector(selector),r=e.getBoundingClientRect(),s=getComputedStyle(e);return {selector,x:r.x,y:r.y,width:r.width,height:r.height,background:s.backgroundColor,font:s.fontFamily,border:s.border,transform:s.transform};})`);
@@ -180,7 +202,45 @@ try {
       assert.deepEqual(await evaluate(`['left','right'].map(side=>({points:document.getElementById(side+'-health').textContent,pips:document.querySelectorAll('#'+side+'-pips .pip').length,filled:document.querySelectorAll('#'+side+'-pips .filled').length,damage:getComputedStyle(document.querySelector('.damage.'+side)).display}))`),
         [{points:'1',pips:7,filled:1,damage:'none'},{points:'1',pips:7,filled:1,damage:'none'}]);
       await screenshot('stream-pinpointing');
+      streamPipDesign=await pipDesign();
+      streamPipDesign.forEach(bar=>assert.equal(bar.background,'rgba(0, 0, 0, 0)','Stream pip bars retain their transparent fill'));
       checks.push('stream: live match title, sponsor asset and authoritative Pinpointing counters');
+      const normalBounds=await evaluate(`['left','right'].map(side=>document.getElementById(side+'-health').parentElement.getBoundingClientRect().toJSON())`);
+      for (const totals of [[5,1],[1,6],[5,6],[4,4],[7,1]]) {
+        await evaluate(`{const next=structuredClone(nodecg.Replicant('presenterDuel').value);next.pinpointing.totals=${JSON.stringify(totals)};qa.set('presenterDuel',next);}`);
+        await settle();
+        await screenshot('stream-pinpointing-'+totals.join('-'));
+        const bars=await evaluate(`['left','right'].map(side=>{const e=document.getElementById(side+'-health').parentElement,s=getComputedStyle(e);return {matchPoint:e.dataset.matchPoint,border:s.borderTopColor,glow:s.boxShadow,rect:e.getBoundingClientRect().toJSON()};})`);
+        bars.forEach((bar,i)=>{
+          const matchPoint=totals[i]>=5&&totals[i]<7;
+          assert.equal(bar.matchPoint,String(matchPoint));
+          assert.equal(bar.border,i?'rgb(48, 131, 255)':'rgb(255, 48, 48)','Match point keeps the player-colored border');
+          assert.equal(bar.glow!=='none',matchPoint,'Only match-point bars glow');
+          if(matchPoint) assert.match(bar.glow,/rgb\(255, 213, 90\) 0px 0px 0px 3px/,'Yellow ring sits outside the player border');
+          assert.deepEqual(bar.rect,normalBounds[i],'Match point must not move or resize the points bar');
+        });
+      }
+      checks.push('stream: match point adds an outer yellow halo to either or both player-colored bars and resets below match point or after winning');
+    }
+    if (led) {
+      await evaluate(`qa.live('MOVE','rendered','none');{const next=structuredClone(qa.initial.presenterDuel);next.mode='MOVE';next.pinpointing={teamIds:next.players.map(p=>p.teamId),firstTo:7,tieRange:'off',rounds:[],totals:[5,2],matchPoint:[true,false],terminal:null};qa.set('presenterDuel',next);}`);
+      await settle();
+      assert.equal(await evaluate(`document.getElementById('mode').textContent`),'MOVING');
+      assert.deepEqual(await evaluate(`['left','right'].map(side=>({banner:getComputedStyle(document.querySelector('.damage.'+side)).display,points:document.getElementById(side+'-health').textContent,filled:document.querySelectorAll('#'+side+'-pips .filled').length}))`),
+        [{banner:'none',points:'5',filled:5},{banner:'none',points:'2',filled:2}]);
+      const pipColors=await evaluate(`['left','right'].map(side=>({sideColor:getComputedStyle(document.getElementById(side+'-wins')).backgroundColor,pips:[...document.querySelectorAll('#'+side+'-pips .filled')].map(e=>getComputedStyle(e).backgroundColor),empty:[...document.querySelectorAll('#'+side+'-pips .pip:not(.filled)')].map(e=>getComputedStyle(e).backgroundColor)}))`);
+      pipColors.forEach(({sideColor,pips,empty})=>{
+        assert.ok(pips.length>0);assert.ok(pips.every(color=>color===sideColor),'Filled LED pips must match their side of the header');
+        assert.ok(empty.every(color=>color==='rgba(255, 255, 255, 0.3)'),'Unfilled LED pips match the stream style');
+      });
+      assert.deepEqual(await pipDesign(),streamPipDesign.map(bar=>({...bar,background:'rgb(0, 0, 0)'})),
+        'LED uses an opaque black fill with the same rounded bar, pips and colored count caps');
+      assert.deepEqual(await evaluate(`[...document.querySelectorAll('.health')].map(e=>({color:getComputedStyle(e).borderTopColor,glow:getComputedStyle(e).boxShadow!=='none'}))`),
+        [{color:'rgb(255, 48, 48)',glow:true},{color:'rgb(48, 131, 255)',glow:false}]);
+      await screenshot('led-pinpointing-no-banners',true);
+      await evaluate(`qa.live('NM','rendered','none')`);await settle();
+      assert.deepEqual(await evaluate(`[...document.querySelectorAll('.damage')].map(e=>getComputedStyle(e).display)`),['flex','flex']);
+      checks.push('LED: points banners are hidden while pips and match point remain; health duels retain damage multipliers');
     }
     await evaluate(`qa.live('NM','rendered','none');const s=structuredClone(qa.initial.presenterDuel);s.rounds[0].startAtMs=qa.now+60000;qa.set('presenterDuel',s);qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'pre-round'});`);
     await settle();
@@ -255,20 +315,75 @@ try {
       await screenshot('led-review',true);
       await evaluate(`qa.set('presenterDuel',{...qa.initial.presenterDuel,status:'Finished',winnerTeamId:qa.initial.presenterDuel.players[0].teamId});qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'finished'})`); await settle();
       assert.equal(await evaluate(`document.body.dataset.scene`),'summary');
-      const withoutDamage = items => items.filter(item => !item.selector.startsWith('.damage'));
-      assert.deepEqual(withoutDamage(await ledHeader()),withoutDamage(header),'Header persists on the winner summary');
+      const scoreboardOnly = items => items.filter(item => !item.selector.startsWith('.damage')&&!item.selector.startsWith('.health'));
+      assert.deepEqual(scoreboardOnly(await ledHeader()),scoreboardOnly(header),'Scoreboard persists on the winner summary');
+      assert.equal(await evaluate(`[...document.querySelectorAll('.health')].every(e=>getComputedStyle(e).display==='none')`),true,'HP bars are hidden between games');
       assert.equal(await evaluate(`document.getElementById('summary-area').hidden`),true);
       assert.equal(await evaluate(`document.body.dataset.intermission`),'before-game');
       await screenshot('led-summary',true);
       await evaluate(`qa.set('presenterDuel',{...qa.initial.presenterDuel,aborted:true})`); await settle();
       assert.equal(await evaluate(`document.body.dataset.scene`),'aborted');
-      assert.deepEqual(withoutDamage(await ledHeader()),withoutDamage(header),'Header persists on cancellation');
+      assert.deepEqual(scoreboardOnly(await ledHeader()),scoreboardOnly(header),'Scoreboard persists on cancellation');
+      assert.equal(await evaluate(`[...document.querySelectorAll('.health')].every(e=>getComputedStyle(e).display==='none')`),true,'Cancelled games hide the HP bars');
       await evaluate(`qa.set('presenterTimeline',null)`); await settle();
       assert.equal(await evaluate(`document.body.dataset.scene`),'waiting');
       assert.deepEqual(await ledHeader(),header,'Header persists while waiting');
       assert.deepEqual(await evaluate(`qa.rect('waiting-area')`),{x:16,y:104,width:1888,height:460});
       checks.push('led: persistent designer header across preview, scoring, review, summary, cancellation and waiting; long names stay contained');
     }
+    // Real scoring projections: +1/+2 by either bar, silent no-point rounds,
+    // swapped player order, and expiry without replay when joining late.
+    const awards=[
+      {winner:0,gain:1,reason:'closest',scores:[4500,3200]},
+      {winner:1,gain:1,reason:'closest',scores:[3200,4500]},
+      {winner:0,gain:2,reason:'solo-5k',scores:[5000,3200]},
+      {winner:1,gain:2,reason:'solo-5k',scores:[3200,5000]},
+      {winner:1,gain:1,reason:'fastest-5k',scores:[5000,5000]},
+      {winner:null,gain:0,reason:'tie',scores:[4000,4000]},
+      {winner:null,gain:0,reason:'fastest-5k',scores:[5000,5000]},
+      {winner:0,gain:2,reason:'solo-5k',scores:[5000,3200],swapped:true},
+    ];
+    for (const [index,{winner,gain,reason,scores,swapped=false}] of awards.entries()) {
+      const result=structuredClone(state),series=structuredClone(initial.presenterSeries);
+      if(swapped) [series.left.playerId,series.right.playerId]=[series.right.playerId,series.left.playerId];
+      const winnerSide=winner===null?null:series.left.playerId===result.players[winner].id?'left':'right';
+      const before=[4,4],points=winner===null?[0,0]:winner===0?[gain,0]:[0,gain],after=before.map((value,i)=>value+points[i]);
+      result.mode='MOVE';result.manualRoundStart=false;
+      result.players.forEach((player,i)=>{player.results=[{round:result.round,score:scores[i],bestGuess:null,healthBefore:6000,healthAfter:6000,damageDealt:0,multiplier:1}];});
+      result.pinpointing={teamIds:result.players.map(player=>player.teamId),firstTo:7,tieRange:'off',totals:after,matchPoint:after.map(value=>value>=5),terminal:null,
+        rounds:[{round:result.round,scores,guessedAtMs:[1,2],points,totalsBefore:before,totalsAfter:after,winner,reason,band:0,withinBand:reason==='tie',fiveKs:scores.filter(score=>score===5000).length}]};
+      const start=epoch+40000+index*12000,timing=advanceTimeline(null,result,start,false,DEFAULT_TIMING);
+      await evaluate(`qa.set('presenterSeries',${JSON.stringify(series)});`);
+      for(const offset of [-1,0,200,500,800,1001,2500]) {
+        const now=timing.scoring.verdictAtMs+offset,verdict=advanceTimeline(timing,result,now,false,DEFAULT_TIMING);
+        await evaluate(`qa.now=${now};qa.set('presenterDuel',${JSON.stringify(result)});qa.set('presenterTimeline',${JSON.stringify(verdict)});`);await settle();
+        assert.equal(await evaluate(`document.getElementById('verdict').hidden`),true,'No explanatory verdict banner');
+        assert.equal(await evaluate(`document.getElementById('score-calculation').hidden`),true,'No damage multiplier in points rounds');
+        const tokens=await evaluate(`['left','right'].map(side=>{const e=document.getElementById('score-token-'+side),s=getComputedStyle(e);return {side,hidden:e.hidden,text:e.textContent,color:s.color,opacity:Number(s.opacity),rect:qa.rect(e.id),bar:document.querySelector('.health.'+side).getBoundingClientRect().toJSON(),headerBottom:document.querySelector('.match-info').getBoundingClientRect().bottom,count:document.getElementById(side+'-health').textContent};})`);
+        tokens.forEach(token=>{
+          const visible=winnerSide===token.side&&offset>=0&&offset<1000;
+          assert.equal(token.hidden,!visible,`${output} ${reason} ${winnerSide} ${offset}: only the awarded side shows a token`);
+          const playerIndex=result.players.findIndex(player=>player.id===series[token.side].playerId);
+          assert.equal(token.count,String((offset<0?before:after)[playerIndex]),'Points land with the award');
+          if(!visible)return;
+          assert.equal(token.text,'+'+gain);
+          assert.equal(token.color,token.side==='left'?'rgb(255, 48, 48)':'rgb(48, 131, 255)');
+          assert.ok(token.opacity>0);
+          if(offset===800)assert.ok(token.opacity<1,'Award fades out');
+          const gap=token.side==='left'?token.rect.x-token.bar.right:token.bar.x-(token.rect.x+token.rect.width);
+          assert.ok(gap>=8&&gap<60,'Award sits next to the inner edge of its pip bar');
+          if(led) assert.ok(token.rect.y>=token.headerBottom+8,'The entire LED award clears the header, including during its pop animation');
+          else assert.ok(Math.abs(token.rect.y+token.rect.height/2-(token.bar.y+token.bar.height/2))<1,'Stream award stays vertically aligned with the bar');
+          assert.ok(token.rect.y>=0&&token.rect.y+token.rect.height<=(led?576:1080),'Award stays within the output');
+        });
+        if(offset===500){
+          const bars=await evaluate(`[...document.querySelectorAll('.health')].map(e=>({border:getComputedStyle(e).borderTopColor,glow:getComputedStyle(e).boxShadow}))`);
+          bars.forEach((bar,i)=>{assert.equal(bar.border,i?'rgb(48, 131, 255)':'rgb(255, 48, 48)');assert.equal(bar.glow!=='none',['left','right'][i]===winnerSide);});
+          await screenshot(`${output}-pinpointing-award-${index}-${winnerSide??'none'}`,led);
+        }
+      }
+    }
+    checks.push(output+': +1/+2 awards pop and fade next to the correct pip bar, including swapped players; no-point rounds show nothing; match-point halo retains player colors');
   }
   assert.deepEqual(errors, [], 'uncaught browser errors');
   await writeFile(path.join(artifacts, 'report.json'), JSON.stringify({ checks, errors, layouts }, null, 2));

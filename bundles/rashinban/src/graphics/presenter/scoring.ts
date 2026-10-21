@@ -1,6 +1,5 @@
 import type { Projection, SeriesState } from '../../types/presenter.ts';
-import { verdictLabel } from './layout.ts';
-import { scoreMotion } from './scoring-motion.ts';
+import { pointAwardMotion, scoreMotion } from './scoring-motion.ts';
 
 /** Paint the clock-derived choreography; no local timers or animation replay on mount. */
 export function paintScoring(root: HTMLElement, projection: Projection, series: SeriesState): void {
@@ -32,19 +31,25 @@ export function paintScoring(root: HTMLElement, projection: Projection, series: 
   el('score-calculation').hidden = true;
   el('verdict').hidden = true;
   if (!active || !motion) return;
-  if (s.stage === 'verdict' && s.pinpointing) {
-    // Points replace damage: announce the round verdict beside the scoring side.
-    const banner = el('verdict'); banner.hidden = false; banner.textContent = verdictLabel(s.pinpointing);
-    banner.dataset.side = sides.find(side => series[side].playerId === s.winnerId) ?? 'none';
-    banner.style.setProperty('--verdict-scale', String(0.6 + 0.4 * s.verdictProgress));
-    banner.style.opacity = String(Math.min(1, s.verdictProgress * 2));
-    return;
-  }
-  const show = (side: 'left' | 'right', value: number, point: { x: number; y: number }, opacity = 1, size = 1) => {
+  const show = (side: 'left' | 'right', value: number | string, point: { x: number; y: number }, opacity = 1, size = 1) => {
     const token = el(`score-token-${side}`); token.hidden = false; token.textContent = String(value);
     token.style.left = `${point.x}px`; token.style.top = `${point.y}px`; token.style.opacity = String(opacity);
     token.style.transform = `translate(-50%, -50%) scale(${size})`;
   };
+  if (s.pinpointing) {
+    const winner = sides.find(side => series[side].playerId === s.winnerId);
+    const gained = Math.max(...s.pinpointing.points);
+    const award = pointAwardMotion(s);
+    if (s.stage === 'verdict' && winner && gained > 0 && award.opacity > 0) {
+      // Reuse the damage token beside the inward-facing edge of the pip bar.
+      const bar = el(`${winner}-health`).parentElement!.getBoundingClientRect();
+      show(winner, `+${gained}`, {
+        x: ((winner === 'left' ? bar.right : bar.left) - rootRect.left) / scale + (winner === 'left' ? 42 : -42),
+        y: (bar.top + bar.height / 2 - rootRect.top) / scale,
+      }, award.opacity, award.scale);
+    }
+    return;
+  }
   const points = { left: center('left-score'), right: center('right-score') };
   const mix = (a: { x: number; y: number }, b: { x: number; y: number }, p: number) => ({ x: a.x + (b.x - a.x) * p, y: a.y + (b.y - a.y) * p });
   if (s.stage === 'tie') {
