@@ -2190,7 +2190,7 @@
         background: #35131f; z-index: 2; color: #ff8492; font-size: 32px; font-variant-numeric: tabular-nums; }
       .damage::before { content: attr(data-factor); display: block; font-size: 16px; color: #ffe169; text-align: center; }
       .damage[data-animating="true"], .score-token { position: fixed; padding: 0; border-radius: 0; background: none;
-        color: #fff; font-size: 58px; line-height: 1; font-weight: 900; text-shadow: 0 3px 12px #10131fcc;
+        color: #fff; font-size: 58px; line-height: 1; font-weight: 700; text-shadow: 0 3px 12px #10131fcc;
         white-space: nowrap; pointer-events: none; z-index: 2; right: auto; }
       .damage[data-animating="true"]::before { display: none; }
       .score-calculation { position: fixed; font-size: 32px; line-height: 1; font-weight: 700; white-space: nowrap;

@@ -24,7 +24,7 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 .interval-match { min-width: 0; }
 .interval-match-players { margin: 0; font-size: 16px; }
 .interval-player { font-family: var(--interval-heading); font-size: 64px; line-height: 44px; text-transform: uppercase; }
-.interval-player-jp { position: relative; top: -3px; font-family: var(--interval-body); font-weight: 900; font-size: 48px; line-height: 35px; text-transform: none; }
+.interval-player-jp { position: relative; top: -3px; font-family: var(--interval-body); font-weight: 700; font-size: 48px; line-height: 35px; text-transform: none; }
 .interval-versus { font-size: 40px; margin: 0 18px; }
 .interval-versus:has(+ .interval-player-jp) { margin-right: 12px; }
 .interval-timer { position: absolute; left: 140px; top: 793px; width: 450px; }

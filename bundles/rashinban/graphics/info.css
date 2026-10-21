@@ -335,7 +335,7 @@ body[data-output="led"] #cards .pcard { height: 528px; --header-bottom-gap: 24px
   box-sizing: border-box;
   font-family: var(--heading);
   font-size: 96px;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -347,7 +347,7 @@ body[data-output="led"] #cards .pcard { height: 528px; --header-bottom-gap: 24px
 /* Japanese names need a different face and sit better a touch smaller. */
 #casters .caster .name.kana {
   font-family: var(--jp);
-  font-weight: 900;
+  font-weight: 700;
   font-size: 58px;
 }
 

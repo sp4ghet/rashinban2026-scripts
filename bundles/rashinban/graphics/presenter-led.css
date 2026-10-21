@@ -63,7 +63,7 @@ body[data-output="led"] {
 
   /* Match the stream's lock treatment within the LED gameplay windows. */
   .player-window:has(> .lock:not([hidden]))::before { background: rgb(255 255 255 / 40%); }
-  &[data-lock] .player-window .lock { font: italic 900 128px/1 var(--presenter-latin); color: var(--left-color); }
+  &[data-lock] .player-window .lock { font: italic 700 128px/1 var(--presenter-latin); color: var(--left-color); }
   &[data-lock] .player-window.right .lock { color: var(--right-color); }
 
   /* Keep the full points award below the header, including its pop animation. */

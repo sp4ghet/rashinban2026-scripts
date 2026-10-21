@@ -77,7 +77,7 @@ header { display: grid; grid-template-columns: 1fr calc(130 * var(--unit)) 1fr; 
 .player span { display: inline-block; flex-shrink: 0; white-space: nowrap; }
 .player.a { background: var(--player-a); }
 .player.b { background: var(--player-b); }
-.versus { background: #fff; color: #000; font-weight: 900; }
+.versus { background: #fff; color: #000; font-weight: 700; }
 
 .bp-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(20 * var(--unit)); min-height: 0; }
 .bp-group { display: grid; grid-template-rows: calc(82 * var(--unit)) repeat(3, minmax(0, 1fr)); gap: calc(20 * var(--unit)); min-width: 0; min-height: 0; }
@@ -90,7 +90,7 @@ header { display: grid; grid-template-columns: 1fr calc(130 * var(--unit)) 1fr; 
   color: #000;
   font-family: var(--heading);
   font-size: calc(64 * var(--unit));
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
 }
 .bp-card {

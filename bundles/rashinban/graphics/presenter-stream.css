@@ -46,7 +46,7 @@ body[data-output="stream"][data-intermission="none"] {
   .player-window::after { border-width: 8px; border-color: var(--left-color); }
   .player-window.right::after { border-color: var(--right-color); }
   .player-window:has(> .lock:not([hidden]))::before { background: rgb(255 255 255 / 40%); }
-  .lock { font: italic 900 128px/1 var(--presenter-latin); color: var(--left-color); }
+  .lock { font: italic 700 128px/1 var(--presenter-latin); color: var(--left-color); }
   .player-window.right .lock { color: var(--right-color); }
   .player-map:empty { visibility: hidden; }
   .player-map[data-inactive="true"] { display: none; }
