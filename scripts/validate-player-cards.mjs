@@ -24,9 +24,10 @@ const ledOnly = process.argv.includes('--led-only');
 const lowerThirdsOnly = process.argv.includes('--lower-thirds-only');
 const castersOnly = process.argv.includes('--casters-only');
 const cardsOnly = process.argv.includes('--cards-only');
-const artifacts = path.join(root, lowerThirdsOnly ? 'artifacts/lower-thirds' : castersOnly ? 'artifacts/casters' : 'artifacts/player-cards');
+const banpickOnly = process.argv.includes('--banpick-only');
+const artifacts = path.join(root, banpickOnly ? 'artifacts/banpick' : lowerThirdsOnly ? 'artifacts/lower-thirds' : castersOnly ? 'artifacts/casters' : 'artifacts/player-cards');
 const adobeFonts = process.argv.includes('--adobe-fonts');
-const screenshotDirectory = cardsOnly && !adobeFonts ? path.join(artifacts, 'fallback-fonts') : artifacts;
+const screenshotDirectory = (cardsOnly || banpickOnly) && !adobeFonts ? path.join(artifacts, 'fallback-fonts') : artifacts;
 await mkdir(artifacts, { recursive: true });
 await mkdir(screenshotDirectory, { recursive: true });
 const now = Date.parse('2026-10-12T05:00:00Z');
@@ -167,7 +168,15 @@ try {
   await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   socket.onmessage = event => { const message = JSON.parse(event.data); if (message.id) { const call = pending.get(message.id); if (call) { pending.delete(message.id); message.error ? call.reject(Error(message.error.message)) : call.resolve(message.result); } } else if (message.method === 'Runtime.exceptionThrown') errors.push(message.params); };
   await command('Runtime.enable'); await command('Page.enable');
-  if (lowerThirdsOnly) {
+  if (banpickOnly) {
+    for (const output of ['stream', 'led']) state = take(setPreview(state, output, {
+      banpick: { visible: true }, playerCards: { visible: output === 'led' },
+    }), output);
+    values[REPLICANTS.broadcast] = state;
+    await verifyBanpick({ navigate, evaluate, until, screenshot, delay, command, adobeFonts });
+    assert.deepEqual(errors, [], 'no browser exceptions');
+    console.log('Ban/pick browser checks passed. Screenshots: ' + screenshotDirectory);
+  } else if (lowerThirdsOnly) {
     await verifyLowerThirds({ navigate, evaluate, until, screenshot, delay, command });
     assert.deepEqual(errors, [], 'no browser exceptions');
     console.log('Lower-third browser checks passed. Screenshots: ' + artifacts);

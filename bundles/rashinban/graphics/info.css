@@ -368,13 +368,18 @@ body[data-output="led"] #cards .pcard { height: 528px; }
 #casters .caster .handle .band-content { background: #fff; }
 
 /* ==== Ban & Pick ========================================================= */
-/* Newest-first strips; stream uses a camera-safe corner, LED uses the space
-   between the two 480px player cards in the top 1920x576 band. */
+/* Designer strips: the LED header shares the player cards' top edge. */
 #banpick {
+  --bp-row-height: 43px;
+  --bp-row-gap: 8px;
+  --bp-outline: 4px;
+  --bp-pad: 12px;
+  --bp-text: 26px;
+  --bp-mode: 34px;
   position: absolute;
-  left: 60px;
-  top: 60px;
-  width: 440px;
+  left: 73px;
+  top: 77px;
+  width: 450px;
   color: var(--ink);
   font-family: var(--heading);
   font-weight: 700;
@@ -385,82 +390,79 @@ body[data-output="led"] #cards .pcard { height: 528px; }
 }
 
 #banpick.visible { opacity: 1; transform: none; }
-
 #banpick .bp-stack-heading {
-  height: 32px;
+  height: 27px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  box-sizing: border-box;
-  padding: 0 16px;
-  margin-bottom: 8px;
-  background: linear-gradient(90deg, #131a27f5 75%, #131a2700);
-  font-size: 24px;
-  line-height: 1;
-  letter-spacing: 0.04em;
-}
-
-#banpick .bp-stage { flex-shrink: 0; }
-#banpick .bp-turn { display: flex; align-items: center; gap: 8px; min-width: 0; margin-left: 16px; font-size: 20px; }
-#banpick .bp-turn-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--body);
-  font-size: 16px;
-  letter-spacing: 0;
-  text-transform: none;
-}
-#banpick .bp-turn-name:empty { display: none; }
-#banpick .bp-turn-action { flex-shrink: 0; }
-#banpick .bp-stack { display: flex; flex-direction: column; gap: 6px; }
-
-#banpick .bp-stack-entry {
-  --selection-color: 163, 21, 34;
-  --selection-edge: #ff4545;
-  height: 76px;
-  box-sizing: border-box;
-  border-left: 5px solid var(--selection-edge);
-  padding: 7px 22px 9px 14px;
-  display: flex;
-  flex-direction: column;
   justify-content: center;
-  background: linear-gradient(90deg,
-    rgba(var(--selection-color), 0.98) 0%,
-    rgba(var(--selection-color), 0.92) 74%,
-    rgba(var(--selection-color), 0.60) 90%,
-    rgba(var(--selection-color), 0) 100%);
-  text-shadow: 0 1px 3px #0005;
+  gap: 12px;
+  box-sizing: border-box;
+  padding: 0 var(--bp-pad);
+  margin-bottom: 13px;
+  background: #000;
+  font-size: 26px;
+  line-height: 1;
+  white-space: nowrap;
 }
-
-#banpick .bp-stack-entry[data-status="picked"],
-#banpick .bp-stack-entry[data-status="remaining"] {
-  --selection-color: 28, 81, 158;
-  --selection-edge: #b9dcff;
-}
-
-#banpick .bp-selection-meta {
+#banpick .bp-match { min-width: 0; overflow: hidden; }
+#banpick .bp-match:empty { display: none; }
+#banpick .bp-stage { flex-shrink: 0; font-weight: 900; font-style: italic; }
+#banpick .bp-stack { display: flex; flex-direction: column; gap: var(--bp-row-gap); }
+#banpick .bp-stack-entry {
+  --selection-color: var(--p1-light);
+  height: var(--bp-row-height);
+  box-sizing: border-box;
+  padding: 0 var(--bp-pad);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  font-size: 22px;
-  line-height: 1;
-  letter-spacing: 0.04em;
+  gap: 5px;
+  background: var(--selection-color);
 }
-
-#banpick .bp-selection-mode { color: #e2e8f0; }
-#banpick .bp-selection-map { margin-top: 3px; font-size: 30px; line-height: 1.05; white-space: nowrap; }
-
-body[data-output="led"] #banpick { left: 552px; top: 24px; width: 816px; }
-body[data-output="led"] #banpick .bp-stack-heading { height: 36px; margin-bottom: 12px; font-size: 32px; }
-body[data-output="led"] #banpick .bp-turn { font-size: 28px; }
-body[data-output="led"] #banpick .bp-turn-name { font-size: 22px; }
-body[data-output="led"] #banpick .bp-stack { gap: 8px; }
-body[data-output="led"] #banpick .bp-stack-entry { height: 88px; padding: 8px 28px 10px 20px; border-left-width: 6px; }
-body[data-output="led"] #banpick .bp-selection-meta { font-size: 28px; }
-body[data-output="led"] #banpick .bp-selection-map { font-size: 40px; }
+#banpick .bp-stack-entry[data-by="B"] { --selection-color: var(--p2-light); }
+#banpick .bp-stack-entry[data-status="remaining"] { --selection-color: #fff; color: #000; }
+#banpick .bp-stack-entry[data-status="banned"] {
+  background: #000;
+  box-shadow: inset 0 0 0 var(--bp-outline) var(--selection-color);
+}
+#banpick .bp-selection-kind {
+  flex-shrink: 0;
+  font-size: var(--bp-text);
+  line-height: 1;
+  font-weight: 900;
+  font-style: italic;
+}
+#banpick .bp-selection-map {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: var(--bp-text);
+  font-weight: 400;
+  line-height: 1;
+}
+#banpick .bp-selection-mode {
+  flex-shrink: 0;
+  margin-left: 12px;
+  font-size: var(--bp-mode);
+  line-height: 1;
+  font-weight: 900;
+  font-style: italic;
+}
+#banpick .bp-stack-entry[data-status="banned"] :is(.bp-selection-kind, .bp-selection-mode) { font-style: normal; }
+#banpick .bp-stack-entry[data-status="banned"] .bp-selection-mode { color: var(--selection-color); }
+body[data-output="led"] #banpick {
+  --bp-row-height: 80px;
+  --bp-row-gap: 16px;
+  --bp-outline: 7px;
+  --bp-pad: 24px;
+  --bp-text: 48px;
+  --bp-mode: 64px;
+  left: 540px;
+  top: 24px;
+  width: 840px;
+}
+body[data-output="led"] #banpick .bp-stack-heading { height: 50px; margin-bottom: 24px; gap: 22px; font-size: 48px; }
+body[data-output="led"] #banpick .bp-stack-entry { gap: 9px; }
+body[data-output="led"] #banpick .bp-selection-mode { margin-left: 22px; }
 
 @media (prefers-reduced-motion: reduce) {
   #banpick { transition: none; }

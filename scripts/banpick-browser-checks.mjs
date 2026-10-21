@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 // Runs inside validate-player-cards.mjs's isolated fixture server and browser.
-export async function verifyBanpick({ navigate, evaluate, until, screenshot, delay, command }) {
+export async function verifyBanpick({ navigate, evaluate, until, screenshot, delay, command, adobeFonts = false }) {
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   const message = (name, data) => evaluate(`nodecg.sendMessage(${JSON.stringify(name)},${JSON.stringify(data) ?? 'undefined'})`);
   const select = id => message('banpick:act', { optionId: id });
@@ -24,15 +24,16 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
       console.log(JSON.stringify(await evaluate(`[...document.querySelectorAll('.bp-stack-entry')].map(row=>({row:row.getBoundingClientRect().toJSON(),text:[...row.querySelectorAll('.bp-selection-kind,.bp-selection-mode,.bp-selection-map')].map(el=>({text:el.textContent,rect:el.getBoundingClientRect().toJSON(),font:getComputedStyle(el).font,width:el.clientWidth,scroll:el.scrollWidth}))}))`)));
     }
     assert.ok(layout.fits, `${output}: all map names and labels fit their rows`);
-    assert.equal(layout.rect.x, output === 'led' ? 552 : 60);
-    assert.equal(layout.rect.y, output === 'led' ? 24 : 60);
-    assert.equal(layout.rect.width, output === 'led' ? 816 : 440);
-    assert.ok(layout.rect.bottom <= (output === 'led' ? 552 : 1080));
+    assert.ok(await evaluate(`(() => {const h=document.querySelector('.bp-stack-heading'),r=h.getBoundingClientRect();return [...h.children].every(el=>{const b=el.getBoundingClientRect();return b.left>=r.left&&b.right<=r.right&&el.scrollWidth<=el.clientWidth;});})()`), 'match label and game number fit the black header');
+    assert.equal(layout.rect.x, output === 'led' ? 540 : 73);
+    assert.equal(layout.rect.y, output === 'led' ? 24 : 77);
+    assert.equal(layout.rect.width, output === 'led' ? 840 : 450);
+    assert.ok(layout.rect.bottom <= (output === 'led' ? 576 : 1080));
     if (output === 'led') {
       assert.ok(await evaluate(`(() => {
         const b=document.querySelector('#banpick').getBoundingClientRect();
         return [...document.querySelectorAll('.pcard')].every(el=>{
-          const c=el.getBoundingClientRect();return c.right<=b.left||c.left>=b.right;
+          const c=el.getBoundingClientRect();return c.top===b.top&&(c.right<=b.left||c.left>=b.right);
         });
       })()`), 'LED stack leaves both player cards clear');
     }
@@ -41,22 +42,21 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
     await navigate(`/bundles/rashinban/graphics/info-${output}.html`, 'document.querySelector("#banpick.visible")');
     await message('banpick:reset');
     assert.deepEqual(await entries(), []);
-    assert.equal(await evaluate(`document.querySelector('.bp-turn-name').textContent`), 'Player A');
-    await evaluate(`{const s=structuredClone(fixtureValues.banPick);s.players.A='めうMeU';emit('banPick',s);}`);
-    assert.equal(await evaluate(`document.querySelector('.bp-turn-name').textContent`), 'めうMeU');
-    assert.equal(await evaluate(`getComputedStyle(document.querySelector('.bp-turn-name')).textTransform`), 'none');
-    assert.match(await evaluate(`getComputedStyle(document.querySelector('.bp-turn-name')).fontFamily`), /Noto Sans JP/);
-    assert.equal(await evaluate(`document.querySelector('.bp-turn-action').textContent`), 'BANNING');
-    await screenshot(`banpick-${output}-player-name`);
+    await evaluate(`{const m=structuredClone(fixtureValues.matchResolved);m.label='Lower Quarter-Finals Match 2';emit('matchResolved',m);}`);
+    assert.equal(await evaluate(`document.querySelector('.bp-match')?.textContent`), 'Lower Quarter-Finals Match 2');
+    assert.equal(await evaluate(`document.querySelector('.bp-stage').textContent`), 'GAME 1');
+    if (adobeFonts) {
+      await until(`[...document.fonts].some(font=>font.family.includes('kaneda-gothic')&&font.status==='loaded')`);
+      await evaluate('document.fonts.ready');
+    }
     await select(4); await select(7); await select(1);
     assert.deepEqual((await entries()).map(row => row.id), [1, 7, 4]);
-    assert.equal(await evaluate(`document.querySelector('.bp-turn').textContent`), 'READY');
+    assert.equal(await evaluate(`document.querySelector('.bp-selection-kind').textContent`), 'PICK /');
     await checkFits(output); await screenshot(`banpick-${output}-game-1`);
     // Stage changes clear immediately, before anyone confirms the next pick.
     await message('banpick:nextGame');
     assert.deepEqual(await entries(), []);
-    assert.equal(await evaluate(`document.querySelector('.bp-turn-name').textContent`), 'Player B');
-    assert.equal(await evaluate(`document.querySelector('.bp-turn-action').textContent`), 'PICKING');
+    assert.equal(await evaluate(`document.querySelector('.bp-stage').textContent`), 'GAME 2');
     await select(2);
     assert.deepEqual((await entries()).map(row => row.id), [2]);
     await checkFits(output); await screenshot(`banpick-${output}-game-2`);
@@ -70,9 +70,13 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
       { id: 9, status: 'remaining', by: '' }, { id: 8, status: 'banned', by: 'B' },
       { id: 3, status: 'banned', by: 'A' }, { id: 6, status: 'banned', by: 'A' }, { id: 5, status: 'banned', by: 'B' },
     ]);
-    assert.equal(await evaluate(`document.querySelector('.bp-selection-kind').textContent`), 'DECIDER · AUTO');
+    assert.equal(await evaluate(`document.querySelector('.bp-selection-kind').textContent`), 'DECIDER /');
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('.bp-selection-map')).textTransform`), 'uppercase');
     await checkFits(output); await screenshot(`banpick-${output}-game-3`);
+    await evaluate(`{const m=structuredClone(fixtureValues.matchResolved);m.label='Lower Quarter-Finals Match 2 - Tournament Championship';emit('matchResolved',m);}`);
+    await checkFits(output);
+    await evaluate(`emit('matchResolved',null)`);
+    assert.equal(await evaluate(`document.querySelector('.bp-match').textContent`), '', 'cleared match does not leave a stale title');
     await message('banpick:undo');
     assert.deepEqual((await entries()).map(row => row.id), [3, 6, 5]);
     await message('banpick:reset'); assert.deepEqual(await entries(), []);
@@ -80,6 +84,48 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
     await delay(350);
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('#banpick')).opacity`), output === 'led' ? '1' : '0', 'only Stream responds to visibility controls');
   }
+
+  // The screen edge follows the acting player even on the other player's tablet.
+  await message('banpick:reset');
+  await navigate('/bundles/rashinban/graphics/banpick-player.html?player=B', 'document.querySelectorAll(".bp-card").length===9');
+  const frame = () => evaluate(`(() => {const p=document.querySelector('#panel'),s=getComputedStyle(p,'::before');return {color:s.borderTopColor,width:s.borderTopWidth,turn:p.dataset.turn,text:document.querySelector('#step').textContent};})()`);
+  assert.deepEqual(await frame(), { color: 'rgb(255, 48, 48)', width: '36px', turn: 'A', text: 'Player A : BAN' });
+  assert.equal(await evaluate(`document.querySelectorAll('.bp-card:not(:disabled)').length`), 0);
+  await screenshot('banpick-tablet-player-a');
+  await select(4);
+  assert.equal((await frame()).color, 'rgb(48, 131, 255)');
+  assert.equal((await frame()).text, 'Player B : BAN');
+  assert.equal(await evaluate(`document.querySelectorAll('.bp-card:not(:disabled)').length`), 8);
+  await screenshot('banpick-tablet-player-b');
+  await select(7); await select(1);
+  assert.equal((await frame()).turn, '');
+  assert.equal((await frame()).color, 'rgb(92, 98, 112)', 'between games no player owns the frame');
+  await message('banpick:nextGame');
+  assert.equal((await frame()).text, 'Player B : PICK GAME 2');
+  await screenshot('banpick-tablet-pick-game-2');
+  const tabletFits = () => evaluate(`(() => {
+    const edge=parseFloat(getComputedStyle(document.querySelector('#panel'),'::before').borderTopWidth);
+    return document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight&&
+      [...document.querySelectorAll('.bp-card')].every(card=>{const r=card.getBoundingClientRect(),m=card.querySelector('.bp-card-map').getBoundingClientRect();return r.left>=edge&&r.right<=innerWidth-edge&&r.bottom<=innerHeight-edge&&m.left>=r.left&&m.right<=r.right&&m.top>=r.top&&m.bottom<=r.bottom;})&&
+      [...document.querySelectorAll('.player span,#step')].every(el=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();return r.left>=p.left&&r.right<=p.right&&r.top>=p.top&&r.bottom<=p.bottom;});
+  })()`);
+  for (const [width,height] of [[1920,1080],[1280,800],[1024,768],[768,1024]]) {
+    await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+    await delay(100);
+    assert.ok(await tabletFits(), `tablet board and heading fit ${width}x${height}`);
+    await screenshot(`banpick-tablet-${width}x${height}`);
+  }
+  await command('Emulation.setDeviceMetricsOverride', { width: 1024, height: 768, deviceScaleFactor: 1, mobile: false });
+  await evaluate(`document.querySelector('.bp-card[data-id="3"]').click()`);
+  await delay(250);
+  await screenshot('banpick-tablet-confirmation');
+  assert.ok(await evaluate(`(() => {const c=document.querySelector('#confirm').getBoundingClientRect();return [...document.querySelectorAll('.bp-card')].every(el=>{const r=el.getBoundingClientRect();return c.bottom<=r.top||c.top>=r.bottom||c.right<=r.left||c.left>=r.right;});})()`), 'confirmation leaves every map card visible for second-tap confirmation');
+  await evaluate(`document.querySelector('#confirm-no').click()`);
+  await evaluate(`{const s=structuredClone(fixtureValues.banPick);s.players.A='めうMeU';s.players.B='とても長いプレイヤー名 / Long Player Name';emit('banPick',s);}`);
+  assert.ok(await tabletFits(), 'Japanese and long player names fit the tablet header and turn label');
+  await screenshot('banpick-tablet-long-names');
+  await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+  await message('banpick:reset');
 
   // Real dashboard controls, including the second-click selection confirmation.
   await navigate('/bundles/rashinban/dashboard/banpick-control.html', 'document.querySelectorAll(".bp-card").length===9');

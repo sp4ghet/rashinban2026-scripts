@@ -3,7 +3,7 @@
 // whose turn it is and accepts input for either player.
 import { createInitialState, type BanPickState, type OptionView, type Player } from "../banpick/rules";
 import { BANPICK_MESSAGES, REPLICANTS } from "../types/replicants";
-import { playerName, renderBoard, renderGames, shortMode, stepText } from "./banpick/board";
+import { playerName, renderBoard, shortMode, stepText } from "./banpick/board";
 
 const params = new URLSearchParams(location.search);
 const lockedPlayer: Player | undefined =
@@ -13,7 +13,6 @@ const rep = nodecg.Replicant<BanPickState>(REPLICANTS.banPick);
 
 const root = document.getElementById("panel")!;
 const board = document.getElementById("board")!;
-const games = document.getElementById("games")!;
 const nameA = document.getElementById("name-a")!;
 const nameB = document.getElementById("name-b")!;
 const stepEl = document.getElementById("step")!;
@@ -28,6 +27,19 @@ let selected: OptionView | null = null;
 let submitting = false;
 let toastTimer: number | undefined;
 
+function fitHeadings() {
+  for (const label of [nameA, nameB, stepEl]) {
+    label.style.fontSize = "";
+    const parent = label.parentElement!;
+    const padding = getComputedStyle(parent);
+    const available = parent.clientWidth - parseFloat(padding.paddingLeft) - parseFloat(padding.paddingRight);
+    if (available > 0 && label.scrollWidth > available) {
+      const size = parseFloat(getComputedStyle(label).fontSize);
+      label.style.fontSize = `${Math.floor(size * available / label.scrollWidth * 10) / 10}px`;
+    }
+  }
+}
+
 function showToast(message: string) {
   toast.textContent = message;
   toast.classList.add("visible");
@@ -37,6 +49,7 @@ function showToast(message: string) {
 
 function render() {
   const view = renderBoard(board, state, {
+    modeLabel: mode => mode === "NM" ? "NO MOVE" : shortMode(mode),
     selectedId: selected?.option.id ?? null,
     onSelect: (v) => {
       if (submitting) return;
@@ -50,11 +63,13 @@ function render() {
   });
   nameA.textContent = playerName(state, "A");
   nameB.textContent = playerName(state, "B");
-  stepEl.textContent = stepText(state, view);
+  stepEl.textContent = view.step
+    ? `${playerName(state, view.step.player)} : ${view.step.kind === "ban" ? "BAN" : `PICK GAME ${view.step.game}`}`
+    : stepText(state, view);
   root.dataset.turn = view.step?.player ?? "";
   root.dataset.kind = view.step?.kind ?? "";
   root.classList.toggle("complete", view.complete);
-  renderGames(games, view);
+  fitHeadings();
 
   const myTurn = !lockedPlayer || view.step?.player === lockedPlayer;
   root.classList.toggle("locked-out", !myTurn && !!view.step);
@@ -66,6 +81,7 @@ function render() {
   confirmBtn.disabled = submitting || !selected || !view.step || !myTurn;
   cancelBtn.disabled = submitting;
 
+  root.classList.toggle("confirming", !!selected && !!view.step && myTurn);
   if (selected && view.step && myTurn) {
     const verb = view.step.kind === "pick" ? `PICK for Game ${view.step.game}` : "BAN";
     confirmText.textContent =
@@ -110,3 +126,6 @@ rep.on("change", (raw) => {
 });
 
 if (lockedPlayer) root.dataset.locked = lockedPlayer;
+void document.fonts.ready.then(fitHeadings);
+document.fonts.addEventListener("loadingdone", fitHeadings);
+window.addEventListener("resize", fitHeadings);
