@@ -78,7 +78,6 @@ header { display: grid; grid-template-columns: 1fr calc(130 * var(--unit)) 1fr; 
 .player.a { background: var(--player-a); }
 .player.b { background: var(--player-b); }
 .versus { background: #fff; color: #000; font-weight: 900; }
-#panel.confirming header { visibility: hidden; }
 
 .bp-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(20 * var(--unit)); min-height: 0; }
 .bp-group { display: grid; grid-template-rows: calc(82 * var(--unit)) repeat(3, minmax(0, 1fr)); gap: calc(20 * var(--unit)); min-width: 0; min-height: 0; }
@@ -124,38 +123,9 @@ header { display: grid; grid-template-columns: 1fr calc(130 * var(--unit)) 1fr; 
 .bp-card[data-status="picked"] { border-color: var(--selection-color); }
 .bp-card[data-status="remaining"] { border-color: #fff; }
 
-#confirm {
-  position: fixed;
-  z-index: 6;
-  /* Replace the player banner temporarily; never move or cover map targets. */
-  left: calc(171 * var(--unit));
-  right: calc(171 * var(--unit));
-  top: calc(163 * var(--unit));
-  height: max(64px, calc(126 * var(--unit)));
-  box-sizing: border-box;
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 12px;
-  align-items: center;
-  padding: 8px;
-  background: #000e;
-  backdrop-filter: blur(6px);
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 0.2s ease, visibility 0.2s;
-}
-#confirm.visible { opacity: 1; visibility: visible; }
-#confirm-text { min-width: 0; max-height: 100%; overflow: auto; font-size: clamp(16px, calc(30 * var(--unit)), 30px); font-weight: 500; }
-#confirm button { min-width: 100px; min-height: 48px; padding: 12px 24px; font: 700 20px var(--body); color: #fff; border: 0; border-radius: 0; cursor: pointer; }
-#confirm-yes { background: #2e7d32; }
-#confirm-no { background: #455a64; }
-#confirm button:disabled { opacity: 0.5; }
 #toast { position: fixed; top: calc(140 * var(--unit)); left: 50%; transform: translate(-50%, -300%); padding: 12px 24px; background: #c62828; font-size: 18px; z-index: 10; visibility: hidden; }
 #toast.visible { transform: translate(-50%, 0); visibility: visible; }
 
 @media (max-width: 700px) {
   #panel { padding-inline: calc(72 * var(--unit)); }
-  #confirm { left: calc(72 * var(--unit)); right: calc(72 * var(--unit)); gap: 6px; }
-  #confirm button { min-width: 0; padding-inline: 12px; font-size: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { #confirm { transition: none; } }

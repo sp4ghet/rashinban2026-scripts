@@ -118,9 +118,11 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
   await command('Emulation.setDeviceMetricsOverride', { width: 1024, height: 768, deviceScaleFactor: 1, mobile: false });
   await evaluate(`document.querySelector('.bp-card[data-id="3"]').click()`);
   await delay(250);
-  await screenshot('banpick-tablet-confirmation');
-  assert.ok(await evaluate(`(() => {const c=document.querySelector('#confirm').getBoundingClientRect();return [...document.querySelectorAll('.bp-card')].every(el=>{const r=el.getBoundingClientRect();return c.bottom<=r.top||c.top>=r.bottom||c.right<=r.left||c.left>=r.right;});})()`), 'confirmation leaves every map card visible for second-tap confirmation');
-  await evaluate(`document.querySelector('#confirm-no').click()`);
+  await screenshot('banpick-tablet-selected');
+  assert.equal(await evaluate(`document.querySelector('#confirm') === null`), true, 'selecting a map never opens a confirmation panel');
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('#panel header')).visibility`), 'visible', 'player names stay visible while a map is selected');
+  assert.equal(await evaluate(`document.querySelector('.bp-selected').dataset.id`), '3');
+  assert.equal(await evaluate(`fixtureValues.banPick.actions.length`), 3, 'the first tap only selects');
   await evaluate(`{const s=structuredClone(fixtureValues.banPick);s.players.A='めうMeU';s.players.B='とても長いプレイヤー名 / Long Player Name';emit('banPick',s);}`);
   assert.ok(await tabletFits(), 'Japanese and long player names fit the tablet header and turn label');
   await screenshot('banpick-tablet-long-names');
@@ -154,7 +156,7 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
     await navigate('/bundles/rashinban/graphics/banpick-player.html' + query, 'document.querySelectorAll(".bp-card").length===9');
     assert.equal(await evaluate(`document.querySelectorAll('.bp-card:not(:disabled)').length`), 0);
     assert.match(await evaluate(`document.querySelector('#step').textContent`), /GAME 2 READY/);
-    assert.equal(await evaluate(`document.querySelector('#confirm').classList.contains('visible')`), false);
+    assert.equal(await evaluate(`document.querySelectorAll('.bp-selected').length`), 0);
   }
   await message('banpick:nextGame');
   assert.equal(await evaluate(`document.querySelectorAll('.bp-card:not(:disabled)').length`), 5, 'P2 tablet unlocks for the first Game 3 ban');
@@ -170,10 +172,10 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
   await evaluate(`document.querySelector('.bp-card[data-id="6"]').click()`);
   await until(`fixtureValues.banPick.actions.length===6`);
   assert.equal(await evaluate(`fixtureValues.banPick.actions.at(-1).optionId`), 6);
-  // The explicit menu still allows cancellation and confirmation.
-  await evaluate(`document.querySelector('.bp-card[data-id="3"]').click();document.querySelector('#confirm-no').click()`);
-  assert.equal(await evaluate(`document.querySelectorAll('.bp-selected').length`), 0);
-  await evaluate(`document.querySelector('.bp-card[data-id="3"]').click();document.querySelector('#confirm-yes').click()`);
+  // Each new selection still needs two taps, including consecutive turns.
+  await evaluate(`document.querySelector('.bp-card[data-id="3"]').click()`);
+  assert.equal(await evaluate(`fixtureValues.banPick.actions.length`), 6);
+  await evaluate(`document.querySelector('.bp-card[data-id="3"]').click()`);
   await until(`fixtureValues.banPick.actions.length===7`);
   assert.equal(await evaluate(`document.querySelectorAll('.bp-card:not(:disabled)').length`), 0);
   // Real touch input confirms too; rapid extra taps cannot send duplicates.
@@ -189,10 +191,11 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
   assert.equal(await evaluate(`fixtureValues.banPick.actions.length`), 7);
   assert.equal(await evaluate(`document.querySelector('.bp-selected').dataset.id`), '8');
   await touchOption();
-  assert.equal(await evaluate(`document.querySelector('#confirm-yes').disabled`), true);
-  await evaluate(`document.querySelector('.bp-card[data-id="8"]').click();document.querySelector('#confirm-yes').click()`);
+  assert.equal(await evaluate(`document.querySelectorAll('.bp-card:not(:disabled)').length`), 0);
+  await touchOption();
+  await evaluate(`document.querySelector('.bp-card[data-id="8"]').click()`);
   await until(`fixtureValues.banPick.actions.length===8`);
   assert.equal(await evaluate(`window.banpickSends`), 1);
   await command('Emulation.setTouchEmulationEnabled', { enabled: false });
-  console.log('Ban & Pick verified: all three stacks, newest-first ordering, automatic decider, undo/reset, stream/LED bounds, player-card clearance, dashboard Next game, paused tablet input, turn locks, second-click/tap confirmation, explicit Confirm/Cancel and duplicate-submit protection.');
+  console.log('Ban & Pick verified: all three stacks, newest-first ordering, automatic decider, undo/reset, stream/LED bounds, player-card clearance, dashboard Next game, paused tablet input, turn locks, double-tap submission without a confirmation panel and duplicate-submit protection.');
 }

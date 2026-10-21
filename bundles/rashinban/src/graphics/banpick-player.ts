@@ -16,10 +16,6 @@ const board = document.getElementById("board")!;
 const nameA = document.getElementById("name-a")!;
 const nameB = document.getElementById("name-b")!;
 const stepEl = document.getElementById("step")!;
-const confirmBar = document.getElementById("confirm")!;
-const confirmText = document.getElementById("confirm-text")!;
-const confirmBtn = document.getElementById("confirm-yes") as HTMLButtonElement;
-const cancelBtn = document.getElementById("confirm-no") as HTMLButtonElement;
 const toast = document.getElementById("toast")!;
 
 let state: BanPickState = createInitialState();
@@ -54,7 +50,7 @@ function render() {
     onSelect: (v) => {
       if (submitting) return;
       if (selected?.option.id === v.option.id) {
-        void confirmSelection();
+        void submitSelection();
         return;
       }
       selected = v;
@@ -78,22 +74,9 @@ function render() {
       b.disabled = true;
     });
   }
-  confirmBtn.disabled = submitting || !selected || !view.step || !myTurn;
-  cancelBtn.disabled = submitting;
-
-  root.classList.toggle("confirming", !!selected && !!view.step && myTurn);
-  if (selected && view.step && myTurn) {
-    const verb = view.step.kind === "pick" ? `PICK for Game ${view.step.game}` : "BAN";
-    confirmText.textContent =
-      `${playerName(state, view.step.player)} / ${verb}: ` +
-      `${shortMode(selected.option.mode)} ${selected.option.map}`;
-    confirmBar.classList.add("visible");
-  } else {
-    confirmBar.classList.remove("visible");
-  }
 }
 
-async function confirmSelection() {
+async function submitSelection() {
   if (!selected || submitting) return;
   const optionId = selected.option.id;
   submitting = true;
@@ -108,13 +91,6 @@ async function confirmSelection() {
     render();
   }
 }
-
-confirmBtn.addEventListener("click", () => void confirmSelection());
-
-cancelBtn.addEventListener("click", () => {
-  selected = null;
-  render();
-});
 
 rep.on("change", (raw) => {
   if (raw?.game !== state.game || raw?.actions.length !== state.actions.length) selected = null;
