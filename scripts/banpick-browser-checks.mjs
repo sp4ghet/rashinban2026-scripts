@@ -94,6 +94,21 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
   // The screen edge follows the acting player even on the other player's tablet.
   await message('banpick:reset');
   await navigate('/bundles/rashinban/graphics/banpick-player.html?player=B', 'document.querySelectorAll(".bp-card").length===9');
+  await command('DOM.enable');
+  await command('CSS.enable');
+  const renderedFonts = async selector => {
+    const { root } = await command('DOM.getDocument');
+    const { nodeId } = await command('DOM.querySelector', { nodeId: root.nodeId, selector });
+    const { fonts } = await command('CSS.getPlatformFontsForNode', { nodeId });
+    return fonts.filter(font => font.glyphCount > 0).map(font => font.familyName);
+  };
+  assert.ok((await renderedFonts('.bp-card-map')).some(font => /Akshar/i.test(font)), 'tablet map names actually render in Akshar');
+  const cardAppearance = id => evaluate(`(() => {
+    const card=document.querySelector('.bp-card[data-id="${id}"]'),map=card.querySelector('.bp-card-map'),tag=card.querySelector('.bp-card-tag');
+    const c=getComputedStyle(card),m=getComputedStyle(map),t=getComputedStyle(tag),r=card.getBoundingClientRect(),b=tag.getBoundingClientRect();
+    return {border:c.borderTopColor,background:c.backgroundColor,mapOpacity:m.opacity,mapDecoration:m.textDecorationLine,label:tag.textContent,labelColor:t.color,labelFont:t.fontFamily,
+      labelCentered:Math.abs(r.x+r.width/2-b.x-b.width/2)<1&&Math.abs(r.y+r.height/2-b.y-b.height/2)<1,labelClip:t.clipPath};
+  })()`);
   const frame = () => evaluate(`(() => {const p=document.querySelector('#panel'),s=getComputedStyle(p,'::before');return {color:s.borderTopColor,width:s.borderTopWidth,turn:p.dataset.turn,text:document.querySelector('#step').textContent};})()`);
   assert.deepEqual(await frame(), { color: 'rgb(255, 48, 48)', width: '36px', turn: 'A', text: 'Player A : BAN' });
   assert.equal(await evaluate(`document.querySelectorAll('.bp-card:not(:disabled)').length`), 0);
@@ -104,6 +119,20 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
   assert.equal(await evaluate(`document.querySelectorAll('.bp-card:not(:disabled)').length`), 8);
   await screenshot('banpick-tablet-player-b');
   await select(7); await select(1);
+  for (const [id, player, color] of [[4, 'A', 'rgb(255, 48, 48)'], [7, 'B', 'rgb(48, 131, 255)']]) {
+    const appearance = await cardAppearance(id);
+    assert.equal(appearance.background, 'rgb(0, 0, 0)', 'banned maps have a black background');
+    assert.equal(appearance.border, 'rgba(0, 0, 0, 0)', 'bans use the centered label instead of a pick border');
+    assert.ok(Number(appearance.mapOpacity) < 0.3, 'banned map name is dimmed behind the label');
+    assert.equal(appearance.mapDecoration, 'none');
+    assert.equal(appearance.label, `Player ${player} - BAN`);
+    assert.equal(appearance.labelColor, color);
+    assert.ok(appearance.labelFont.startsWith('kaneda-gothic'));
+    assert.ok(appearance.labelCentered);
+    assert.equal(appearance.labelClip, 'none');
+  }
+  if (adobeFonts) assert.ok((await renderedFonts('.bp-card[data-status="banned"] .bp-card-tag')).some(font => /Kaneda/i.test(font)), 'ban labels actually render in Kaneda Gothic');
+  assert.equal((await cardAppearance(1)).border, 'rgb(255, 48, 48)', 'Player A pick has a red border');
   assert.equal((await frame()).turn, '');
   assert.equal((await frame()).color, 'rgb(92, 98, 112)', 'between games no player owns the frame');
   await message('banpick:nextGame');
@@ -113,7 +142,7 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
     const edge=parseFloat(getComputedStyle(document.querySelector('#panel'),'::before').borderTopWidth);
     return document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight&&
       [...document.querySelectorAll('.bp-card')].every(card=>{const r=card.getBoundingClientRect(),m=card.querySelector('.bp-card-map').getBoundingClientRect();return r.left>=edge&&r.right<=innerWidth-edge&&r.bottom<=innerHeight-edge&&m.left>=r.left&&m.right<=r.right&&m.top>=r.top&&m.bottom<=r.bottom;})&&
-      [...document.querySelectorAll('.player span,#step')].every(el=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();return r.left>=p.left&&r.right<=p.right&&r.top>=p.top&&r.bottom<=p.bottom;});
+      [...document.querySelectorAll('.player span,#step,.bp-card[data-status="banned"] .bp-card-tag')].every(el=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();return r.left>=p.left&&r.right<=p.right&&r.top>=p.top&&r.bottom<=p.bottom;});
   })()`);
   for (const [width,height] of [[1920,1080],[1280,800],[1024,768],[768,1024]]) {
     await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
@@ -131,6 +160,7 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
   assert.equal(await evaluate(`fixtureValues.banPick.actions.length`), 3, 'the first tap only selects');
   await evaluate(`{const s=structuredClone(fixtureValues.banPick);s.players.A='めうMeU';s.players.B='とても長いプレイヤー名 / Long Player Name';emit('banPick',s);}`);
   assert.ok(await tabletFits(), 'Japanese and long player names fit the tablet header and turn label');
+  assert.equal((await cardAppearance(7)).label, 'とても長いプレイヤー名 / Long Player Name - BAN', 'ban label identifies the actual player');
   await screenshot('banpick-tablet-long-names');
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   await message('banpick:reset');
@@ -202,6 +232,11 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
   await evaluate(`document.querySelector('.bp-card[data-id="8"]').click()`);
   await until(`fixtureValues.banPick.actions.length===8`);
   assert.equal(await evaluate(`window.banpickSends`), 1);
+  assert.equal((await cardAppearance(1)).border, 'rgb(255, 48, 48)', 'Player A pick stays red after later actions');
+  assert.equal((await cardAppearance(2)).border, 'rgb(48, 131, 255)', 'Player B pick stays blue after later actions');
+  assert.equal((await cardAppearance(9)).border, 'rgb(255, 255, 255)', 'final remaining map has a white border');
+  assert.ok(await tabletFits(), 'completed board labels fit their cards');
+  await screenshot('banpick-tablet-complete');
   await command('Emulation.setTouchEmulationEnabled', { enabled: false });
   console.log('Ban & Pick verified: all three stacks, newest-first ordering, automatic decider, undo/reset, stream/LED bounds, player-card clearance, dashboard Next game, paused tablet input, turn locks, double-tap submission without a confirmation panel and duplicate-submit protection.');
 }
