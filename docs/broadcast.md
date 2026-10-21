@@ -211,9 +211,11 @@ with the existing Adobe Kaneda Gothic kit instead of the offline fallback.
 ### Ban & Pick stack
 
 Both info pages show only the current game's selections, newest first.
-The stream column starts at **(60, 60)** and is **440px** wide. The LED
-column starts at **(552, 24)** and is **816px** wide, centered between the
-player cards. Its full five-row Game 3 stack ends at **y=544**, within the
+The stream column starts at **(73, 77)** and is **450px** wide. The LED
+column starts at **(540, 24)** and is **840px** wide, centered between the
+player cards at x=36 and x=1404 with 24px gutters. Its 50px header is followed
+by a 32px gap and 80px rows separated by 12px gaps. The full five-row Game 3
+stack ends at **y=554**, within the
 1920x576 LED band. Map names and labels use uppercase Kaneda Gothic, with
 map names fitted to their row when necessary.
 

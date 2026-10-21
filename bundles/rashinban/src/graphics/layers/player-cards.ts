@@ -91,14 +91,22 @@ export function mountPlayerCards(host: HTMLElement, output: BroadcastOutput): La
       const style = getComputedStyle(card);
       const scale = parseFloat(style.getPropertyValue("--card-scale"));
       const gap = parseFloat(getComputedStyle(mustQuery(card, ".page-profile")).rowGap);
+      const head = mustQuery(card, ".head");
+      let headBounds = head.getBoundingClientRect();
+      const contentBottom = Math.max(...Array.from(head.children, child => child.getBoundingClientRect().bottom));
+      // Keep names inside the solid band even when LED leaves a larger gap
+      // between that band and the profile fields.
+      const bandGap = parseFloat(getComputedStyle(head, "::before").bottom);
+      const clearance = Math.max(28 * scale, bandGap + 8 * scale);
+      const requiredHeadHeight = contentBottom - headBounds.top + clearance;
+      if (requiredHeadHeight > headBounds.height) {
+        card.style.setProperty("--profile-head-h", `${requiredHeadHeight}px`);
+        headBounds = head.getBoundingClientRect();
+      }
       const bottom = card.getBoundingClientRect().bottom - parseFloat(style.paddingBottom);
       let overflow = mustQuery(card, ".page-details").getBoundingClientRect().bottom - bottom;
       if (overflow <= 0) continue;
-      const head = mustQuery(card, ".head");
-      const headBounds = head.getBoundingClientRect();
-      const contentBottom = Math.max(...Array.from(head.children, child => child.getBoundingClientRect().bottom));
-      // Preserve the same scaled header clearance on Stream and LED.
-      const spare = Math.max(0, headBounds.bottom - contentBottom - 28 * scale);
+      const spare = Math.max(0, headBounds.bottom - contentBottom - clearance);
       const reduction = Math.min(spare, overflow);
       card.style.setProperty("--profile-head-h", `${headBounds.height - reduction}px`);
       overflow -= reduction;

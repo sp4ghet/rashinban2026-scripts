@@ -36,6 +36,9 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
           const c=el.getBoundingClientRect();return c.top===b.top&&(c.right<=b.left||c.left>=b.right);
         });
       })()`), 'LED stack leaves both player cards clear');
+      const headers = await evaluate(`[...document.querySelectorAll('.pcard')].map(card=>{const h=card.querySelector('.head'),r=h.getBoundingClientRect(),s=getComputedStyle(h,'::before');return {bandBottom:r.bottom-parseFloat(s.bottom),labels:[...h.children].map(name=>({text:name.textContent,bottom:name.getBoundingClientRect().bottom}))};})`);
+      assert.ok(headers.every(header=>header.labels.every(label=>label.bottom<=header.bandBottom)), `long LED profiles keep names and handles inside the solid header: ${JSON.stringify(headers)}`);
+      assert.ok(await evaluate(`[...document.querySelectorAll('.pcard')].every(card=>{const r=card.getBoundingClientRect();return [...card.querySelectorAll('.name,.twitter,.value')].every(el=>{const b=el.getBoundingClientRect();return b.left>=r.left&&b.right<=r.right&&b.bottom<=r.bottom;});})`), 'long LED profile fields stay within their cards');
     }
   };
   for (const output of ['stream', 'led']) {
@@ -79,6 +82,23 @@ export async function verifyBanpick({ navigate, evaluate, until, screenshot, del
     assert.equal(await evaluate(`document.querySelector('.bp-selection-kind').textContent`), 'DECIDER /');
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('.bp-selection-map')).textTransform`), 'uppercase');
     await checkFits(output); await screenshot(`banpick-${output}-game-3`);
+    if (output === 'led') {
+      // Match the artwork's profile and longest map text on the real five-row state.
+      const original = await evaluate(`({match:structuredClone(fixtureValues.matchResolved),banPick:structuredClone(fixtureValues.banPick)})`);
+      await evaluate(`{const m=structuredClone(fixtureValues.matchResolved);for(const side of [m.left,m.right]){side.name='Shiina';side.handle='si417_';Object.assign(side.profile,{age:'32',rating:'2300',favoriteMode:'NO MOVE',strengths:'経験',favoriteFood:'おいしいもの',message:'自信無いですけど頑張ります'});}emit('matchResolved',m);const s=structuredClone(fixtureValues.banPick);for(const option of s.options)option.map='An Arbitrary Rural Intersectionguessr';emit('banPick',s);document.body.style.setProperty('background','url("assets/presenter-kv.jpg") center top / 1920px 576px no-repeat','important');}`);
+      await evaluate('document.fonts.ready');
+      await evaluate(`(async()=>{const bg=new Image();bg.src='assets/presenter-kv.jpg';await bg.decode();})()`);
+      await checkFits(output);
+      await screenshot('banpick-led-designer-layout', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
+      const designer = await evaluate(`(() => {
+        const cards=[...document.querySelectorAll('.pcard')],rows=[...document.querySelectorAll('.bp-stack-entry')];
+        return {cards:cards.map(card=>{const r=card.getBoundingClientRect(),head=card.querySelector('.head'),h=head.getBoundingClientRect(),s=getComputedStyle(head,'::before');return {x:r.x,y:r.y,width:r.width,height:r.height,headerHeight:h.bottom-parseFloat(s.bottom)-r.top};}),rows:rows.map(row=>{const r=row.getBoundingClientRect();return {y:r.y,height:r.height};})};
+      })()`);
+      assert.deepEqual(designer.cards.map(({headerHeight,...rect})=>rect), [{x:36,y:24,width:480,height:528},{x:1404,y:24,width:480,height:528}], 'LED cards use the designer outer margins and 24px center gutters');
+      if (adobeFonts) for (const card of designer.cards) assert.ok(Math.abs(card.headerHeight-92)<1, 'LED solid name band matches the 92px designer height');
+      assert.deepEqual(designer.rows, [106,198,290,382,474].map(y=>({y,height:80})), 'all five LED strips match the reference spacing within the physical band');
+      await evaluate(`emit('matchResolved',${JSON.stringify(original.match)});emit('banPick',${JSON.stringify(original.banPick)});document.body.style.removeProperty('background');`);
+    }
     await evaluate(`{const m=structuredClone(fixtureValues.matchResolved);m.label='Lower Quarter-Finals Match 2 - Tournament Championship';emit('matchResolved',m);}`);
     await checkFits(output);
     await evaluate(`emit('matchResolved',null)`);

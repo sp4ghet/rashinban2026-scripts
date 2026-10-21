@@ -255,16 +255,16 @@ body[data-output="stream"] #cards[data-position="right"] :is(#card-1, #card-2) {
 #cards[data-page="compact"] .page-results { padding-inline: calc(4px * var(--card-scale)); }
 
 /* The LED processor displays only y=0..576 of the 1920x1080 source.
-   Keep both cards 24px from the outer edges, leaving the center for ban/pick. */
+   The designer uses 36px side margins and 24px gutters beside ban/pick. */
 body[data-output="led"] #cards {
   --card-w: 480px;
   --card-scale: 0.586666666667; /* 528 / 900 */
   inset: 0 0 auto;
   height: 576px;
-  padding: 24px;
+  padding: 24px 36px;
   align-items: start;
 }
-body[data-output="led"] #cards .pcard { height: 528px; }
+body[data-output="led"] #cards .pcard { height: 528px; --header-bottom-gap: 24px; }
 
 /* ==== Casters desk ======================================================= */
 /* Caster name cards over the camera feed, composited behind this transparent page by OBS. */
@@ -451,7 +451,7 @@ body[data-output="led"] #cards .pcard { height: 528px; }
 #banpick .bp-stack-entry[data-status="banned"] .bp-selection-mode { color: var(--selection-color); }
 body[data-output="led"] #banpick {
   --bp-row-height: 80px;
-  --bp-row-gap: 16px;
+  --bp-row-gap: 12px;
   --bp-outline: 7px;
   --bp-pad: 24px;
   --bp-text: 48px;
@@ -460,7 +460,7 @@ body[data-output="led"] #banpick {
   top: 24px;
   width: 840px;
 }
-body[data-output="led"] #banpick .bp-stack-heading { height: 50px; margin-bottom: 24px; gap: 22px; font-size: 48px; }
+body[data-output="led"] #banpick .bp-stack-heading { height: 50px; margin-bottom: 32px; gap: 22px; font-size: 48px; }
 body[data-output="led"] #banpick .bp-stack-entry { gap: 9px; }
 body[data-output="led"] #banpick .bp-selection-mode { margin-left: 22px; }
 

@@ -13,7 +13,7 @@ export async function verifyLedPages({ navigate, evaluate, until, screenshot, de
     await evaluate(`emit('broadcast',{stream:{preview:{playerCards:{page:'compact'}},program:{playerCards:{page:'stats',visible:false,player:'right',position:'right'}}},led:{program:{playerCards:{visible:false,page:'profile'},banpick:{visible:false}}}})`);
     assert.equal(await evaluate(`document.querySelector('#cards').dataset.page`), 'stats', 'LED follows Stream Program, not LED or Stream Preview');
     assert.equal(await evaluate(`document.querySelectorAll('.pcard:not([hidden])').length`), 2, 'Stream player selection never hides an LED player');
-    assert.deepEqual(await evaluate(`[...document.querySelectorAll('.pcard')].map(c=>c.getBoundingClientRect().x)`), [24, 1416], 'Stream position never moves the LED cards');
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('.pcard')].map(c=>c.getBoundingClientRect().x)`), [36, 1404], 'Stream position never moves the LED cards');
     for (const page of ['profile', 'compact', 'stats']) {
       await evaluate(`{const s=structuredClone(fixtureValues.broadcast);s.stream.program.playerCards.page=${JSON.stringify(page)};emit('broadcast',s);}`);
       assert.equal(await evaluate(`document.querySelector('#cards').dataset.page`), page);

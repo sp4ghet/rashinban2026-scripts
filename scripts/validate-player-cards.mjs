@@ -144,7 +144,7 @@ async function screenshot(name, clip) {
   await writeFile(path.join(screenshotDirectory, name + '.png'), Buffer.from(shot.data, 'base64'));
 }
 async function fits() {
-  return evaluate(`[...document.querySelectorAll('.pcard:not([hidden])')].every(card=>{const r=card.getBoundingClientRect();const led=document.body.dataset.output==='led';return r.top>=0&&r.bottom<=(led?576:1080)&&(!led||(r.top===24&&r.height===528&&r.width===480&&r.left===(card.id==='card-1'?24:1416)))&&card.scrollWidth<=card.clientWidth&&[...card.querySelectorAll('.name,.twitter,.value,.result-row,.result-round,.result-opponent,.result-score,.results-empty')].filter(e=>e.getBoundingClientRect().height).every(e=>{const a=e.getBoundingClientRect();return a.left>=r.left&&a.right<=r.right&&a.top>=r.top&&a.bottom<=r.bottom;});})`);
+  return evaluate(`[...document.querySelectorAll('.pcard:not([hidden])')].every(card=>{const r=card.getBoundingClientRect();const led=document.body.dataset.output==='led';return r.top>=0&&r.bottom<=(led?576:1080)&&(!led||(r.top===24&&r.height===528&&r.width===480&&r.left===(card.id==='card-1'?36:1404)))&&card.scrollWidth<=card.clientWidth&&[...card.querySelectorAll('.name,.twitter,.value,.result-row,.result-round,.result-opponent,.result-score,.results-empty')].filter(e=>e.getBoundingClientRect().height).every(e=>{const a=e.getBoundingClientRect();return a.left>=r.left&&a.right<=r.right&&a.top>=r.top&&a.bottom<=r.bottom;});})`);
 }
 async function sharedLayout() {
   return evaluate(`[...document.querySelectorAll('.pcard:not([hidden])')].map(card=>[card,...card.querySelectorAll('.head,.name,.twitter,.page-profile,.page-profile .pair,.page-profile .field,.page-profile .label,.page-profile .value')].map(el=>({rect:el.getBoundingClientRect().toJSON(),font:getComputedStyle(el).font})))`);
@@ -298,16 +298,16 @@ try {
     }
   }
   assert.ok(await fits(), 'scaled designer LED profile fits');
-  await screenshot('designer-reference-led', { x: 24, y: 24, width: 480, height: 528, scale: 1 });
+  await screenshot('designer-reference-led', { x: 36, y: 24, width: 480, height: 528, scale: 1 });
   await screenshot('designer-reference-led-layout', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
   await evaluate(`document.body.style.setProperty('background','transparent','important')`);
   await command('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
-  await screenshot('designer-reference-led-alpha', { x: 24, y: 24, width: 480, height: 528, scale: 1 });
+  await screenshot('designer-reference-led-alpha', { x: 36, y: 24, width: 480, height: 528, scale: 1 });
   await evaluate(`document.body.style.removeProperty('background')`);
   await command('Emulation.setDefaultBackgroundColorOverride');
   await evaluate(`emit('${REPLICANTS.matchResolved}',${JSON.stringify(values[REPLICANTS.matchResolved])})`);
   await screenshot('12-led-profile');
-  assert.ok(await fits(), 'LED profiles fit the physical 576px band with 24px margins');
+  assert.ok(await fits(), 'LED profiles fit the physical 576px band with 24px vertical and 36px side margins');
   const ledProfileLayout = await sharedLayout();
   const ledBracket = structuredClone(longBracket);
   for (const [index, round] of ['Losers Quarter-Final', 'Losers Round 1', 'Losers Round 6', 'Losers Round 5', 'Losers Round 4'].entries()) ledBracket.sets[14 - index].roundText = round;
