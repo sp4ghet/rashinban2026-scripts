@@ -57,6 +57,7 @@ function validateSettingsShape(input: unknown): void {
   }
   if (settings.tieRange !== undefined) validatePartialObject(settings.tieRange, ['enabled', 'mode'], 'presenter.settings.tieRange');
   if (settings.pinpointing !== undefined) validatePartialObject(settings.pinpointing, ['enabled'], 'presenter.settings.pinpointing');
+  if (settings.cameraFraming !== undefined) validatePartialObject(settings.cameraFraming, ['left', 'right'], 'presenter.settings.cameraFraming');
 }
 
 function validateMediaShape(input: unknown): void {

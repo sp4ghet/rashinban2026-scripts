@@ -8,12 +8,14 @@ export type PresenterSettings = {
   musicGain: number; effectsGain: number; timing: Timing;
   tieRange: { enabled: boolean; mode: 'full' | 'half' };
   pinpointing: { enabled: boolean };
+  cameraFraming: { left: number; right: number };
 };
 export const DEFAULT_SETTINGS: PresenterSettings = {
   viewSource: 'chroma', keyColor: '#ff00ff', audioOutput: 'separate', muted: false,
   musicGain: 0.7, effectsGain: 1, timing: { ...DEFAULT_TIMING },
   tieRange: { enabled: false, mode: 'full' },
   pinpointing: { enabled: false },
+  cameraFraming: { left: 50, right: 50 },
 };
 export function parseSettings(input: unknown): PresenterSettings {
   if (typeof input !== 'object' || input === null || Array.isArray(input)) throw new Error('Settings must be an object');
@@ -32,6 +34,13 @@ export function parseSettings(input: unknown): PresenterSettings {
   if (typeof pinpointing !== 'object' || pinpointing === null || Array.isArray(pinpointing)) throw new Error('Invalid Pinpointing Duels setting');
   const points = pinpointing as Record<string, unknown>;
   if (Object.keys(points).some(key => key !== 'enabled') || typeof points.enabled !== 'boolean') throw new Error('Invalid Pinpointing Duels setting');
+  const cameraFraming = value.cameraFraming === undefined ? DEFAULT_SETTINGS.cameraFraming : value.cameraFraming;
+  if (typeof cameraFraming !== 'object' || cameraFraming === null || Array.isArray(cameraFraming)) throw new Error('Invalid camera framing');
+  const framing = cameraFraming as Record<string, unknown>;
+  if (Object.keys(framing).some(key => key !== 'left' && key !== 'right')
+    || [framing.left, framing.right].some(position => typeof position !== 'number' || !Number.isFinite(position) || position < 0 || position > 100)) {
+    throw new Error('Camera framing must be a percentage from 0 to 100 for each player');
+  }
   const bounded = (input: unknown, max: number): number => {
     if (typeof input !== 'number' || !Number.isFinite(input) || input < 0 || input > max) throw new Error('Invalid gain or duration');
     return input;
@@ -46,5 +55,6 @@ export function parseSettings(input: unknown): PresenterSettings {
   if (raw.pinRateLimitMs !== undefined) timing.pinRateLimitMs = bounded(raw.pinRateLimitMs, 120000);
   return { viewSource: value.viewSource, keyColor: value.keyColor, audioOutput: value.audioOutput, muted: value.muted,
     musicGain: bounded(value.musicGain, 1), effectsGain: bounded(value.effectsGain, 1), timing,
-    tieRange: { enabled: rule.enabled, mode: rule.mode }, pinpointing: { enabled: points.enabled } };
+    tieRange: { enabled: rule.enabled, mode: rule.mode }, pinpointing: { enabled: points.enabled },
+    cameraFraming: { left: framing.left as number, right: framing.right as number } };
 }

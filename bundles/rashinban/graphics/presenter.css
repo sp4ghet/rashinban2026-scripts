@@ -188,6 +188,8 @@ body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .c
 body[data-output="stream"][data-intermission="before-game"] .camera.left::after { border-right: 5px solid #ff3030; }
 body[data-output="stream"][data-intermission="before-game"] .camera.right::after { border-left: 5px solid #ff3030; }
 .relay-camera video { object-position: center center; }
+body[data-output="stream"]:is([data-intermission="before-game"], [data-intermission="end-of-last-game"]) .camera.left video { object-position: var(--camera-left-position, 50%) center; }
+body[data-output="stream"]:is([data-intermission="before-game"], [data-intermission="end-of-last-game"]) .camera.right video { object-position: var(--camera-right-position, 50%) center; }
 body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .scoreboard { z-index: 6; }
 body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .competitor {
   bottom: 72px; width: 780px; gap: 16px; flex-wrap: wrap; align-items: center;

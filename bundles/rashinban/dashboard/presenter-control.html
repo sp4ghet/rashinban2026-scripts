@@ -4,6 +4,8 @@
   * { box-sizing: border-box; } body { margin: 0; padding: 16px; color: #edf1f8; background: #1b2333; font: 14px "Segoe UI", sans-serif; }
   h2 { font-size: 16px; margin: 14px 0 7px; } label { display: grid; gap: 5px; margin: 9px 0; color: #bbc8dd; } input, select, button { color: #f5f7fc; background: #2c3950; border: 1px solid #52637d; border-radius: 4px; padding: 8px; font: inherit; min-width: 0; } button { cursor: pointer; font-weight: 600; } button:hover { background: #3b5073; } .primary { background: #335f9b; } .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }.side { min-width: 0; border-top: 3px solid #458af2; }.side.right { border-color: #f05060; } .status { padding: 10px; background: #111a29; border-radius: 5px; line-height: 1.4; overflow-wrap: anywhere; } #replay-label { display: block; color: #ffcf78; font-weight: 800; letter-spacing: .09em; } .warning { color: #ffcd7d; } #error { color: #ff9eaa; min-height: 20px; margin-top: 10px; } .help { color: #9bacc5; font-size: 12px; line-height: 1.5; } .check { display: flex; gap: 9px; align-items: center; } [hidden] { display: none !important; } fieldset { border: 0; padding: 0; margin: 0; } .wide { width: 100%; margin-top: 8px; }
   details { margin: 6px 0; } summary { cursor: pointer; color: #9bacc5; font-size: 12px; } .help { margin: 6px 0; } #error:empty { display: none; } a { color: #9ccaff; } .launch-links { display: flex; flex-wrap: wrap; gap: 12px; margin: 10px 0; }
+  .camera-range-scale { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; }
+  .camera-framing input[type="range"] { width: 100%; margin: 0; padding: 0; }
 </style></head><body>
 <div class="status"><span id="replay-label" hidden>OFFLINE REPLAY</span><strong id="connection-status">Connecting to NodeCG…</strong><div id="game-status"></div><div id="mapping-warning" class="warning"></div><div id="server-warning" class="warning"></div></div>
 <p class="help">Input source and Pinpointing Duels are in the Duel Setup panel in Config.</p>
@@ -22,6 +24,12 @@
 <p id="video-source-help" class="help" hidden>In the active OBS program source, open Interact and press F8 to assign left/right video inputs. Use HTTPS or localhost and enable OBS media access. Close setup before going on air.</p>
 <div class="row"><label>Audio output<select id="audio-output"><option value="separate">Separate browser source</option><option value="embedded">Embedded in graphic</option></select></label><label class="check"><input type="checkbox" id="muted"> Mute presenter audio</label></div>
 <div class="row"><label>Music gain (0–1)<input id="music-gain" type="number" min="0" max="1" step="0.05"></label><label>Effects gain (0–1)<input id="effects-gain" type="number" min="0" max="1" step="0.05"></label></div>
+<fieldset class="camera-framing"><h2>Player camera framing</h2>
+<p class="help">Move the crop left or right for pre-game and post-game on Presenter and Remote. 50% centers the camera. Save with Apply presentation.</p>
+<div class="row">
+<label>Player 1 · Left camera<input id="camera-left-position" type="range" min="0" max="100" step="1" value="50"><span class="camera-range-scale"><span>Left</span><output id="camera-left-position-value" for="camera-left-position">50% (center)</output><span>Right</span></span></label>
+<label>Player 2 · Right camera<input id="camera-right-position" type="range" min="0" max="100" step="1" value="50"><span class="camera-range-scale"><span>Left</span><output id="camera-right-position-value" for="camera-right-position">50% (center)</output><span>Right</span></span></label>
+</div></fieldset>
 <fieldset><h2>Tie range</h2>
 <label class="check"><input id="tie-range-enabled" type="checkbox"> Enable tie-range</label>
 <label>Range<select id="tie-range-mode" disabled><option value="full">Full</option><option value="half">Half</option></select></label>

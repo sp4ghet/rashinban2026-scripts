@@ -98,7 +98,15 @@ function reconcileVideo() {
 }
 clients.on('change', value => { if (value) client.updateClients(value); reconcileVideo(); });
 timeline.on('change', value => { if (value) client.updateTimeline(value); reconcileVideo(); });
-settings.on('change', reconcileVideo);
+function applyCameraFraming(value = settings.value) {
+  if (ledOutput) return;
+  const framing = value?.cameraFraming ?? DEFAULT_SETTINGS.cameraFraming;
+  for (const side of ['left', 'right'] as const) {
+    document.body.style.setProperty(`--camera-${side}-position`, `${framing[side]}%`);
+  }
+}
+settings.on('change', value => { reconcileVideo(); applyCameraFraming(value); });
+applyCameraFraming();
 // Replicant events stop stale playback even when RAF is suspended. The timer
 // also enforces local lease/clock expiry if the network drops while hidden.
 const mediaGuard = setInterval(reconcileVideo, 250);

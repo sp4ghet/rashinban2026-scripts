@@ -2,7 +2,7 @@ import { REPLICANTS, type PresenterConnection, type PresenterRenderer, type Pres
 import type { PresenterPublicConfig } from '../config/types.ts';
 import { bindConfigurationControls, type ConfigurationControls } from './configuration-status.ts';
 import type { DuelState, SeriesState, Timeline } from '../types/presenter.ts';
-import type { PresenterSettings } from '../presenter/settings.ts';
+import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
 import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import { CUE_KINDS, EMPTY_MEDIA, MUSIC_CONTEXTS, type AssetInventory, type MediaManifest, type Stem } from '../presenter/media.ts';
 import type { PresenterMediaStatus } from '../types/replicants.ts';
@@ -180,12 +180,20 @@ function status() {
   element('mapping-warning').textContent = missing.length ? `Player mapping needed: ${missing.join(', ')}. Health and results stay blank until mapped.` : '';
 }
 series.on('change', value => { if (value) showSeries(value); status(); });
+function showCameraPosition(side: 'left' | 'right') {
+  const position = Number(input(`camera-${side}-position`).value);
+  element(`camera-${side}-position-value`).textContent = `${position}%${position === 50 ? ' (center)' : ''}`;
+}
 function applySettings(value: PresenterSettings | undefined) {
   if (!value) return;
   select('view-source').value = value.viewSource; select('key-color').value = value.keyColor;
   element('video-source-help').hidden = value.viewSource !== 'video';
   select('audio-output').value = value.audioOutput; input('muted').checked = value.muted;
   input('music-gain').value = String(value.musicGain); input('effects-gain').value = String(value.effectsGain);
+  for (const side of ['left', 'right'] as const) {
+    input(`camera-${side}-position`).value = String(value.cameraFraming?.[side] ?? DEFAULT_SETTINGS.cameraFraming[side]);
+    showCameraPosition(side);
+  }
   input('tie-range-enabled').checked = value.tieRange?.enabled ?? false;
   select('tie-range-mode').value = value.tieRange?.mode ?? 'full';
   select('tie-range-mode').disabled = !input('tie-range-enabled').checked;
@@ -195,6 +203,9 @@ function applySettings(value: PresenterSettings | undefined) {
 }
 settings.on('change', value => { settingsConfiguration.acceptProjection(() => applySettings(value)); status(); });
 select('view-source').addEventListener('change', () => { element('video-source-help').hidden = select('view-source').value !== 'video'; });
+for (const side of ['left', 'right'] as const) {
+  input(`camera-${side}-position`).addEventListener('input', () => showCameraPosition(side));
+}
 ruleContexts.on('change', status);
 input('tie-range-enabled').addEventListener('change', () => { select('tie-range-mode').disabled = !input('tie-range-enabled').checked; });
 duel.on('change', status);
@@ -209,6 +220,7 @@ element('settings-form').addEventListener('submit', event => {
   void control('settings', { ...settings.value, viewSource: select('view-source').value, keyColor: select('key-color').value,
     audioOutput: select('audio-output').value, muted: input('muted').checked,
     musicGain: Number(input('music-gain').value), effectsGain: Number(input('effects-gain').value),
+    cameraFraming: { left: Number(input('camera-left-position').value), right: Number(input('camera-right-position').value) },
     tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value } }, 'error', settingsConfiguration);
 });
 

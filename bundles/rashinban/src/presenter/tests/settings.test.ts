@@ -2,10 +2,39 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { layoutKind } from '../../graphics/presenter/layout.ts';
 import { DEFAULT_SETTINGS, parseSettings } from '../settings.ts';
+import { parseApplicationConfig } from '../../config/schema.ts';
 
 test('chroma NMPZ uses two complete player windows', () => {
   assert.equal(layoutKind('NMPZ', 'chroma'), 'dual');
   assert.equal(layoutKind('NMPZ', 'rendered'), 'dual');
+});
+
+test('older presentation settings keep both cameras centered without resetting other preferences', () => {
+  const legacy = { ...DEFAULT_SETTINGS, musicGain: 0.25, muted: true } as Record<string, unknown>;
+  delete legacy.cameraFraming;
+  const migrated = parseSettings(legacy);
+  assert.deepEqual(migrated.cameraFraming, { left: 50, right: 50 });
+  assert.equal(migrated.musicGain, 0.25);
+  assert.equal(migrated.muted, true);
+});
+
+test('independent camera framing survives serialization and partial configuration overlays', () => {
+  const value = { ...DEFAULT_SETTINGS, cameraFraming: { left: 0, right: 100 } };
+  const parsed = parseSettings(JSON.parse(JSON.stringify(value)));
+  assert.deepEqual(parsed, value);
+  assert.notEqual(parsed.cameraFraming, value.cameraFraming);
+  assert.deepEqual(parseApplicationConfig({ presenter: { settings: { cameraFraming: { left: 25 } } } })
+    .presenter.settings.cameraFraming, { left: 25, right: 50 });
+});
+
+test('camera framing rejects malformed values and unknown configuration fields', () => {
+  for (const cameraFraming of [null, [], true, {}, { left: 50 }, { left: -1, right: 50 },
+    { left: 50, right: 101 }, { left: NaN, right: 50 }, { left: 50, right: Infinity },
+    { left: '50', right: 50 }, { left: 50, right: 50, vertical: 25 }]) {
+    assert.throws(() => parseSettings({ ...DEFAULT_SETTINGS, cameraFraming }));
+  }
+  assert.throws(() => parseApplicationConfig({ presenter: { settings: { cameraFraming: { vertical: 25 } } } }),
+    /Unknown configuration field presenter.settings.cameraFraming.vertical/);
 });
 
 test('video inputs persist as a third presentation and keep independent feeds in every game mode', () => {
