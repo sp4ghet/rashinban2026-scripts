@@ -3,14 +3,14 @@
 // the real graphics pages opened on the preview/program channel.
 import { MAX_TEXT, withDefaults, layersEqual, type BroadcastOutput, type BroadcastState } from "../broadcast/state.ts";
 import { controlRows, monitorUrls, patchAt, rowDirty, valueAt, type Control, type Row } from "../broadcast/switcher-model.ts";
-import type { ResolvedMatch } from "../match/state.ts";
+import { bindMatch } from "../graphics/broadcast/match.ts";
 import { findCaster, type Caster } from "../casters/casters.ts";
 import { BROADCAST_MESSAGES, REPLICANTS } from "../types/replicants.ts";
 import { mountIntervalTimer } from "./components/interval-timer.ts";
 import { recoverMonitor } from "./components/monitor-recovery.ts";
 import { mountMonitorResize } from "./components/monitor-resize.ts";
 
-const output: BroadcastOutput = document.body.dataset.output === "led" ? "led" : "stream";
+const output: BroadcastOutput = document.body.dataset.output === "en" ? "en" : document.body.dataset.output === "led" ? "led" : "stream";
 const rep = nodecg.Replicant<BroadcastState>(REPLICANTS.broadcast);
 const el = (id: string) => document.getElementById(id)!;
 const strip = el("strip");
@@ -84,8 +84,8 @@ function buildRow(row: Row): HTMLElement {
     }
   }
   section.append(title, controls);
-  if (output === "stream" && row.id === "interval") {
-    mountIntervalTimer(controls, message => { el("error").textContent = message; });
+  if (output !== "led" && row.id === "interval") {
+    mountIntervalTimer(controls, message => { el("error").textContent = message; }, output === "en");
   }
   return section;
 }
@@ -95,13 +95,13 @@ const playerControl = rows.flatMap(row => row.controls).find(control =>
   control.kind === "select" && control.path[0] === "playerCards" && control.path[1] === "player");
 if (playerControl) {
   const select = widgets.get(playerControl) as HTMLSelectElement;
-  nodecg.Replicant<ResolvedMatch | null>(REPLICANTS.matchResolved).on("change", match => {
+  bindMatch(match => {
     // Update labels in place so a match refresh never changes the selected side.
     for (const option of select.options) {
       const side = option.value === "left" ? "left" : "right";
       option.textContent = `${side === "left" ? "P1" : "P2"} ${match?.[side].name || "TBD"}`;
     }
-  });
+  }, output === "en");
 }
 
 function render() {
@@ -145,8 +145,8 @@ rep.on("change", (value) => {
   state = withDefaults(value);
   render();
 });
-if (output === "stream") {
-  nodecg.Replicant<Caster[]>(REPLICANTS.casters).on("change", value => {
+if (output !== "led") {
+  nodecg.Replicant<Caster[]>(output === "en" ? REPLICANTS.castersEn : REPLICANTS.casters).on("change", value => {
     casters = value ?? [];
     render();
   });

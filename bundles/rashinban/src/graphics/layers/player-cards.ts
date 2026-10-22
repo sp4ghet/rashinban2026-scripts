@@ -1,4 +1,5 @@
 // Shared cards: stream shows the selected player; LED shows both.
+import { bindMatch } from "../broadcast/match.ts";
 import type { ResolvedMatch, ResolvedSide } from "../../match/state.ts";
 import { defaultLayers, type BroadcastOutput, type PlayerCardsLayer } from "../../broadcast/state.ts";
 import { playerCardResults, type PlayerCardResults } from "../../broadcast/player-card-results.ts";
@@ -125,7 +126,7 @@ export function mountPlayerCards(host: HTMLElement, output: BroadcastOutput): La
     for (const [index, sideName] of (["left", "right"] as const).entries()) {
       const card = cards[index]!;
       const side = match?.[sideName] ?? null;
-      card.hidden = output === "stream" && layer.player !== sideName;
+      card.hidden = output !== "led" && layer.player !== sideName;
       renderCard(card, side);
       const results: PlayerCardResults = side && layer.visible && !card.hidden && layer.page !== "profile"
         ? playerCardResults(bracket, side, profiles, match?.setId ?? null, layer.page === "compact" ? 3 : 5, now)
@@ -135,9 +136,9 @@ export function mountPlayerCards(host: HTMLElement, output: BroadcastOutput): La
     fitProfileSpacing();
   }
 
-  nodecg.Replicant<ResolvedMatch | null>(REPLICANTS.matchResolved).on("change", value => { match = value ?? null; render(); });
+  bindMatch(value => { match = value; render(); }, output === "en");
   nodecg.Replicant<StartggBracket | null>(REPLICANTS.startggBracket).on("change", value => { bracket = value ?? null; render(); });
-  nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players).on("change", value => { profiles = value ?? []; render(); });
+  nodecg.Replicant<PlayerProfile[]>(output === "en" ? REPLICANTS.playersEn : REPLICANTS.players).on("change", value => { profiles = value ?? []; render(); });
   // Adobe and the Japanese fallback may finish loading after the first render.
   document.fonts.ready.then(fitProfileSpacing);
   document.fonts.addEventListener("loadingdone", fitProfileSpacing);

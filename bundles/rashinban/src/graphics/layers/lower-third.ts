@@ -1,8 +1,8 @@
 // Designer lower thirds share the match data and Stream Preview/Program bus.
 import { defaultLayers, type LowerThirdLayer } from "../../broadcast/state.ts";
 import { lowerThirdText } from "../../broadcast/lower-third.ts";
+import { bindMatch } from "../broadcast/match.ts";
 import type { ResolvedMatch } from "../../match/state.ts";
-import { REPLICANTS } from "../../types/replicants.ts";
 import { mustQuery, type Layer } from "./layer.ts";
 
 const TEMPLATE = `<div id="lower-third">
@@ -19,7 +19,7 @@ const TEMPLATE = `<div id="lower-third">
   </div>
 </div>`;
 
-export function mountLowerThird(host: HTMLElement): Layer<LowerThirdLayer> {
+export function mountLowerThird(host: HTMLElement, english = false): Layer<LowerThirdLayer> {
   host.innerHTML = TEMPLATE;
   const root = mustQuery(host, "#lower-third");
   const scores = mustQuery(root, ".lt-scores");
@@ -65,15 +65,9 @@ export function mountLowerThird(host: HTMLElement): Layer<LowerThirdLayer> {
     fit();
   }
 
-  nodecg.Replicant<ResolvedMatch | null>(REPLICANTS.matchResolved).on("change", (v) => {
-    match = v ?? null;
-    render();
-  });
+  bindMatch(value => { match = value; render(); }, english);
 
-  nodecg.Replicant<ResolvedMatch | null>(REPLICANTS.nextMatchResolved).on("change", value => {
-    nextMatch = value ?? null;
-    render();
-  });
+  bindMatch(value => { nextMatch = value; render(); }, english, true);
   void document.fonts.ready.then(fit);
   document.fonts.addEventListener("loadingdone", fit);
 

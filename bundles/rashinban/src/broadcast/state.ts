@@ -4,8 +4,8 @@
 
 import { relayName } from "../presenter/relay-protocol.ts";
 
-export type BroadcastOutput = "stream" | "led";
-export const BROADCAST_OUTPUTS: readonly BroadcastOutput[] = ["stream", "led"];
+export type BroadcastOutput = "stream" | "led" | "en";
+export const BROADCAST_OUTPUTS: readonly BroadcastOutput[] = ["stream", "led", "en"];
 
 // `stats` remains the persisted/Companion key for Page 2, now tournament results.
 export type CardPage = "profile" | "stats" | "compact";
@@ -36,9 +36,9 @@ export type LedLayers = {
   presenter: ToggleLayer;
   bracket: ToggleLayer;
 };
-export type LayersFor<O extends BroadcastOutput> = O extends "stream" ? StreamLayers : LedLayers;
+export type LayersFor<O extends BroadcastOutput> = O extends "led" ? LedLayers : StreamLayers;
 export type OutputBus<L> = { program: L; preview: L };
-export type BroadcastState = { stream: OutputBus<StreamLayers>; led: OutputBus<LedLayers> };
+export type BroadcastState = { stream: OutputBus<StreamLayers>; led: OutputBus<LedLayers>; en: OutputBus<StreamLayers> };
 
 /** Recursive patch type: every leaf optional. */
 export type Patch<L> = { [K in keyof L]?: L[K] extends object ? (L[K] extends readonly unknown[] ? L[K] : Patch<L[K]>) : L[K] };
@@ -86,7 +86,7 @@ const STREAM_SPEC = {
   banpick: TOGGLE_SPEC,
 } as const satisfies SpecOf<StreamLayers>;
 const LED_SPEC = { playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC, bracket: TOGGLE_SPEC } as const satisfies SpecOf<LedLayers>;
-const SPECS: Record<BroadcastOutput, Spec> = { stream: STREAM_SPEC, led: LED_SPEC };
+const SPECS: Record<BroadcastOutput, Spec> = { stream: STREAM_SPEC, led: LED_SPEC, en: STREAM_SPEC };
 
 function isLeaf(spec: Leaf | Spec): spec is Leaf {
   return typeof spec === "string" || Array.isArray(spec);
@@ -157,7 +157,7 @@ const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 /** Narrow an untrusted value to an output name; throws BroadcastError otherwise. */
 export function parseOutput(output: unknown): BroadcastOutput {
-  if (output !== "stream" && output !== "led") throw new BroadcastError("output must be stream or led");
+  if (output !== "stream" && output !== "led" && output !== "en") throw new BroadcastError("output must be stream, led or en");
   return output;
 }
 
@@ -182,6 +182,7 @@ export function createInitialState(): BroadcastState {
   return {
     stream: { program: defaultLayers("stream"), preview: defaultLayers("stream") },
     led: { program: defaultLayers("led"), preview: defaultLayers("led") },
+    en: { program: defaultLayers("en"), preview: defaultLayers("en") },
   };
 }
 
@@ -217,7 +218,7 @@ export function withDefaults(value: unknown, legacyCasters?: unknown): Broadcast
       preview: restore(raw.preview),
     };
   };
-  return { stream: bus("stream"), led: bus("led") };
+  return { stream: bus("stream"), led: bus("led"), en: bus("en") };
 }
 
 /** Deep-merge a validated partial onto a layer set; throws BroadcastError on invalid input. */
@@ -254,7 +255,7 @@ export function swap(state: BroadcastState, output: BroadcastOutput): BroadcastS
 /** Hide all preview layers while keeping their content and configuration. */
 export function clearPreview(state: BroadcastState, output: BroadcastOutput): BroadcastState {
   const o = parseOutput(output);
-  if (o === "stream") return setPreview(state, o, {
+  if (o !== "led") return setPreview(state, o, {
     playerCameras: { left: false, right: false },
     playerCards: { visible: false },
     lowerThird: { visible: false },

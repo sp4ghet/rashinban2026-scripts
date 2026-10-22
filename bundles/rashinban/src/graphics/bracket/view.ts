@@ -1,9 +1,11 @@
 // Shared live data binding for the standalone and LED bracket layouts.
+import { matchProfile } from "../../match/identity.ts";
+import type { PlayerProfile } from "../../sheet/players.ts";
 import { emptyRow, type BracketFinals } from "../../bracket/finals.ts";
 import { REPLICANTS } from "../../types/replicants.ts";
 import { renderBracket, type BracketLayout } from "./svg.ts";
 
-export function mountBracketView(root: SVGSVGElement, layout: BracketLayout): void {
+export function mountBracketView(root: SVGSVGElement, layout: BracketLayout, english = false): void {
   renderBracket(layout, {
     linesHost: root.querySelector("#bracket-lines")!,
     matchesHost: root.querySelector("#bracket-matches")!,
@@ -20,7 +22,10 @@ export function mountBracketView(root: SVGSVGElement, layout: BracketLayout): vo
       scores: [part("-score-top")!, part("-score-bottom")!],
     };
   });
-  nodecg.Replicant<BracketFinals>(REPLICANTS.bracketFinals).on("change", value => {
+  let value: BracketFinals | undefined;
+  let profiles: PlayerProfile[] = [];
+  let sharedProfiles: PlayerProfile[] = [];
+  function render() {
     const rows = new Map((value?.rows ?? []).map(row => [row.match, row]));
     for (const { match, group, line, border, names, scores } of parts) {
       const row = rows.get(match.id) ?? emptyRow(match.id);
@@ -31,10 +36,18 @@ export function mountBracketView(root: SVGSVGElement, layout: BracketLayout): vo
       }
       border.classList.toggle("active", row.active);
       for (const [index, side] of (["top", "bottom"] as const).entries()) {
-        names[index]!.textContent = row[side];
+        const identity = { entrantId: row[`${side}EntrantId`], tag: row[side] };
+        const shared = english ? matchProfile(sharedProfiles, identity).profile : null;
+        const translated = english ? matchProfile(profiles, { ...identity, uid: shared?.geoguessrPlayerUid }).profile : null;
+        names[index]!.textContent = translated?.name || row[side];
         names[index]!.parentElement?.classList.toggle("winner", row.winner === side);
         scores[index]!.textContent = row[`${side}Score`];
       }
     }
-  });
+  }
+  nodecg.Replicant<BracketFinals>(REPLICANTS.bracketFinals).on("change", next => { value = next; render(); });
+  if (english) {
+    nodecg.Replicant<PlayerProfile[]>(REPLICANTS.playersEn).on("change", next => { profiles = next ?? []; render(); });
+    nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players).on("change", next => { sharedProfiles = next ?? []; render(); });
+  }
 }

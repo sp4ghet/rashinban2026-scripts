@@ -9,6 +9,8 @@ export const DEFAULT_SHEET_CONFIG: SheetConfig = {
   sheetId: '1xozkRDAEeRLqVPzvpqqDFAcpC3vcbTrd9xekrQ28B50',
   playersGid: '0',
   castersGid: '247806508',
+  playersEnGid: '1767411728',
+  castersEnGid: '2083370771',
   pollIntervalMs: 15_000,
 };
 
@@ -89,7 +91,7 @@ export function parseConfigLayer(input: unknown, options: { allowLegacyCookieFil
     if (presenter.settings !== undefined) validateSettingsShape(presenter.settings);
     if (presenter.media !== undefined) validateMediaShape(presenter.media);
   }
-  if (value.sheet !== undefined) validatePartialObject(value.sheet, ['enabled', 'sheetId', 'playersGid', 'castersGid', 'pollIntervalMs'], 'sheet');
+  if (value.sheet !== undefined) validatePartialObject(value.sheet, ['enabled', 'sheetId', 'playersGid', 'castersGid', 'playersEnGid', 'castersEnGid', 'pollIntervalMs'], 'sheet');
   if (value.startgg !== undefined) validatePartialObject(value.startgg, ['enabled', 'eventSlug', 'tournamentSlug', 'pollIntervalMs'], 'startgg');
 
   const cloned = structuredClone(value) as Record<string, unknown>;
@@ -111,15 +113,17 @@ export function mergeConfigValues<T>(base: T, overlay: unknown): T {
 }
 
 export function parseSheetConfig(input: unknown): SheetConfig {
-  const value = validatePartialObject(input, ['enabled', 'sheetId', 'playersGid', 'castersGid', 'pollIntervalMs'], 'sheet');
+  const value = validatePartialObject(input, ['enabled', 'sheetId', 'playersGid', 'castersGid', 'playersEnGid', 'castersEnGid', 'pollIntervalMs'], 'sheet');
   if (typeof value.enabled !== 'boolean' || typeof value.sheetId !== 'string' || typeof value.playersGid !== 'string') {
     throw new Error('Invalid sheet configuration');
   }
   // castersGid arrived after the first configs were written; tolerate its absence.
   const castersGid = value.castersGid === undefined ? DEFAULT_SHEET_CONFIG.castersGid : value.castersGid;
-  if (typeof castersGid !== 'string') throw new Error('Invalid sheet configuration');
+  const playersEnGid = value.playersEnGid === undefined ? DEFAULT_SHEET_CONFIG.playersEnGid : value.playersEnGid;
+  const castersEnGid = value.castersEnGid === undefined ? DEFAULT_SHEET_CONFIG.castersEnGid : value.castersEnGid;
+  if ([castersGid, playersEnGid, castersEnGid].some(gid => typeof gid !== 'string')) throw new Error('Invalid sheet configuration');
   if (!Number.isFinite(value.pollIntervalMs) || (value.pollIntervalMs as number) < 5_000) throw new Error('sheet.pollIntervalMs must be at least 5000');
-  return { enabled: value.enabled, sheetId: value.sheetId, playersGid: value.playersGid, castersGid, pollIntervalMs: value.pollIntervalMs as number };
+  return { enabled: value.enabled, sheetId: value.sheetId, playersGid: value.playersGid, castersGid: castersGid as string, playersEnGid: playersEnGid as string, castersEnGid: castersEnGid as string, pollIntervalMs: value.pollIntervalMs as number };
 }
 
 export function parseStartggConfig(input: unknown): StartggConfig {

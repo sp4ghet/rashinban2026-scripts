@@ -224,3 +224,19 @@ export function toSeries(
     right: { ...side(match.right), playerId: right },
   };
 }
+
+/** Display-only localization. Keep the shared match's IDs, sides and scores authoritative. */
+export function localizeMatch(match: ResolvedMatch | null, profiles: PlayerProfile[]): ResolvedMatch | null {
+  if (!match) return null;
+  const localize = (side: ResolvedSide): ResolvedSide => {
+    const { profile } = matchProfile(profiles, { uid: side.uid, entrantId: side.entrantId, tag: side.tag || side.profile?.startggTag, name: side.name });
+    if (!profile) return side;
+    return { ...side, name: profile.name || side.name, handle: side.handleOverride ?? profile.twitter,
+      profile: { ...profile,
+        geoguessrPlayerUid: side.uid || side.profile?.geoguessrPlayerUid || profile.geoguessrPlayerUid,
+        startggEntrantId: side.entrantId ?? side.profile?.startggEntrantId ?? profile.startggEntrantId,
+        startggTag: side.tag || side.profile?.startggTag || profile.startggTag,
+      }, profileStatus: "matched" };
+  };
+  return { ...match, left: localize(match.left), right: localize(match.right) };
+}

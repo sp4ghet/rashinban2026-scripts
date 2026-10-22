@@ -33,11 +33,17 @@ function applySheet(v: SheetConfig | undefined) {
   input("casters-url").value = v.sheetId && v.castersGid
     ? `https://docs.google.com/spreadsheets/d/${v.sheetId}/edit#gid=${v.castersGid}`
     : "";
+  input("players-en-gid").value = v.playersEnGid ?? "1767411728";
+  input("casters-en-gid").value = v.castersEnGid ?? "2083370771";
   input("sheet-interval").value = String(v.pollIntervalMs / 1000);
   el("sheet-enabled").textContent = v.enabled ? "Polling ON" : "Polling OFF";
 }
 sheet.on("change", (v) => configuration.acceptProjection(() => applySheet(v)));
 if (sheet.value) configuration.acceptProjection(() => applySheet(sheet.value));
+for (const [id, key] of [["players-en-gid", "playersEnGid"], ["casters-en-gid", "castersEnGid"]] as const) {
+  input(id).addEventListener("input", () => configuration.draft.markDirty());
+  input(id).onchange = () => save({ [key]: input(id).value });
+}
 input('sheet-url').addEventListener('input', () => configuration.draft.markDirty());
 input('casters-url').addEventListener('input', () => configuration.draft.markDirty());
 input('sheet-interval').addEventListener('input', () => configuration.draft.markDirty());
@@ -54,6 +60,6 @@ el("sheet-enabled").onclick = () =>
 el("sheet-refresh").onclick = () => send(SHEET_MESSAGES.refresh);
 sheetStatus.on("change", (v) => {
   el("sheet-status").textContent = v
-    ? `${v.playerCount} players · ${v.casterCount} casters · ${v.skippedRows} skipped rows${v.missingColumns.length ? " · Missing identity column: geoguessr_player_uid (or legacy startgg_tag)" : ""}${v.lastError ? "\n" + v.lastError : ""}`
+    ? `${v.playerCount} players · ${v.casterCount} casters · ${v.playersEnCount ?? 0} EN players · ${v.castersEnCount ?? 0} EN casters · ${v.skippedRows} skipped rows${v.missingColumns.length ? " · Missing identity column: geoguessr_player_uid (or legacy startgg_tag)" : ""}${v.lastError ? "\n" + v.lastError : ""}`
     : "";
 });

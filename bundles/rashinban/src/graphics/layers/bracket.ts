@@ -6,7 +6,7 @@ import { STREAM_BRACKET_SVG } from "../bracket/stream-template.ts";
 import { mountKvBackground } from "./kv-background.ts";
 import type { Layer } from "./layer.ts";
 
-export function mountBracket(host: HTMLElement, output: "stream" | "led" = "led"): Layer<ToggleLayer> {
+export function mountBracket(host: HTMLElement, output: "stream" | "led" = "led", english = false): Layer<ToggleLayer> {
   host.hidden = true;
   host.innerHTML = output === "stream" ? `<div class="bracket-wrapper">${STREAM_BRACKET_SVG}</div>` : `
     <div id="led-bracket">
@@ -24,6 +24,6 @@ export function mountBracket(host: HTMLElement, output: "stream" | "led" = "led"
       </svg>
     </div>`;
   const background = mountKvBackground(host.firstElementChild as HTMLElement);
-  mountBracketView(host.querySelector<SVGSVGElement>("#bracket")!, output === "stream" ? FINALS_LAYOUT : LED_FINALS_LAYOUT);
+  mountBracketView(host.querySelector<SVGSVGElement>("#bracket")!, output === "stream" ? FINALS_LAYOUT : LED_FINALS_LAYOUT, english);
   return { apply(layer) { host.hidden = !layer.visible; background.setVisible(layer.visible); } };
 }

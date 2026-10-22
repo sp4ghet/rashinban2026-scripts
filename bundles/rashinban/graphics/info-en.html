@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>RASHINBAN 2026 — Info (English)</title>
+    <!-- Adobe Fonts supplies Kaneda Gothic's regular, bold and heavy weights with real italics; do not self-host it.
+         Vendored OFL fonts (scripts/fetch-fonts.mjs) provide Oswald as the offline fallback and Noto Sans JP for body text. -->
+    <!-- Remote font CSS must not block NodeCG startup or leave a monitor blank. -->
+    <link rel="stylesheet" href="https://use.typekit.net/fxf4ggj.css" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="assets/fonts/fonts.css" />
+    <link rel="stylesheet" href="info.css" />
+    <link rel="stylesheet" href="player-cameras.css" />
+    <link rel="stylesheet" href="interval.css" />
+    <link rel="stylesheet" href="assets/brackets.css" />
+    <link rel="stylesheet" href="assets/bracket-matches.css" />
+    <style>
+      :root { --accent: #c2185b; }
+      body { background: transparent; }
+    </style>
+  </head>
+  <body data-output="en">
+    <!-- Layer order on screen = DOM order (each host is its own stacking context). -->
+    <div class="layer" id="layer-player-cameras" hidden></div>
+    <div class="layer" id="layer-casters"></div>
+    <div class="layer" id="layer-banpick"></div>
+    <div class="layer" id="layer-cards"></div>
+    <div class="layer" id="layer-lower-third"></div>
+    <div class="layer" id="layer-bracket" hidden></div>
+    <div class="layer" id="layer-interval" hidden></div>
+    <script src="info-en.js"></script>
+  </body>
+</html>

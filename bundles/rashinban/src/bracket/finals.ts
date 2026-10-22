@@ -17,6 +17,9 @@ export interface BracketRow {
   match: number;
   top: string;
   bottom: string;
+  /** Stable identity for localized labels; optional for older persisted rows. */
+  topEntrantId?: number | null;
+  bottomEntrantId?: number | null;
   /** Both empty unless both sides have a score. */
   topScore: string;
   bottomScore: string;
@@ -133,6 +136,8 @@ function setRow(match: number, set: BracketSet, bracket: StartggBracket): Bracke
     match,
     top: name(a),
     bottom: name(b),
+    topEntrantId: a?.entrantId ?? null,
+    bottomEntrantId: b?.entrantId ?? null,
     topScore,
     bottomScore,
     winner: winnerId == null ? null : a?.entrantId === winnerId ? "top" : b?.entrantId === winnerId ? "bottom" : null,

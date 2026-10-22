@@ -1,4 +1,4 @@
-import { resolveMatch, type MatchState } from "../match/state.ts";
+import { localizeMatch, resolveMatch, type MatchState } from "../match/state.ts";
 import type { PlayerProfile } from "../sheet/players.ts";
 
 export type UpcomingMatch = { playerOne: string; playerTwo: string };
@@ -6,7 +6,7 @@ export type IntervalContent = { title: string; upcomingLabel: string; matchSourc
 export type IntervalTimer = { endsAtMs: number | null; remainingMs: number | null };
 export type IntervalState = { content: IntervalContent; timer: IntervalTimer };
 
-export const INTERVAL_MESSAGES = { content: "interval:content", timer: "interval:timer", clock: "interval:clock" } as const;
+export const INTERVAL_MESSAGES = { content: "interval:content", timer: "interval:timer", timerEn: "interval:timer:en", clock: "interval:clock" } as const;
 const DAY_MS = 86_400_000;
 const MAX_DATE_MS = 8_640_000_000_000_000;
 
@@ -49,10 +49,11 @@ export function updateContent(state: IntervalState, value: unknown): IntervalSta
 }
 
 /** Derive names from the saved staging slot; never copy them into manual content. */
-export function upcomingMatches(content: IntervalContent, next: MatchState | null, profiles: PlayerProfile[]): UpcomingMatch[] {
+export function upcomingMatches(content: IntervalContent, next: MatchState | null, profiles: PlayerProfile[], translations?: PlayerProfile[]): UpcomingMatch[] {
   if (content.matchSource === "manual") return content.matches;
   if (!next || ![next.left, next.right].every(side => side.uid || side.entrantId || side.name || side.tag)) return [];
-  const resolved = resolveMatch(next, profiles);
+  const shared = resolveMatch(next, profiles);
+  const resolved = translations ? localizeMatch(shared, translations)! : shared;
   return [{ playerOne: resolved.left.name, playerTwo: resolved.right.name }];
 }
 

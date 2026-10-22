@@ -199,9 +199,9 @@ body {
 #cards[data-page="compact"] .result-score { font-size: 28px; }
 
 /* Stream cards accompany a single-player camera shot at 1920x1080. */
-body[data-output="stream"] #cards { --card-w: 800px; }
-body[data-output="stream"] #cards[data-position="left"] :is(#card-1, #card-2) { grid-column: 1; }
-body[data-output="stream"] #cards[data-position="right"] :is(#card-1, #card-2) { grid-column: 3; }
+body:is([data-output="stream"], [data-output="en"]) #cards { --card-w: 800px; }
+body:is([data-output="stream"], [data-output="en"]) #cards[data-position="left"] :is(#card-1, #card-2) { grid-column: 1; }
+body:is([data-output="stream"], [data-output="en"]) #cards[data-position="right"] :is(#card-1, #card-2) { grid-column: 3; }
 /* Both outputs use the designer layout; LED scales the same dimensions. */
 #cards .pcard {
   --profile-gap: calc(36px * var(--card-scale));

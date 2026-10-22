@@ -95,7 +95,7 @@ const LED_ROWS: readonly Row[] = [
 ];
 
 export function controlRows(output: BroadcastOutput): readonly Row[] {
-  return output === "stream" ? STREAM_ROWS : LED_ROWS;
+  return output === "led" ? LED_ROWS : STREAM_ROWS;
 }
 
 /** Read the value at `path`; own properties only, so "constructor" etc. do not resolve via the prototype. */
@@ -181,7 +181,7 @@ export function patchAt(path: readonly string[], value: unknown, layers: unknown
 export function monitorUrls(output: BroadcastOutput, channel: "preview" | "program"): { info: string; presenter: string } {
   const base = "/bundles/rashinban/graphics";
   return {
-    info: `${base}/info-${output}.html?channel=${channel}${output === "stream" ? "&cameraMode=placeholder" : ""}`,
+    info: `${base}/info-${output}.html?channel=${channel}${output !== "led" ? "&cameraMode=placeholder" : ""}`,
     presenter:
       output === "led"
         ? `${base}/presenter-led.html?channel=${channel}`

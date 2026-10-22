@@ -9,8 +9,9 @@ import { parsePlayers, type PlayerProfile } from "../sheet/players.ts";
 import type { SheetConfig, SheetStatus } from "../sheet/types.ts";
 import { REPLICANTS, SHEET_MESSAGES } from "../types/replicants.ts";
 import type { ConfigStore } from '../config/types.ts';
+import { DEFAULT_SHEET_CONFIG } from '../config/schema.ts';
 
-const DEFAULT_CONFIG: SheetConfig = { enabled: false, sheetId: "1xozkRDAEeRLqVPzvpqqDFAcpC3vcbTrd9xekrQ28B50", playersGid: "0", castersGid: "247806508", pollIntervalMs: 15_000 };
+const DEFAULT_CONFIG = DEFAULT_SHEET_CONFIG;
 const MIN_POLL_MS = 5_000;
 
 /** Google export URL for a sheet id, or the id itself when it is already a full CSV URL (local tests, Apps Script endpoints). */
@@ -32,6 +33,8 @@ export function registerSheet(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeC
   const config = nodecg.Replicant<SheetConfig>(REPLICANTS.sheetConfig, { defaultValue: store ? structuredClone(store.get().sheet) : DEFAULT_CONFIG, persistent: store ? false : true });
   const players = nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players, { defaultValue: [] });
   const casters = nodecg.Replicant<Caster[]>(REPLICANTS.casters, { defaultValue: [] });
+  const playersEn = nodecg.Replicant<PlayerProfile[]>(REPLICANTS.playersEn, { defaultValue: [] });
+  const castersEn = nodecg.Replicant<Caster[]>(REPLICANTS.castersEn, { defaultValue: [] });
   const status = nodecg.Replicant<SheetStatus>(REPLICANTS.sheetStatus, {
     defaultValue: { polling: false, lastFetchAt: null, lastSuccessAt: null, lastError: null, playerCount: 0, casterCount: 0, missingColumns: [], skippedRows: 0 },
     persistent: false,
@@ -50,16 +53,36 @@ export function registerSheet(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeC
 
   async function fetchSheet(cfg: SheetConfig): Promise<void> {
     if (!cfg.sheetId) throw new Error("sheetId is empty");
-    const parsed = parsePlayers(await fetchTab(cfg, cfg.playersGid));
-    players.value = parsed.players;
-    patch({ playerCount: parsed.players.length, missingColumns: parsed.missingColumns, skippedRows: parsed.skippedRows });
-
-    // A full CSV URL in sheetId (local testing) addresses a single tab, so
-    // there is no second tab to fetch.
-    if (/^https?:\/\//.test(cfg.sheetId) || !cfg.castersGid) return;
-    const parsedCasters = parseCasters(await fetchTab(cfg, cfg.castersGid));
-    casters.value = parsedCasters;
-    patch({ casterCount: parsedCasters.length });
+    const tasks: [string, () => Promise<void>][] = [["players", async () => {
+      const parsed = parsePlayers(await fetchTab(cfg, cfg.playersGid));
+      if (parsed.missingColumns.length) throw new Error("missing player identity columns");
+      players.value = parsed.players;
+      patch({ playerCount: parsed.players.length, missingColumns: parsed.missingColumns, skippedRows: parsed.skippedRows });
+    }]];
+    // A direct CSV URL is one tab, used by local previews.
+    if (!/^https?:\/\//.test(cfg.sheetId)) {
+      tasks.push(["casters", async () => {
+        const value = cfg.castersGid ? parseCasters(await fetchTab(cfg, cfg.castersGid)) : [];
+        casters.value = value;
+        patch({ casterCount: value.length });
+      }], ["players_en", async () => {
+        const gid = cfg.playersEnGid ?? DEFAULT_CONFIG.playersEnGid!;
+        const parsed = gid ? parsePlayers(await fetchTab(cfg, gid)) : { players: [], missingColumns: [] };
+        if (parsed.missingColumns.length) throw new Error("missing player identity columns");
+        playersEn.value = parsed.players;
+        patch({ playersEnCount: parsed.players.length });
+      }], ["casters_en", async () => {
+        const gid = cfg.castersEnGid ?? DEFAULT_CONFIG.castersEnGid!;
+        const value = gid ? parseCasters(await fetchTab(cfg, gid)) : [];
+        castersEn.value = value;
+        patch({ castersEnCount: value.length });
+      }]);
+    }
+    // Each tab publishes independently and retains its last good value on failure.
+    const results = await Promise.allSettled(tasks.map(([, run]) => run()));
+    const errors = results.flatMap((result, index) => result.status === "rejected"
+      ? [`${tasks[index]![0]}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`] : []);
+    if (errors.length) throw new Error(errors.join("; "));
   }
 
   let inFlight: Promise<boolean> | null = null;
@@ -101,7 +124,7 @@ export function registerSheet(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeC
 
   config.on("change", (next, prev) => {
     if (!next) return;
-    const changed = !prev || next.enabled !== prev.enabled || next.sheetId !== prev.sheetId || next.playersGid !== prev.playersGid || next.castersGid !== prev.castersGid || next.pollIntervalMs !== prev.pollIntervalMs;
+    const changed = !prev || next.enabled !== prev.enabled || next.sheetId !== prev.sheetId || next.playersGid !== prev.playersGid || next.castersGid !== prev.castersGid || next.playersEnGid !== prev.playersEnGid || next.castersEnGid !== prev.castersEnGid || next.pollIntervalMs !== prev.pollIntervalMs;
     if (!changed) return;
     if (next.enabled) {
       patch({ polling: true });
@@ -137,6 +160,8 @@ export function registerSheet(nodecg: NodeCG.ServerAPI, router: ReturnType<NodeC
       sheetId,
       playersGid: playersGid || "0",
       castersGid,
+      playersEnGid: typeof data?.playersEnGid === "string" ? data.playersEnGid.trim() : cur.playersEnGid ?? DEFAULT_CONFIG.playersEnGid,
+      castersEnGid: typeof data?.castersEnGid === "string" ? data.castersEnGid.trim() : cur.castersEnGid ?? DEFAULT_CONFIG.castersEnGid,
       pollIntervalMs:
         typeof data?.pollIntervalMs === "number" && Number.isFinite(data.pollIntervalMs)
           ? Math.max(MIN_POLL_MS, Math.round(data.pollIntervalMs))

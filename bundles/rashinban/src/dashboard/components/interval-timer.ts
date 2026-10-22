@@ -3,13 +3,13 @@ import { startIntervalClock } from "../../interval/browser-clock.ts";
 import { REPLICANTS } from "../../types/replicants.ts";
 
 /** Compact live timer controls; scene visibility still belongs to Preview/TAKE. */
-export function mountIntervalTimer(host: HTMLElement, reportError: (message: string) => void): void {
+export function mountIntervalTimer(host: HTMLElement, reportError: (message: string) => void, english = false): void {
   const controls = document.createElement("fieldset");
   controls.id = "interval-timer-controls";
   controls.className = "interval-timer-controls";
   controls.disabled = true;
   controls.setAttribute("aria-label", "Live interval timer");
-  controls.title = "Timer changes apply live to Stream and LED.";
+  controls.title = english ? "Timer changes apply live to English only." : "Timer changes apply live to Stream and LED.";
   controls.innerHTML = `
     <label>Minutes <input id="interval-minutes" type="number" min="1" max="1440" step="1" value="10" /></label>
     <button id="interval-start" type="button">Start</button>
@@ -42,7 +42,7 @@ export function mountIntervalTimer(host: HTMLElement, reportError: (message: str
     busy = true;
     render();
     try {
-      state = restoreInterval(await nodecg.sendMessage(INTERVAL_MESSAGES.timer, command));
+      state = restoreInterval(await nodecg.sendMessage(english ? INTERVAL_MESSAGES.timerEn : INTERVAL_MESSAGES.timer, command));
       reportError("");
     } catch (error) {
       reportError((error as { message?: string })?.message ?? String(error));
@@ -56,7 +56,7 @@ export function mountIntervalTimer(host: HTMLElement, reportError: (message: str
   };
   pause.onclick = () => { void send({ action: state.timer.remainingMs !== null ? "resume" : "pause" }); };
   clear.onclick = () => { void send({ action: "clear" }); };
-  nodecg.Replicant<IntervalState>(REPLICANTS.interval).on("change", value => {
+  nodecg.Replicant<IntervalState>(english ? REPLICANTS.intervalEn : REPLICANTS.interval).on("change", value => {
     ready = Boolean(value);
     state = restoreInterval(value);
     render();

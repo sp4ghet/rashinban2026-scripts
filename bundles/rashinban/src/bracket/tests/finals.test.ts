@@ -70,3 +70,13 @@ test("an old stored config with source csv falls back to live start.gg", () => {
   assert.match(cfg.samplePath, /top8\.json$/);
   assert.deepEqual(Object.keys(cfg).sort(), ["groupId", "samplePath", "source"]);
 });
+
+test("finals rows retain stable entrant IDs even when display tags are renamed", () => {
+  const bracket = bracketOf(top8);
+  const rows = fromStartgg(bracket, top8.id);
+  for (const row of rows.filter(row => row.top)) {
+    assert.ok(row.topEntrantId);
+    assert.equal(bracket.entrants[row.topEntrantId!]?.tag, row.top);
+    assert.equal(bracket.entrants[row.bottomEntrantId!]?.tag, row.bottom);
+  }
+});

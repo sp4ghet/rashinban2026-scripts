@@ -45,6 +45,8 @@ export const REPLICANTS = {
   sheetConfig: "sheetConfig",
   sheetStatus: "sheetStatus",
   players: "players",
+  playersEn: "playersEn",
+  castersEn: "castersEn",
   casters: "casters",
   castersState: "castersState",
   currentMatch: "currentMatch",
@@ -54,6 +56,7 @@ export const REPLICANTS = {
   nextMatchResolved: 'nextMatchResolved',
   broadcast: "broadcast",
   interval: "interval",
+  intervalEn: "intervalEn",
   bracketConfig: "bracketConfig",
   bracketFinals: "bracketFinals",
   presenterConnection: 'presenterConnection',
@@ -83,6 +86,8 @@ export interface ReplicantMap {
   [REPLICANTS.sheetConfig]: SheetConfig;
   [REPLICANTS.sheetStatus]: SheetStatus;
   [REPLICANTS.players]: PlayerProfile[];
+  [REPLICANTS.playersEn]: PlayerProfile[];
+  [REPLICANTS.castersEn]: Caster[];
   [REPLICANTS.casters]: Caster[];
   [REPLICANTS.castersState]: CastersState;
   [REPLICANTS.currentMatch]: CurrentMatchSelection;
@@ -92,6 +97,7 @@ export interface ReplicantMap {
   [REPLICANTS.nextMatchResolved]: ResolvedMatch;
   [REPLICANTS.broadcast]: BroadcastState;
   [REPLICANTS.interval]: IntervalState;
+  [REPLICANTS.intervalEn]: IntervalState;
   [REPLICANTS.bracketConfig]: BracketConfig;
   [REPLICANTS.bracketFinals]: BracketFinals;
   [REPLICANTS.presenterConnection]: PresenterConnection;
@@ -154,7 +160,7 @@ export const MATCH_MESSAGES = {
   promoteNext: 'match:next:promote',
 } as const;
 
-/** Broadcast buses. output is "stream" | "led". */
+/** Broadcast buses. output is "stream" | "led" | "en". */
 export const BROADCAST_MESSAGES = {
   /** { output, patch: Patch<Layers> } — edit preview. */
   setPreview: "broadcast:setPreview",

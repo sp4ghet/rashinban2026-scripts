@@ -10,7 +10,7 @@ import type { MatchState } from "../../match/state.ts";
 import type { PlayerProfile } from "../../sheet/players.ts";
 
 /** One shared renderer for standalone sources and the switcher info pages. */
-export function mountInterval(host: HTMLElement, output: "stream" | "led"): Layer<ToggleLayer> {
+export function mountInterval(host: HTMLElement, output: "stream" | "led", english = false): Layer<ToggleLayer> {
   host.hidden = true;
   host.innerHTML = `
     <section class="interval-output" data-layout="${output}">
@@ -45,8 +45,10 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
   const countdown = mustQuery(host, ".interval-countdown span");
   mountSponsorRotation(host.querySelector<HTMLImageElement>(".interval-sponsors img")!, output);
   let state = defaultInterval();
+  let enTimer = defaultInterval().timer;
   let nextMatch: MatchState | null = null;
   let profiles: PlayerProfile[] = [];
+  let translations: PlayerProfile[] = [];
   const clock = startIntervalClock();
 
   function fit() {
@@ -69,7 +71,8 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
 
   function tick() {
     const now = clock.now();
-    const value = now === null && state.timer.endsAtMs !== null ? "" : countdownText(state.timer, now ?? 0);
+    const activeTimer = english ? enTimer : state.timer;
+    const value = now === null && activeTimer.endsAtMs !== null ? "" : countdownText(activeTimer, now ?? 0);
     timer.hidden = value === "";
     if (countdown.textContent !== value) {
       countdown.textContent = value;
@@ -78,7 +81,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
   }
 
   function renderContent() {
-    const upcomingList = upcomingMatches(state.content, nextMatch, profiles);
+    const upcomingList = upcomingMatches(state.content, nextMatch, profiles, english ? translations : undefined);
     title.textContent = state.content.title;
     upcomingTitle.textContent = state.content.upcomingLabel;
     upcoming.hidden = upcomingList.length === 0;
@@ -102,6 +105,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
     state = restoreInterval(value);
     renderContent();
   });
+  if (english) nodecg.Replicant<IntervalState>(REPLICANTS.intervalEn).on("change", value => { enTimer = restoreInterval(value).timer; tick(); });
   nodecg.Replicant<MatchState>(REPLICANTS.nextMatchState).on("change", value => {
     nextMatch = value ?? null;
     renderContent();
@@ -110,6 +114,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led"): Laye
     profiles = value ?? [];
     renderContent();
   });
+  if (english) nodecg.Replicant<PlayerProfile[]>(REPLICANTS.playersEn).on("change", value => { translations = value ?? []; renderContent(); });
   const interval = window.setInterval(tick, 250);
   window.addEventListener("pagehide", event => {
     if (event.persisted) return;

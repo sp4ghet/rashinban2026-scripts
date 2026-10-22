@@ -12,6 +12,8 @@ import { mountPlayerCards } from "./layers/player-cards.ts";
 
 import { mountPlayerCameras } from "./layers/player-cameras.ts";
 
+const output = document.body.dataset.output === "en" ? "en" : "stream";
+const english = output === "en";
 const channel = channelFromSearch(location.search);
 // Not styled: lets a switcher monitor or DevTools tell preview from program.
 document.body.dataset.channel = channel;
@@ -22,14 +24,14 @@ const playerCameras = mountPlayerCameras(mustQuery(document, "#layer-player-came
 });
 window.addEventListener("pagehide", () => playerCameras.dispose());
 
-const casters = mountCasters(mustQuery(document, "#layer-casters"));
+const casters = mountCasters(mustQuery(document, "#layer-casters"), english);
 const banpick = mountBanpick(mustQuery(document, "#layer-banpick"));
-const cards = mountPlayerCards(mustQuery(document, "#layer-cards"), "stream");
-const lowerThird = mountLowerThird(mustQuery(document, "#layer-lower-third"));
-const interval = mountInterval(mustQuery(document, "#layer-interval"), "stream");
-const bracket = mountBracket(mustQuery(document, "#layer-bracket"), "stream");
+const cards = mountPlayerCards(mustQuery(document, "#layer-cards"), output);
+const lowerThird = mountLowerThird(mustQuery(document, "#layer-lower-third"), english);
+const interval = mountInterval(mustQuery(document, "#layer-interval"), "stream", english);
+const bracket = mountBracket(mustQuery(document, "#layer-bracket"), "stream", english);
 
-bindLayers("stream", channel, (layers) => {
+bindLayers(output, channel, (layers) => {
   playerCameras.apply(layers.playerCameras);
   casters.apply(layers.casters);
   banpick.apply(layers.banpick);

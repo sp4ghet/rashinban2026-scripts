@@ -20,7 +20,7 @@ const TEMPLATE = `<div id="casters">
 /** Kana/kanji need the Noto face; latin names use the condensed heading face. */
 const hasJapanese = (text: string) => /[぀-ヿ㐀-鿿]/.test(text);
 
-export function mountCasters(host: HTMLElement): Layer<CastersLayer> {
+export function mountCasters(host: HTMLElement, english = false): Layer<CastersLayer> {
   host.innerHTML = TEMPLATE;
   const cards = ["left", "right", "center"].map((side, index) => ({
     side: side as keyof CastersLayer["names"],
@@ -106,7 +106,7 @@ export function mountCasters(host: HTMLElement): Layer<CastersLayer> {
     }
   }
 
-  nodecg.Replicant<Caster[]>(REPLICANTS.casters).on("change", (value) => {
+  nodecg.Replicant<Caster[]>(english ? REPLICANTS.castersEn : REPLICANTS.casters).on("change", (value) => {
     casters = value ?? [];
     render();
   });

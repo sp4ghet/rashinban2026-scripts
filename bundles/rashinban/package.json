@@ -89,6 +89,11 @@
         "file": "brackets-finals.html",
         "width": 1920,
         "height": 1080
+      },
+      {
+        "file": "info-en.html",
+        "width": 1920,
+        "height": 1080
       }
     ],
     "dashboardPanels": [
@@ -102,6 +107,12 @@
         "name": "switcher-stream",
         "title": "Stream",
         "file": "switcher-stream.html",
+        "fullbleed": true
+      },
+      {
+        "name": "switcher-en",
+        "title": "English",
+        "file": "switcher-en.html",
         "fullbleed": true
       },
       {

@@ -8,6 +8,9 @@ export interface SheetConfig {
   playersGid: string;
   /** gid of the casters tab. Empty disables the casters fetch. */
   castersGid: string;
+  /** English profile/caster tab gids. Empty disables a tab; absent uses defaults. */
+  playersEnGid?: string;
+  castersEnGid?: string;
   pollIntervalMs: number;
 }
 
@@ -18,6 +21,8 @@ export interface SheetStatus {
   lastError: string | null;
   playerCount: number;
   casterCount: number;
+  playersEnCount?: number;
+  castersEnCount?: number;
   missingColumns: string[];
   skippedRows: number;
 }
