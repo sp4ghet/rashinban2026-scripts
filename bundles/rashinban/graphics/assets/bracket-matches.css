@@ -18,7 +18,22 @@
 /* Each player row is a nested <svg>; let text run past its box. */
 .bracket-svg svg.match--player { overflow: visible; }
 .bracket-svg .match--player-background { fill: #cfcfcf; }
-.bracket-svg .match--player-name { fill: #000; font-size: 24px; }
+.bracket-svg .match--player-name {
+  fill: #000;
+  font-family: 'kaneda-gothic', 'Oswald', 'Noto Sans JP', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.bracket-svg .bracket-champion {
+  fill: #fff;
+  font-family: 'kaneda-gothic', 'Oswald', sans-serif;
+  font-size: 64px;
+  font-weight: 800;
+  font-style: italic;
+  text-anchor: middle;
+}
+#led-bracket .bracket-champion { font-size: 48px; }
 .bracket-svg .match--player-divider { stroke: #fff; stroke-width: 2px; }
 .bracket-svg .match--seed-background { fill: #646464; }
 .bracket-svg .match--player.winner .match--seed-background { fill: #ff3030; }

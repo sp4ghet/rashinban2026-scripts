@@ -19,6 +19,7 @@ export function mountBracket(host: HTMLElement, output: "stream" | "led" = "led"
         <text class="bracket-band-label" x="64" y="144" transform="rotate(-90 64 144)">UPPER</text>
         <text class="bracket-band-label" x="64" y="432" transform="rotate(-90 64 432)">LOWER</text>
         <text class="bracket-riser-label" x="1516" y="248">LOWER FINAL WINNER</text>
+        <text class="bracket-champion" x="1643" y="75">CHAMPION</text>
         <g id="bracket-lines"></g>
         <g id="bracket-matches"></g>
       </svg>

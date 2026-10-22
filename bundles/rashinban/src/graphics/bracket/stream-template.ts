@@ -64,6 +64,7 @@ export const STREAM_BRACKET_SVG = `<svg
             />
           </svg>
 
+          <text class="bracket-champion" x="1643" y="220">CHAMPION</text>
           <!-- Lines first, then boxes, so the boxes paint over the line ends. -->
           <g id="bracket-lines"></g>
           <g id="bracket-matches"></g>

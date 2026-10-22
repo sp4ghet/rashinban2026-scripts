@@ -494,7 +494,7 @@ body[data-output="led"] #banpick .bp-selection-mode { margin-left: 22px; }
 #lower-third .lt-score { flex: 0 0 81px; display: flex; align-items: center; justify-content: center; background: var(--p1-light); font-size: 64px; line-height: 1; }
 #lower-third [data-side="right"] .lt-score { background: var(--p2-light); }
 #lower-third .lt-player { display: flex; align-items: center; gap: 22px; min-width: 0; padding: 0 39px; flex: 1; }
-#lower-third .lt-name { min-width: 0; max-width: 300px; font-size: 72px; line-height: 64px; transform: translateY(-1px) scaleY(.89); }
+#lower-third .lt-name { min-width: 0; max-width: 300px; font-size: 72px; font-weight: 900; line-height: 64px; transform: translateY(-1px) scaleY(.89); }
 #lower-third .lt-handle { flex: 0 1 auto; min-width: 0; font-family: "Akshar", var(--body); font-size: 28px; line-height: 1; letter-spacing: -.5px; }
 #lower-third .lt-compass { position: absolute; left: 52px; bottom: 52px; width: 130px; height: 130px; }
 #lower-third .lt-current { position: absolute; left: 199px; bottom: 66px; width: 1000px; }

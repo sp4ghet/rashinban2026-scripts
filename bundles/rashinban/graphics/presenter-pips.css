@@ -1,9 +1,10 @@
 /* Shared points-bar design; each output keeps its own width and position. */
 body:is([data-output="stream"], [data-output="led"])[data-intermission][data-ruleset="pinpointing"] {
   .damage { display: none; }
-  .health { height: 60px; background: transparent; border: 5px solid var(--left-color); border-radius: 32px; clip-path: none; transform: none; box-shadow: none; }
-  .health.right { border-color: var(--right-color); }
-  &[data-output="led"] .health { background: #000; }
+  /* Paint the count cap under the border to avoid a second clipped curve and its seam. */
+  .health { height: 60px; background: linear-gradient(to left, var(--left-color) 60px, transparent 60px); background-origin: border-box; border: 5px solid var(--left-color); border-radius: 32px; clip-path: none; transform: none; box-shadow: none; }
+  .health.right { border-color: var(--right-color); background-image: linear-gradient(to right, var(--right-color) 60px, transparent 60px); }
+  &[data-output="led"] .health { background-color: #000; }
   /* Add the yellow halo outside the red/blue border, preserving player identity. */
   .health[data-match-point="true"] { box-shadow: 0 0 0 3px #ffd55a, 0 0 22px #ffd55a88; }
   .pips { left: 28px; right: 80px; gap: 0; justify-content: space-between; transform: none; }
@@ -11,8 +12,8 @@ body:is([data-output="stream"], [data-output="led"])[data-intermission][data-rul
   .pip { flex: 0 1 25px; width: 25px; height: auto; aspect-ratio: 1; border: 0; background: #ffffff4d; box-shadow: none; }
   .health.left .pip.filled { background: var(--left-color); box-shadow: none; }
   .health.right .pip.filled { background: var(--right-color); box-shadow: none; }
-  .health b { position: absolute; top: -5px; right: -5px; width: 60px; height: 60px; font: 700 48px/60px var(--presenter-latin); transform: none; background: var(--left-color); }
-  .health.right b { right: auto; left: -5px; background: var(--right-color); }
+  .health b { position: absolute; top: -5px; right: -5px; width: 60px; height: 60px; font: 700 48px/60px var(--presenter-latin); transform: none; background: none; text-shadow: none; }
+  .health.right b { right: auto; left: -5px; }
   .score-token { font-size: 48px; }
   .score-token.left { color: var(--left-color); }
   .score-token.right { color: var(--right-color); }

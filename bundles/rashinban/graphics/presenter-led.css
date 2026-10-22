@@ -37,7 +37,7 @@ body[data-output="led"] {
   .competitor { top: 0; bottom: auto; width: 824px; height: var(--led-header-h); gap: 14px; align-items: center; }
   .competitor.left { left: 0; padding: 0 24px 0 418px; justify-content: flex-end; background: var(--left-panel); }
   .competitor.right { right: 0; padding: 0 418px 0 24px; justify-content: flex-start; background: var(--right-panel); }
-  .competitor strong { flex: 0 1 auto; min-width: 0; font: 700 40px/1 var(--presenter-latin); text-shadow: none; }
+  .competitor strong { flex: 0 1 auto; min-width: 0; font: 900 40px/1 var(--presenter-latin); text-shadow: none; }
   .handle { flex: 0 1 auto; min-width: 0; max-width: 200px; font: 700 20px/1 "Akshar", "Noto Sans JP", sans-serif; color: #fff; }
   .competitor.left .handle { order: 0; }
   .handle:empty { display: none; }
@@ -63,7 +63,7 @@ body[data-output="led"] {
 
   /* Match the stream's lock treatment within the LED gameplay windows. */
   .player-window:has(> .lock:not([hidden]))::before { background: rgb(255 255 255 / 40%); }
-  &[data-lock] .player-window .lock { font: italic 700 128px/1 var(--presenter-latin); color: var(--left-color); }
+  &[data-lock] .player-window .lock { font: italic 900 128px/1 var(--presenter-latin); color: var(--left-color); }
   &[data-lock] .player-window.right .lock { color: var(--right-color); }
 
   /* Keep the full points award below the header, including its pop animation. */
@@ -88,6 +88,7 @@ body[data-output="led"]:is([data-scene="live"], [data-celebration-underlay="true
    covers their top 18px; the stream's 10px seam stays centered. */
 body[data-output="led"]:is([data-intermission="before-game"], [data-intermission="end-of-last-game"]) {
   .scoreboard { z-index: 6; }
+  .competitor strong { font-weight: 700; }
   .camera { display: block; top: 36px; bottom: auto; width: 960px; height: 540px; border: 0; border-radius: 0; }
   .camera.left { left: 0; }
   .camera.right { right: 0; }
