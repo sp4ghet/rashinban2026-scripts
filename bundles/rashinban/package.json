@@ -91,7 +91,22 @@
         "height": 1080
       },
       {
-        "file": "info-en.html",
+        "file": "player-cards-en.html",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "file": "interval-en.html",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "file": "bracket-en.html",
+        "width": 1920,
+        "height": 1080
+      },
+      {
+        "file": "casters-en.html",
         "width": 1920,
         "height": 1080
       }

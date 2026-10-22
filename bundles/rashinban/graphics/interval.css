@@ -55,3 +55,7 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 #layer-interval .interval-output[data-layout="led"] .interval-countdown [data-fit] { flex: 0 0 auto; transform-origin: center; }
 .interval-output[data-layout="led"] .interval-slides { left: 1371px; top: 163px; width: 450px; height: 253.125px; border-radius: 30px; }
 .interval-output[data-layout="led"] .interval-sponsors { top: 504.5px; }
+
+/* OBS supplies the background for the English standalone source. */
+[data-background="transparent"] .interval-screen { background: transparent; }
+[data-background="transparent"] .interval-screen::before { content: none; }

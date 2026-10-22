@@ -2,7 +2,7 @@
 // output's preview bus; TAKE copies preview to program and SWAP exchanges them. The monitors are
 // the real graphics pages opened on the preview/program channel.
 import { MAX_TEXT, withDefaults, layersEqual, type BroadcastOutput, type BroadcastState } from "../broadcast/state.ts";
-import { controlRows, monitorUrls, patchAt, rowDirty, valueAt, type Control, type Row } from "../broadcast/switcher-model.ts";
+import { controlRows, monitorUrls, patchAt, rowDirty, valueAt, type Control, type Row, type EnglishScene } from "../broadcast/switcher-model.ts";
 import { bindMatch } from "../graphics/broadcast/match.ts";
 import { findCaster, type Caster } from "../casters/casters.ts";
 import { BROADCAST_MESSAGES, REPLICANTS } from "../types/replicants.ts";
@@ -182,10 +182,12 @@ document.addEventListener("keydown", (event) => {
 // URLs (and the role each presenter client gets) live in monitorUrls().
 const STORAGE_KEY = `rashinban.switcher.${output}.presenterMonitors`;
 const monitorsBox = el("presenter-monitors") as HTMLInputElement;
+const monitorScene = document.getElementById("monitor-scene") as HTMLSelectElement | null;
+if (monitorScene) monitorScene.onchange = applyMonitors;
 function applyMonitors() {
   for (const monitor of document.querySelectorAll<HTMLElement>(".monitor")) {
     const channel = monitor.dataset.channel === "program" ? "program" : "preview";
-    const urls = monitorUrls(output, channel);
+    const urls = monitorUrls(output, channel, monitorScene?.value as EnglishScene | undefined);
     // The info monitor is cheap, so it is always loaded.
     const info = monitor.querySelector<HTMLIFrameElement>("iframe.info")!;
     if (!info.src.endsWith(urls.info)) info.src = urls.info;

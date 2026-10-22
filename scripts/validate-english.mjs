@@ -152,9 +152,15 @@ async function click(selector) { await evaluate(`document.querySelector(${JSON.s
 async function fill(selector, value) {
   await evaluate(`{const input=document.querySelector(${JSON.stringify(selector)});input.value=${JSON.stringify(value)};input.dispatchEvent(new Event('input',{bubbles:true}));}`);
 }
-async function chooseSource(value) {
-  await fill('#match-source', value);
-  await evaluate('document.querySelector("#match-source").dispatchEvent(new Event("change", { bubbles: true }))');
+async function chooseMonitor(value) {
+  await evaluate(`{const select=document.querySelector('#monitor-scene');select.value=${JSON.stringify(value)};select.dispatchEvent(new Event('change'));}`);
+}
+async function transparentScene(rootSelector) {
+  check('No embedded video in ' + rootSelector, await evaluate('document.querySelectorAll("video").length'), 0);
+  check('Transparent body in ' + rootSelector, await evaluate('getComputedStyle(document.body).backgroundColor'), 'rgba(0, 0, 0, 0)');
+  check('Transparent scene in ' + rootSelector, await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(rootSelector)})).backgroundColor`), 'rgba(0, 0, 0, 0)');
+  check('No full-screen scrim in ' + rootSelector, await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(rootSelector)}), '::before').content`), 'none');
+  check('No background media requested in ' + rootSelector, await evaluate(`performance.getEntriesByType('resource').some(r => /\\.(mp4|webm)(?:[?]|$)/.test(r.name))`), false);
 }
 async function screenshot(name, clip) {
   await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
@@ -207,29 +213,36 @@ try {
   check('Main clear leaves EN paused',values.intervalEn.timer.remainingMs,enPaused);
   await click('#interval-pause');await until("document.querySelector('#interval-pause').textContent === 'Pause'");
   await click('#interval-clear');await until("document.querySelector('#interval-timer-status').textContent === 'Hidden'");
-  await click('[data-row=lowerThird] button');await click('[data-row=banpick] button');await click('#take');
-  await until(`${doc('program')}.querySelector('#lower-third').classList.contains('visible')`);
-  check('Ban/pick on English Program',await evaluate(`${doc('program')}.querySelector('#banpick').classList.contains('visible')`));
+  check('English removes unrelated controls', await evaluate('document.querySelectorAll("[data-row=lowerThird], [data-row=banpick], [data-row=bracket]").length'), 0);
+  check('Interval keeps timer controls without a visibility toggle', await evaluate('document.querySelectorAll("[data-row=interval] button.toggle").length'), 0);
   await evaluate(`{const select=document.querySelector('[data-row=casters] select');select.value='trulybuzzy';select.dispatchEvent(new Event('change'));}`);
   await until("window.fixtureValues.broadcast.en.preview.casters.names.left === 'trulybuzzy'");
   await click('[data-row=casters] button');await click('#take');
-  await until(`${doc('program')}.querySelector('#caster-1 .name').textContent === 'trulybuzzy'`);
+  await chooseMonitor('casters');
+  await until(`${doc('program')}?.querySelector('#caster-1 .name')?.textContent === 'trulybuzzy'`);
   check('English casters populated',await evaluate(`${doc('program')}.querySelector('#caster-1').dataset.visible`),'true');
-  await click('[data-row=interval] button');await click('#take');
-  await until(`${doc('program')}.querySelector('#layer-interval').hidden === false`);
+  await chooseMonitor('interval');
+  await until(`${doc('program')}?.querySelector('#layer-interval')?.hidden === false`);
   check('EN upcoming names localized',await evaluate(`${doc('program')}.querySelector('.interval-matches').textContent.includes('JP ')`),false);
+  check('Interval monitor is on without enabling the broadcast layer', values.broadcast.en.program.interval.visible, false);
   await screenshot('switcher-interval');
-  await click('[data-row=bracket] button');await click('#take');
-  await until(`${doc('program')}.querySelector('#layer-bracket').hidden === false`);
-  check('Bracket replaces interval',values.broadcast.en.program.interval.visible,false);
+  await chooseMonitor('bracket');
+  await until(`${doc('program')}?.querySelector('#layer-bracket')?.hidden === false`);
   check('All EN actions leave Stream untouched',values.broadcast.stream,stream);
   // Render every requested layer directly at production size.
   await message('broadcast:clearPreview',{output:'en'});
   await message('broadcast:setPreview',{output:'en',patch:{playerCards:{visible:true,page:'profile',player:'left',position:'left'},playerCameras:{left:true,right:false}}});
   await message('broadcast:take',{output:'en'});
-  await navigate('graphics/info-en.html?cameraMode=placeholder');
+  await navigate('graphics/player-cards-en.html?cameraMode=placeholder');
   await until("document.querySelector('#cards').classList.contains('visible')");
   await screenshot('player-card');
+  check('Player scene contains only cameras and cards', await evaluate('document.querySelectorAll("#casters, #banpick, #lower-third, #layer-bracket, #layer-interval").length'), 0);
+  // Persisted legacy visibility must never cover the independent player source.
+  await message('broadcast:setPreview',{output:'en',patch:{interval:{visible:true},bracket:{visible:true},lowerThird:{visible:true},banpick:{visible:true}}});
+  await message('broadcast:take',{output:'en'});
+  await until('window.fixtureValues.broadcast.en.program.interval.visible === true');
+  check('Other scene state leaves the card visible', await evaluate('document.querySelector("#cards").classList.contains("visible")'));
+
   const overflows=[];
   for (const profile of profiles) {
     current.left.uid=profile.geoguessrPlayerUid;
@@ -240,21 +253,45 @@ try {
   }
   await writeFile(path.join(artifacts,'profile-overflow.json'),JSON.stringify(overflows,null,2));
   check('All '+profiles.length+' English profiles fit within cards',overflows,[]);
-  await message('broadcast:setPreview',{output:'en',patch:{playerCards:{visible:false},playerCameras:{left:false,right:false},lowerThird:{visible:true,mode:'scores'},banpick:{visible:true}}});
-  await message('broadcast:take',{output:'en'});await until("document.querySelector('#lower-third').dataset.mode === 'scores'");await screenshot('lower-thirds-banpick');
+  await message('broadcast:setPreview',{output:'en',patch:{casters:{slots:[true,true],names:{left:'trulybuzzy',right:'kioni_the_mage'}}}});
+  await message('broadcast:take',{output:'en'});
+  for (const [width,height,expected] of [
+    [1920,1080, [{x:330,y:60,width:390,height:170},{x:1200,y:60,width:390,height:170}]],
+    [3840,2160, [{x:660,y:120,width:780,height:340},{x:2400,y:120,width:780,height:340}]],
+  ]) {
+    await navigate('graphics/casters-en.html',width,height);
+    await until('document.querySelector("#caster-2")?.dataset.visible === "true"');
+    await evaluate('Promise.all(document.getAnimations().map(animation => animation.finished))');
+    check('Caster nameplate geometry at ' + width, await evaluate(`['#caster-1','#caster-2'].map(id=>{const {x,y,width,height}=document.querySelector(id).getBoundingClientRect();return {x,y,width,height};})`),expected);
+    const textOverflow = await evaluate(`Array.from(document.querySelectorAll('.caster:not([hidden]) .band:not([hidden]) .band-content')).flatMap(el => {
+      const range=document.createRange();range.selectNodeContents(el);
+      const text=range.getBoundingClientRect(),box=el.getBoundingClientRect();
+      return text.left < box.left - 1 || text.right > box.right + 1 ? [{text:el.textContent,width:text.width,available:box.width}] : [];
+    })`);
+    check('Caster text fits at ' + width, textOverflow, []);
+    check('Caster source contains only casters', await evaluate('document.querySelectorAll("#cards, #layer-player-cameras, #layer-bracket, #layer-interval").length'),0);
+    await screenshot('casters-' + width);
+  }
   const first=profiles[0];
   nodecg.Replicant('bracketFinals').value={source:'startgg',groupId:1,error:null,updatedAt:Date.now(),rows:[{match:1,top:'renamed-tag',bottom:'Unknown',topEntrantId:first.startggEntrantId,topScore:'2',bottomScore:'1',winner:'top',active:true}]};
-  await message('broadcast:setPreview',{output:'en',patch:{bracket:{visible:true},interval:{visible:false}}});await message('broadcast:take',{output:'en'});
+  await message('broadcast:clearPreview',{output:'en'});await message('broadcast:take',{output:'en'});
+  await navigate('graphics/bracket-en.html');
   await until("document.querySelector('#layer-bracket').hidden === false");
   await until(`document.querySelector('#match1-top').textContent === ${JSON.stringify(first.name)}`);
   check('Bracket matches English name by entrant ID',await evaluate('document.querySelector("#match1-top").textContent'),first.name);
   nodecg.Replicant('playersEn').value = profiles.map(p => p === first ? {...p,startggTag:'',startggEntrantId:null} : p);
   await until(`window.fixtureValues.playersEn[0].startggEntrantId === null`);
   check('Bracket resolves UID-only translations through shared identity',await evaluate('document.querySelector("#match1-top").textContent'),first.name);
+  await transparentScene('.bracket-wrapper');
+  check('Bracket background tints are removed', await evaluate('[...document.querySelectorAll(".filter, .filter-bright")].every(el=>getComputedStyle(el).display === "none")'));
+  await command('Emulation.setDefaultBackgroundColorOverride',{color:{r:0,g:0,b:0,a:0}});
   await screenshot('bracket');
   await message('interval:timer:en',{action:'start',durationSeconds:300});
-  await message('broadcast:setPreview',{output:'en',patch:{bracket:{visible:false},interval:{visible:true}}});await message('broadcast:take',{output:'en'});
+  await navigate('graphics/interval-en.html');
   await until("document.querySelector('#layer-interval').hidden === false");await screenshot('interval');
+  await transparentScene('.interval-screen');
+  check('Interval uses English timer even with switcher visibility off', values.broadcast.en.program.interval.visible, false);
+  check('Interval countdown renders', await evaluate('document.querySelector(".interval-countdown").textContent.trim().startsWith("04:") || document.querySelector(".interval-countdown").textContent.trim() === "05:00"'));
   check('No browser exceptions',errors,[]);
   await writeFile(path.join(artifacts,'report.json'),JSON.stringify({checks,profileCount:profiles.length,adobeFonts,errors},null,2));
   console.log(JSON.stringify({passed:checks.length,profileCount:profiles.length,artifacts}));

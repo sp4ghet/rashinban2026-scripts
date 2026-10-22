@@ -84,6 +84,22 @@ export function mountCasters(host: HTMLElement, english = false): Layer<CastersL
     }
   }
 
+  function fitEnglishText() {
+    if (!english) return;
+    for (const content of host.querySelectorAll<HTMLElement>(".caster:not([hidden]) .band:not([hidden]) .band-content")) {
+      content.style.fontSize = "";
+      const style = getComputedStyle(content);
+      const box = content.getBoundingClientRect();
+      if (!box.width || !content.offsetWidth) continue;
+      const scale = box.width / content.offsetWidth;
+      const available = (content.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)) * scale;
+      const range = document.createRange();
+      range.selectNodeContents(content);
+      const width = range.getBoundingClientRect().width;
+      if (width > available) content.style.fontSize = `${parseFloat(style.fontSize) * available / width}px`;
+    }
+  }
+
   function render() {
     for (const [index, card] of cards.entries()) {
       const caster = findCaster(casters, layer.names[card.side]);
@@ -104,12 +120,18 @@ export function mountCasters(host: HTMLElement, english = false): Layer<CastersL
       if (!card.visible || card.name !== caster.name) animate(card, true);
       card.name = caster.name;
     }
+    fitEnglishText();
   }
 
   nodecg.Replicant<Caster[]>(english ? REPLICANTS.castersEn : REPLICANTS.casters).on("change", (value) => {
     casters = value ?? [];
     render();
   });
+
+  if (english) {
+    void document.fonts.ready.then(fitEnglishText);
+    document.fonts.addEventListener("loadingdone", fitEnglishText);
+  }
 
   return {
     apply(next) {
