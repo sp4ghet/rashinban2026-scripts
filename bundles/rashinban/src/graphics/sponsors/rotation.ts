@@ -7,7 +7,6 @@ const SLIDES: Record<Layout, readonly Slide[]> = {
   presenter: [
     { file: 'tamura-builds.svg', name: 'TAMURA BUILDS', x: 672.5, width: 575, height: 575 * 87 / 598 },
     { file: 'geo_logo.svg', name: 'GeoGuessr', x: 816, width: 340, height: 340 * 40 / 208 },
-    { file: 'voicemod.png', name: 'Voicemod', x: 768, width: 384, height: 384 * 48 / 403 },
   ],
   stream: [
     { file: 'tamura-builds.svg', name: 'TAMURA BUILDS', x: 964, width: 598, height: 87 },
