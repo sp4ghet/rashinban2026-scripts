@@ -14,7 +14,7 @@ External-camera compositions can use transparent windows or regional camera keyi
 | Source | URL |
 | --- | --- |
 | Program | `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program` |
-| Separate audio | `http://localhost:9090/bundles/rashinban/graphics/presenter-audio.html?role=audio` |
+| Remote watch party | `http://localhost:9090/bundles/rashinban/graphics/presenter-remote.html` |
 | Silent browser preview | `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=preview` |
 | LED wall presenter | `http://localhost:9090/bundles/rashinban/graphics/presenter-led.html` (the wall shows the top 1920 × 576; silent, no role parameter) |
 | Stream info layers | `http://localhost:9090/bundles/rashinban/graphics/info-stream.html` (replaces the old Ban & Pick, player cards and casters sources) |
@@ -26,12 +26,14 @@ Stream info visibility is driven by the **Stream** switcher tab (see
 player cards + Ban & Pick, and bracket. Select or blank the LED output in
 OBS/ATEM; there is no LED switcher dashboard.
 
-The dashboard has **Silent preview**, **Program graphic**, **Separate
-audio** and **LED graphic** launch links that use the current NodeCG origin. The latter two expose
-the local audio activation button for browser testing. In Separate audio mode,
-open both Program graphic and Separate audio; embedded celebration sound stays
-on the program graphic. In Embedded mode, open Program graphic for all audio.
-The silent preview cannot become an audio owner.
+The dashboard has **Silent preview**, **Program graphic**, **Remote graphic**,
+and **LED graphic** launch links using the current NodeCG origin. Select
+**Embedded in graphic** and open Program graphic for all presenter audio.
+Existing Separate settings must be changed and saved; the separate audio graphic
+has been removed. The remote graphic uses relayed cameras and local map rendering
+without chroma keying; see [remote setup](remote.md). Preview, LED, and remote
+graphics cannot become shared audio owners. The remote graphic has its own local
+audio playback and shows an activation button if its browser blocks autoplay.
 
 Stream keeps its original static KV background. Only the LED presenter embeds
 the muted, looping `assets/videos/KV/RASHINBAN2026_loop_002.mp4`, cropped to fill
@@ -145,7 +147,7 @@ test-only obs-websocket commands; those commands are not a production bridge.
 
 ## Audio ownership and recovery
 
-Keep the same separate audio source active in every broadcast scene. Enable
+Keep the active program source available in every broadcast scene. Enable
 OBS browser audio routing, use one recording/output track, and disable audio
 monitoring unless deliberately routed. Mute GeoGuessr, captured player feeds,
 and any duplicate browser audio paths. Start with zero OBS sync offset and
@@ -167,8 +169,7 @@ video delay consistently to the relevant composition, including external feeds
 and cameras as needed, and remeasure on the event machine. This value is not
 a universal preset. The full recording results are in [validation](validation.md).
 
-Select **Separate** in the dashboard for the persistent audio source. Select
-**Embedded** to move music and cue ownership into the active program source.
+Select **Embedded in graphic** for music and cue ownership in the active program source.
 The old owner stops and acknowledges silence before the new owner activates;
 an unavailable old owner falls back to lease expiry. Brief silence during a
 handoff is expected. Reloading rejoins music phase and skips expired cues.

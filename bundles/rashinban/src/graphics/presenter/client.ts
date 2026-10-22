@@ -3,9 +3,11 @@ import type { PresenterClients, RendererStatus } from '../../types/replicants.ts
 import type { Cue, Timeline } from '../../types/presenter.ts';
 import type { AudioStatus } from '../../presenter/media.ts';
 import type { PresenterSettings } from '../../presenter/settings.ts';
-/** An explicit ?role wins; otherwise an LED page (body[data-output="led"]) implies led and anything else is a silent preview. */
+/** Remote viewers cannot opt into ownership. Other pages accept explicit roles; LED defaults to led. */
 export function clientRole(search: string, output?: string): ClientRole {
-  const role = new URLSearchParams(search).get('role');
+  const params = new URLSearchParams(search);
+  const role = params.get('role');
+  if (output === 'remote') return role === 'preview' || params.get('channel') === 'preview' ? 'preview' : 'remote';
   return role === 'program' ? 'program' : role === 'led' ? 'led' : role === 'preview' ? 'preview' : output === 'led' ? 'led' : 'preview';
 }
 export type ClientDeps = { clientId: string; role: ClientRole; wallNow(): number; monotonicNow(): number;
@@ -36,8 +38,8 @@ export function createPresenterClient(deps: ClientDeps) {
     if (next !== active) { active = next; ownership++; adopt = true; }
     return active;
   }
-  /** Program plays celebrations as the lease owner; an LED client plays them too, silently, on a fresh clock. */
-  function playsVideo() { return ownsProgram() || (!disposed && deps.role === 'led' && deps.monotonicNow() - lastSync < 30000); }
+  /** Independent LED/remote viewers play celebrations on a fresh clock without owning the program. */
+  function playsVideo() { return ownsProgram() || (!disposed && (deps.role === 'led' || deps.role === 'remote') && deps.monotonicNow() - lastSync < 30000); }
   async function sync() {
     const samples: ClockSample[] = [];
     for (let i = 0; i < 5 && !disposed; i++) {
@@ -59,18 +61,29 @@ export function createPresenterClient(deps: ClientDeps) {
       clockFresh: deps.monotonicNow() - lastSync < 30000 }).catch(() => {});
     schedule(heartbeat, 2000);
   }
+  function programOwner() {
+    const lease = clients.program;
+    return !disposed && deps.monotonicNow() - lastSync < 30000 && lease && eligibleCompletion(lease, lease.clientId, now()) ? lease.clientId : null;
+  }
+  function audioLease(mode: PresenterSettings['audioOutput']) {
+    const lease = clients.audio;
+    return !disposed && deps.monotonicNow() - lastSync < 30000 && lease && !lease.releasing && lease.mode === mode
+      && eligibleCompletion(lease, deps.clientId, now())
+      && (mode === 'separate' ? deps.role === 'audio' : ownsProgram()) ? lease : null;
+  }
   return {
     async start() { if (started || disposed) return; started = true; heartbeat(); await sync(); },
-    now, ownsProgram, playsVideo,
-    programOwner() {
-      const lease = clients.program;
-      return !disposed && deps.monotonicNow() - lastSync < 30000 && lease && eligibleCompletion(lease, lease.clientId, now()) ? lease.clientId : null;
-    },
-    audioLease(mode: PresenterSettings['audioOutput']) {
-      const lease = clients.audio;
-      return !disposed && deps.monotonicNow() - lastSync < 30000 && lease && !lease.releasing && lease.mode === mode
-        && eligibleCompletion(lease, deps.clientId, now())
-        && (mode === 'separate' ? deps.role === 'audio' : ownsProgram()) ? lease : null;
+    now, ownsProgram, playsVideo, programOwner, audioLease,
+    audioPlayback(mode: PresenterSettings['audioOutput']) {
+      if (!disposed && deps.role === 'remote' && deps.monotonicNow() - lastSync < 30000) {
+        // Use the same clock as this viewer's visuals. The audio-thread gate
+        // expires with clock freshness even if this page's JS stops running.
+        const expiresAtMs = now() + 30000 - (deps.monotonicNow() - lastSync);
+        return { key: `remote:${deps.clientId}:${lastSync}`, expiresAtMs, videoOwner: deps.clientId, independent: true };
+      }
+      const lease = audioLease(mode);
+      return lease ? { key: `${lease.token}:${lease.expiresAtMs}`, expiresAtMs: lease.expiresAtMs,
+        videoOwner: programOwner(), independent: false } : null;
     },
     releasingAudio() { return clients.audio?.clientId === deps.clientId && clients.audio.releasing ? clients.audio : null; },
     setAudioStatus(value: AudioStatus) { audio = value; },

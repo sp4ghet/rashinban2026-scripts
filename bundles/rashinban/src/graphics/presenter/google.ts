@@ -104,6 +104,14 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
         motionTracking: false, motionTrackingControl: false, showRoadLabels: false,
         addressControl: false, fullscreenControl: false, enableCloseButton: false,
       }));
+      const compass = dom.host.ownerDocument.createElement('div');
+      compass.className = 'streetview-compass'; compass.hidden = true;
+      const circle = dom.host.ownerDocument.createElement('div'); circle.className = 'streetview-compass-circle';
+      const needle = dom.host.ownerDocument.createElement('img');
+      needle.className = 'streetview-compass-needle'; needle.src = 'assets/streetview-compass.svg';
+      needle.alt = 'Compass: red points north'; needle.draggable = false;
+      compass.append(circle, needle);
+      dom.host.append(compass);
       const service = new maps.StreetViewService();
       let latest: Panorama | null = null; let requested: string | null = null; let resolved = ''; let generation = 0; let disposed = false;
       let identity: string | undefined; let visible = true; let canvasVisible = false; let sdkVisible = false; let canvasSize = ''; let frozen = false;
@@ -113,6 +121,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
         if (ready !== sdkVisible) { sdkVisible = ready; pano.setVisible(ready); }
         const next = visible && ready;
         dom.canvas.style.visibility = next ? 'visible' : 'hidden';
+        compass.hidden = !next;
         const nextSize = `${dom.canvas.clientWidth}:${dom.canvas.clientHeight}`;
         if (next && (!canvasVisible || nextSize !== canvasSize)) maps.event.trigger(pano, 'resize');
         canvasSize = nextSize;
@@ -132,6 +141,7 @@ export function googleAdapter(root: HTMLElement, maps: typeof google.maps, onErr
         if (!latest || !resolved || googlePanoId(latest.panoId) !== resolved) return;
         const next = smoothing.sample(latest, now(), snapPov || !visible); snapPov = false;
         if (!writtenPov || next.heading !== writtenPov.heading || next.pitch !== writtenPov.pitch) pano.setPov({ heading: next.heading, pitch: next.pitch });
+        if (!writtenPov || next.heading !== writtenPov.heading) needle.style.transform = `rotate(${-next.heading}deg)`;
         if (!writtenPov || next.zoom !== writtenPov.zoom) pano.setZoom(next.zoom);
         writtenPov = next;
       }

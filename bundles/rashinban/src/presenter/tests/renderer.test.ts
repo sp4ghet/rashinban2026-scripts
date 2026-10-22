@@ -508,6 +508,56 @@ test('a fixed initial POV stays exact without writes even when heading uses a si
   assert.equal(fake.panos[0].povWrites, 1); assert.equal(fake.panos[0].zoomWrites, 1);
 });
 
+test('Street View compass follows the displayed smoothed heading and hides with its panorama', () => {
+  const fake = googleBoundary(); let now = 0;
+  const surface = googleAdapter(fake.root, fake.api, assert.fail, () => {}, () => now).panorama('left-view');
+  const compass = fake.slots.get('#left-view')!.children.find(child => child.className === 'streetview-compass');
+  assert.ok(compass, 'panorama includes a compass');
+  const needle = compass.children.find(child => child.className === 'streetview-compass-needle');
+  assert.ok(needle);
+  assert.equal(compass.style.transform, undefined, 'the ring stays stationary');
+  assert.equal(compass.hidden, true, 'unresolved imagery has no compass');
+  const p = { lat: 1, lng: 2, panoId: 'same', heading: 350, pitch: 20, zoom: 1 };
+  const options = { identity: 'compass-test', visible: true };
+  surface.render(p, options); fake.requests[0].callback({ location: { pano: 'same' } }, 'OK');
+  assert.equal(compass.hidden, false);
+  assert.equal(needle.style.transform, 'rotate(-350deg)');
+  const target = { ...p, heading: 10 };
+  surface.render(target, options); now = 100; surface.render(target, options);
+  assert.equal(needle.style.transform, 'rotate(0deg)', 'north tracks the short arc through north');
+  now = 200; surface.render(target, options);
+  assert.equal(needle.style.transform, 'rotate(-10deg)');
+  surface.render({ ...p, heading: 180 }, { ...options, frozen: true });
+  assert.equal(needle.style.transform, 'rotate(-10deg)', 'frozen imagery retains its displayed heading');
+  surface.render(target, { ...options, visible: false });
+  assert.equal(compass.hidden, true);
+  surface.render({ ...p, heading: 90 }, options);
+  assert.equal(compass.hidden, false);
+  assert.equal(needle.style.transform, 'rotate(-90deg)', 'north points left while facing east');
+  surface.render(null);
+  assert.equal(compass.hidden, true);
+  surface.dispose(); assert.equal(fake.slots.get('#left-view')!.children.length, 0);
+});
+
+for (const source of ['rendered', 'chroma', 'video'] as const) for (const output of ['stream', 'led'] as const) {
+  test(`${output} round preview includes its own compass with ${source} gameplay`, () => {
+    const fake = googleBoundary(); const renderer = createRenderer(googleAdapter(fake.root, fake.api, assert.fail), assert.fail);
+    const f = frame(); f.source = source; f.output = output;
+    f.previewRound = f.state.round; f.projection.phase = 'pre-round'; f.projection.answer = null;
+    renderer.render(f);
+    for (const request of fake.requests) request.callback({ location: { pano: request.request.pano } }, 'OK');
+    const compass = fake.slots.get('#preview-panorama')?.children.find(child => child.className === 'streetview-compass');
+    assert.ok(compass, 'preview panorama includes a compass');
+    const needle = compass.children.find(child => child.className === 'streetview-compass-needle');
+    assert.ok(needle);
+    assert.equal(compass.hidden, false);
+    assert.equal(needle.style.transform, `rotate(${-f.state.rounds.find(round => round.number === f.state.round)!.panorama.heading}deg)`);
+    f.previewRound = null; f.projection.phase = 'live'; renderer.render(f);
+    assert.equal(compass.hidden, true, 'preview compass hides when live play starts');
+    renderer.dispose();
+  });
+}
+
 for (const fps of [30, 60]) test(`POV interpolation uses elapsed time at ${fps} fps and repeated targets do not restart it`, () => {
   const fake = googleBoundary(); let now = 0;
   const surface = googleAdapter(fake.root, fake.api, assert.fail, () => {}, () => now).panorama('left-view');

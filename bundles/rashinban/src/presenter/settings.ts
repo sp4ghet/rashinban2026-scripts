@@ -11,7 +11,7 @@ export type PresenterSettings = {
   cameraFraming: { left: number; right: number };
 };
 export const DEFAULT_SETTINGS: PresenterSettings = {
-  viewSource: 'chroma', keyColor: '#ff00ff', audioOutput: 'separate', muted: false,
+  viewSource: 'chroma', keyColor: '#ff00ff', audioOutput: 'embedded', muted: false,
   musicGain: 0.7, effectsGain: 1, timing: { ...DEFAULT_TIMING },
   tieRange: { enabled: false, mode: 'full' },
   pinpointing: { enabled: false },

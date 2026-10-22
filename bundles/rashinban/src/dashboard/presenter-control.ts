@@ -198,7 +198,7 @@ function applySettings(value: PresenterSettings | undefined) {
   select('tie-range-mode').value = value.tieRange?.mode ?? 'full';
   select('tie-range-mode').disabled = !input('tie-range-enabled').checked;
   element('audio-launch-help').textContent = value.audioOutput === 'separate'
-    ? 'Open Program graphic and Separate audio.'
+    ? 'The separate audio graphic has been removed. Select Embedded in graphic and save settings to enable program audio.'
     : 'Open Program graphic for video and audio.';
 }
 settings.on('change', value => { settingsConfiguration.acceptProjection(() => applySettings(value)); status(); });

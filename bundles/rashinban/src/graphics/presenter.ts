@@ -44,22 +44,24 @@ let selectedMedia = EMPTY_MEDIA;
 const videoPlayer = createVideoPlayer(() => {
   const video = document.createElement('video'); video.className = 'celebration-video'; document.body.append(video); return video;
 }, (fn, ms) => { const id = setTimeout(fn, ms); return () => clearTimeout(id); });
-const role = clientRole(location.search, document.body.dataset.output);
+const remoteOutput = document.body.dataset.presenter === 'remote';
+const role = clientRole(location.search, remoteOutput ? 'remote' : document.body.dataset.output);
 const clientId = crypto.randomUUID();
 const client = createPresenterClient({ clientId, role, wallNow: () => Date.now(), monotonicNow: () => performance.now(),
   send: (name, body) => nodecg.sendMessage(name, body), schedule(fn, ms) { const id = setTimeout(fn, ms); return () => clearTimeout(id); } });
-const audioOutput = createAudioOutput(client);
+const audioOutput = createAudioOutput(client, { unlock: role === 'remote' });
 const ledOutput = document.body.dataset.output === 'led' || role === 'led';
 const relayParam = new URLSearchParams(location.search).get('videoRelay');
-const relayCameras = ledOutput || new URLSearchParams(location.search).get('relayCameras') === '1';
-const relay = relayParam !== null ? createRelayReceiver({ room: relayName(relayParam), cameras: relayCameras,
+const relayCameras = remoteOutput || ledOutput || new URLSearchParams(location.search).get('relayCameras') === '1';
+const relay = !remoteOutput && relayParam !== null ? createRelayReceiver({ room: relayName(relayParam), cameras: relayCameras,
   request: request => nodecg.sendMessage(RELAY_MESSAGE, request) as Promise<RelayResponse>,
-  status(message) { document.body.dataset.relayStatus = message; capture.setRelayStatus(message); },
+  status(message) { document.body.dataset.relayStatus = message; capture?.setRelayStatus(message); },
 }) : null;
-const capture = createCaptureUI(document.body, location.search, ledOutput ? 'led' : 'stream', { relay: relay ?? undefined });
+const capture = remoteOutput ? null : createCaptureUI(document.body, location.search, ledOutput ? 'led' : 'stream', { relay: relay ?? undefined });
 // Plain LED URLs retain local gameplay capture and receive only the cameras
-// from the default room. A videoRelay URL shares its existing connection.
-const cameraRelay = ledOutput && !relay ? createRelayReceiver({ room: 'main', feeds: ['camera-left', 'camera-right'],
+// from the default room. Remote viewers only ever subscribe to cameras, even
+// when videoRelay names a room; their gameplay is always rendered locally.
+const cameraRelay = (remoteOutput || ledOutput) && !relay ? createRelayReceiver({ room: relayName(remoteOutput ? relayParam ?? 'main' : 'main'), feeds: ['camera-left', 'camera-right'],
   request: request => nodecg.sendMessage(RELAY_MESSAGE, request) as Promise<RelayResponse>,
   status(message) { document.body.dataset.cameraRelayStatus = message; },
 }) : null;
@@ -88,10 +90,10 @@ function reconcileVideo() {
   const options = settings.value ?? DEFAULT_SETTINGS;
   // LED follows its own fresh clock; it must never take the stream's program
   // lease. Switcher previews do not open devices, even on the LED page.
-  const captureActive = client.playsVideo() && (!ledOutput || channelFromSearch(location.search) === 'program');
+  const captureActive = client.playsVideo() && (!(ledOutput || remoteOutput) || channelFromSearch(location.search) === 'program');
   relay?.setActive(captureActive && (options.viewSource === 'video' || !!cameras));
   cameraRelay?.setActive(captureActive);
-  capture.update(options.viewSource, captureActive);
+  capture?.update(options.viewSource, captureActive);
   cameras?.update(captureActive);
   videoPlayer.update(timeline.value?.generation ?? null, client.playsVideo(), timeline.value?.effect ?? 'none', silent(options.muted), options.effectsGain);
   audioOutput.sync(timeline.value, options);
@@ -137,7 +139,7 @@ function startRenderer(value?: PresenterPublicConfig) {
 }
 publicConfig.on('change', startRenderer);
 startRenderer(publicConfig.value);
-window.addEventListener('pagehide', () => { clearInterval(mediaGuard); chromaWindows.dispose(); capture.dispose(); cameras?.dispose(); cameraRelay?.dispose(); relay?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
+window.addEventListener('pagehide', () => { clearInterval(mediaGuard); chromaWindows.dispose(); capture?.dispose(); cameras?.dispose(); cameraRelay?.dispose(); relay?.dispose(); videoPlayer.dispose(); audioOutput.dispose(); client.dispose(); renderer?.dispose(); });
 
 function frame() {
   let captureFrame: RenderFrame | null = null;
@@ -146,7 +148,7 @@ function frame() {
   const timing = timeline.value;
   const match = series.value;
   const options = settings.value ?? DEFAULT_SETTINGS;
-  const viewSource = options.viewSource;
+  const viewSource = remoteOutput ? 'rendered' : options.viewSource;
   // Sole graphic cue consumer; sound scheduling belongs to the audio lease engine.
   for (const cue of client.pollCues()) if (cue.kind === 'five-k' && timing) {
     const complete = client.effectCompletion(timing);
@@ -155,7 +157,7 @@ function frame() {
     else void complete(true);
   }
   reconcileVideo();
-  document.documentElement.style.setProperty('--key-color', options.keyColor);
+  document.documentElement.style.setProperty('--key-color', remoteOutput ? '#080d17' : options.keyColor);
   document.body.dataset.source = viewSource;
   document.body.dataset.layout = layoutKind(state?.mode ?? 'NMPZ', viewSource, ledOutput);
   document.body.dataset.celebrationUnderlay = 'false';
@@ -272,8 +274,8 @@ function frame() {
     renderer?.render({ ...previousFrame, source: viewSource, projection: { phase: 'waiting-game', answer: null, players: [], remainingMs: null } });
     previousFrame = null;
   }
-  capture.render(captureFrame);
-  chromaWindows.update(options.keyColor === 'transparent');
+  capture?.render(captureFrame);
+  chromaWindows.update(!remoteOutput && options.keyColor === 'transparent');
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

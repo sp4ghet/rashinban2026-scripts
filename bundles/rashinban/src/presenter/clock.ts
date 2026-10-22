@@ -1,6 +1,6 @@
 export type ClockSample = { sentMs: number; receivedMs: number; serverMs: number };
 export type Lease = { clientId: string; expiresAtMs: number };
-export type ClientRole = 'program' | 'preview' | 'audio' | 'led';
+export type ClientRole = 'program' | 'preview' | 'audio' | 'led' | 'remote';
 export type ClientReady = { clientId: string; role: ClientRole; ready: boolean };
 export function clockOffset(samples: readonly ClockSample[]): number {
   const valid = samples.filter(s => [s.sentMs, s.receivedMs, s.serverMs].every(Number.isFinite) && s.receivedMs >= s.sentMs);

@@ -31,8 +31,8 @@ Each result remains available for 30 seconds, including enough time for the
 five-second single-5K clip and scoring, or the missing-effect watchdog. A double
 5K uses only the separately configured double-5K asset. If that asset is absent,
 the normal missing-media fallback continues to the tied scores; the single-5K
-clip is not duplicated. Use the Program graphic to test embedded audio. If the
-audio setting is Separate, also open the separate audio source. The silent
+clip is not duplicated. Use the Program graphic to test embedded audio. Set
+audio to **Embedded in graphic**; the separate audio graphic has been removed. The silent
 preview deliberately emits no audio. Google imagery still requires
 the presenter's configured Google API key.
 

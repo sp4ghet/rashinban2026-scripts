@@ -25,7 +25,7 @@ affects the LED layout.
 | `brackets-finals.html` | stream | Standalone finals bracket with embedded KV video, always on |
 
 Unchanged: `banpick-player.html` (tablet),
-`presenter-audio.html`. Removed: `banpick-stream.html`, `banpick-led.html`,
+`presenter-remote.html` (camera relay plus locally rendered maps for remote viewers). Removed: `banpick-stream.html`, `banpick-led.html`,
 `player-cards.html`, `casters.html`.
 
 ## Bus model

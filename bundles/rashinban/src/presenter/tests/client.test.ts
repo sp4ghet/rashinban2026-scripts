@@ -5,7 +5,7 @@ import { advanceTimeline } from '../timeline.ts';
 import { DEFAULT_SETTINGS } from '../settings.ts';
 import type { Timeline } from '../../types/presenter.ts';
 
-function client(role: 'preview' | 'program' | 'led' = 'program') {
+function client(role: 'preview' | 'program' | 'led' | 'remote' = 'program') {
   let elapsed = 0; let wall = 1000; let pings = 0;
   const sent: { name: string; body: any }[] = [];
   const tasks: { fn: () => void; at: number; active: boolean }[] = [];
@@ -100,8 +100,8 @@ test('?role=led opts into the led role', () => {
   assert.equal(clientRole('?role=LED'), 'preview');
 });
 
-test('led plays video cues on its own clock but never owns program, audio, or effect completion', async () => {
-  const c = client('led'); await c.value.start();
+for (const role of ['led', 'remote'] as const) test(`${role} plays video cues on its own clock but never owns program, audio, or effect completion`, async () => {
+  const c = client(role); await c.value.start();
   const t = timeline();
   c.value.updateClients({ clients: [], program: { clientId: 'other', expiresAtMs: 6000 } }); c.value.updateTimeline(t);
   assert.equal(c.value.ownsProgram(), false);
@@ -115,9 +115,59 @@ test('led plays video cues on its own clock but never owns program, audio, or ef
   assert.deepEqual(c.value.pollCues(), []);
   const sent = c.sent.length;
   assert.equal(await c.value.effectCompletion(t)(), false);
-  assert.equal(c.sent.length, sent, 'led never reports effect-ended');
-  c.advance(31000); assert.equal(c.value.playsVideo(), false, 'stale clock stops led playback');
+  assert.equal(c.sent.length, sent, `${role} never reports effect-ended`);
+  c.advance(31000); assert.equal(c.value.playsVideo(), false, 'stale clock stops independent playback');
   c.value.dispose(); assert.equal(c.value.playsVideo(), false);
+});
+
+test('remote pages stay independent even when a program or LED role is requested', () => {
+  for (const search of ['', '?role=program', '?role=led', '?role=audio']) assert.equal(clientRole(search, 'remote'), 'remote');
+  assert.equal(clientRole('?role=preview', 'remote'), 'preview');
+  assert.equal(clientRole('?channel=preview', 'remote'), 'preview');
+});
+
+test('remote audio follows its own fresh clock independently of the program and audio leases', async () => {
+  const c = client('remote');
+  assert.equal(c.value.audioPlayback('embedded'), null, 'no audio before clock sync');
+  await c.value.start();
+  const first = c.value.audioPlayback('embedded')!;
+  assert.equal(first.videoOwner, 'one');
+  assert.equal(first.independent, true);
+  assert.equal(first.expiresAtMs, 31200);
+  c.value.updateClients({ clients: [], program: { clientId: 'program-a', expiresAtMs: 6000 },
+    audio: { clientId: 'program-a', mode: 'embedded', token: 7, releasing: false, expiresAtMs: 6000 } });
+  c.advance(1000);
+  assert.deepEqual(c.value.audioPlayback('separate'), first, 'global audio mode does not change local playback');
+  c.value.updateClients({ clients: [], program: { clientId: 'program-b', expiresAtMs: 7000 } });
+  assert.deepEqual(c.value.audioPlayback('embedded'), first, 'program transfer cannot restart or cancel remote sound');
+  assert.equal(c.value.audioLease('embedded'), null);
+  c.advance(30000);
+  assert.equal(c.value.audioPlayback('embedded'), null, 'stale clock stops local audio');
+  const refresh = c.tasks.find(task => task.active && task.at === 10100)!;
+  refresh.fn();
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  const renewed = c.value.audioPlayback('embedded')!;
+  assert.ok(renewed.expiresAtMs > first.expiresAtMs, 'successful clock refresh renews the local audio gate');
+  assert.notEqual(renewed.key, first.key);
+  c.value.dispose();
+  assert.equal(c.value.audioPlayback('embedded'), null);
+});
+
+for (const role of ['led', 'preview'] as const) test(`${role} has no independent audio session`, async () => {
+  const c = client(role); await c.value.start();
+  assert.equal(c.value.audioPlayback('embedded'), null);
+  assert.equal(c.value.audioPlayback('separate'), null);
+  c.value.dispose();
+});
+
+test('program audio playback still requires its shared lease and tracks the video owner', async () => {
+  const c = client(); await c.value.start();
+  assert.equal(c.value.audioPlayback('embedded'), null);
+  c.value.updateClients({ clients: [], program: { clientId: 'one', expiresAtMs: 6000 },
+    audio: { clientId: 'one', mode: 'embedded', token: 7, releasing: false, expiresAtMs: 6000 } });
+  assert.deepEqual(c.value.audioPlayback('embedded'), { key: '7:6000', expiresAtMs: 6000, videoOwner: 'one', independent: false });
+  assert.equal(c.value.audioPlayback('separate'), null);
+  c.value.dispose();
 });
 
 test('preview still never plays video', async () => {

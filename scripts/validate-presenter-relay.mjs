@@ -11,11 +11,13 @@ import { applySnapshot } from '../bundles/rashinban/src/presenter/normalize.ts';
 import { seedViews } from '../bundles/rashinban/src/presenter/telemetry.ts';
 import { advanceTimeline, DEFAULT_TIMING } from '../bundles/rashinban/src/presenter/timeline.ts';
 import { DEFAULT_SETTINGS } from '../bundles/rashinban/src/presenter/settings.ts';
+import { audioBootstrap, serveAudioFixture, validateRemoteAudio } from './validate-presenter-remote-audio.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const cameraTest = process.argv.includes('--cameras');
+const remoteTest = process.argv.includes('--remote');
+const cameraTest = remoteTest || process.argv.includes('--cameras');
 const inputCount = cameraTest ? 4 : 2;
-const out = path.join(root, 'artifacts/presenter-validation', cameraTest ? 'relay-cameras' : 'relay');
+const out = path.join(root, 'artifacts/presenter-validation', remoteTest ? 'remote' : cameraTest ? 'relay-cameras' : 'relay');
 await mkdir(out, { recursive: true });
 const state = applySnapshot(null, JSON.parse(await readFile(path.join(root, 'docs/geoguessr/samples/gs2-ws-DuelStarted.json'), 'utf8'))).state;
 state.rounds[0].startAtMs = Date.now() - 1000; state.rounds[0].endAtMs = Date.now() + 600000;
@@ -40,10 +42,11 @@ qa.cameraHash=side=>{const v=document.getElementById('camera-'+side+'-video');co
 qa.mode=mode=>qa.set('presenterSettings',{...nodecg.Replicant('presenterSettings').value,viewSource:mode});
 qa.hold=()=>qa.set('presenterTimeline',{...nodecg.Replicant('presenterTimeline').value,phase:'results-transition',effect:'single-5k'});
 qa.reset=()=>qa.set('presenterTimeline',structuredClone(qa.initial.presenterTimeline));
-`;
+` + (remoteTest ? audioBootstrap : '');
 const broker = createRelayBroker();
 const server = createServer(async (req, res) => {
   try {
+    if (remoteTest && await serveAudioFixture(req, res)) return;
     if (req.url === '/signal') {
       const chunks = []; for await (const c of req) chunks.push(c);
       res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(broker.request(JSON.parse(Buffer.concat(chunks).toString())))); return;
@@ -61,7 +64,7 @@ const profile = path.join(out, 'chrome-' + Date.now()); const pages = []; const 
 const browser = spawn(process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', [
   '--headless=new', '--remote-debugging-port=0', '--user-data-dir=' + profile, '--no-first-run', '--no-default-browser-check',
   '--disable-background-networking', '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
-  '--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream=device-count=' + (cameraTest ? 5 : 3) + ',fps=30', 'about:blank',
+  '--autoplay-policy=' + (remoteTest ? 'document-user-activation-required' : 'no-user-gesture-required'), '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream=device-count=' + (cameraTest ? 5 : 3) + ',fps=30', 'about:blank',
 ], { windowsHide: true, stdio: 'ignore' });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 let debugPort;
@@ -106,6 +109,47 @@ try {
   await owner.until('qa.active()===' + inputCount, 'each selected physical input is opened once');
   const cameraIds = cameraTest ? await owner.eval("['camera-left','camera-right'].map(feed=>document.getElementById('video-'+feed+'-preview').srcObject.getVideoTracks()[0].id)") : [];
   const originalIds = await owner.eval("['left','right'].map(side=>document.getElementById('video-'+side+'-preview').srcObject.getVideoTracks()[0].id)");
+  if (remoteTest) {
+    for (const query of ['', '?videoRelay=main&role=program&relayCameras=0&videoSetup=1']) {
+      const remote = await page('/presenter-remote.html' + query);
+      await remote.until(camerasReady, 'remote receives both cameras ' + query);
+      assert.equal(await remote.eval('qa.requests.length'), 0, 'remote never opens physical devices');
+      assert.equal(await remote.eval("document.body.dataset.role"), 'remote');
+      assert.equal(await remote.eval("document.body.dataset.program"), 'false');
+      assert.equal(await remote.eval("!!document.querySelector('#video-setup')"), false, 'remote has no local device setup');
+      const directions = await remote.eval("qa.peers.filter(p=>p.connectionState==='connected').map(p=>p.getTransceivers().map(t=>t.currentDirection))");
+      assert.deepEqual(directions, [['inactive', 'inactive', 'recvonly', 'recvonly']], 'only camera media is negotiated');
+      for (const source of ['chroma', 'video', 'rendered']) {
+        for (const keyColor of ['#00ff00', '#ff00ff', 'transparent']) {
+          await remote.eval(`qa.set('presenterSettings',{...nodecg.Replicant('presenterSettings').value,viewSource:${JSON.stringify(source)},keyColor:${JSON.stringify(keyColor)}})`);
+          await remote.until("document.body.dataset.source==='rendered' && getComputedStyle(document.documentElement).getPropertyValue('--key-color').trim()==='#080d17'", 'remote renders locally with ' + source + '/' + keyColor);
+          assert.equal(await remote.eval("['left','right'].every(side=>!document.querySelector('.camera.'+side).classList.contains('key-slot'))"), true);
+          assert.equal(await remote.eval("getComputedStyle(document.querySelector('.backdrop')).clipPath"), 'none', 'remote never cuts alpha holes');
+        }
+      }
+      await remote.eval("qa.cameraBefore=qa.cameraHash('left');qa.hold()");
+      await remote.until("qa.cameraBefore!==qa.cameraHash('left')", 'remote cameras remain live through results transition');
+      await remote.eval('qa.reset()');
+      const shot = await remote.call('Page.captureScreenshot', { format: 'png' });
+      await writeFile(path.join(out, query ? 'remote-explicit.png' : 'remote-default.png'), Buffer.from(shot.data, 'base64'));
+    }
+    const otherOwner = await page('/presenter-capture.html?relay=watch-party');
+    await otherOwner.eval("document.getElementById('relay-start').click()");
+    await otherOwner.until("document.querySelectorAll('#video-camera-left-device option').length===6", 'named room camera inputs available');
+    await otherOwner.eval("document.getElementById('video-camera-left-device').selectedIndex=4;document.getElementById('video-camera-right-device').selectedIndex=5;document.getElementById('video-apply').click()");
+    const named = await page('/presenter-remote.html?videoRelay=watch-party');
+    await named.until(camerasReady, 'remote receives cameras from a named room');
+    assert.equal(await named.eval('qa.requests.length'), 0);
+    for (const query of ['role=preview', 'channel=preview']) {
+      const preview = await page('/presenter-remote.html?' + query);
+      await delay(1200);
+      assert.equal(await preview.eval('qa.relayJoins'), 0, 'remote preview does not join relay');
+      assert.equal(await preview.eval('qa.requests.length'), 0);
+      assert.equal(await preview.eval("document.body.dataset.audioPlayback"), 'inactive', 'previews do not start local audio');
+    }
+    checks.push('camera-only negotiation, no physical capture, no program ownership, and silent preview');
+    await validateRemoteAudio(page, checks);
+  } else {
   const stream = await page('/presenter.html?role=program&videoRelay=main&videoSetup=1&dropOffer=1' + (cameraTest ? '&relayCameras=1' : ''));
   const led = await page('/presenter-led.html?videoRelay=main');
   await stream.until(ready, 'stream recovers from a lost offer acknowledgement');
@@ -264,6 +308,7 @@ try {
     if (name !== 'capture') await viewer.eval("document.getElementById('video-close').click()");
     await viewer.call('Page.bringToFront'); await delay(100);
     const shot = await viewer.call('Page.captureScreenshot', { format: 'png' }); await writeFile(path.join(out, name + '.png'), Buffer.from(shot.data, 'base64'));
+  }
   }
   assert.deepEqual(errors, []);
   const report = { checks, errors, physicalHardware: 'Not tested; Chromium fake devices only', userAgent: await owner.eval('navigator.userAgent') };

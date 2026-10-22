@@ -58,7 +58,8 @@ event follows the authoritative round start, with no historical replay on join.
 The current single-5K video uses its embedded soundtrack. Assigning `five-k`
 does not play an additional effect over it: that cue is used only when the
 selected celebration's soundtrack setting is **Separate five-k cue**. Program
-graphics play embedded audio; Separate audio mode also needs an audio source.
+graphics play embedded audio. Select **Embedded in graphic** for music and cues;
+the separate audio graphic has been removed.
 Pin placement is silent in the presenter. Player-client land/water placement
 sounds are not assigned to the game-master overlay.
 

@@ -72,7 +72,8 @@ your credentials.
 - [Validation evidence and outstanding event checks](docs/presenter/validation.md)
 
 Program: `http://localhost:9090/bundles/rashinban/graphics/presenter.html?role=program`.
-Separate audio: `http://localhost:9090/bundles/rashinban/graphics/presenter-audio.html?role=audio`.
+Remote watch party: `http://localhost:9090/bundles/rashinban/graphics/presenter-remote.html` (use the reachable NodeCG host off-site). See [remote setup](docs/presenter/remote.md).
+Presenter audio uses the active program graphic; select **Embedded in graphic** in Config.
 LED sources (always on, switch in OBS/ATEM):
 
 - Presenter: `http://localhost:9090/bundles/rashinban/graphics/presenter-led.html`

@@ -92,6 +92,7 @@ test('audio mode handoff waits for old mute acknowledgement or expiry, and denie
   const message = (name: string, body: unknown) => { let result: any; listeners.get(name)?.(body, (err: unknown, value: unknown) => { result = err ? 'rejected' : value; }); return result; };
   const report = (clientId: string, role: string) => message('presenter:client', { clientId, role, ready: false, renderer: 'missing-key', clockFresh: true, audio: { state: 'ready', missing: [] } });
   const audio = () => reps.get('presenterClients').value.audio;
+  message('presenter:control', { action: 'settings', body: { ...DEFAULT_SETTINGS, audioOutput: 'separate' } });
   report('preview', 'preview'); assert.equal(audio() ?? null, null);
   report('program', 'program'); report('one', 'audio'); report('two', 'audio');
   assert.equal(audio()?.clientId, 'one'); const first = { ...audio() };
@@ -101,7 +102,7 @@ test('audio mode handoff waits for old mute acknowledgement or expiry, and denie
   assert.equal(message('presenter:audio-muted', { clientId: 'one', token: first.token }), true);
   assert.equal(audio().clientId, 'program', 'missing Google key must not block embedded audio'); assert.equal(audio().mode, 'embedded');
   assert.notEqual(audio().token, first.token);
-  message('presenter:control', { action: 'settings', body: DEFAULT_SETTINGS });
+  message('presenter:control', { action: 'settings', body: { ...DEFAULT_SETTINGS, audioOutput: 'separate' } });
   assert.equal(audio().clientId, 'program'); assert.equal(audio().releasing, true);
   now += 2000; report('two', 'audio');
   now = 106000; for (const t of tasks.filter(t => t.active && t.at <= now)) { t.active = false; t.fn(); }
@@ -114,7 +115,7 @@ test('audio mode handoff waits for old mute acknowledgement or expiry, and denie
   assert.equal(reportMissing([...missing, 'overflow']), 'rejected');
 });
 
-test('led clients are accepted but never hold the program or audio lease and cannot receive a transfer', () => {
+for (const role of ['led', 'remote']) test(`${role} clients are accepted but never hold the program or audio lease and cannot receive a transfer`, () => {
   const reps = new Map<string, any>(); const listeners = new Map<string, Function>(); let now = 100000;
   registerPresenter({ bundleConfig: { presenter: { input: 'invalid' } },
     Replicant(name: string, opts: any) { const rep = { value: opts.defaultValue }; reps.set(name, rep); return rep; },
@@ -123,13 +124,14 @@ test('led clients are accepted but never hold the program or audio lease and can
   const message = (name: string, body: unknown) => { let result: any; listeners.get(name)?.(body, (err: unknown, value: unknown) => { result = err ? 'rejected' : value; }); return result; };
   const report = (clientId: string, role: string) => message('presenter:client', { clientId, role, ready: true, renderer: 'api-ready', clockFresh: true, audio: { state: 'ready', missing: [] } });
   const clients = () => reps.get('presenterClients').value;
-  assert.equal(report('wall', 'led'), true);
-  assert.equal(clients().clients.find((client: any) => client.clientId === 'wall')?.role, 'led');
-  assert.equal(clients().program, null, 'led never takes a vacant program lease');
-  assert.equal(clients().audio ?? null, null, 'led is not eligible for separate audio');
+  message('presenter:control', { action: 'settings', body: { ...DEFAULT_SETTINGS, audioOutput: 'separate' } });
+  assert.equal(report('wall', role), true);
+  assert.equal(clients().clients.find((client: any) => client.clientId === 'wall')?.role, role);
+  assert.equal(clients().program, null, `${role} never takes a vacant program lease`);
+  assert.equal(clients().audio ?? null, null, `${role} is not eligible for separate audio`);
   message('presenter:control', { action: 'settings', body: { ...DEFAULT_SETTINGS, audioOutput: 'embedded' } });
-  now += 1000; report('wall', 'led');
-  assert.equal(clients().audio ?? null, null, 'led is not eligible for embedded audio');
+  now += 1000; report('wall', role);
+  assert.equal(clients().audio ?? null, null, `${role} is not eligible for embedded audio`);
   assert.equal(message('presenter:control', { action: 'program/transfer', body: { clientId: 'wall' } }), 'rejected');
   assert.equal(clients().program, null);
   report('main', 'program'); assert.equal(clients().program?.clientId, 'main');
