@@ -6,7 +6,7 @@ import type { PlayerViewSource } from '../../presenter/settings.ts';
 export type RenderFrame = { state: DuelState; views: Views; projection: Projection; source: PlayerViewSource; output?: 'stream' | 'led'; displayedRound?: number | null; playerIds?: { left: string | null; right: string | null }; frozen?: boolean; previewRound?: number | null; prewarmRound?: number | null; preparedResults?: MapFrame };
 export interface GameRenderer { render(frame: RenderFrame): void; dispose(): void }
 export type RendererPlan = { panoramas: 0 | 1 | 2; playerMaps: 0 | 2; resultsMap: boolean };
-export type MapFrame = { visible: boolean; prepare?: boolean; inactive?: boolean; padding?: number; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[]; tieRange?: TieRangeMapGeometry };
+export type MapFrame = { visible: boolean; prepare?: boolean; inactive?: boolean; padding?: number; viewport?: { center: Point; zoom: number }; bounds: Bounds | null; pins: { point: Point; color: string; label: string; kind?: 'answer' }[]; lines: { from: Point; to: Point; color: string }[]; tieRange?: TieRangeMapGeometry };
 export interface MapSurface { render(frame: MapFrame): void; dispose(): void }
 export type PanoramaOptions = { visible: boolean; identity: string; frozen?: boolean };
 export interface PanoramaSurface { render(panorama: Panorama | null, options?: PanoramaOptions): void; dispose(): void }
@@ -37,6 +37,8 @@ export function paintResultMapLabel(root: ParentNode, frame: MapFrame | null, re
 const sides = ['left', 'right'] as const;
 const colors = { left: '#458af2', right: '#f05060' };
 const streamColors = { left: '#ff3030', right: '#3083ff' };
+// Keep regional context when a comparison map has only the submitted guess.
+const SINGLE_PIN_ZOOM = 6;
 function mapColors(frame: MapFrame, output: RenderFrame['output']): MapFrame {
   if (output !== 'stream') return frame;
   const recolor = (color: string) => color === colors.left ? streamColors.left : color === colors.right ? streamColors.right : color;
@@ -140,6 +142,7 @@ export function createRenderer(adapter: RendererAdapter, onError: (message: stri
           }
           maps.get(`${sides[i]}-map`)?.render(mapColors({ visible: live && !!ids[i] && (source === 'rendered' || locked[i]), inactive: !locked[i] && !player?.mapActive && !player?.mapSticky,
             bounds: locked[i] ? resultBounds(pins.map(pin => pin.point)) : player?.mapBounds ?? null,
+            viewport: locked[i] && pins.length === 1 ? { center: pins[0].point, zoom: SINGLE_PIN_ZOOM } : undefined,
             padding: locked[i] ? 45 : 0, pins, lines: [] }, frame.output));
         }
         const resultFrame = plan.resultsMap && projection.answer

@@ -134,6 +134,34 @@ test('missing current telemetry uses current snapshot pin, while explicit null d
   f.views.round--; renderer.render(f);
   assert.deepEqual(fake.maps[0].frames.at(-1)!.pins[1].point, { lat: 2, lng: 3 });
 });
+for (const output of ['stream', 'led'] as const) for (const lockedIndex of [0, 1]) test(output + ' locked map gives a lone pin regional context on side ' + lockedIndex, () => {
+  const f = frame(); f.output = output; lockPlayer(f, lockedIndex);
+  const guess = f.state.players[lockedIndex].guesses.at(-1)!;
+  Object.assign(guess, { lat: 43.073, lng: -89.401 });
+  const opponent = f.views.players[f.state.players[1 - lockedIndex].id];
+  opponent.pin = null;
+  const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
+  renderer.render(f);
+  const map = fake.maps[lockedIndex];
+  const focus = { center: { lat: 43.073, lng: -89.401 }, zoom: 6 };
+  assert.equal(map.frames.at(-1)!.visible, true);
+  assert.deepEqual(map.frames.at(-1)!.viewport, focus, 'one submitted pin must not use a zero-area fit');
+  assert.equal(map.frames.at(-1)!.pins.length, 1);
+  opponent.pin = { lat: 44.5, lng: -88 };
+  renderer.render(f);
+  assert.equal(map.frames.at(-1)!.viewport, undefined, 'two pins use automatic bounds');
+  assert.deepEqual(map.frames.at(-1)!.bounds, { north: 44.5, south: 43.073, west: -89.40100000000001, east: -88 });
+  opponent.pin = null; renderer.render(f);
+  assert.deepEqual(map.frames.at(-1)!.viewport, focus, 'clearing the opponent pin restores the regional view');
+  f.state.players[lockedIndex].guesses = []; f.projection.players = [];
+  const own = f.views.players[f.state.players[lockedIndex].id];
+  own.mapActive = true; own.pin = focus.center;
+  own.mapBounds = { north: 43.074, south: 43.072, west: -89.402, east: -89.4 };
+  renderer.render(f);
+  assert.equal(map.frames.at(-1)!.viewport, undefined, 'unlocked minimaps retain player-controlled zoom');
+  assert.deepEqual(map.frames.at(-1)!.bounds, own.mapBounds);
+});
+
 test('NMPZ shows the same panorama in both viewports and freezes each locked side; chroma never resizes', () => {
   const f = frame(); const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);
   renderer.render(f); lockPlayer(f, 0); renderer.render(f);
@@ -393,8 +421,8 @@ function googleBoundary() {
     addListener(name: string, fn: Function) { this.listeners.set(name, fn); return { remove: () => this.listeners.delete(name) }; } unbindAll() {}
   }
   class GMap {
-    fits: any[] = []; center: any; zoom: any; constructor(_el: any, publicOptions: any) { maps.push(this); }
-    setCenter(center: any) { this.center = center; } setZoom(zoom: number) { this.zoom = zoom; }
+    fits: any[] = []; centers: any[] = []; zooms: number[] = []; center: any; zoom: any; constructor(_el: any, publicOptions: any) { maps.push(this); }
+    setCenter(center: any) { this.center = center; this.centers.push(center); } setZoom(zoom: number) { this.zoom = zoom; this.zooms.push(zoom); }
     fitBounds(bounds: any, padding: any) { this.fits.push({ bounds, padding }); } unbindAll() {}
   }
   class Overlay {
@@ -679,6 +707,34 @@ test('Google map adapter fits visible bounds once and refits on expansion, and d
   surface.render({ ...f, bounds: null }); assert.deepEqual(fake.maps[0].center, { lat: 0, lng: 0 }); assert.equal(fake.maps[0].zoom, 1);
   surface.dispose(); assert.ok(fake.overlays.every(overlay => overlay.map === null)); assert.ok(fake.cleared.includes(fake.maps[0]));
 });
+test('Google map adapter transitions between world, regional focus and automatic bounds without repeated zoom writes', () => {
+  const fake = googleBoundary(); const surface = googleAdapter(fake.root, fake.api, assert.fail).map('left-map');
+  const empty: MapFrame = { visible: true, bounds: null, pins: [], lines: [] };
+  surface.render(empty);
+  const map = fake.maps[0];
+  assert.deepEqual(map.center, { lat: 0, lng: 0 }); assert.equal(map.zoom, 1);
+  const point = { lat: 43.073, lng: -89.401 };
+  const lone: MapFrame = { ...empty, viewport: { center: point, zoom: 6 }, bounds: resultBounds([point]),
+    pins: [{ point, color: '#ff3030', label: 'left' }] };
+  surface.render(lone); surface.render(lone);
+  assert.deepEqual(map.center, point); assert.equal(map.zoom, 6);
+  assert.equal(map.fits.length, 0, 'a single pin never reaches fitBounds');
+  assert.equal(map.zooms.length, 2, 'stable frames do not repeatedly set zoom');
+  fake.slots.get('#left-map')!.clientWidth = 578; surface.render(lone);
+  assert.equal(map.zooms.length, 3, 'expanded locked viewport reapplies the regional focus');
+  const paired: MapFrame = { ...lone, viewport: undefined, bounds: { north: 45, south: 43, west: -90, east: -87 },
+    pins: [...lone.pins, { point: { lat: 45, lng: -87 }, color: '#3083ff', label: 'right' }] };
+  surface.render(paired);
+  assert.deepEqual(map.fits.at(-1).bounds, paired.bounds);
+  surface.render(lone); assert.equal(map.zoom, 6);
+  const moved = { lat: -33.9, lng: 151.2 };
+  surface.render({ ...lone, viewport: { center: moved, zoom: 6 } });
+  assert.deepEqual(map.center, moved, 'viewport changes invalidate the fit cache even with identical bounds');
+  surface.render(empty);
+  assert.deepEqual(map.center, { lat: 0, lng: 0 }); assert.equal(map.zoom, 1);
+  surface.dispose();
+});
+
 test('Google map adapter draws annular fill and sampled circle outlines below lines and pins, and refreshes changed geometry', () => {
   const fake = googleBoundary(); const surface = googleAdapter(fake.root, fake.api, assert.fail).map('results-map');
   const outer = [{ lat: 1, lng: 179 }, { lat: -1, lng: -179 }, { lat: 1, lng: 179 }];
