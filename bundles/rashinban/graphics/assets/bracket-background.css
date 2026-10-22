@@ -22,3 +22,8 @@
   opacity: 0.8;
   filter: blur(30px);
 }
+
+/* Transparent sources retain the bracket artwork, without a full-frame tint. */
+[data-background="transparent"] .bracket-wrapper { background: transparent; }
+[data-background="transparent"] .bracket-wrapper::before { content: none; }
+[data-background="transparent"] .bracket-svg :is(.filter, .filter-bright) { display: none; }

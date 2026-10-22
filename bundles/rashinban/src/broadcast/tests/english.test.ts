@@ -25,8 +25,8 @@ test("English stages and takes every stream layer independently, including migra
 });
 
 test("English monitor uses its own bus and cheap camera placeholders", () => {
-  assert.equal(monitorUrls("en", "preview").info, "/bundles/rashinban/graphics/info-en.html?channel=preview&cameraMode=placeholder");
-  assert.deepEqual(controlRows("en").map(r => r.id), ["playerCameras", "playerCards", "lowerThird", "casters", "banpick", "interval", "bracket"]);
+  assert.equal(monitorUrls("en", "preview").info, "/bundles/rashinban/graphics/player-cards-en.html?channel=preview&cameraMode=placeholder");
+  assert.deepEqual(controlRows("en").map(r => r.id), ["playerCameras", "playerCards", "casters", "interval"]);
   assert.ok(controlRows("en").flatMap(r => r.controls).some(c => c.path.join(".") === "playerCards.player"));
 });
 

@@ -23,6 +23,12 @@ affects the LED layout.
 | `bracket-led.html` | LED | Finals bracket, always on; embedded KV video with translucent red/blue tint |
 | `interval-led.html` | LED | Interval with embedded KV video, always on |
 | `brackets-finals.html` | stream | Standalone finals bracket with embedded KV video, always on |
+| `player-cards-en.html` | English | Player cameras and cards, selected through English Preview/TAKE |
+| `casters-en.html` | English | English nameplates; 1080p/4K placement, selected through English Preview/TAKE |
+| `interval-en.html` | English | Transparent interval, always on; independent English countdown |
+| `bracket-en.html` | English | Transparent finals bracket, always on; English player names |
+
+English OBS setup and controls: [english-output.md](english-output.md).
 
 Unchanged: `banpick-player.html` (tablet),
 `presenter-remote.html` (camera relay plus locally rendered maps for remote viewers). Removed: `banpick-stream.html`, `banpick-led.html`,

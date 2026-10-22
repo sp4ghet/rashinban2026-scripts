@@ -1,0 +1,5 @@
+/* English OBS layout, authored at 1920 x 1080 and scaled uniformly at 4K. */
+html { width: 100%; height: 100%; }
+body { transform-origin: top left; transform: scale(var(--caster-scale, 1)); }
+#casters { --card-top: 60px; }
+/* Shared bands total 170px (40px role + 98px name + 32px handle). */

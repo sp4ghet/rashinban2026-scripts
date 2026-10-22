@@ -94,8 +94,13 @@ const LED_ROWS: readonly Row[] = [
   BRACKET,
 ];
 
+const ENGLISH_ROWS: readonly Row[] = [
+  ...STREAM_ROWS.filter(row => ["playerCameras", "playerCards", "casters"].includes(row.id)),
+  { ...INTERVAL, controls: [] },
+];
+
 export function controlRows(output: BroadcastOutput): readonly Row[] {
-  return output === "led" ? LED_ROWS : STREAM_ROWS;
+  return output === "led" ? LED_ROWS : output === "en" ? ENGLISH_ROWS : STREAM_ROWS;
 }
 
 /** Read the value at `path`; own properties only, so "constructor" etc. do not resolve via the prototype. */
@@ -178,10 +183,11 @@ export function patchAt(path: readonly string[], value: unknown, layers: unknown
  * program lease; presenter-led.html implies the led role by itself and
  * shows exactly what the wall shows.
  */
-export function monitorUrls(output: BroadcastOutput, channel: "preview" | "program"): { info: string; presenter: string } {
+export type EnglishScene = "player-cards" | "interval" | "bracket" | "casters";
+export function monitorUrls(output: BroadcastOutput, channel: "preview" | "program", englishScene: EnglishScene = "player-cards"): { info: string; presenter: string } {
   const base = "/bundles/rashinban/graphics";
   return {
-    info: `${base}/info-${output}.html?channel=${channel}${output !== "led" ? "&cameraMode=placeholder" : ""}`,
+    info: `${base}/${output === "en" ? `${englishScene}-en` : `info-${output}`}.html?channel=${channel}${output !== "led" ? "&cameraMode=placeholder" : ""}`,
     presenter:
       output === "led"
         ? `${base}/presenter-led.html?channel=${channel}`

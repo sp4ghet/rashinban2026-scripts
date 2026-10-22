@@ -38,6 +38,10 @@ npm run dev     # esbuild watch + NodeCG together
   (`node scripts/fetch-fonts.mjs`). The heading font kaneda-gothic loads from
   the 2025 Adobe Fonts kit (its licence forbids self-hosting); Oswald is the
   offline fallback.
+- English OBS sources: `player-cards-en.html` (player cameras/cards),
+  `casters-en.html`, `interval-en.html`, and `bracket-en.html`.
+  Interval and bracket have transparent backgrounds and no embedded video.
+  See [docs/english-output.md](docs/english-output.md) for URLs and controls.
 - DAY2 bracket (1920×1080): `graphics/brackets-finals.html`, the top-8 layout
   ported from [rashinban2026](https://github.com/Zashness/rashinban2026). The
   "Bracket" panel picks the data: live start.gg (DAY2 group, auto-detected) or,

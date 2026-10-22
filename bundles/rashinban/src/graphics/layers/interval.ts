@@ -10,8 +10,9 @@ import type { MatchState } from "../../match/state.ts";
 import type { PlayerProfile } from "../../sheet/players.ts";
 
 /** One shared renderer for standalone sources and the switcher info pages. */
-export function mountInterval(host: HTMLElement, output: "stream" | "led", english = false): Layer<ToggleLayer> {
+export function mountInterval(host: HTMLElement, output: "stream" | "led", english = false, options: { background?: boolean } = {}): Layer<ToggleLayer> {
   host.hidden = true;
+  host.dataset.background = options.background === false ? "transparent" : "video";
   host.innerHTML = `
     <section class="interval-output" data-layout="${output}">
       <div class="interval-screen">
@@ -36,7 +37,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led", engli
       </div>
     </section>`;
 
-  const background = mountKvBackground(mustQuery(host, ".interval-screen"));
+  const background = options.background === false ? null : mountKvBackground(mustQuery(host, ".interval-screen"));
   const title = mustQuery(host, ".interval-title span");
   const upcoming = mustQuery(host, ".interval-upcoming");
   const upcomingTitle = mustQuery(host, ".interval-upcoming h2 span");
@@ -122,5 +123,5 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led", engli
   });
   void document.fonts.ready.then(fit);
   document.fonts.addEventListener("loadingdone", fit);
-  return { apply(layer) { host.hidden = !layer.visible; background.setVisible(layer.visible); tick(); fit(); } };
+  return { apply(layer) { host.hidden = !layer.visible; background?.setVisible(layer.visible); tick(); fit(); } };
 }
