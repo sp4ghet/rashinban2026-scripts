@@ -80,9 +80,12 @@ body[data-output="stream"][data-intermission="none"] {
   footer { left: 0; right: auto; top: 955px; bottom: auto; width: 1920px; height: 0; }
   footer .presenter-logo { display: none; }
   .presenter-sponsor { display: block; }
-  #preview-area { left: 496px; top: 335px; width: 928px; height: 522px; border-radius: 20px; }
+  #preview-area { left: 24px; top: 335px; width: 1872px; height: 720px; aspect-ratio: auto; border-radius: 20px; }
+  /* Keep the compass above the camera dock where it overlaps the preview. */
+  #preview-panorama .streetview-compass { bottom: 248px; }
   #preview-area::after { border-width: 8px; border-color: #ff005d; }
   #preview-map { display: none; }
+  &:has(> #preview-area:not([hidden])) .presenter-sponsor { visibility: hidden; }
 
   &[data-ruleset="pinpointing"] {
     .health { top: 237px; width: 426px; }
