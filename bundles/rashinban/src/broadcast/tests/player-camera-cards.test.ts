@@ -11,7 +11,7 @@ for (const side of ["left", "right"] as const) {
     const initial = setPreview(createInitialState(), "stream", { playerCards: { position: "right", page: "compact" } });
     const snapshot = structuredClone(initial);
     const queued = edit(initial, ["playerCameras", side], true);
-    assert.deepEqual(queued.stream.preview.playerCards, { visible: true, player: side, position: "right", page: "compact" });
+    assert.deepEqual(queued.stream.preview.playerCards, { visible: true, player: side, position: side === "left" ? "right" : "left", page: "compact" });
     assert.deepEqual(queued.stream.preview.playerCameras,
       side === "left" ? { left: true, right: false, relay: "main" } : { left: false, right: true, relay: "main" });
     assert.deepEqual(queued.stream.program, initial.stream.program);
@@ -51,31 +51,31 @@ for (const visible of [true, false]) {
     });
     const next = edit(initial, ["playerCards", "player"], "left").stream.preview;
     assert.deepEqual(next.playerCameras, { left: visible, right: false, relay: "stage-2" });
-    assert.deepEqual(next.playerCards, { visible, player: "left", position: "left", page: "stats" });
+    assert.deepEqual(next.playerCards, { visible, player: "left", position: "right", page: "stats" });
   });
 }
 
 for (const via of ["camera", "card"] as const) {
   for (const [page, expectedPage] of [["stats", "profile"], ["compact", "compact"]] as const) {
-    test(`${via} selection changes P1/Left/${page} to P2/Right/${expectedPage}`, () => {
+    test(`${via} selection changes P1/Right/${page} to P2/Left/${expectedPage}`, () => {
       const initial = setPreview(createInitialState(), "stream", {
-        playerCards: { visible: true, player: "left", position: "left", page },
+        playerCards: { visible: true, player: "left", position: "right", page },
         playerCameras: { left: true },
       });
       const next = via === "camera" ? edit(initial, ["playerCameras", "right"], true)
         : edit(initial, ["playerCards", "player"], "right");
-      assert.deepEqual(next.stream.preview.playerCards, { visible: true, player: "right", position: "right", page: expectedPage });
+      assert.deepEqual(next.stream.preview.playerCards, { visible: true, player: "right", position: "left", page: expectedPage });
       assert.deepEqual(next.stream.preview.playerCameras, { left: false, right: true, relay: "main" });
     });
   }
 
-  test(`${via} selection defaults to the player side on swaps and retains same-player overrides`, () => {
+  test(`${via} selection defaults to P1 right/P2 left on swaps and retains same-player overrides`, () => {
     const transitions = [
       // Previous player, previous position, selected player, expected position.
-      ["left", "left", "right", "right"],
-      ["left", "right", "right", "right"],
-      ["right", "left", "left", "left"],
-      ["right", "right", "left", "left"],
+      ["left", "left", "right", "left"],
+      ["left", "right", "right", "left"],
+      ["right", "left", "left", "right"],
+      ["right", "right", "left", "right"],
       ["left", "left", "left", "left"],
       ["left", "right", "left", "right"],
       ["right", "left", "right", "left"],
@@ -84,7 +84,7 @@ for (const via of ["camera", "card"] as const) {
     for (const [player, position, selected, expectedPosition] of transitions) {
       for (const page of ["profile", "stats", "compact"] as const) {
         // The existing Page 2 -> Page 1 exception has its own test above.
-        if (`${player}/${position}/${page}/${selected}` === "left/left/stats/right") continue;
+        if (`${player}/${position}/${page}/${selected}` === "left/right/stats/right") continue;
         const initial = setPreview(createInitialState(), "stream", { playerCards: { visible: true, player, position, page } });
         const next = via === "camera" ? edit(initial, ["playerCameras", selected], true)
           : edit(initial, ["playerCards", "player"], selected);

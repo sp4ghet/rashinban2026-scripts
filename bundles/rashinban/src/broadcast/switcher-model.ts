@@ -82,6 +82,7 @@ const STREAM_ROWS: readonly Row[] = [
       { kind: "text", path: ["lowerThird", "subtitle"], label: "Subtitle" },
     ],
   },
+  BANPICK,
   {
     id: "casters",
     title: "Casters",
@@ -93,7 +94,6 @@ const STREAM_ROWS: readonly Row[] = [
       { kind: "select", path: ["casters", "names", "center"], label: "Center", options: [["", "— none —"]] },
     ],
   },
-  BANPICK,
   INTERVAL,
   BRACKET,
 ];
@@ -123,16 +123,16 @@ export function valueAt(obj: unknown, path: readonly string[]): unknown {
   return cur;
 }
 
-/** Player swaps restore the matching side; same-player edits keep emergency overrides. */
+/** Player swaps restore P1 right/P2 left; same-player edits keep emergency overrides. */
 function selectCard(player: "left" | "right", layers: unknown): Partial<PlayerCardsLayer> {
   const current = valueAt(layers, ["playerCards", "player"]);
   const position = valueAt(layers, ["playerCards", "position"]);
   const page = valueAt(layers, ["playerCards", "page"]);
-  if (current === "left" && player === "right" && position === "left") {
-    if (page === "stats") return { player, position: "right", page: "profile" };
-    if (page === "compact") return { player, position: "right", page: "compact" };
+  if (current === "left" && player === "right" && position === "right") {
+    if (page === "stats") return { player, position: "left", page: "profile" };
+    if (page === "compact") return { player, position: "left", page: "compact" };
   }
-  return current === player ? { player } : { player, position: player };
+  return current === player ? { player } : { player, position: player === "left" ? "right" : "left" };
 }
 
 /**

@@ -83,7 +83,7 @@ const STREAM_SPEC = {
   playerCameras: { left: "boolean", right: "boolean", relay: "relay" },
   interval: TOGGLE_SPEC,
   bracket: TOGGLE_SPEC,
-  playerCards: CARD_SPEC,
+  playerCards: { ...CARD_SPEC, position: ["right", "left"] },
   lowerThird: { visible: "boolean", mode: ["match", "scores", "text"], title: "text", subtitle: "text", comingUp: "boolean" },
   casters: { slots: "booleanPair", center: "boolean", names: { left: "text", right: "text", center: "text" } },
   banpick: TOGGLE_SPEC,

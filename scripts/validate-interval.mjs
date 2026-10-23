@@ -80,6 +80,12 @@ const server = createServer(async (req, res) => {
       res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(value)); return;
     }
     const url = new URL(req.url, 'http://localhost');
+    if (url.pathname === '/dashboard/') {
+      // Same-origin shell around the panel, matching NodeCG's fullbleed iframe.
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.end('<!doctype html><button id="shell-control">Dashboard tab</button><iframe id="stream-panel" src="/bundles/rashinban/dashboard/switcher-stream.html"></iframe>');
+      return;
+    }
     if (url.pathname === '/favicon.ico') { res.statusCode = 204; res.end(); return; }
     const file = path.resolve(root, '.' + decodeURIComponent(url.pathname));
     if (!file.startsWith(path.join(root, 'bundles', 'rashinban') + path.sep)) throw Error('Invalid fixture path');
@@ -123,11 +129,16 @@ async function until(expression) {
 }
 async function navigate(file, width = 1920, height = 1080) {
   await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
-  await command('Page.navigate', { url: origin + '/bundles/rashinban/' + file });
+  await command('Page.navigate', { url: origin + (file.startsWith('/') ? file : '/bundles/rashinban/' + file) });
   await until('document.readyState === "complete"');
   await evaluate('document.fonts.ready');
 }
 async function click(selector) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`); }
+async function pressKey(key) {
+  const windowsVirtualKeyCode = key === 'ArrowLeft' ? 37 : 39;
+  await command('Input.dispatchKeyEvent', { type: 'keyDown', key, code: key, windowsVirtualKeyCode });
+  await command('Input.dispatchKeyEvent', { type: 'keyUp', key, code: key, windowsVirtualKeyCode });
+}
 async function fill(selector, value) {
   await evaluate(`{const input=document.querySelector(${JSON.stringify(selector)});input.value=${JSON.stringify(value)};input.dispatchEvent(new Event('input',{bubbles:true}));}`);
 }
@@ -158,7 +169,7 @@ try {
   };
   await command('Runtime.enable'); await command('Page.enable');
   if (process.argv.includes('--slides-only')) {
-    await validateStreamSlides({ navigate, evaluate, until, click, screenshot, delay, values });
+    await validateStreamSlides({ navigate, evaluate, until, click, pressKey, screenshot, delay, values });
     assert.equal(errors.length, 0, JSON.stringify(errors));
     console.log('Slide sequences, Preview/TAKE, bracket entry/exit and both interval crossfades passed.');
   } else {

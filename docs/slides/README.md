@@ -6,6 +6,8 @@ After building, restart NodeCG and refresh the Stream dashboard and OBS
 The **Slides** row controls the stream info overlay. Choose **Mode**, then
 use **Previous**, **Next**, or the **Slide** selector. All changes stage in
 Preview; **TAKE** sends the selected image and bracket visibility to Program.
+**Left/Right arrow** also selects the previous/next slide anywhere in the Stream
+dashboard, including while a button, dropdown, text field, or monitor has focus.
 Changing mode selects its first cue. Navigation stops at the first/last cue;
 each mode ends with **CLEAR** to remove the slide. **Visible** can hide the
 current sequence without losing its place. Revert, Swap and Clear Preview

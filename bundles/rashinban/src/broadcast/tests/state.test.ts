@@ -17,6 +17,13 @@ test("initial state hides every layer on both buses without a caster title bar",
   assert.deepEqual(s.led.program, s.led.preview);
   assert.equal(s.stream.program.playerCards.visible, false);
   assert.equal(s.stream.program.playerCards.page, "profile");
+  for (const output of ["stream", "en"] as const) {
+    for (const channel of ["preview", "program"] as const) {
+      assert.equal(s[output][channel].playerCards.player, "left");
+      assert.equal(s[output][channel].playerCards.position, "right");
+    }
+  }
+  assert.equal(s.led.program.playerCards.position, "left");
   assert.equal(s.stream.program.lowerThird.mode, "match");
   assert.equal(Object.hasOwn(s.stream.program.casters, "titleBar"), false);
   assert.deepEqual(s.stream.program.casters.slots, [false, false]);
@@ -214,12 +221,12 @@ test("persisted cards discard obsolete date and pagination while retaining the s
 
 test("card position is independent of the player and changes on TAKE", () => {
   const initial = createInitialState();
-  let state = setPreview(initial, "stream", { playerCards: { position: "right" } });
+  let state = setPreview(initial, "stream", { playerCards: { position: "left" } });
   assert.equal(state.stream.preview.playerCards.player, "left");
-  assert.equal(state.stream.program.playerCards.position, "left");
-  assert.equal(state.stream.preview.playerCards.position, "right");
-  state = take(state, "stream");
   assert.equal(state.stream.program.playerCards.position, "right");
+  assert.equal(state.stream.preview.playerCards.position, "left");
+  state = take(state, "stream");
+  assert.equal(state.stream.program.playerCards.position, "left");
   state = setPreview(state, "stream", { playerCards: { player: "right", position: "left" } });
   assert.equal(state.stream.program.playerCards.player, "left");
   state = take(state, "stream");

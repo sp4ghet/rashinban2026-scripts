@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { SLIDE_MODES, SLIDE_SEQUENCES } from '../../bundles/rashinban/src/broadcast/slides.ts';
 
-export async function validateStreamSlides({ navigate, evaluate, until, click, screenshot, delay, values }) {
+export async function validateStreamSlides({ navigate, evaluate, until, click, pressKey, screenshot, delay, values }) {
   const choose = async (selector, value) => {
     await evaluate(`{const el=document.querySelector(${JSON.stringify(selector)});el.value=${JSON.stringify(String(value))};el.dispatchEvent(new Event('change',{bubbles:true}));}`);
   };
@@ -12,6 +12,52 @@ export async function validateStreamSlides({ navigate, evaluate, until, click, s
   await until('document.querySelector("[data-row=slides] select") !== null');
   const originalEn = structuredClone(values.broadcast.en);
   const originalLed = structuredClone(values.broadcast.led);
+  const originalProgram = structuredClone(values.broadcast.stream.program);
+  await choose(cue, 1);
+  await until('window.fixtureValues.broadcast.stream.preview.slides.index === 1');
+  // Real keyboard input must override native arrows even inside unrelated controls.
+  for (const selector of [cue, mode, '[data-row=playerCards] select', '[data-row=playerCameras] input', '#interval-minutes', '#take', '[data-slide-direction="1"]']) {
+    await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`);
+    const before = await evaluate(`document.querySelector(${JSON.stringify(selector)}).value`);
+    await pressKey('ArrowRight');
+    await until('window.fixtureValues.broadcast.stream.preview.slides.index === 2');
+    assert.equal(values.broadcast.stream.preview.slides.mode, 'day1-opening', selector);
+    await pressKey('ArrowLeft');
+    await until('window.fixtureValues.broadcast.stream.preview.slides.index === 1');
+    assert.equal(await evaluate(`document.querySelector(${JSON.stringify(selector)}).value`), before, selector + ' retains its value');
+  }
+  assert.deepEqual(values.broadcast.stream.program, originalProgram, 'arrow navigation only stages Preview');
+  await choose(cue, 0);
+  await until('window.fixtureValues.broadcast.stream.preview.slides.index === 0');
+  await pressKey('ArrowLeft');
+  await delay(100);
+  assert.equal(values.broadcast.stream.preview.slides.index, 0, 'Left stops at the first slide');
+  await navigate('/dashboard/#fullbleed/switcher-stream', 1440, 1100);
+  const panel = "document.querySelector('#stream-panel').contentWindow";
+  await until(`${panel}.document.querySelector('[data-slide-direction="1"]') !== null`);
+  await evaluate("document.querySelector('#shell-control').focus()");
+  await pressKey('ArrowRight');
+  await until(`${panel}.fixtureValues.broadcast.stream.preview.slides.index === 1`);
+  await pressKey('ArrowLeft');
+  await until(`${panel}.fixtureValues.broadcast.stream.preview.slides.index === 0`);
+  // Keys in the nested monitor do not bubble to the switcher or outer shell.
+  for (const channel of ['preview', 'program']) {
+    const frame = `${panel}.document.querySelector('.monitor[data-channel=${channel}] iframe.info')`;
+    await until(`${frame}.contentDocument.readyState === 'complete'`);
+    await evaluate(`${frame}.contentWindow.focus()`);
+    await pressKey('ArrowRight');
+    await until(`${panel}.fixtureValues.broadcast.stream.preview.slides.index === 1`);
+    await pressKey('ArrowLeft');
+    await until(`${panel}.fixtureValues.broadcast.stream.preview.slides.index === 0`);
+  }
+  await evaluate("location.hash = '#fullbleed/switcher-en'; document.querySelector('#shell-control').focus()");
+  const inactive = structuredClone(values.broadcast);
+  await pressKey('ArrowRight');
+  await delay(100);
+  assert.deepEqual(values.broadcast, inactive, 'inactive Stream cannot intercept another dashboard route');
+  assert.deepEqual(values.broadcast.stream.program, originalProgram, 'shell and monitor arrows keep Program unchanged');
+  await navigate('dashboard/switcher-stream.html', 1440, 1100);
+  await until('document.querySelector("[data-row=slides] select") !== null');
   await choose(mode, 'day1-ending');
   await until(`${monitor('preview')}?.querySelector('#layer-bracket')?.hidden === false`);
   assert.equal(values.broadcast.stream.program.bracket.visible, false);
@@ -58,6 +104,9 @@ export async function validateStreamSlides({ navigate, evaluate, until, click, s
       }
     }
     assert.equal(await evaluate(`document.querySelector('[data-slide-direction="1"]').disabled`), true);
+    await pressKey('ArrowRight');
+    await delay(100);
+    assert.equal(values.broadcast.stream.preview.slides.index, SLIDE_SEQUENCES[selected].length - 1, 'Right stops at the last slide');
   }
   assert.deepEqual(values.broadcast.en, originalEn);
   assert.deepEqual(values.broadcast.led, originalLed);

@@ -74,13 +74,14 @@ test("English selects its own player with the same staged camera/card linkage as
   const main = structuredClone(state.stream);
   state = setPreview(state, "en", patchAt(["playerCameras", "left"], true, state.en.preview));
   assert.equal(state.en.preview.playerCards.player, "left");
+  assert.equal(state.en.preview.playerCards.position, "right");
   assert.equal(state.en.preview.playerCards.visible, true);
   assert.equal(state.en.program.playerCameras.left, false);
   state = take(state, "en");
   assert.equal(state.en.program.playerCameras.left, true);
   state = setPreview(state, "en", patchAt(["playerCards", "player"], "right", state.en.preview));
   assert.deepEqual(state.en.preview.playerCameras, { left: false, right: true, relay: "main" });
-  assert.equal(state.en.preview.playerCards.position, "right");
+  assert.equal(state.en.preview.playerCards.position, "left");
   assert.equal(state.en.program.playerCards.player, "left");
   state = setPreview(state, "en", patchAt(["playerCards", "visible"], false, state.en.preview));
   assert.equal(state.en.preview.playerCameras.right, false);

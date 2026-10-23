@@ -91,6 +91,7 @@ function buildRow(row: Row): HTMLElement {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = label;
+      button.title = direction === -1 ? "Previous slide (Left arrow)" : "Next slide (Right arrow)";
       button.dataset.slideDirection = String(direction);
       button.onclick = event => {
         const slides = state.stream.preview.slides;
@@ -212,6 +213,39 @@ document.addEventListener("keydown", (event) => {
     el("take").click();
   }
 });
+
+if (output === "stream") {
+  const navigateSlides = (event: KeyboardEvent) => {
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    // Capture before focused controls can change their value or move the caret.
+    event.preventDefault();
+    event.stopPropagation();
+    slideButtons[event.key === "ArrowLeft" ? 0 : 1]!.click();
+  };
+  window.addEventListener("keydown", navigateSlides, true);
+  // Keyboard events do not bubble out of the preview/program iframes.
+  for (const frame of document.querySelectorAll<HTMLIFrameElement>(".screen iframe")) {
+    frame.addEventListener("load", () => frame.contentWindow?.addEventListener("keydown", navigateSlides, true));
+  }
+  // NodeCG's tabs and panel chrome live in the parent document. Only handle
+  // their arrows while this fullbleed panel is the selected dashboard route.
+  if (window.parent !== window) {
+    try {
+      const dashboard = window.parent;
+      if (dashboard.location.origin === window.location.origin) {
+        const navigateFromDashboard = (event: KeyboardEvent) => {
+          if (dashboard.location.hash === "#fullbleed/switcher-stream") navigateSlides(event);
+        };
+        dashboard.addEventListener("keydown", navigateFromDashboard, true);
+        window.addEventListener("pagehide", () => dashboard.removeEventListener("keydown", navigateFromDashboard, true));
+        window.addEventListener("pageshow", () => dashboard.addEventListener("keydown", navigateFromDashboard, true));
+      }
+    } catch {
+      // A cross-origin embed can still use the panel's own shortcuts.
+    }
+  }
+}
 
 // ---- Monitors ----------------------------------------------------------------
 // URLs (and the role each presenter client gets) live in monitorUrls().

@@ -138,10 +138,10 @@ shows P1's card, and enabling Camera 2 shows P2's card. The card's **Visible**
 control shows/hides its matching camera, and its **Player** selector changes the
 camera while preserving visibility. These changes are staged together until TAKE.
 
-Switching from **P1 / Left / Page 2** to P2 defaults to **P2 / Right / Page 1**.
-Switching from **P1 / Left / Compact** to P2 defaults to **P2 / Right / Compact**.
-Both the camera buttons and card player selector default position to **Left for
-P1** and **Right for P2** whenever the selected player changes. The **Position**
+Switching from **P1 / Right / Page 2** to P2 defaults to **P2 / Left / Page 1**.
+Switching from **P1 / Right / Compact** to P2 defaults to **P2 / Left / Compact**.
+Both the camera buttons and card player selector default position to **Right for
+P1** and **Left for P2** whenever the selected player changes in Stream and EN. The **Position**
 dropdown remains available for emergency overrides; an override lasts until the
 next player swap. Other page selections are preserved.
 

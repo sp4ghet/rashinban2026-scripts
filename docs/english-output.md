@@ -26,7 +26,7 @@ The caster source scales automatically when its OBS browser dimensions are 3840x
 
 ## Player cameras and cards
 
-English and Stream share **Shared > Current Match** and its scores. Each operator chooses P1 or P2 independently. The English camera buttons and card Player/Visible controls use the same linkage as Stream: changing player switches the camera and card together; hiding the card hides its camera. Page, position overrides and relay selection are staged until TAKE. Switching players restores the matching card position, including the existing Page 2/Compact rules.
+English and Stream share **Shared > Current Match** and its scores. Each operator chooses P1 or P2 independently. The English camera buttons and card Player/Visible controls use the same linkage as Stream: changing player switches the camera and card together; hiding the card hides its camera. Page, position overrides and relay selection are staged until TAKE. Switching players defaults the card position to **Right for P1** and **Left for P2**, including the existing Page 2/Compact rules.
 
 The relay defaults to `main`. Keep the existing presenter capture page running with Left player camera and Right player camera assigned. A separate English output adds one camera receiver; its dashboard monitors do not subscribe to the relay.
 

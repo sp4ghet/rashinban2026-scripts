@@ -127,7 +127,7 @@ test("cards expose manual modes and separate stream-only player and position sel
   assert.ok(position?.kind === "select");
   assert.deepEqual(position.options, [["left", "Left"], ["right", "Right"]]);
   assert.ok(!led.some(c => c.path[1] === "position"));
-  const state = setPreview(createInitialState(), "stream", { playerCards: { position: "right" } });
+  const state = setPreview(createInitialState(), "stream", { playerCards: { position: "left" } });
   assert.equal(rowDirty(controlRows("stream").find(r => r.id === "playerCards")!, state.stream.preview, state.stream.program), true);
   assert.ok(!stream.some(c => ["resultsDate", "resultsPage"].includes(c.path[1]!)));
 });

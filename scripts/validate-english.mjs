@@ -198,7 +198,7 @@ try {
   await evaluate(`{const select=document.querySelector('[data-row=playerCards] select');select.value='right';select.dispatchEvent(new Event('change'));}`);
   await until("window.fixtureValues.broadcast.en.preview.playerCameras.right === true");
   check('Card player selector links camera',values.broadcast.en.preview.playerCameras.left,false);
-  check('Card swap restores matching position',values.broadcast.en.preview.playerCards.position,'right');
+  check('Card swap defaults P2 to Left',values.broadcast.en.preview.playerCards.position,'left');
   await click('#revert');await until("window.fixtureValues.broadcast.en.preview.playerCards.player === 'left'");
   check('Revert keeps EN Program',values.broadcast.en.program.playerCards.player,'left');
   await message('interval:timer',{action:'start',durationSeconds:900});
