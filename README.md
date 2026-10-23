@@ -40,7 +40,11 @@ npm run dev     # esbuild watch + NodeCG together
   offline fallback.
 - English OBS sources: `player-cards-en.html` (player cameras/cards),
   `casters-en.html`, `interval-en.html`, and `bracket-en.html`.
-  Interval and bracket have transparent backgrounds and no embedded video.
+  Interval uses 25% black over the external OBS background; bracket has a fully
+  transparent background, with tint and dimming supplied by a separate OBS PNG
+  source in Multiply mode. Neither EN page embeds video.
+  Set both browser sources to **Blending Method > SRGB Off** and
+  **Blending Mode > Normal** in OBS to match the browser preview.
   See [docs/english-output.md](docs/english-output.md) for URLs and controls.
 - DAY2 bracket (1920×1080): `graphics/brackets-finals.html`, the top-8 layout
   ported from [rashinban2026](https://github.com/Zashness/rashinban2026). The

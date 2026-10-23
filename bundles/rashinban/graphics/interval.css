@@ -60,6 +60,5 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 .interval-output[data-layout="led"] .interval-slides { left: 1371px; top: 163px; transform: scale(calc(450 / 998)); transform-origin: top left; }
 .interval-output[data-layout="led"] .interval-sponsors { top: 504.5px; }
 
-/* OBS supplies the background for the English standalone source. */
+/* OBS supplies the video for EN; retain the shared 25% dimming overlay. */
 [data-background="transparent"] .interval-screen { background: transparent; }
-[data-background="transparent"] .interval-screen::before { content: none; }

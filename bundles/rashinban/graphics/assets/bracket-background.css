@@ -32,7 +32,8 @@
   filter: blur(30px);
 }
 
-/* Transparent sources retain the bracket artwork, without a full-frame tint. */
+/* OBS supplies EN's video, dimming, and tint through separate sources. */
 [data-background="transparent"] .bracket-wrapper { background: transparent; }
-[data-background="transparent"] .bracket-wrapper::before { content: none; }
+[data-background="transparent"] .bracket-wrapper::before,
+[data-background="transparent"] .bracket-wrapper::after { content: none; }
 [data-background="transparent"] .bracket-svg :is(.filter, .filter-bright) { display: none; }

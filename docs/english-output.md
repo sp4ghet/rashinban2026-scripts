@@ -9,7 +9,9 @@ Build with `npm run build`, restart NodeCG, then refresh the dashboard and OBS b
 | Bracket | `http://localhost:9090/bundles/rashinban/graphics/bracket-en.html` |
 | Casters | `http://localhost:9090/bundles/rashinban/graphics/casters-en.html` |
 
-`player-cards-en.html` replaces `info-en.html` and contains only player cameras and cards. Interval and bracket are always on, with transparent backgrounds and no embedded video or full-screen tint. OBS controls which scene is on air.
+`player-cards-en.html` replaces `info-en.html` and contains only player cameras and cards. Interval and bracket are always on, with no embedded video. Place the original KV video underneath in OBS. For **each Interval EN and Bracket EN browser source**, right-click the source and set **Blending Method > SRGB Off**, with **Blending Mode > Normal**. These are two separate settings: the Default blending method uses linear blending and makes translucent content composite differently from the browser preview. See [OBS's explanation of the blending methods](https://github.com/obsproject/obs-studio/pull/6257).
+
+Interval retains the Stream layout's 25% black dimming. Bracket EN has a fully transparent background with no black dimming or red/blue tint. For the tinted bracket background, place `assets/images/bracket-multiply.png` in an OBS Image source at 100% opacity with **Blending Mode > Multiply**, below Bracket EN and above the KV loop. The PNG supplies both tint and darkening; no Custom CSS override is needed on Bracket EN. OBS controls which scene is on air.
 
 The **English** dashboard retains Preview/Program, TAKE, SWAP, Clear preview and Revert preview for player cameras/cards and caster selections. Lower-third, Ban & Pick, bracket visibility and interval visibility controls are removed. The interval timer controls remain live and independent of TAKE. **Monitor scene** selects which of the four URLs appears in both dashboard monitors; it does not switch OBS. Camera monitors use placeholders; the OBS player source receives live camera video. Append `?channel=preview` to the player or caster source to inspect staged selections.
 

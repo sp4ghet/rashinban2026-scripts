@@ -155,11 +155,19 @@ async function fill(selector, value) {
 async function chooseMonitor(value) {
   await evaluate(`{const select=document.querySelector('#monitor-scene');select.value=${JSON.stringify(value)};select.dispatchEvent(new Event('change'));}`);
 }
-async function transparentScene(rootSelector) {
+async function transparentScene(rootSelector, scrimColor = null) {
   check('No embedded video in ' + rootSelector, await evaluate('document.querySelectorAll("video").length'), 0);
   check('Transparent body in ' + rootSelector, await evaluate('getComputedStyle(document.body).backgroundColor'), 'rgba(0, 0, 0, 0)');
   check('Transparent scene in ' + rootSelector, await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(rootSelector)})).backgroundColor`), 'rgba(0, 0, 0, 0)');
-  check('No full-screen scrim in ' + rootSelector, await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(rootSelector)}), '::before').content`), 'none');
+  const scrim = await evaluate(`(() => {
+    const style = getComputedStyle(document.querySelector(${JSON.stringify(rootSelector)}), '::before');
+    return [style.content, style.backgroundColor, style.opacity, style.mixBlendMode, style.inset];
+  })()`);
+  if (scrimColor) {
+    check('Full-frame dimming over the external video in ' + rootSelector, scrim, ['""', scrimColor, '1', 'normal', '0px']);
+  } else {
+    check('No black dimming in ' + rootSelector, scrim[0], 'none');
+  }
   check('No background media requested in ' + rootSelector, await evaluate(`performance.getEntriesByType('resource').some(r => /\\.(mp4|webm)(?:[?]|$)/.test(r.name))`), false);
 }
 async function screenshot(name, clip) {
@@ -284,12 +292,13 @@ try {
   check('Bracket resolves UID-only translations through shared identity',await evaluate('document.querySelector("#match1-top").textContent'),first.name);
   await transparentScene('.bracket-wrapper');
   check('Bracket background tints are removed', await evaluate('[...document.querySelectorAll(".filter, .filter-bright")].every(el=>getComputedStyle(el).display === "none")'));
+  check('Bracket has no red/blue tint', await evaluate(`getComputedStyle(document.querySelector('.bracket-wrapper'), '::after').content`), 'none');
   await command('Emulation.setDefaultBackgroundColorOverride',{color:{r:0,g:0,b:0,a:0}});
   await screenshot('bracket');
   await message('interval:timer:en',{action:'start',durationSeconds:300});
   await navigate('graphics/interval-en.html');
   await until("document.querySelector('#layer-interval').hidden === false");await screenshot('interval');
-  await transparentScene('.interval-screen');
+  await transparentScene('.interval-screen', 'rgba(0, 0, 0, 0.25)');
   check('Interval uses English timer even with switcher visibility off', values.broadcast.en.program.interval.visible, false);
   check('Interval countdown renders', await evaluate('document.querySelector(".interval-countdown").textContent.trim().startsWith("04:") || document.querySelector(".interval-countdown").textContent.trim() === "05:00"'));
   check('No browser exceptions',errors,[]);
