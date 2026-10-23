@@ -76,7 +76,15 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led", engli
     const value = now === null && activeTimer.endsAtMs !== null ? "" : countdownText(activeTimer, now ?? 0);
     timer.hidden = value === "";
     if (countdown.textContent !== value) {
-      countdown.textContent = value;
+      if (output === "led") {
+        // Keep the centered colon fixed even when the font has proportional digits.
+        countdown.replaceChildren(...Array.from(value, character => {
+          const span = document.createElement("span");
+          span.textContent = character;
+          if (character !== ":") span.className = "interval-countdown-digit";
+          return span;
+        }));
+      } else countdown.textContent = value;
       fit();
     }
   }
