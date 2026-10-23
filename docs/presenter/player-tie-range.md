@@ -15,13 +15,14 @@ connection or presenter credential is needed.
    Moving duels with starting HP **above 50,000** automatically use
    **Pinpointing Duels** (see [pinpointing.md](pinpointing.md)). Tick
    **Force Pinpointing Duels** to enable it for other settings too.
-   The defaults are tie range **Off** and the force checkbox unticked.
+   The defaults are tie range **Half** and the force checkbox unticked.
    The HUD also provides a settings button.
 4. Configure before the duel is created. The first valid attachment captures
    the mode for that game, including a game waiting for its first round.
 
 Automatic detection requires moving, panning, and zooming to be allowed.
-Exactly 50,000 HP does not trigger it. Detection uses the party's starting HP,
+Exactly 50,000 HP does not trigger it. Both teams must start above the threshold.
+Detection uses the party's starting HP,
 so losing health never switches a duel back to HP scoring.
 
 Changing the preference affects the **next duel**. Reloading preserves the
@@ -64,9 +65,15 @@ rounds, aborts, and series scores.
 
 ## Supported games and recovery
 
-Support is limited to **two teams with one player each**, with equal initial
-health, multipliers enabled, and healing disabled. MOVE, NM, and NMPZ use the
-same score-based rules. Multi-player teams and special scoring are rejected.
+Support requires **two teams**, multipliers enabled, and healing disabled.
+Teams may have multiple players and equal or unequal initial health. MOVE,
+NM, and NMPZ use the same score-based rules. Special scoring is rejected.
+
+Game Mode presets and **Individual Initial Health** are supported. With the
+setting off, leftover per-team preset values are ignored. With it on, each
+team's actual starting HP is taken from its first-round result (or its team
+health before any results). Both multipliers still begin at 1x. Later remaining
+HP is never used as the starting baseline when replaying settled scores.
 Party players remain on `/party/lobby`; direct `/duels/<id>` and
 `/team-duels/<id>` pages, locale prefixes, and `/summary` are also recognized.
 

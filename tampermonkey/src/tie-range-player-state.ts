@@ -192,14 +192,6 @@ function decodeOptions(raw: Record<string, unknown>): Omit<TieRangeInput, 'teamI
     throw new DecodeError('incompatible-rules', 'Maximum-round options disagree');
   }
 
-  const teamOneHealth = options.initialHealthTeamOne;
-  const teamTwoHealth = options.initialHealthTeamTwo;
-  if (options.individualInitialHealth === true
-    || (teamOneHealth !== undefined && teamTwoHealth !== undefined && teamOneHealth !== teamTwoHealth)
-    || (typeof teamOneHealth === 'number' && teamOneHealth !== 0 && teamOneHealth !== initialHealth)
-    || (typeof teamTwoHealth === 'number' && teamTwoHealth !== 0 && teamTwoHealth !== initialHealth)) {
-    throw new DecodeError('incompatible-rules', 'Asymmetric team health is unsupported');
-  }
   if (options.disableHealing === false) {
     throw new DecodeError('incompatible-rules', 'Healing must be disabled');
   }
@@ -243,7 +235,8 @@ function decodeGuessTimes(player: Record<string, unknown>, deadlines: Map<number
   }
 }
 
-function decodeTeams(raw: Record<string, unknown>): {
+function decodeTeams(raw: Record<string, unknown>, individualInitialHealth: boolean): {
+  initialHealthByTeam?: [number, number];
   teamIds: [string, string];
   playerIds: [string[], string[]];
   rounds: PlayerSettledRound[];
@@ -255,6 +248,7 @@ function decodeTeams(raw: Record<string, unknown>): {
 
   const byLabel = new Map<string, {
     id: string;
+    initialHealth: number | null;
     playerIds: string[];
     results: Map<number, number>;
     guessTimes: Map<number, number>;
@@ -281,6 +275,9 @@ function decodeTeams(raw: Record<string, unknown>): {
       throw new DecodeError('partial-results', 'Team round results are missing');
     }
     const results = new Map<number, number>();
+    // Preset option fields can be stale. The team's round-one health is the
+    // actual baseline; current health is only a baseline before any results.
+    let startingHealth = team.health;
     for (const rawResult of team.roundResults) {
       const result = record(rawResult, 'Round result');
       const round = integer(result.roundNumber, 'Round-result number', 1);
@@ -288,8 +285,11 @@ function decodeTeams(raw: Record<string, unknown>): {
       if (score > 5000) throw new DecodeError('invalid-snapshot', `Score for round ${round} is invalid`);
       if (results.has(round)) throw new DecodeError('partial-results', `Duplicate result for round ${round}`);
       results.set(round, score);
+      if (round === 1) startingHealth = result.healthBefore;
     }
-    byLabel.set(label, { id, playerIds, results, guessTimes });
+    const initialHealth = individualInitialHealth
+      ? integer(startingHealth, `${label} initial health`, 1) : null;
+    byLabel.set(label, { id, initialHealth, playerIds, results, guessTimes });
   }
 
   const blue = byLabel.get('blue');
@@ -310,6 +310,7 @@ function decodeTeams(raw: Record<string, unknown>): {
       guessedAtMs: [blue.guessTimes.get(round) ?? null, red.guessTimes.get(round) ?? null] });
   }
   return {
+    ...(individualInitialHealth ? { initialHealthByTeam: [blue.initialHealth!, red.initialHealth!] as [number, number] } : {}),
     teamIds: [blue.id, red.id],
     playerIds: [blue.playerIds, red.playerIds],
     rounds,
@@ -345,13 +346,15 @@ function decodeSnapshot(rawValue: unknown): DecodedSnapshot {
   const currentRoundNumber = integer(raw.currentRoundNumber, 'Current round number', 1);
   const sourceStatus = nonemptyString(raw.status, 'Source status');
   const rules = decodeOptions(raw);
-  const movement = (raw.options as Record<string, unknown>).movementOptions;
-  const autoPinpointing = rules.initialHealth > 50000
+  const options = raw.options as Record<string, unknown>;
+  const teams = decodeTeams(raw, options.individualInitialHealth === true);
+  const movement = options.movementOptions;
+  const startingHealth = teams.initialHealthByTeam ?? [rules.initialHealth, rules.initialHealth];
+  const autoPinpointing = startingHealth.every(health => health > 50000)
     && typeof movement === 'object' && movement !== null && !Array.isArray(movement)
     && ['forbidMoving', 'forbidZooming', 'forbidRotating'].every(
       flag => (movement as Record<string, unknown>)[flag] === false,
     );
-  const teams = decodeTeams(raw);
   const roundStarts = decodeRoundStarts(raw, teams.rounds.length);
   return {
     gameId,
@@ -363,12 +366,18 @@ function decodeSnapshot(rawValue: unknown): DecodedSnapshot {
     teamLabels: ['blue', 'red'],
     playerIds: teams.playerIds,
     roundStarts,
-    input: { ...rules, teamIds: teams.teamIds, rounds: teams.rounds },
+    input: { ...rules,
+      ...(teams.initialHealthByTeam ? { initialHealthByTeam: teams.initialHealthByTeam } : {}),
+      teamIds: teams.teamIds, rounds: teams.rounds },
   };
 }
 
 function sameRules(previous: PlayerGameContext, next: DecodedSnapshot): boolean {
   return previous.input.initialHealth === next.input.initialHealth
+    && tupleEqual(
+      previous.input.initialHealthByTeam ?? [previous.input.initialHealth, previous.input.initialHealth],
+      next.input.initialHealthByTeam ?? [next.input.initialHealth, next.input.initialHealth],
+    )
     && previous.input.individual === next.input.individual
     && previous.input.mutual === next.input.mutual
     && previous.input.delay === next.input.delay
@@ -416,6 +425,7 @@ function freezeContext(context: PlayerGameContext): PlayerGameContext {
   for (const start of context.roundStarts) Object.freeze(start);
   Object.freeze(context.input.rounds);
   Object.freeze(context.input.teamIds);
+  if (context.input.initialHealthByTeam) Object.freeze(context.input.initialHealthByTeam);
   Object.freeze(context.input);
   Object.freeze(context.teamIds);
   Object.freeze(context.teamLabels);

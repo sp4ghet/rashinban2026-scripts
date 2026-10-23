@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.3.4
+// @version      0.3.5
 // @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Automatically detects Moving duels above 50,000 starting HP.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -460,6 +460,9 @@
     if (!Number.isInteger(input.initialHealth) || input.initialHealth <= 0) {
       throw new Error("Tie-range initial health is missing or invalid");
     }
+    if (input.initialHealthByTeam !== void 0 && (!Array.isArray(input.initialHealthByTeam) || input.initialHealthByTeam.length !== 2 || input.initialHealthByTeam.some((health) => !Number.isInteger(health) || health <= 0))) {
+      throw new Error("Tie-range team initial health is missing or invalid");
+    }
     if (!Number.isInteger(input.individual) || input.individual < 0 || !Number.isInteger(input.mutual) || input.mutual < 0 || !Number.isInteger(input.delay) || input.delay < 0) {
       throw new Error("Tie-range rule options are missing or invalid");
     }
@@ -486,7 +489,7 @@
   }
   function foldTieRange(input, mode2) {
     validateInput(input);
-    const initialHealth = [input.initialHealth, input.initialHealth];
+    const initialHealth = input.initialHealthByTeam ? [...input.initialHealthByTeam] : [input.initialHealth, input.initialHealth];
     const initialMultiplierTenths = [10, 10];
     const health = [...initialHealth];
     const multiplierTenths = [...initialMultiplierTenths];
@@ -736,11 +739,6 @@
     if (raw.maxNumberOfRounds !== void 0 && raw.maxNumberOfRounds !== maxRounds) {
       throw new DecodeError("incompatible-rules", "Maximum-round options disagree");
     }
-    const teamOneHealth = options.initialHealthTeamOne;
-    const teamTwoHealth = options.initialHealthTeamTwo;
-    if (options.individualInitialHealth === true || teamOneHealth !== void 0 && teamTwoHealth !== void 0 && teamOneHealth !== teamTwoHealth || typeof teamOneHealth === "number" && teamOneHealth !== 0 && teamOneHealth !== initialHealth || typeof teamTwoHealth === "number" && teamTwoHealth !== 0 && teamTwoHealth !== initialHealth) {
-      throw new DecodeError("incompatible-rules", "Asymmetric team health is unsupported");
-    }
     if (options.disableHealing === false) {
       throw new DecodeError("incompatible-rules", "Healing must be disabled");
     }
@@ -778,7 +776,7 @@
       if (previous === void 0 || at < previous) times.set(round, at);
     }
   }
-  function decodeTeams(raw) {
+  function decodeTeams(raw, individualInitialHealth) {
     const deadlines = decodeDeadlines(raw);
     if (!Array.isArray(raw.teams) || raw.teams.length !== 2) {
       throw new DecodeError("unsupported-game", "Exactly two teams are required");
@@ -806,6 +804,7 @@
         throw new DecodeError("partial-results", "Team round results are missing");
       }
       const results = /* @__PURE__ */ new Map();
+      let startingHealth = team.health;
       for (const rawResult of team.roundResults) {
         const result = record(rawResult, "Round result");
         const round = integer(result.roundNumber, "Round-result number", 1);
@@ -813,8 +812,10 @@
         if (score > 5e3) throw new DecodeError("invalid-snapshot", `Score for round ${round} is invalid`);
         if (results.has(round)) throw new DecodeError("partial-results", `Duplicate result for round ${round}`);
         results.set(round, score);
+        if (round === 1) startingHealth = result.healthBefore;
       }
-      byLabel.set(label, { id, playerIds, results, guessTimes });
+      const initialHealth = individualInitialHealth ? integer(startingHealth, `${label} initial health`, 1) : null;
+      byLabel.set(label, { id, initialHealth, playerIds, results, guessTimes });
     }
     const blue = byLabel.get("blue");
     const red = byLabel.get("red");
@@ -836,6 +837,7 @@
       });
     }
     return {
+      ...individualInitialHealth ? { initialHealthByTeam: [blue.initialHealth, red.initialHealth] } : {},
       teamIds: [blue.id, red.id],
       playerIds: [blue.playerIds, red.playerIds],
       rounds
@@ -869,11 +871,13 @@
     const currentRoundNumber = integer(raw.currentRoundNumber, "Current round number", 1);
     const sourceStatus = nonemptyString(raw.status, "Source status");
     const rules = decodeOptions(raw);
-    const movement = raw.options.movementOptions;
-    const autoPinpointing = rules.initialHealth > 5e4 && typeof movement === "object" && movement !== null && !Array.isArray(movement) && ["forbidMoving", "forbidZooming", "forbidRotating"].every(
+    const options = raw.options;
+    const teams = decodeTeams(raw, options.individualInitialHealth === true);
+    const movement = options.movementOptions;
+    const startingHealth = teams.initialHealthByTeam ?? [rules.initialHealth, rules.initialHealth];
+    const autoPinpointing = startingHealth.every((health) => health > 5e4) && typeof movement === "object" && movement !== null && !Array.isArray(movement) && ["forbidMoving", "forbidZooming", "forbidRotating"].every(
       (flag) => movement[flag] === false
     );
-    const teams = decodeTeams(raw);
     const roundStarts = decodeRoundStarts(raw, teams.rounds.length);
     return {
       gameId,
@@ -885,11 +889,19 @@
       teamLabels: ["blue", "red"],
       playerIds: teams.playerIds,
       roundStarts,
-      input: { ...rules, teamIds: teams.teamIds, rounds: teams.rounds }
+      input: {
+        ...rules,
+        ...teams.initialHealthByTeam ? { initialHealthByTeam: teams.initialHealthByTeam } : {},
+        teamIds: teams.teamIds,
+        rounds: teams.rounds
+      }
     };
   }
   function sameRules(previous, next) {
-    return previous.input.initialHealth === next.input.initialHealth && previous.input.individual === next.input.individual && previous.input.mutual === next.input.mutual && previous.input.delay === next.input.delay && previous.input.maxRounds === next.input.maxRounds;
+    return previous.input.initialHealth === next.input.initialHealth && tupleEqual(
+      previous.input.initialHealthByTeam ?? [previous.input.initialHealth, previous.input.initialHealth],
+      next.input.initialHealthByTeam ?? [next.input.initialHealth, next.input.initialHealth]
+    ) && previous.input.individual === next.input.individual && previous.input.mutual === next.input.mutual && previous.input.delay === next.input.delay && previous.input.maxRounds === next.input.maxRounds;
   }
   function sameRound(left, right) {
     return left.round === right.round && tupleEqual(left.scores, right.scores);
@@ -922,6 +934,7 @@
     for (const start2 of context.roundStarts) Object.freeze(start2);
     Object.freeze(context.input.rounds);
     Object.freeze(context.input.teamIds);
+    if (context.input.initialHealthByTeam) Object.freeze(context.input.initialHealthByTeam);
     Object.freeze(context.input);
     Object.freeze(context.teamIds);
     Object.freeze(context.teamLabels);

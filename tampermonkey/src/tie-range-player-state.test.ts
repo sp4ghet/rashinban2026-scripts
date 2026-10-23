@@ -151,7 +151,7 @@ test('rejects partial, duplicate, invalid, and incompatible scoring data', () =>
     ['duplicate round identity', value => value.rounds.push(value.rounds[0])],
     ['invalid score', value => { value.teams[0].roundResults[0].score = 5001; }],
     ['unknown required option', value => { delete value.options.roundWinMultiplierIncrement; }],
-    ['asymmetric health', value => { value.options.initialHealthTeamOne = 6000; }],
+    ['invalid initial health', value => { value.initialHealth = -1; }],
     ['healing enabled', value => { value.options.disableHealing = false; }],
     ['healing round', value => { value.rounds[0].isHealingRound = true; }],
     ['special round behavior', value => { value.options.roundStartingBehavior = 'Seeded'; }],
@@ -444,6 +444,7 @@ test('reload rejects cross-game keys, inconsistent identities, and malformed Off
     (v: any) => { v.sourceVersion = -1; },
     (v: any) => { v.roundStarts.push(v.roundStarts[0]); },
     (v: any) => { v.mode = 'off'; v.input.initialHealth = -1; },
+    (v: any) => { v.input.initialHealthByTeam = [6000, -1]; },
   ]) {
     const storage = new MemoryStorage();
     const context = acceptPlayerSnapshot(null, snapshot(), 'full').context!;
@@ -734,4 +735,109 @@ test('a finished archive clears a pending rollback left by the live node cancell
   assert.equal(finished.context?.input.rounds.length, 1);
   assert.deepEqual(finished.pinpointing?.totals, [1, 0]);
   assert.equal(finished.diagnostic?.code, 'source-ended');
+});
+
+function individualHealthSnapshot(blue: number, red: number): any {
+  return snapshot(value => {
+    value.options.individualInitialHealth = true;
+    value.options.initialHealthTeamOne = blue;
+    value.options.initialHealthTeamTwo = red;
+    value.teams[0].roundResults[0].healthBefore = blue;
+    value.teams[1].roundResults[0].healthBefore = red;
+  });
+}
+
+test('preset individual-health toggle accepts equal HP', () => {
+  const accepted = acceptPlayerSnapshot(null, individualHealthSnapshot(6000, 6000), 'half');
+  assert.equal(accepted.accepted, true);
+  assert.equal(accepted.diagnostic, null);
+  assert.deepEqual(accepted.output?.initialHealth, [6000, 6000]);
+});
+
+test('disabled individual health ignores stale preset team values', () => {
+  const accepted = acceptPlayerSnapshot(null, snapshot(value => {
+    value.options.initialHealthTeamOne = 10000;
+    value.options.initialHealthTeamTwo = 0;
+  }), 'half');
+  assert.equal(accepted.accepted, true);
+  assert.equal(accepted.diagnostic, null);
+  assert.deepEqual(accepted.output?.initialHealth, [6000, 6000]);
+});
+
+test('individual HP replays from round-one health, independent of current HP and preset fields', () => {
+  const value = individualHealthSnapshot(9000, 4000);
+  value.options.initialHealthTeamOne = value.options.initialHealthTeamTwo = 0;
+  const accepted = acceptPlayerSnapshot(null, value, 'half');
+  assert.equal(accepted.accepted, true);
+  assert.equal(accepted.diagnostic, null);
+  assert.deepEqual(accepted.output?.initialHealth, [9000, 4000]);
+  assert.deepEqual(accepted.output?.rounds[0].healthAfter, [9000, 3924]);
+  assert.deepEqual(accepted.output?.rounds[0].multiplierTenths, [10, 10]);
+  assert.deepEqual(accepted.output?.currentHealth, [0, 3644]);
+  assert.equal(accepted.output?.terminal?.winnerTeamId, 'team-red');
+});
+
+test('individual HP before round one uses team health and remains stable when results arrive', () => {
+  const created = structuredClone(liveManualFixture.created) as any;
+  created.options.individualInitialHealth = true;
+  created.teams[0].health = 9000;
+  created.teams[1].health = 4000;
+  const first = acceptPlayerSnapshot(null, created, 'half');
+  assert.equal(first.accepted, true);
+  assert.deepEqual(first.output?.currentHealth, [9000, 4000]);
+  assert.deepEqual(first.output?.currentMultiplierTenths, [10, 10]);
+  const resolved = structuredClone(liveManualFixture.resolved) as any;
+  resolved.options.individualInitialHealth = true;
+  resolved.teams[0].roundResults[0].healthBefore = 9000;
+  resolved.teams[1].roundResults[0].healthBefore = 4000;
+  const next = acceptPlayerSnapshot(first.context, resolved, 'half');
+  assert.equal(next.accepted, true);
+  assert.deepEqual(next.output?.initialHealth, [9000, 4000]);
+});
+
+test('individual HP stays attached to team labels and detects changes to starting health', () => {
+  const value = individualHealthSnapshot(9000, 4000);
+  const first = acceptPlayerSnapshot(null, value, 'half');
+  assert.ok(first.context);
+  value.version += 1;
+  value.teams.reverse();
+  value.teams[0].roundResults.reverse();
+  const reordered = acceptPlayerSnapshot(first.context, value, 'half');
+  assert.equal(reordered.accepted, true);
+  assert.deepEqual(reordered.output?.initialHealth, [9000, 4000]);
+  assert.ok(Object.isFrozen(reordered.context?.input.initialHealthByTeam));
+  value.version += 1;
+  value.teams[0].roundResults.find((round: any) => round.roundNumber === 1).healthBefore = 5000;
+  const changed = acceptPlayerSnapshot(reordered.context, value, 'half');
+  assert.equal(changed.accepted, false);
+  assert.equal(changed.diagnostic?.code, 'rules-change');
+});
+
+test('individual HP survives saved-context reload', async () => {
+  const first = acceptPlayerSnapshot(null, individualHealthSnapshot(9000, 4000), 'half');
+  assert.ok(first.context);
+  const storage = new MemoryStorage();
+  await savePlayerContext(storage, first.context);
+  const restored = await loadPlayerContext(storage, first.context.gameId);
+  assert.equal(restored.diagnostic, null);
+  assert.deepEqual(restored.output?.initialHealth, [9000, 4000]);
+  assert.deepEqual(restored.output?.currentHealth, [0, 3644]);
+});
+
+test('automatic Pinpointing uses both individual starting HP values', () => {
+  for (const [blue, red, points] of [[1000000, 900000, true], [1000000, 6000, false]] as const) {
+    const value = individualHealthSnapshot(blue, red);
+    value.options.movementOptions = { forbidMoving: false, forbidZooming: false, forbidRotating: false };
+    const accepted = acceptPlayerSnapshot(null, value, { mode: 'half', pinpointing: false });
+    assert.equal(accepted.accepted, true);
+    assert.equal(accepted.context?.pinpointing, points);
+  }
+});
+
+test('individual HP requires valid starting health, not later remaining health', () => {
+  const value = individualHealthSnapshot(9000, 4000);
+  delete value.teams[0].roundResults[0].healthBefore;
+  const accepted = acceptPlayerSnapshot(null, value, 'half');
+  assert.equal(accepted.accepted, false);
+  assert.equal(accepted.diagnostic?.code, 'invalid-snapshot');
 });

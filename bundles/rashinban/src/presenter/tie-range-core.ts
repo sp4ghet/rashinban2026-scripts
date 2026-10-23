@@ -9,6 +9,8 @@ export type TieRangeSettledRound = {
 
 export type TieRangeInput = {
   initialHealth: number;
+  /** Optional starting HP in teamIds order; defaults to the shared initialHealth. */
+  initialHealthByTeam?: [number, number];
   /** Individual multiplier increment in tenths. */
   individual: number;
   /** Mutual multiplier increment in tenths. */
@@ -68,6 +70,11 @@ function validateInput(input: TieRangeInput): void {
   if (!Number.isInteger(input.initialHealth) || input.initialHealth <= 0) {
     throw new Error('Tie-range initial health is missing or invalid');
   }
+  if (input.initialHealthByTeam !== undefined
+    && (!Array.isArray(input.initialHealthByTeam) || input.initialHealthByTeam.length !== 2
+      || input.initialHealthByTeam.some(health => !Number.isInteger(health) || health <= 0))) {
+    throw new Error('Tie-range team initial health is missing or invalid');
+  }
   if (!Number.isInteger(input.individual) || input.individual < 0
     || !Number.isInteger(input.mutual) || input.mutual < 0
     || !Number.isInteger(input.delay) || input.delay < 0) {
@@ -100,7 +107,8 @@ function validateInput(input: TieRangeInput): void {
 export function foldTieRange(input: TieRangeInput, mode: TieRangeFoldMode): TieRangeOutput {
   validateInput(input);
 
-  const initialHealth: [number, number] = [input.initialHealth, input.initialHealth];
+  const initialHealth: [number, number] = input.initialHealthByTeam
+    ? [...input.initialHealthByTeam] : [input.initialHealth, input.initialHealth];
   const initialMultiplierTenths: [number, number] = [10, 10];
   const health: [number, number] = [...initialHealth];
   const multiplierTenths: [number, number] = [...initialMultiplierTenths];

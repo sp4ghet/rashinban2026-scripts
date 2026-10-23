@@ -162,3 +162,37 @@ test('rejects malformed or gapped settled history', () => {
     { round: 0, scores: [4000, 3000] },
   ]), 'full'), /round/i);
 });
+
+test('individual starting HP preserves each team health and starts multipliers at 1x', () => {
+  const output = foldTieRange(input([
+    { round: 1, scores: [4000, 3500] },
+    { round: 2, scores: [3500, 4000] },
+  ], { initialHealthByTeam: [9000, 4000] }), 'half');
+  assert.deepEqual(output.initialHealth, [9000, 4000]);
+  assert.deepEqual(output.rounds[0].healthBefore, [9000, 4000]);
+  assert.deepEqual(output.rounds[0].multiplierTenths, [10, 10]);
+  assert.deepEqual(output.currentHealth, [8250, 3500]);
+  assert.deepEqual(output.currentMultiplierTenths, [20, 20]);
+});
+
+test('individual starting HP determines knockouts and round-limit winners', () => {
+  const knockout = foldTieRange(input([
+    { round: 1, scores: [4000, 3500] },
+    { round: 2, scores: [0, 5000] },
+  ], { initialHealthByTeam: [9000, 500] }), 'half');
+  assert.deepEqual(knockout.currentHealth, [9000, 0]);
+  assert.deepEqual(knockout.terminal, { round: 1, winnerTeamId: 'blue-team', isDraw: false });
+  assert.equal(knockout.rounds.length, 1);
+  const limit = foldTieRange(input([{ round: 1, scores: [4000, 4000] }], {
+    initialHealthByTeam: [4000, 9000], maxRounds: 1,
+  }), 'half');
+  assert.deepEqual(limit.terminal, { round: 1, winnerTeamId: 'red-team', isDraw: false });
+});
+
+test('rejects invalid individual starting HP', () => {
+  for (const value of [null, [], [6000], [6000, 6000, 6000], [0, 6000], [6000, -1], [6000, 1.5], ['6000', 6000]]) {
+    assert.throws(() => foldTieRange(input([], {
+      initialHealthByTeam: value as unknown as [number, number],
+    }), 'half'), /initial health/i);
+  }
+});
