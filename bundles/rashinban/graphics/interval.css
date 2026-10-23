@@ -56,7 +56,8 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 .interval-output[data-layout="led"] .interval-countdown { display: flex; justify-content: center; font-size: 410px; line-height: 290px; text-shadow: 0 4px 12px rgb(0 0 0 / 50%); }
 .interval-countdown-digit { display: inline-block; width: 1ch; text-align: center; }
 #layer-interval .interval-output[data-layout="led"] .interval-countdown [data-fit] { flex: 0 0 auto; transform-origin: center; }
-.interval-output[data-layout="led"] .interval-slides { left: 1371px; top: 163px; width: 450px; height: 253.125px; border-radius: 30px; }
+/* Scale the Stream frame as a whole so the corner mask keeps the artwork border intact. */
+.interval-output[data-layout="led"] .interval-slides { left: 1371px; top: 163px; transform: scale(calc(450 / 998)); transform-origin: top left; }
 .interval-output[data-layout="led"] .interval-sponsors { top: 504.5px; }
 
 /* OBS supplies the background for the English standalone source. */
