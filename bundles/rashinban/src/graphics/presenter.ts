@@ -1,6 +1,6 @@
 import { REPLICANTS, type RendererStatus, type PresenterClients } from '../types/replicants.ts';
 import type { DuelState, SeriesState, Timeline, Views } from '../types/presenter.ts';
-import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
+import { celebrationVolume, DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
 import { projectScene, paintScene, type PresenterScene } from './presenter/scene.ts';
 import { layoutKind, multiplierLabel, distanceLabel, lockLayout, pointsLabel, pointPips } from './presenter/layout.ts';
 import { paintScoring } from './presenter/scoring.ts';
@@ -95,7 +95,7 @@ function reconcileVideo() {
   cameraRelay?.setActive(captureActive);
   capture?.update(options.viewSource, captureActive);
   cameras?.update(captureActive);
-  videoPlayer.update(timeline.value?.generation ?? null, client.playsVideo(), timeline.value?.effect ?? 'none', silent(options.muted), options.effectsGain);
+  videoPlayer.update(timeline.value?.generation ?? null, client.playsVideo(), timeline.value?.effect ?? 'none', silent(options.muted), celebrationVolume(options));
   audioOutput.sync(timeline.value, options);
 }
 clients.on('change', value => { if (value) client.updateClients(value); reconcileVideo(); });
@@ -153,7 +153,7 @@ function frame() {
   for (const cue of client.pollCues()) if (cue.kind === 'five-k' && timing) {
     const complete = client.effectCompletion(timing);
     const asset = celebrationAsset(selectedMedia, timing.effect, mediaAssetsForCategory(presenterAssets.value, 'video', legacyVideoAssets.value ?? []));
-    if (asset) videoPlayer.play(asset, timing.generation, (_generation, failed) => { void complete(failed); }, silent(options.muted), options.effectsGain);
+    if (asset) videoPlayer.play(asset, timing.generation, (_generation, failed) => { void complete(failed); }, silent(options.muted), celebrationVolume(options));
     else void complete(true);
   }
   reconcileVideo();

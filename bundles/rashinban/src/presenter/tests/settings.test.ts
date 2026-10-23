@@ -5,6 +5,22 @@ import { DEFAULT_SETTINGS, parseSettings } from '../settings.ts';
 import { parseApplicationConfig } from '../../config/schema.ts';
 import { CUE_KINDS } from '../media.ts';
 
+test('embedded celebration volume defaults to full for existing settings and persists independently of cue volume', () => {
+  const legacy = { ...DEFAULT_SETTINGS, effectsGain: 0.35 } as Record<string, unknown>;
+  delete legacy.celebrationGain;
+  assert.equal(parseSettings(legacy).celebrationGain, 1);
+  const value = { ...DEFAULT_SETTINGS, celebrationGain: 0.375, cueGains: { 'five-k': 0.25 } };
+  const parsed = parseSettings(JSON.parse(JSON.stringify(value)));
+  assert.equal(parsed.celebrationGain, 0.375);
+  assert.equal(parsed.cueGains['five-k'], 0.25);
+  assert.deepEqual(parseSettings(JSON.parse(JSON.stringify(parsed))), parsed);
+  assert.equal(parseApplicationConfig({ presenter: { settings: { celebrationGain: 0 } } })
+    .presenter.settings.celebrationGain, 0);
+  for (const celebrationGain of [-0.1, 1.01, NaN, Infinity, '0.5', null, true]) {
+    assert.throws(() => parseSettings({ ...DEFAULT_SETTINGS, celebrationGain }));
+  }
+});
+
 test('cue faders migrate at full volume and preserve the existing global effects level', () => {
   const legacy = { ...DEFAULT_SETTINGS, effectsGain: 0.35 } as Record<string, unknown>;
   delete legacy.cueGains;

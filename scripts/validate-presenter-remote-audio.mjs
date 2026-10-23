@@ -81,12 +81,18 @@ export async function validateRemoteAudio(page, checks) {
   })()`);
   await p.until("[...document.querySelectorAll('.celebration-video')].some(v=>v.readyState>=2)", 'embedded soundtrack fixture preloaded');
   for (const effect of ['single-5k', 'double-5k']) {
+    await p.eval("qa.set('presenterSettings',{...nodecg.Replicant('presenterSettings').value,effectsGain:0.5,celebrationGain:0.4,cueGains:{...qa.initial.presenterSettings.cueGains,'five-k':0}})");
     await p.eval(`qa.audioSources=[];qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'results-transition',effect:${JSON.stringify(effect)},cues:[{id:${JSON.stringify(effect)},kind:'five-k',atMs:Date.now()+500,untilMs:Date.now()+4000,playerId:null}]})`);
-    await p.until("[...document.querySelectorAll('.celebration-video')].some(v=>!v.hidden&&!v.paused&&!v.muted&&v.volume===1&&v.currentTime>0.05)", effect + ' plays locally with embedded audio');
+    await p.until("[...document.querySelectorAll('.celebration-video')].some(v=>!v.hidden&&!v.paused&&!v.muted&&v.volume===0.2&&v.currentTime>0.05)", effect + ' embedded audio uses global and video faders independently of the cue fader');
     assert.equal(await p.eval("(()=>{const v=[...document.querySelectorAll('.celebration-video')].find(v=>!v.hidden);const stream=v.captureStream();const audible=stream.getAudioTracks().length>0;stream.getTracks().forEach(t=>t.stop());return audible;})()"), true, 'playing celebration contains an audio track');
     assert.equal(await p.eval('qa.audioSources.length'), 0, 'embedded soundtracks do not also play the five-k cue');
+    await p.eval("qa.videoTime=[...document.querySelectorAll('.celebration-video')].find(v=>!v.hidden).currentTime;qa.set('presenterSettings',{...nodecg.Replicant('presenterSettings').value,celebrationGain:0})");
+    await p.until("[...document.querySelectorAll('.celebration-video')].some(v=>!v.hidden&&!v.paused&&v.volume===0&&v.currentTime>=qa.videoTime)", effect + ' video fader silences an active clip without restarting it');
+    await p.eval("qa.set('presenterSettings',{...nodecg.Replicant('presenterSettings').value,celebrationGain:0.25})");
+    await p.until("[...document.querySelectorAll('.celebration-video')].some(v=>!v.hidden&&!v.paused&&v.volume===0.125)", effect + ' video volume changes during playback');
     await p.until("[...document.querySelectorAll('.celebration-video')].every(v=>v.hidden)", effect + ' completes locally');
   }
+  await p.eval("qa.set('presenterSettings',{...nodecg.Replicant('presenterSettings').value,effectsGain:1,celebrationGain:0,cueGains:qa.initial.presenterSettings.cueGains})");
   await p.eval(`qa.media.fiveK.single={...qa.asset,soundtrack:'cue'};qa.set('presenterMedia',qa.media)`);
   await p.until("document.body.dataset.audio==='ready'", 'separate celebration cue ready');
   await p.eval("qa.audioSources=[];qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'results-transition',effect:'single-5k',cues:[{id:'remote-cue-5k',kind:'five-k',atMs:Date.now()+500,untilMs:Date.now()+4000,playerId:null}]})");

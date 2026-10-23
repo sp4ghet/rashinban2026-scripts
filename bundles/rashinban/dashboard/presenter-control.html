@@ -29,8 +29,9 @@
 <p id="video-source-help" class="help" hidden>In the active OBS program source, open Interact and press F8 to assign left/right video inputs. Use HTTPS or localhost and enable OBS media access. Close setup before going on air.</p>
 <div class="row"><label>Audio output<select id="audio-output"><option value="separate" disabled>Separate browser source (removed)</option><option value="embedded">Embedded in graphic</option></select></label><label class="check"><input type="checkbox" id="muted"> Mute presenter audio</label></div>
 <label>Music gain (0–1)<input id="music-gain" type="number" min="0" max="1" step="0.05"></label>
-<fieldset><h2>Cue audio volume</h2><div id="effects-volume"></div>
+<fieldset><h2>Effects audio volume</h2><div id="effects-volume"></div>
 <p class="help">Each cue plays at its maximum volume × global volume × individual volume. 0% silences it; 100% keeps its original level. Save with Apply presentation.</p>
+<div id="celebration-volume"></div><p class="help">Embedded 5K/10K soundtracks use global volume × video volume. Separate five-k cue audio uses its individual cue fader below.</p>
 <details><summary>Individual cue volumes</summary><div id="cue-volumes"></div></details></fieldset>
 <fieldset class="camera-framing"><h2>Player camera framing</h2>
 <p class="help">Move the crop left or right for pre-game and post-game on Presenter and Remote. 50% centers the camera. Save with Apply presentation.</p>

@@ -85,6 +85,7 @@ function volumeFader(parent: HTMLElement, title: string, id: string) {
   };
 }
 const globalEffectsFader = volumeFader(element('effects-volume'), 'Global effects volume', 'effects-gain');
+const celebrationFader = volumeFader(element('celebration-volume'), 'Embedded 5K/10K video volume', 'celebration-gain');
 const cueFaders = new Map(CUE_KINDS.map(kind => [kind, volumeFader(element('cue-volumes'), kind, `cue-gain-${kind}`)]));
 function readCueGains(): PresenterSettings['cueGains'] {
   return Object.fromEntries([...cueFaders].map(([kind, fader]) => [kind, fader.gain])) as PresenterSettings['cueGains'];
@@ -220,6 +221,7 @@ function applySettings(value: PresenterSettings | undefined) {
   element('video-source-help').hidden = value.viewSource !== 'video';
   select('audio-output').value = value.audioOutput; input('muted').checked = value.muted;
   input('music-gain').value = String(value.musicGain); globalEffectsFader.set(value.effectsGain);
+  celebrationFader.set(value.celebrationGain ?? 1);
   for (const [kind, fader] of cueFaders) fader.set(value.cueGains?.[kind] ?? 1);
   updateCuePreviewVolume();
   for (const side of ['left', 'right'] as const) {
@@ -252,6 +254,7 @@ element('settings-form').addEventListener('submit', event => {
   void control('settings', { ...settings.value, viewSource: select('view-source').value, keyColor: select('key-color').value,
     audioOutput: select('audio-output').value, muted: input('muted').checked,
     musicGain: Number(input('music-gain').value), effectsGain: globalEffectsFader.gain, cueGains: readCueGains(),
+    celebrationGain: celebrationFader.gain,
     cameraFraming: { left: Number(input('camera-left-position').value), right: Number(input('camera-right-position').value) },
     tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value } }, 'error', settingsConfiguration);
 });

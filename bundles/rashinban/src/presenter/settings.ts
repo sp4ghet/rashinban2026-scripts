@@ -6,14 +6,14 @@ export type PlayerViewSource = 'rendered' | 'chroma' | 'video';
 export type PresenterSettings = {
   viewSource: PlayerViewSource; keyColor: '#00ff00' | '#ff00ff' | 'transparent';
   audioOutput: 'separate' | 'embedded'; muted: boolean;
-  musicGain: number; effectsGain: number; cueGains: Record<CueKind, number>; timing: Timing;
+  musicGain: number; effectsGain: number; celebrationGain: number; cueGains: Record<CueKind, number>; timing: Timing;
   tieRange: { enabled: boolean; mode: 'full' | 'half' };
   pinpointing: { enabled: boolean };
   cameraFraming: { left: number; right: number };
 };
 export const DEFAULT_SETTINGS: PresenterSettings = {
   viewSource: 'chroma', keyColor: '#ff00ff', audioOutput: 'embedded', muted: false,
-  musicGain: 0.7, effectsGain: 1, timing: { ...DEFAULT_TIMING },
+  musicGain: 0.7, effectsGain: 1, celebrationGain: 1, timing: { ...DEFAULT_TIMING },
   cueGains: Object.fromEntries(CUE_KINDS.map(kind => [kind, 1])) as Record<CueKind, number>,
   tieRange: { enabled: false, mode: 'full' },
   pinpointing: { enabled: false },
@@ -64,8 +64,14 @@ export function parseSettings(input: unknown): PresenterSettings {
   if (raw.pinRateLimitMs !== undefined) timing.pinRateLimitMs = bounded(raw.pinRateLimitMs, 120000);
   return { viewSource: value.viewSource, keyColor: value.keyColor, audioOutput: value.audioOutput, muted: value.muted,
     musicGain: bounded(value.musicGain, 1), effectsGain: bounded(value.effectsGain, 1), cueGains, timing,
+    celebrationGain: value.celebrationGain === undefined ? 1 : bounded(value.celebrationGain, 1),
     tieRange: { enabled: rule.enabled, mode: rule.mode }, pinpointing: { enabled: points.enabled },
     cameraFraming: { left: framing.left as number, right: framing.right as number } };
+}
+
+/** Embedded celebration audio has its own fader, independent of the five-k cue. */
+export function celebrationVolume(settings: Pick<PresenterSettings, 'effectsGain' | 'celebrationGain'>): number {
+  return settings.effectsGain * (settings.celebrationGain ?? 1);
 }
 
 /** Preserve the authored cue level, then apply the two operator faders. */
