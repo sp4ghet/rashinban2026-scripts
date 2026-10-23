@@ -208,9 +208,9 @@ try {
     surroundings.forEach(opaque);
     if(led) {
       assert.equal(await evaluate(`document.querySelector('.backdrop video')===qa.kv&&!qa.kv.paused&&qa.kv.muted`),true);
-      // Confirm the opaque backdrop pixels come from the playing video.
+      // A loading or unavailable video must never expose the capture below.
       await evaluate(`qa.kv.style.visibility='hidden'`);
-      (await pixels([[100,200],[1820,200]])).forEach(rgba=>assert.ok(rgba[3]<255));
+      (await pixels([[100,200],[1820,200]])).forEach(opaque);
       await evaluate(`qa.kv.style.visibility=''`);
     }
     if(!led){transparent(results[1]);transparent(results[2]);}

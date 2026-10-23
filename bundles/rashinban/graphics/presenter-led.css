@@ -4,8 +4,9 @@
 /* LED wall: only the top 1920x576 is physically shown. Names and HP sit in a
    top band because the players on stage can cover the lower part. */
 :root { --stage-top: 104px; --stage-h: 460px; --led-header-h: 54px; --led-view-h: calc(576px - var(--led-header-h)); }
-/* The LED owns its silent KV loop; the stream retains its static background. */
-.backdrop { inset: auto; top: 0; left: 0; width: 1920px; height: 576px; background: none; overflow: hidden; pointer-events: none; }
+/* Keep the LED opaque while its silent KV loop loads or if the local video is missing.
+   The shared chroma clip still opens the external player/camera windows when needed. */
+.backdrop { inset: auto; top: 0; left: 0; width: 1920px; height: 576px; background: #10131f url('assets/presenter-kv-led.png') center / cover no-repeat; overflow: hidden; pointer-events: none; }
 .backdrop video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .backdrop::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 35%, #0005 100%); }
 .celebration-video { height: 576px; }

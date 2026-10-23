@@ -42,6 +42,10 @@ and results; external gameplay and camera cutouts still work. NodeCG serves it a
 `/rashinban/media/background/presenter-led-kv.mp4`, with shared-installation fallback
 for worktrees. Build and restart NodeCG, then refresh the LED source to load the
 new media route. The interval/bracket KV selection is independent.
+If the video is loading or unavailable, the shipped LED KV image and an opaque
+base color cover the capture beneath preview and results screens. A 404 from
+the media URL means the local MP4 must be restored to the path above; the image
+fallback does not replace the video file.
 Place the KV video beneath the bracket Browser Sources. Stream and LED brackets
 share translucent red upper / blue lower bands, a dark scrim, and a soft glow
 along the left edge; the KV video remains visible through that treatment.
