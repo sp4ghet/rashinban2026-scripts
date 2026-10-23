@@ -43,7 +43,7 @@ function accountId(): string | null {
 }
 
 async function start(): Promise<void> {
-  let configuredMode = mode(await GM_getValue(MODE_KEY, 'off'));
+  let configuredMode = mode(await GM_getValue(MODE_KEY, 'half'));
   let configuredPinpointing = (await GM_getValue(PINPOINTING_KEY, false)) === true;
   let guestId: string | null = null;
   let identityRequest: AbortController | null = null;

@@ -2683,7 +2683,7 @@
     }
   }
   async function start() {
-    let configuredMode = mode(await GM_getValue(MODE_KEY, "off"));
+    let configuredMode = mode(await GM_getValue(MODE_KEY, "half"));
     let configuredPinpointing = await GM_getValue(PINPOINTING_KEY, false) === true;
     let guestId = null;
     let identityRequest = null;
