@@ -1,11 +1,12 @@
-import type { Timing } from '../types/presenter.ts';
+import type { Cue, CueKind, Timing } from '../types/presenter.ts';
+import { CUE_KINDS } from './media.ts';
 import { DEFAULT_TIMING } from './timeline.ts';
 
 export type PlayerViewSource = 'rendered' | 'chroma' | 'video';
 export type PresenterSettings = {
   viewSource: PlayerViewSource; keyColor: '#00ff00' | '#ff00ff' | 'transparent';
   audioOutput: 'separate' | 'embedded'; muted: boolean;
-  musicGain: number; effectsGain: number; timing: Timing;
+  musicGain: number; effectsGain: number; cueGains: Record<CueKind, number>; timing: Timing;
   tieRange: { enabled: boolean; mode: 'full' | 'half' };
   pinpointing: { enabled: boolean };
   cameraFraming: { left: number; right: number };
@@ -13,6 +14,7 @@ export type PresenterSettings = {
 export const DEFAULT_SETTINGS: PresenterSettings = {
   viewSource: 'chroma', keyColor: '#ff00ff', audioOutput: 'embedded', muted: false,
   musicGain: 0.7, effectsGain: 1, timing: { ...DEFAULT_TIMING },
+  cueGains: Object.fromEntries(CUE_KINDS.map(kind => [kind, 1])) as Record<CueKind, number>,
   tieRange: { enabled: false, mode: 'full' },
   pinpointing: { enabled: false },
   cameraFraming: { left: 50, right: 50 },
@@ -45,6 +47,13 @@ export function parseSettings(input: unknown): PresenterSettings {
     if (typeof input !== 'number' || !Number.isFinite(input) || input < 0 || input > max) throw new Error('Invalid gain or duration');
     return input;
   };
+  const cueInput = value.cueGains === undefined ? {} : value.cueGains;
+  if (typeof cueInput !== 'object' || cueInput === null || Array.isArray(cueInput)
+    || Object.keys(cueInput).some(key => !CUE_KINDS.includes(key as CueKind))) throw new Error('Invalid cue gains');
+  const cueValues = cueInput as Record<string, unknown>;
+  const cueGains = Object.fromEntries(CUE_KINDS.map(kind => [kind,
+    Object.hasOwn(cueValues, kind) ? bounded(cueValues[kind], 1) : 1,
+  ])) as Record<CueKind, number>;
   if (typeof value.timing !== 'object' || value.timing === null || Array.isArray(value.timing)) throw new Error('Invalid timing');
   const raw = value.timing as Record<string, unknown>;
   if (Object.keys(raw).some(key => !['leadMs', 'countMs', 'damageMs', 'effectWatchdogMs', 'pinRateLimitMs'].includes(key))) throw new Error('Unknown timing field');
@@ -54,7 +63,13 @@ export function parseSettings(input: unknown): PresenterSettings {
   };
   if (raw.pinRateLimitMs !== undefined) timing.pinRateLimitMs = bounded(raw.pinRateLimitMs, 120000);
   return { viewSource: value.viewSource, keyColor: value.keyColor, audioOutput: value.audioOutput, muted: value.muted,
-    musicGain: bounded(value.musicGain, 1), effectsGain: bounded(value.effectsGain, 1), timing,
+    musicGain: bounded(value.musicGain, 1), effectsGain: bounded(value.effectsGain, 1), cueGains, timing,
     tieRange: { enabled: rule.enabled, mode: rule.mode }, pinpointing: { enabled: points.enabled },
     cameraFraming: { left: framing.left as number, right: framing.right as number } };
+}
+
+/** Preserve the authored cue level, then apply the two operator faders. */
+export function cueVolume(settings: Pick<PresenterSettings, 'muted' | 'effectsGain' | 'cueGains'>, cue: Pick<Cue, 'kind' | 'sound'>): number {
+  const maxVolume = cue.kind === 'pre-round-tick' ? 1.3 : 1;
+  return settings.muted ? 0 : maxVolume * settings.effectsGain * (settings.cueGains?.[cue.sound ?? cue.kind] ?? 1);
 }

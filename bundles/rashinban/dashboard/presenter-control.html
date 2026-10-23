@@ -6,6 +6,11 @@
   details { margin: 6px 0; } summary { cursor: pointer; color: #9bacc5; font-size: 12px; } .help { margin: 6px 0; } #error:empty { display: none; } a { color: #9ccaff; } .launch-links { display: flex; flex-wrap: wrap; gap: 12px; margin: 10px 0; }
   .camera-range-scale { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; }
   .camera-framing input[type="range"] { width: 100%; margin: 0; padding: 0; }
+  .volume-fader { min-width: 0; }
+  .volume-fader-controls { display: grid; grid-template-columns: minmax(0, 1fr) 80px auto; gap: 8px; align-items: center; }
+  .volume-fader-controls input[type="range"] { width: 100%; min-width: 0; margin: 0; padding: 0; }
+  .volume-fader-controls input[type="number"] { width: 100%; }
+  #cue-volumes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 0 16px; }
 </style></head><body>
 <div class="status"><span id="replay-label" hidden>OFFLINE REPLAY</span><strong id="connection-status">Connecting to NodeCG…</strong><div id="game-status"></div><div id="mapping-warning" class="warning"></div><div id="server-warning" class="warning"></div></div>
 <p class="help">Input source and Pinpointing Duels are in the Duel Setup panel in Config.</p>
@@ -23,7 +28,10 @@
 <form id="settings-form"><h2>Presentation</h2><div class="row"><label>Player views<select id="view-source"><option value="chroma">Chroma · whole player feeds</option><option value="rendered">Rendered</option><option value="video">Video input · capture devices</option></select></label><label>Capture window fill<select id="key-color"><option value="#ff00ff">Magenta</option><option value="#00ff00">Green</option><option value="transparent">Transparent · OBS overlay</option></select></label></div>
 <p id="video-source-help" class="help" hidden>In the active OBS program source, open Interact and press F8 to assign left/right video inputs. Use HTTPS or localhost and enable OBS media access. Close setup before going on air.</p>
 <div class="row"><label>Audio output<select id="audio-output"><option value="separate" disabled>Separate browser source (removed)</option><option value="embedded">Embedded in graphic</option></select></label><label class="check"><input type="checkbox" id="muted"> Mute presenter audio</label></div>
-<div class="row"><label>Music gain (0–1)<input id="music-gain" type="number" min="0" max="1" step="0.05"></label><label>Effects gain (0–1)<input id="effects-gain" type="number" min="0" max="1" step="0.05"></label></div>
+<label>Music gain (0–1)<input id="music-gain" type="number" min="0" max="1" step="0.05"></label>
+<fieldset><h2>Cue audio volume</h2><div id="effects-volume"></div>
+<p class="help">Each cue plays at its maximum volume × global volume × individual volume. 0% silences it; 100% keeps its original level. Save with Apply presentation.</p>
+<details><summary>Individual cue volumes</summary><div id="cue-volumes"></div></details></fieldset>
 <fieldset class="camera-framing"><h2>Player camera framing</h2>
 <p class="help">Move the crop left or right for pre-game and post-game on Presenter and Remote. 50% centers the camera. Save with Apply presentation.</p>
 <div class="row">
@@ -44,7 +52,7 @@
 <p class="help">Upload clips in NodeCG Assets, then select below. LED plays silently and uses the stream clip when no LED clip is selected.</p>
 <div class="row"><fieldset><label>Single 5K · Stream<select id="single-video" data-assets="video"></select></label><label>Single 5K · LED<select id="single-led-video" data-assets="video"></select></label><label>Soundtrack<select id="single-soundtrack"><option value="embedded">Embedded in video</option><option value="cue">Separate five-k cue</option><option value="silent">Silent</option></select></label><label>Maximum wait (ms)<input id="single-watchdog" type="number" min="500" max="120000" value="10000"></label></fieldset>
 <fieldset><label>Double 5K (10K) · Stream<select id="double-video" data-assets="video"></select></label><label>Double 5K (10K) · LED<select id="double-led-video" data-assets="video"></select></label><label>Soundtrack<select id="double-soundtrack"><option value="embedded">Embedded in video</option><option value="cue">Separate five-k cue</option><option value="silent">Silent</option></select></label><label>Maximum wait (ms)<input id="double-watchdog" type="number" min="500" max="120000" value="10000"></label></fieldset></div>
-<details><summary>Music stems and cue sounds</summary><div id="media-stems"></div><button id="add-stem" type="button">Add music stem</button><h2>Context fade (ms)</h2><div id="media-fades" class="row"></div><h2>Cue sounds</h2><p class="help">Local preview: 50% volume, up to 10 seconds.</p><audio id="cue-preview-audio"></audio><button id="stop-cue-preview" type="button">Stop local preview</button><div id="media-sounds" class="row"></div></details>
+<details><summary>Music stems and cue sounds</summary><div id="media-stems"></div><button id="add-stem" type="button">Add music stem</button><h2>Context fade (ms)</h2><div id="media-fades" class="row"></div><h2>Cue sounds</h2><p class="help">Local preview follows the current volume faders at a 50% listening level, up to 10 seconds.</p><audio id="cue-preview-audio"></audio><button id="stop-cue-preview" type="button">Stop local preview</button><div id="media-sounds" class="row"></div></details>
 <button class="primary wide" type="submit">Apply media</button>
 <div id="media-configuration-status" class="status">Loading configuration…</div>
 <div class="row"><button id="media-configuration-reset" type="button">Reset to shared</button><button id="media-configuration-import" type="button">Import local settings</button></div>

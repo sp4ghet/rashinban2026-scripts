@@ -2,7 +2,7 @@ import { REPLICANTS, type PresenterConnection, type PresenterRenderer, type Pres
 import type { PresenterPublicConfig } from '../config/types.ts';
 import { bindConfigurationControls, type ConfigurationControls } from './configuration-status.ts';
 import type { DuelState, SeriesState, Timeline } from '../types/presenter.ts';
-import { DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
+import { cueVolume, DEFAULT_SETTINGS, type PresenterSettings } from '../presenter/settings.ts';
 import type { RuleContexts } from '../presenter/tie-range-context.ts';
 import { CUE_KINDS, EMPTY_MEDIA, MUSIC_CONTEXTS, type AssetInventory, type MediaManifest, type Stem } from '../presenter/media.ts';
 import type { PresenterMediaStatus } from '../types/replicants.ts';
@@ -65,6 +65,30 @@ function menuField(parent: HTMLElement, title: string, category: MediaCategory, 
   const menu = document.createElement('select'); menu.dataset.assets = category; assetOptions(menu, category, value);
   label.append(menu); parent.append(label); return menu;
 }
+function volumeFader(parent: HTMLElement, title: string, id: string) {
+  const row = document.createElement('div'); row.className = 'volume-fader';
+  const label = document.createElement('label'); label.htmlFor = `${id}-slider`; label.textContent = title;
+  const controls = document.createElement('div'); controls.className = 'volume-fader-controls';
+  const slider = document.createElement('input'); slider.id = `${id}-slider`; slider.type = 'range';
+  const exact = document.createElement('input'); exact.id = id; exact.type = 'number'; exact.required = true;
+  for (const control of [slider, exact]) {
+    control.min = '0'; control.max = '100'; control.step = 'any'; control.value = '100';
+    control.setAttribute('aria-label', `${title} (${control === slider ? 'slider' : 'percent'})`);
+  }
+  slider.addEventListener('input', () => { exact.value = slider.value; });
+  exact.addEventListener('input', () => { if (exact.validity.valid) slider.value = exact.value; });
+  const unit = document.createElement('span'); unit.textContent = '%';
+  controls.append(slider, exact, unit); row.append(label, controls); parent.append(row);
+  return {
+    get gain() { return exact.valueAsNumber / 100; },
+    set(gain: number) { slider.value = exact.value = String(Number((gain * 100).toFixed(10))); },
+  };
+}
+const globalEffectsFader = volumeFader(element('effects-volume'), 'Global effects volume', 'effects-gain');
+const cueFaders = new Map(CUE_KINDS.map(kind => [kind, volumeFader(element('cue-volumes'), kind, `cue-gain-${kind}`)]));
+function readCueGains(): PresenterSettings['cueGains'] {
+  return Object.fromEntries([...cueFaders].map(([kind, fader]) => [kind, fader.gain])) as PresenterSettings['cueGains'];
+}
 function addStem(stem: Stem) {
   const row = document.createElement('fieldset'); row.className = 'media-stem';
   field(row, 'Stem ID', 'id', stem.id); menuField(row, 'Music asset', 'music', stem.url);
@@ -78,13 +102,19 @@ for (const context of MUSIC_CONTEXTS) field(element('media-fades'), context, con
 field(element('media-fades'), 'duel end', 'end', '0', 120000);
 const cuePreview = element('cue-preview-audio') as HTMLAudioElement;
 let stopPreview: ReturnType<typeof setTimeout> | undefined;
-function stopCuePreview() { clearTimeout(stopPreview); cuePreview.pause(); cuePreview.removeAttribute('src'); cuePreview.load(); }
+let previewKind: typeof CUE_KINDS[number] | null = null;
+function stopCuePreview() { clearTimeout(stopPreview); previewKind = null; cuePreview.pause(); cuePreview.removeAttribute('src'); cuePreview.load(); }
+function updateCuePreviewVolume() {
+  if (!previewKind) return;
+  const volume = 0.5 * cueVolume({ muted: false, effectsGain: globalEffectsFader.gain, cueGains: readCueGains() }, { kind: previewKind });
+  if (Number.isFinite(volume) && volume >= 0 && volume <= 1) cuePreview.volume = volume;
+}
 for (const kind of CUE_KINDS) {
   const menu = menuField(element('media-sounds'), kind, 'effects', ''); menu.dataset.cue = kind;
   const preview = document.createElement('button'); preview.type = 'button'; preview.dataset.previewCue = kind; preview.textContent = 'Preview here';
   preview.onclick = () => {
     stopCuePreview(); if (!menu.value) return;
-    cuePreview.src = mediaPlaybackUrl(menu.value); cuePreview.loop = kind === 'count'; cuePreview.volume = 0.5;
+    cuePreview.src = mediaPlaybackUrl(menu.value); cuePreview.loop = kind === 'count'; previewKind = kind; updateCuePreviewVolume();
     void cuePreview.play().catch(() => { element('error').textContent = 'Preview audio unavailable. Check the selected asset.'; });
     stopPreview = setTimeout(stopCuePreview, kind === 'count' ? 3000 : 10000);
   };
@@ -189,7 +219,9 @@ function applySettings(value: PresenterSettings | undefined) {
   select('view-source').value = value.viewSource; select('key-color').value = value.keyColor;
   element('video-source-help').hidden = value.viewSource !== 'video';
   select('audio-output').value = value.audioOutput; input('muted').checked = value.muted;
-  input('music-gain').value = String(value.musicGain); input('effects-gain').value = String(value.effectsGain);
+  input('music-gain').value = String(value.musicGain); globalEffectsFader.set(value.effectsGain);
+  for (const [kind, fader] of cueFaders) fader.set(value.cueGains?.[kind] ?? 1);
+  updateCuePreviewVolume();
   for (const side of ['left', 'right'] as const) {
     input(`camera-${side}-position`).value = String(value.cameraFraming?.[side] ?? DEFAULT_SETTINGS.cameraFraming[side]);
     showCameraPosition(side);
@@ -219,12 +251,12 @@ element('settings-form').addEventListener('submit', event => {
   event.preventDefault(); if (!settings.value) return;
   void control('settings', { ...settings.value, viewSource: select('view-source').value, keyColor: select('key-color').value,
     audioOutput: select('audio-output').value, muted: input('muted').checked,
-    musicGain: Number(input('music-gain').value), effectsGain: Number(input('effects-gain').value),
+    musicGain: Number(input('music-gain').value), effectsGain: globalEffectsFader.gain, cueGains: readCueGains(),
     cameraFraming: { left: Number(input('camera-left-position').value), right: Number(input('camera-right-position').value) },
     tieRange: { enabled: input('tie-range-enabled').checked, mode: select('tie-range-mode').value } }, 'error', settingsConfiguration);
 });
 
-element('settings-form').addEventListener('input', () => settingsConfiguration.draft.markDirty());
+element('settings-form').addEventListener('input', () => { settingsConfiguration.draft.markDirty(); updateCuePreviewVolume(); });
 element('settings-form').addEventListener('change', () => settingsConfiguration.draft.markDirty());
 element('media-form').addEventListener('input', () => mediaConfiguration.draft.markDirty());
 element('media-form').addEventListener('change', () => mediaConfiguration.draft.markDirty());

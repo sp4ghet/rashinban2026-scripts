@@ -1,7 +1,7 @@
 import { EMPTY_MEDIA, type MediaManifest, type Stem, type AudioStatus } from '../../presenter/media.ts';
 import { canPlayCue } from '../../presenter/cues.ts';
 import type { Cue, CueKind, Timeline } from '../../types/presenter.ts';
-import type { PresenterSettings } from '../../presenter/settings.ts';
+import { cueVolume, type PresenterSettings } from '../../presenter/settings.ts';
 import { mediaPlaybackUrl } from '../../config/media-url.ts';
 export function stemOffset(epoch: number, now: number, start: number, end: number): number {
   const length = end - start;
@@ -57,7 +57,7 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       if (node.envelope && node.start > time && bothGuessed) { cancelCue(id, false); continue; }
       if (!valid.has(id) && (node.start > time || node.cue.kind === 'count' || node.cue.kind === 'five-k') || timeline.phase === 'aborted' || node.cue.kind === 'five-k' && (effect?.soundtrack !== 'cue' || node.programOwner !== programOwner)) cancelCue(id, false);
       else {
-        node.gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain * (node.cue.kind === 'pre-round-tick' ? 1.3 : 1), time);
+        node.gain.gain.setValueAtTime(cueVolume(settings, node.cue), time);
         const endedEarly = (bothGuessed
           || ['results-transition', 'results-reveal', 'between-rounds', 'waiting-host', 'finished'].includes(timeline.phase))
           && now < node.cue.untilMs;
@@ -86,7 +86,7 @@ export function createAudio(context: AudioContext, fetchAsset: typeof fetch): Pr
       if (cue.kind === 'count' && end <= now) continue;
       const source = context.createBufferSource(); const gain = context.createGain();
       source.buffer = buffer; source.loop = cue.kind === 'count';
-      gain.gain.setValueAtTime(settings.muted ? 0 : settings.effectsGain * (cue.kind === 'pre-round-tick' ? 1.3 : 1), time);
+      gain.gain.setValueAtTime(cueVolume(settings, cue), time);
       const envelope = countdown ? context.createGain() : null;
       const naturalEnd = start + buffer.duration - offset;
       source.connect(gain);

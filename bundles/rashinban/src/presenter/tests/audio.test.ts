@@ -207,6 +207,33 @@ test('preview tick plays once at researched gain and finishes when live begins',
   p.audio.sync({ ...t, phase: 'live', cues: [] }, { ...DEFAULT_SETTINGS, muted: true }, 2000);
   assert.equal(p.sources[0].output.gain.at(11),0);
 });
+
+test('cue volume multiplies authored maximum, global fader and the selected sound fader', async () => {
+  const p = port();
+  await p.audio.load({ ...EMPTY_MEDIA, sounds: { 'pre-round-tick': '/tick', guess: '/guess', 'opponent-guess': '/opponent' } });
+  p.audio.lease(30000, 1000);
+  const t = { ...timeline, cues: [cue('tick', 'pre-round-tick', 1000), cue('own', 'guess', 1000),
+    { ...cue('opponent', 'guess', 1000), sound: 'opponent-guess' as const }] };
+  const settings = { ...DEFAULT_SETTINGS, effectsGain: 0.5,
+    cueGains: { ...DEFAULT_SETTINGS.cueGains, 'pre-round-tick': 0.4, guess: 0.25, 'opponent-guess': 0.75 } };
+  p.audio.sync(t, settings, 1000);
+  assert.equal(p.sources.length, 3);
+  assert.equal(p.sources[0].output.gain.at(10), 0.26);
+  assert.equal(p.sources[1].output.gain.at(10), 0.125);
+  assert.equal(p.sources[2].output.gain.at(10), 0.375);
+
+  p.context.currentTime = 11;
+  p.audio.sync(t, { ...settings, effectsGain: 1, cueGains: { ...settings.cueGains, guess: 0 } }, 2000);
+  assert.equal(p.sources.length, 3, 'adjusting levels keeps the current cue sources');
+  assert.equal(p.sources[0].output.gain.at(11), 0.52);
+  assert.equal(p.sources[1].output.gain.at(11), 0);
+  assert.equal(p.sources[2].output.gain.at(11), 0.75);
+
+  for (const silenced of [{ ...settings, effectsGain: 0 }, { ...settings, muted: true }]) {
+    p.audio.sync(t, silenced, 2000);
+    assert.ok(p.sources.every(source => source.output.gain.at(11) === 0));
+  }
+});
 test('continuous countdown seeks on late entry, fades on early results, and skips stale tails', async () => {
   const p = port(); await p.audio.load(cueMedia); p.audio.lease(30000, 8000);
   const t = { ...timeline, cues: [cue('continuous', 'countdown', 1000, 16000)] };

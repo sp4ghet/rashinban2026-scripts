@@ -3,6 +3,36 @@ import test from 'node:test';
 import { layoutKind } from '../../graphics/presenter/layout.ts';
 import { DEFAULT_SETTINGS, parseSettings } from '../settings.ts';
 import { parseApplicationConfig } from '../../config/schema.ts';
+import { CUE_KINDS } from '../media.ts';
+
+test('cue faders migrate at full volume and preserve the existing global effects level', () => {
+  const legacy = { ...DEFAULT_SETTINGS, effectsGain: 0.35 } as Record<string, unknown>;
+  delete legacy.cueGains;
+  const parsed = parseSettings(legacy);
+  assert.equal(parsed.effectsGain, 0.35);
+  for (const kind of CUE_KINDS) assert.equal(parsed.cueGains[kind], 1, kind);
+});
+
+test('cue faders persist exact values and fill unspecified cues at full volume', () => {
+  const value = { ...DEFAULT_SETTINGS, cueGains: { pin: 0, guess: 0.375, 'opponent-guess': 1 } };
+  const parsed = parseSettings(JSON.parse(JSON.stringify(value)));
+  assert.equal(parsed.cueGains.pin, 0);
+  assert.equal(parsed.cueGains.guess, 0.375);
+  assert.equal(parsed.cueGains['opponent-guess'], 1);
+  assert.equal(parsed.cueGains.countdown, 1);
+  assert.notEqual(parsed.cueGains, value.cueGains);
+  assert.deepEqual(parseSettings(JSON.parse(JSON.stringify(parsed))), parsed);
+  const configured = parseApplicationConfig({ presenter: { settings: { cueGains: { damage: 0.625 } } } });
+  assert.equal(configured.presenter.settings.cueGains.damage, 0.625);
+  assert.equal(configured.presenter.settings.cueGains.pin, 1);
+});
+
+test('cue faders reject invalid shapes, unknown cues and values outside zero to one', () => {
+  for (const cueGains of [null, [], true, '0.5', { unknown: 0.5 }, { constructor: 0.5 },
+    { pin: -0.1 }, { pin: 1.01 }, { pin: NaN }, { pin: Infinity }, { pin: '0.5' }, { pin: null }]) {
+    assert.throws(() => parseSettings({ ...DEFAULT_SETTINGS, cueGains }));
+  }
+});
 
 test('chroma NMPZ uses two complete player windows', () => {
   assert.equal(layoutKind('NMPZ', 'chroma'), 'dual');
