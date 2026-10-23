@@ -15,7 +15,16 @@
   z-index: -1;
 }
 
-/* Red upper / blue lower bands; only the background is tinted. */
+/* Tint the Stream video in its own layer. SVG blend modes cannot multiply
+   against a video outside the SVG and otherwise wash black areas with red. */
+.bracket-wrapper .kv-background { filter: brightness(0.55); }
+.bracket-wrapper::before {
+  background: linear-gradient(to bottom, #ff0000 0 596px, #0000ff 596px 100%);
+  mix-blend-mode: multiply;
+  opacity: 0.85;
+}
+
+/* LED bands retain their independent 576px composition. */
 .bracket-svg .filter { opacity: 0.1; }
 .bracket-svg .filter-bright {
   mix-blend-mode: multiply;

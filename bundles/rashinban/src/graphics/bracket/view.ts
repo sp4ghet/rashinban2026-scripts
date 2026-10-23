@@ -3,9 +3,9 @@ import { matchProfile } from "../../match/identity.ts";
 import type { PlayerProfile } from "../../sheet/players.ts";
 import { emptyRow, type BracketFinals } from "../../bracket/finals.ts";
 import { REPLICANTS } from "../../types/replicants.ts";
-import { renderBracket, type BracketLayout } from "./svg.ts";
+import { anchors, BOX, renderBracket, type BracketLayout } from "./svg.ts";
 
-export function mountBracketView(root: SVGSVGElement, layout: BracketLayout, english = false): void {
+export function mountBracketView(root: SVGSVGElement, layout: BracketLayout, english = false): { fitNames(): void } {
   renderBracket(layout, {
     linesHost: root.querySelector("#bracket-lines")!,
     matchesHost: root.querySelector("#bracket-matches")!,
@@ -25,14 +25,30 @@ export function mountBracketView(root: SVGSVGElement, layout: BracketLayout, eng
   let value: BracketFinals | undefined;
   let profiles: PlayerProfile[] = [];
   let sharedProfiles: PlayerProfile[] = [];
+  const champion = root.querySelector<SVGTextElement>(".bracket-champion");
+  const box = layout.box ?? BOX;
+  function fitNames() {
+    for (const { names } of parts) for (const name of names) {
+      const text = name as SVGTextElement;
+      text.removeAttribute("textLength");
+      text.removeAttribute("lengthAdjust");
+      const available = box.right - box.scoreWidth - box.nameX * 2;
+      if (text.getComputedTextLength() > available) {
+        text.setAttribute("textLength", String(available));
+        text.setAttribute("lengthAdjust", "spacingAndGlyphs");
+      }
+    }
+  }
   function render() {
     const rows = new Map((value?.rows ?? []).map(row => [row.match, row]));
+    let championshipMatch = layout.matches.find(match => match.round === "Grand Final");
     for (const { match, group, line, border, names, scores } of parts) {
       const row = rows.get(match.id) ?? emptyRow(match.id);
       if (match.optional) {
         const display = row.top || row.bottom ? "" : "none";
         group.style.display = display;
         if (line) line.style.display = display;
+        if (display !== "none") championshipMatch = match;
       }
       border.classList.toggle("active", row.active);
       for (const [index, side] of (["top", "bottom"] as const).entries()) {
@@ -44,10 +60,21 @@ export function mountBracketView(root: SVGSVGElement, layout: BracketLayout, eng
         scores[index]!.textContent = row[`${side}Score`];
       }
     }
+    if (champion && championshipMatch) {
+      const position = anchors(championshipMatch, layout.colX, box);
+      champion.setAttribute("x", String(position.centerX));
+      champion.setAttribute("y", String(championshipMatch.y - (layout.championGap ?? 24)));
+    }
+    fitNames();
   }
+  // Refit after Adobe's display face and Japanese fallback finish loading.
+  void document.fonts.ready.then(fitNames);
+  document.fonts.addEventListener("loadingdone", fitNames);
+  render();
   nodecg.Replicant<BracketFinals>(REPLICANTS.bracketFinals).on("change", next => { value = next; render(); });
   if (english) {
     nodecg.Replicant<PlayerProfile[]>(REPLICANTS.playersEn).on("change", next => { profiles = next ?? []; render(); });
     nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players).on("change", next => { sharedProfiles = next ?? []; render(); });
   }
+  return { fitNames };
 }

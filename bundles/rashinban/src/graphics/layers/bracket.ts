@@ -26,6 +26,10 @@ export function mountBracket(host: HTMLElement, output: "stream" | "led" = "led"
       </svg>
     </div>`;
   const background = options.background === false ? null : mountKvBackground(host.firstElementChild as HTMLElement);
-  mountBracketView(host.querySelector<SVGSVGElement>("#bracket")!, output === "stream" ? FINALS_LAYOUT : LED_FINALS_LAYOUT, english);
-  return { apply(layer) { host.hidden = !layer.visible; background?.setVisible(layer.visible); } };
+  const view = mountBracketView(host.querySelector<SVGSVGElement>("#bracket")!, output === "stream" ? FINALS_LAYOUT : LED_FINALS_LAYOUT, english);
+  return { apply(layer) {
+    host.hidden = !layer.visible;
+    if (layer.visible) view.fitNames();
+    background?.setVisible(layer.visible);
+  } };
 }

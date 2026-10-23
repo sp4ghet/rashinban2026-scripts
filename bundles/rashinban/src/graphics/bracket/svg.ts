@@ -2,8 +2,7 @@
 // assets/js/bracket-svg.js. A layout supplies { colX, dividerY, matches,
 // connectors } and this module derives the boxes and the lines joining them.
 //
-// Drawn at 1:1 on the 1920x1080 canvas (no viewBox zoom), so the box is twice
-// the 2025 geometry; font sizes to match live in assets/brackets.css.
+// Stream and LED share the renderer, with output-specific box geometry.
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -33,6 +32,9 @@ export interface BracketLayout {
   dividerY: number;
   matches: LayoutMatch[];
   connectors: LayoutConnector[];
+  box?: MatchBox;
+  joinOffset?: number;
+  championGap?: number;
 }
 
 /** Geometry of a single match box, relative to its group's translate(). */
@@ -47,19 +49,24 @@ export const BOX = {
   midY: 45,
   /** bottom edge of the lower player row */
   bottom: 90,
+  nameX: 10,
+  nameY: 30,
+  scoreY: 36,
 } as const;
+
+export type MatchBox = { [K in keyof typeof BOX]: number };
 
 /** How far right of a feeder's edge two siblings meet before dropping into their next match. */
 export const JOIN_OFFSET = 48;
 
-export function anchors(match: LayoutMatch, colX: number[]) {
+export function anchors(match: LayoutMatch, colX: number[], box: MatchBox = BOX) {
   const x = colX[match.col]!;
   return {
-    left: x + BOX.left,
-    right: x + BOX.right,
-    midY: match.y + BOX.midY,
-    bottom: match.y + BOX.bottom,
-    centerX: x + (BOX.left + BOX.right) / 2,
+    left: x + box.left,
+    right: x + box.right,
+    midY: match.y + box.midY,
+    bottom: match.y + box.bottom,
+    centerX: x + (box.left + box.right) / 2,
   };
 }
 
@@ -72,8 +79,8 @@ function el(name: string, attrs: Record<string, string | number | undefined> = {
 }
 
 /** One player row: grey name plate + darker score box on the right. */
-function playerRow(matchId: number, position: "top" | "bottom", y: number) {
-  const { right: w, scoreWidth: sw, rowHeight: h } = BOX;
+function playerRow(matchId: number, position: "top" | "bottom", y: number, box: MatchBox) {
+  const { right: w, scoreWidth: sw, rowHeight: h } = box;
   const row = el("svg", { x: 0, y, class: "match--player" });
   row.appendChild(el("title"));
   row.appendChild(el("path", { d: `M 0 0 h ${w} v ${h} h -${w} Z`, class: "match--player-background" }));
@@ -82,13 +89,13 @@ function playerRow(matchId: number, position: "top" | "bottom", y: number) {
     el("text", {
       id: `match${matchId}-score-${position}`,
       x: w - sw / 2,
-      y: position === "top" ? 36 : 37,
+      y: box.scoreY,
       "text-anchor": "middle",
       class: "match--seed",
     }),
   );
   row.appendChild(
-    el("text", { id: `match${matchId}-${position}`, x: 10, y: 30, "text-anchor": "start", class: "match--player-name" }),
+    el("text", { id: `match${matchId}-${position}`, x: box.nameX, y: box.nameY, "text-anchor": "start", class: "match--player-name" }),
   );
   if (position === "bottom") {
     row.appendChild(el("line", { x1: 0, y1: -1, x2: w, y2: -1, class: "match--player-divider" }));
@@ -97,7 +104,7 @@ function playerRow(matchId: number, position: "top" | "bottom", y: number) {
 }
 
 /** A full match group: red "active" border + the two player rows. */
-export function buildMatch(match: LayoutMatch, colX: number[]) {
+export function buildMatch(match: LayoutMatch, colX: number[], box: MatchBox = BOX) {
   const group = el("g", {
     id: `match${match.id}`,
     class: "match",
@@ -115,13 +122,13 @@ export function buildMatch(match: LayoutMatch, colX: number[]) {
       "stroke-width": 6,
       x: -2,
       y: -2,
-      width: BOX.right + 4,
-      height: BOX.bottom + 4,
+      width: box.right + 4,
+      height: box.bottom + 4,
     }),
   );
   const rows = el("g");
-  rows.appendChild(playerRow(match.id, "top", 0));
-  rows.appendChild(playerRow(match.id, "bottom", BOX.bottomRowY));
+  rows.appendChild(playerRow(match.id, "top", 0, box));
+  rows.appendChild(playerRow(match.id, "bottom", box.bottomRowY, box));
   group.appendChild(rows);
   return group;
 }
@@ -134,7 +141,7 @@ export function connectorPath(connector: LayoutConnector, layout: BracketLayout)
   const find = (id: number) => {
     const match = layout.matches.find((m) => m.id === id);
     if (!match) throw new Error(`Unknown match id: ${id}`);
-    return anchors(match, layout.colX);
+    return anchors(match, layout.colX, layout.box);
   };
   const to = find(connector.to);
   const sources = connector.from.map(find);
@@ -156,7 +163,7 @@ export function connectorPath(connector: LayoutConnector, layout: BracketLayout)
     return `M ${from.right} ${from.midY} L ${to.left} ${from.midY}`;
   }
 
-  const joinX = Math.max(...sources.map((s) => s.right)) + JOIN_OFFSET;
+  const joinX = Math.max(...sources.map((s) => s.right)) + (layout.joinOffset ?? JOIN_OFFSET);
   const top = Math.min(...sources.map((s) => s.midY));
   const bottom = Math.max(...sources.map((s) => s.midY));
   const legs = sources.map((s) => `M ${s.right} ${s.midY} L ${joinX} ${s.midY}`).join(" ");
@@ -176,5 +183,5 @@ export function renderBracket(layout: BracketLayout, hosts: { linesHost: Element
   divider.appendChild(el("path", { d: `M -300 ${layout.dividerY} L 2000 ${layout.dividerY}`, class: "bracket-line" }));
   hosts.linesHost.appendChild(divider);
   for (const connector of layout.connectors) hosts.linesHost.appendChild(buildConnector(connector, layout));
-  for (const match of layout.matches) hosts.matchesHost.appendChild(buildMatch(match, layout.colX));
+  for (const match of layout.matches) hosts.matchesHost.appendChild(buildMatch(match, layout.colX, layout.box));
 }

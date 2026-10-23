@@ -23,8 +23,24 @@
   font-family: 'kaneda-gothic', 'Oswald', 'Noto Sans JP', sans-serif;
   font-size: 24px;
   font-weight: 700;
+  font-style: normal;
+  font-synthesis: none;
   text-transform: uppercase;
 }
+
+/* Stream uses the compact 199 x 64 plates from the designer reference. */
+.bracket-wrapper .bracket-line { stroke-width: 1px; }
+.bracket-wrapper .bracket-svg .match--seed { font-size: 28px; }
+.bracket-wrapper .match-border { stroke-width: 3px; }
+.bracket-wrapper .bracket-band-label,
+.bracket-wrapper .bracket-riser-label {
+  font-family: 'kaneda-gothic', 'Oswald', sans-serif;
+  font-weight: 700;
+  font-style: normal;
+  font-synthesis: none;
+}
+.bracket-wrapper .bracket-band-label { font-size: 264px; }
+.bracket-wrapper .bracket-riser-label { fill: #fff; font-size: 40px; text-anchor: middle; }
 .bracket-svg .bracket-champion {
   fill: #fff;
   font-family: 'kaneda-gothic', 'Oswald', sans-serif;
