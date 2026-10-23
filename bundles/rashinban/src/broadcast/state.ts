@@ -3,6 +3,7 @@
 // owns the replicant, the dashboard edits preview, TAKE copies it to program.
 
 import { relayName } from "../presenter/relay-protocol.ts";
+import { SLIDE_MODES, validSlideIndex, type SlidesLayer } from "./slides.ts";
 
 export type BroadcastOutput = "stream" | "led" | "en";
 export const BROADCAST_OUTPUTS: readonly BroadcastOutput[] = ["stream", "led", "en"];
@@ -22,6 +23,7 @@ export type ToggleLayer = { visible: boolean };
 export type PlayerCamerasLayer = { left: boolean; right: boolean; relay: string };
 
 export type StreamLayers = {
+  slides: SlidesLayer;
   playerCameras: PlayerCamerasLayer;
   interval: ToggleLayer;
   bracket: ToggleLayer;
@@ -54,7 +56,7 @@ export const MAX_TEXT = 120;
 // "boolean:true" to true. Arrays are described by "booleanPair" because the
 // only array in the buses is the caster slot pair. A string list is an enum
 // whose first entry is the default.
-type Leaf = "boolean" | "boolean:true" | "text" | "relay" | "booleanPair" | readonly string[];
+type Leaf = "boolean" | "boolean:true" | "text" | "relay" | "booleanPair" | "slideIndex" | readonly string[];
 type Spec = { [key: string]: Leaf | Spec };
 
 /**
@@ -71,12 +73,13 @@ type SpecOf<L> = {
         ? string extends L[K]
           ? "text" | "relay"
           : readonly L[K][]
-        : SpecOf<L[K]>;
+        : L[K] extends number ? "slideIndex" : SpecOf<L[K]>;
 };
 
 const CARD_SPEC = { visible: "boolean", page: ["profile", "stats", "compact"], player: ["left", "right"], position: ["left", "right"] } as const satisfies SpecOf<PlayerCardsLayer>;
 const TOGGLE_SPEC = { visible: "boolean" } as const satisfies SpecOf<ToggleLayer>;
 const STREAM_SPEC = {
+  slides: { visible: "boolean", mode: SLIDE_MODES, index: "slideIndex" },
   playerCameras: { left: "boolean", right: "boolean", relay: "relay" },
   interval: TOGGLE_SPEC,
   bracket: TOGGLE_SPEC,
@@ -93,6 +96,7 @@ function isLeaf(spec: Leaf | Spec): spec is Leaf {
 }
 
 function defaultFor(spec: Leaf | Spec): unknown {
+  if (spec === "slideIndex") return 0;
   if (spec === "boolean") return false;
   if (spec === "boolean:true") return true;
   if (spec === "text") return "";
@@ -105,6 +109,7 @@ function defaultFor(spec: Leaf | Spec): unknown {
 }
 
 function validLeaf(spec: Leaf, value: unknown): boolean {
+  if (spec === "slideIndex") return typeof value === "number" && Number.isInteger(value) && value >= 0;
   if (spec === "relay") {
     if (typeof value !== "string") return false;
     try { relayName(value); return true; } catch { return false; }
@@ -193,6 +198,14 @@ export function withDefaults(value: unknown, legacyCasters?: unknown): Broadcast
     const raw = typeof source[output] === "object" && source[output] !== null ? (source[output] as Record<string, unknown>) : {};
     const restore = (value: unknown): LayersFor<O> => {
       const layers = repair(SPECS[output], value) as LayersFor<O>;
+      if (output !== "led") {
+        const slides = (layers as StreamLayers).slides;
+        const rawSlides = (value as Partial<StreamLayers> | null)?.slides;
+        if (rawSlides && (!SLIDE_MODES.includes(rawSlides.mode) || !validSlideIndex(slides.mode, rawSlides.index))) {
+          slides.index = 0;
+          slides.visible = false;
+        }
+      }
       if (output === "stream" && typeof value === "object" && value !== null) {
         const cards = (value as Record<string, unknown>).playerCards;
         // Older cards were positioned by player. Preserve that side on migration.
@@ -223,17 +236,22 @@ export function withDefaults(value: unknown, legacyCasters?: unknown): Broadcast
 
 /** Deep-merge a validated partial onto a layer set; throws BroadcastError on invalid input. */
 export function mergeLayers<O extends BroadcastOutput>(output: O, base: LayersFor<O>, patch: Patch<LayersFor<O>>): LayersFor<O> {
-  return merge(SPECS[parseOutput(output)], base, patch) as LayersFor<O>;
+  const layers = merge(SPECS[parseOutput(output)], base, patch) as LayersFor<O>;
+  if (output !== "led") {
+    const slides = (layers as StreamLayers).slides;
+    if (!validSlideIndex(slides.mode, slides.index)) throw new BroadcastError("invalid value for slides.index");
+  }
+  return layers;
 }
 
 export function setPreview<O extends BroadcastOutput>(state: BroadcastState, output: O, patch: Patch<LayersFor<O>>): BroadcastState {
   const o = parseOutput(output);
-  return replaceBus(state, o, { preview: merge(SPECS[o], state[o].preview, patch) });
+  return replaceBus(state, o, { preview: mergeLayers(o, state[o].preview, patch) });
 }
 
 export function cutProgram<O extends BroadcastOutput>(state: BroadcastState, output: O, patch: Patch<LayersFor<O>>): BroadcastState {
   const o = parseOutput(output);
-  return replaceBus(state, o, { program: merge(SPECS[o], state[o].program, patch) });
+  return replaceBus(state, o, { program: mergeLayers(o, state[o].program, patch) });
 }
 
 export function take(state: BroadcastState, output: BroadcastOutput): BroadcastState {
@@ -256,6 +274,7 @@ export function swap(state: BroadcastState, output: BroadcastOutput): BroadcastS
 export function clearPreview(state: BroadcastState, output: BroadcastOutput): BroadcastState {
   const o = parseOutput(output);
   if (o !== "led") return setPreview(state, o, {
+    slides: { visible: false },
     playerCameras: { left: false, right: false },
     playerCards: { visible: false },
     lowerThird: { visible: false },

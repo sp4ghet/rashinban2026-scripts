@@ -5,6 +5,7 @@ import { startIntervalClock } from "../../interval/browser-clock.ts";
 import { mustQuery, type Layer } from "./layer.ts";
 import { mountKvBackground } from "./kv-background.ts";
 import { mountSponsorRotation } from "../sponsors/rotation.ts";
+import { mountIntervalSlides } from "../slides/interval-loop.ts";
 
 import type { MatchState } from "../../match/state.ts";
 import type { PlayerProfile } from "../../sheet/players.ts";
@@ -26,9 +27,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led", engli
         <section class="interval-timer" hidden>
           <div class="interval-countdown"><span data-fit></span></div>
         </section>
-        <section class="interval-slides" aria-label="Interval slides">
-          <img src="assets/interval-slides/${output === "led" ? "placeholder-led.svg" : "placeholder.svg"}" alt="RASHINBAN 2026 — slide placeholder" />
-        </section>
+        <section class="interval-slides" aria-label="Interval slides"></section>
         <section class="interval-sponsors" aria-label="Sponsors">
           <img src="assets/sponsor-logos/tamura-builds.svg" alt="TAMURA BUILDS" />
         </section>
@@ -37,6 +36,7 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led", engli
     </section>`;
 
   const background = mountKvBackground(mustQuery(host, ".interval-screen"));
+  const slides = mountIntervalSlides(mustQuery(host, ".interval-slides"));
   const title = mustQuery(host, ".interval-title span");
   const upcoming = mustQuery(host, ".interval-upcoming");
   const upcomingTitle = mustQuery(host, ".interval-upcoming h2 span");
@@ -119,8 +119,9 @@ export function mountInterval(host: HTMLElement, output: "stream" | "led", engli
   window.addEventListener("pagehide", event => {
     if (event.persisted) return;
     window.clearInterval(interval);
+    slides.dispose();
   });
   void document.fonts.ready.then(fit);
   document.fonts.addEventListener("loadingdone", fit);
-  return { apply(layer) { host.hidden = !layer.visible; background.setVisible(layer.visible); tick(); fit(); } };
+  return { apply(layer) { host.hidden = !layer.visible; background.setVisible(layer.visible); slides.setVisible(layer.visible); tick(); fit(); } };
 }

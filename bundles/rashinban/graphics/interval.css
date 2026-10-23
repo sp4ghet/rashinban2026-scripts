@@ -31,7 +31,9 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 .interval-timer { position: absolute; left: 140px; top: 793px; width: 450px; }
 .interval-countdown { font-size: 200px; line-height: 138px; }
 .interval-slides { position: absolute; left: 782px; top: 308px; width: 998px; height: 562px; border-radius: 30px; }
-.interval-slides img { width: 100%; height: 100%; border-radius: inherit; display: block; }
+.interval-slides { overflow: hidden; }
+.interval-slides img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; display: block; object-fit: contain; opacity: 0; }
+.interval-slides img.visible { opacity: 1; }
 /* Each slide keeps its reference x/size; all share the on-screen vertical center. */
 .interval-sponsors { position: absolute; left: 0; top: 956.5px; width: 1920px; height: 0; z-index: 10; }
 /* Scale unusually long dashboard text as one line, keeping natural name spacing. */
