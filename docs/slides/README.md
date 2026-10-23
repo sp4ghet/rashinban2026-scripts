@@ -15,7 +15,7 @@ Script ordering comes from [配信資料_RASHINBAN2026](https://docs.google.com/
 
 | Mode | Sequence |
 | --- | --- |
-| DAY 1 OPENING | GeoGuessr 1–2 → Game Modes → Duels 1–4 → Day 1 maps → RASHINBAN → tournament format → Day 1 rules → tie range → prize pool 1–2 → corporate award → sponsors → community partners → Voicemod/Ajinomoto prizes → Day 1 schedule → clear |
+| DAY 1 OPENING | GeoGuessr 1–2 → Game Modes → Duels 1–4 → Day 1 maps → RASHINBAN → tournament format → Day 1 rules → tie range → prize pool 1–2 → corporate award → Voicemod/Ajinomoto prizes → sponsors → community partners → Day 1 schedule → clear |
 | DAY 2 OPENING | GeoGuessr 1–2 → Game Modes → Duels 1–4 → RASHINBAN → tournament format → map pool → Ban & Pick → Pinpointing Duels → Move/NM rules → tie range → **live bracket** → prizes/sponsors/partners/bonus prizes → clear for Top 8 introductions → Day 2 schedule → clear |
 | DAY 1 ENDING | **Live bracket** → sponsors → tomorrow's Day 2 schedule → clear |
 | DAY 2 ENDING | Tamura Builds award → ceremony prizes → clear for organizer address → sponsors → clear |

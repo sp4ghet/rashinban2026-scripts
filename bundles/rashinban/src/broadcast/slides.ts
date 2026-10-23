@@ -33,7 +33,7 @@ export const SLIDE_SEQUENCES: Record<SlideMode, readonly SlideCue[]> = {
   "day1-opening": [
     ...intro, image("DAY1 GAME MODES & MAPS.png"), ...tournament,
     image("DAY1 REGULATION.png"), image("DAY1 TIE RANGE.png"),
-    ...prizes, ...sponsors, ...bonus, image("day1スケジュール.png", "DAY 1 · broadcast schedule"), clear,
+    ...prizes, ...bonus, ...sponsors, image("day1スケジュール.png", "DAY 1 · broadcast schedule"), clear,
   ],
   "day2-opening": [
     ...intro, ...tournament, image("DAY2 GAME MODES & MAP POOL.png"), image("DAY2 BAN & PICK.png"),
