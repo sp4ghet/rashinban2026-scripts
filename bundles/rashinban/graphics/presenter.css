@@ -192,7 +192,7 @@ body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .c
 body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .camera.right { right: var(--camera-inset, 28px); }
 body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .camera::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: var(--camera-shade, linear-gradient(transparent 65%, #080d17cc 100%));
+  background: linear-gradient(transparent 75%, rgb(0 0 0 / 95%) 100%);
 }
 body[data-output="stream"][data-intermission="before-game"] .camera.left::after { border-right: 5px solid #ff3030; }
 body[data-output="stream"][data-intermission="before-game"] .camera.right::after { border-left: 5px solid #ff3030; }
@@ -218,7 +218,7 @@ body[data-output="stream"][data-intermission]:not([data-intermission="none"]) .p
 /* Pre-game follows the split-camera slate: corner identities and a compass at centre. */
 body[data-output="stream"][data-intermission="before-game"] .scoreboard .competitor {
   bottom: 64px; flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 8px;
-  font-family: var(--presenter-latin); font-weight: 700; line-height: 1; text-transform: uppercase; color: #fff;
+  font-family: var(--presenter-latin); font-weight: 700; line-height: 1; text-transform: none; color: #fff;
 }
 body[data-output="stream"][data-intermission="before-game"] .scoreboard .competitor.left { left: 70px; }
 body[data-output="stream"][data-intermission="before-game"] .scoreboard .competitor.right { right: 70px; align-items: flex-end; text-align: right; }
@@ -231,7 +231,7 @@ body[data-output="stream"][data-intermission="before-game"] .pregame-symbol { di
 /* Post-game geometry follows the 1920x1080 design; side identities stay put. */
 body[data-output="stream"][data-intermission="end-of-last-game"] {
   --camera-inset: 60px; --camera-top: 65px; --camera-width: 883px; --camera-height: 951px;
-  --camera-border: 8px; --camera-radius: 20px; --camera-shade: none;
+  --camera-border: 8px; --camera-radius: 20px;
 }
 body[data-output="stream"][data-intermission="end-of-last-game"] .backdrop { background: linear-gradient(#000000d6, #000000d6), url('assets/presenter-kv.jpg') center / cover no-repeat; }
 body[data-output="stream"][data-intermission="end-of-last-game"] .camera.left { border-color: #ff3030; }
@@ -242,7 +242,7 @@ body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-win
 body[data-output="stream"][data-intermission="end-of-last-game"][data-camera-winner="right"] .camera.left { --camera-width: 717px; }
 body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .competitor {
   bottom: 104px; width: 801px; height: 40px;
-  font: 700 40px/1 var(--presenter-latin); text-transform: uppercase; color: #fff;
+  font: 700 40px/1 var(--presenter-latin); text-transform: none; color: #fff;
 }
 body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .competitor.left { left: 94px; }
 body[data-output="stream"][data-intermission="end-of-last-game"] .scoreboard .competitor.right { right: 108px; text-align: right; }

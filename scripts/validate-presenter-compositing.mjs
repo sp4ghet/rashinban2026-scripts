@@ -25,8 +25,8 @@ Object.assign(state.rounds[0], { startAtMs: epoch - 21000, timerStartAtMs: epoch
 const timeline = advanceTimeline(null, state, epoch, false, DEFAULT_TIMING);
 const initial = { presenterDuel: state, presenterViews: seedViews(state), presenterTimeline: timeline,
   presenterSettings: { ...DEFAULT_SETTINGS, viewSource: 'rendered', muted: true },
-  presenterSeries: { id: 'motion-qa', source: 'manual', left: { id: 'a', name: 'PLAYER LEFT', handle: '@playerleft', wins: 1, playerId: state.players[0].id },
-    right: { id: 'b', name: 'PLAYER RIGHT', handle: '@playerright', wins: 2, playerId: state.players[1].id } },
+  presenterSeries: { id: 'motion-qa', source: 'manual', left: { id: 'a', name: 'Player Left', handle: '@PlayerLeft', wins: 1, playerId: state.players[0].id },
+    right: { id: 'b', name: 'Player Right', handle: '@PlayerRight', wins: 2, playerId: state.players[1].id } },
   presenterClients: { clients: [], program: null }, presenterPublicConfig: { googleMapsApiKey: '' } };
 const bootstrap = `
 const nativeSetInterval=window.setInterval;
@@ -136,8 +136,17 @@ try {
         const shot = await command('Page.captureScreenshot', { format: 'png' });
         await writeFile(path.join(artifacts, name + '.png'), Buffer.from(shot.data, 'base64'));
       }, 'presenter');
-      checks.push('stream: Tamura, GeoGuessr and Voicemod rotate with fades at the reference sizes and x positions');
+      checks.push('stream: Tamura and GeoGuessr rotate with fades, centered below the player windows');
+      const edges = await evaluate(`['left','right'].map(side=>{
+        const edge=side==='left'?'left':'right';
+        return ['.player-window.','.competitor.','.damage.'].map(selector=>document.querySelector(selector+side).getBoundingClientRect()[edge]);
+      })`);
+      edges.forEach(([window,header,damage])=>{assert.equal(header,window);assert.equal(damage,window);});
+      checks.push('stream: identity headers and damage boxes align with the outer player-window edges');
     }
+    await evaluate(`qa.live('MOVE','rendered','none')`);await settle();
+    assert.equal(await evaluate(`document.getElementById('mode').textContent`),'MOVE');
+    await screenshot(output+'-move-live',led);
     const viewY=led ? 300 : 400, cameraY=led ? 800 : 900;
     await evaluate(`qa.live('NM','chroma','none');qa.set('presenterSettings',{...qa.initial.presenterSettings,viewSource:'chroma',keyColor:'transparent'})`);
     await settle();
@@ -280,6 +289,18 @@ try {
       });`);
       await settle();
       const rects=()=>evaluate(`[...document.querySelectorAll('.camera')].map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,fit:getComputedStyle(e.querySelector('video')).objectFit,position:getComputedStyle(e.querySelector('video')).objectPosition}})`);
+      const cameraIdentity = async cameras => {
+        const identities = await evaluate(`['left','right'].map(side=>['name','handle'].map(field=>{const e=document.getElementById(side+'-'+field);return {text:e.textContent,transform:getComputedStyle(e).textTransform};}))`);
+        for (const [i,side] of ['left','right'].entries()) {
+          assert.deepEqual(identities[i],[{text:initial.presenterSeries[side].name,transform:'none'},{text:initial.presenterSeries[side].handle,transform:'none'}]);
+        }
+        const samples = await pixels(cameras.flatMap((r,i)=>[.7,.98].map(y=>[Math.round(r.x+r.width*(i?.2:.8)),Math.round(r.y+r.height*y)])));
+        for (const i of [0,2]) {
+          const upper=samples[i].slice(0,3).reduce((a,b)=>a+b,0),lower=samples[i+1].slice(0,3).reduce((a,b)=>a+b,0);
+          assert.ok(upper>30 && lower<upper*.2,'Camera vignette darkens the bottom while keeping the upper image clear');
+          opaque(samples[i]);opaque(samples[i+1]);
+        }
+      };
       let cameras=await rects();
       assert.equal(cameras[0].width,1049);assert.equal(cameras[1].width,717);
       cameras.forEach(r=>{assert.equal(r.y,65);assert.equal(r.height,951);});
@@ -287,6 +308,7 @@ try {
       cameras.forEach(r=>{assert.equal(r.fit,'cover');assert.equal(r.position,'50% 50%');assert.ok(r.x>=0&&r.x+r.width<=1920&&r.y+r.height<=1080);});
       assert.equal(await evaluate(`document.getElementById('summary-area').hidden`),true);
       assert.equal(await evaluate(`document.getElementById('camera-scene-label').textContent`),'WINNER');
+      await cameraIdentity(cameras);
       await screenshot('stream-post-game-left');
       checks.push('stream: post-game panels match the design geometry; both 16:9 inputs crop at their centre');
 
@@ -296,6 +318,7 @@ try {
       assert.equal(cameras[0].x,0);assert.equal(cameras[1].x,960);
       assert.equal(cameras[0].x+cameras[0].width,cameras[1].x);
       assert.equal(await evaluate(`getComputedStyle(document.getElementById('camera-scene-label')).display`),'none');
+      await cameraIdentity(cameras);
       await screenshot('stream-before-game');
       checks.push('stream: Before-Game cameras cover the screen edge to edge with no outer margins or gap');
 
@@ -303,6 +326,7 @@ try {
       await settle();cameras=await rects();
       assert.equal(cameras[0].width,717);assert.equal(cameras[1].width,1049);
       assert.equal(cameras[0].x,60);assert.equal(cameras[1].x,811);
+      await cameraIdentity(cameras);
       await screenshot('stream-post-game-right');
       checks.push('stream: a right-side winner mirrors the dominant camera layout');
 
@@ -310,6 +334,9 @@ try {
       await settle();cameras=await rects();
       assert.equal(cameras[0].width,cameras[1].width);
       assert.equal(await evaluate(`document.getElementById('camera-scene-label').textContent`),'DRAW');
+      await cameraIdentity(cameras);
+      await screenshot('stream-post-game-draw');
+      checks.push('stream: all pre/post-game camera layouts preserve name/handle case and shade the lower image');
       assert.equal(await evaluate(`qa.cameraNodes.every((v,i)=>v===document.querySelectorAll('.camera video')[i]&&v.srcObject.active)`),true);
       checks.push('stream: draws are balanced and all scene switches preserve the video elements and streams');
     }

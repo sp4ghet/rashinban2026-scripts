@@ -27,7 +27,7 @@ export async function validateSponsorRotation(evaluate, screenshot, layout, pref
   }
   assert.ok(result.changes.length && result.changes.every(s => s.opacity < .01), `${prefix}: swap only when invisible: ${JSON.stringify(result.changes)}`);
   const expected = layout === 'presenter'
-    ? [['GeoGuessr', 816, 340], ['Voicemod', 768, 384], ['TAMURA BUILDS', 672.5, 575]]
+    ? [['GeoGuessr', 816, 340], ['TAMURA BUILDS', 672.5, 575]]
     : layout === 'led'
       ? [['GeoGuessr', 888, 144], ['Voicemod', 848, 224], ['Supporting sponsors', 583, 795], ['TAMURA BUILDS', 819, 282]]
       : [['GeoGuessr', 1140, 340], ['Voicemod', 1100, 384], ['Supporting sponsors', 716, 1127], ['TAMURA BUILDS', 964, 598]];
@@ -40,7 +40,9 @@ export async function validateSponsorRotation(evaluate, screenshot, layout, pref
     assert.equal(box.name, name, `${prefix}: rotation order`);
     assert.ok(box.loaded && box.visible && box.opacity === 1, `${prefix}: ${name} is fully visible and loaded`);
     assert.ok(Math.abs(box.x - x) < 1 && Math.abs(box.width - width) < 1, `${prefix}: ${name} respects the reference x and size: ${JSON.stringify(box)}`);
-    const centerY = layout === 'presenter' ? 955 : layout === 'led' ? 504.5 : 956.5;
+    const centerY = layout === 'presenter'
+      ? await evaluate(`(document.getElementById('left-window').getBoundingClientRect().bottom + document.body.getBoundingClientRect().bottom) / 2`)
+      : layout === 'led' ? 504.5 : 956.5;
     assert.ok(Math.abs(box.y + box.height / 2 - centerY) < 1, `${prefix}: ${name} stays in the on-screen sponsor slot`);
     assert.ok(box.y >= 0 && box.y + box.height <= (layout === 'led' ? 576 : 1035), `${prefix}: ${name} is not clipped`);
     await screenshot(`${prefix}-sponsor-${name.toLowerCase().replaceAll(' ', '-')}`);

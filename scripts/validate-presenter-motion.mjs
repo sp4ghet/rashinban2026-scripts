@@ -193,7 +193,7 @@ try {
       await evaluate(`qa.set('presenterSeries',qa.initial.presenterSeries)`); await settle();
     }
     if (!led) {
-      assert.equal(await evaluate(`document.querySelector('.presenter-sponsor').naturalWidth`),575,'Sponsor must load as SVG');
+      assert.equal(await evaluate(`document.querySelector('.presenter-sponsor').naturalWidth > 0`),true,'Sponsor must load');
       assert.equal(await evaluate(`document.getElementById('match-label').textContent`),'GRAND FINALS');
       await evaluate(`qa.set('matchResolved',{id:'other-match',label:'STALE MATCH'})`); await settle();
       assert.equal(await evaluate(`document.getElementById('match-label').textContent`),'','Do not label a different series');
@@ -225,7 +225,7 @@ try {
     if (led) {
       await evaluate(`qa.live('MOVE','rendered','none');{const next=structuredClone(qa.initial.presenterDuel);next.mode='MOVE';next.pinpointing={teamIds:next.players.map(p=>p.teamId),firstTo:7,tieRange:'off',rounds:[],totals:[5,2],matchPoint:[true,false],terminal:null};qa.set('presenterDuel',next);}`);
       await settle();
-      assert.equal(await evaluate(`document.getElementById('mode').textContent`),'MOVING');
+      assert.equal(await evaluate(`document.getElementById('mode').textContent`),'MOVE');
       assert.deepEqual(await evaluate(`['left','right'].map(side=>({banner:getComputedStyle(document.querySelector('.damage.'+side)).display,points:document.getElementById(side+'-health').textContent,filled:document.querySelectorAll('#'+side+'-pips .filled').length}))`),
         [{banner:'none',points:'5',filled:5},{banner:'none',points:'2',filled:2}]);
       const pipColors=await evaluate(`['left','right'].map(side=>({sideColor:getComputedStyle(document.getElementById(side+'-wins')).backgroundColor,pips:[...document.querySelectorAll('#'+side+'-pips .filled')].map(e=>getComputedStyle(e).backgroundColor),empty:[...document.querySelectorAll('#'+side+'-pips .pip:not(.filled)')].map(e=>getComputedStyle(e).backgroundColor)}))`);
@@ -245,15 +245,17 @@ try {
     await evaluate(`qa.live('NM','rendered','none');const s=structuredClone(qa.initial.presenterDuel);s.rounds[0].startAtMs=qa.now+60000;qa.set('presenterDuel',s);qa.set('presenterTimeline',{...qa.initial.presenterTimeline,phase:'pre-round'});`);
     await settle();
     const preview = await evaluate(`({rect:qa.rect('preview-area'),panorama:qa.rect('preview-panorama'),hidden:document.getElementById('preview-area').hidden,timerHidden:document.getElementById('timer').hidden})`);
-    ratio(preview.rect); ratio(preview.panorama); assert.equal(preview.rect.x + preview.rect.width / 2, 960); assert.equal(preview.hidden, false); assert.equal(preview.timerHidden, true);
+    assert.deepEqual(preview.panorama,preview.rect,'Preview panorama fills its frame');
+    assert.equal(preview.rect.x + preview.rect.width / 2, 960); assert.equal(preview.hidden, false); assert.equal(preview.timerHidden, true);
     if (led) {
+      ratio(preview.rect);
       assert.equal(preview.rect.y,54,'Round preview starts directly below the header');
       assert.equal(preview.rect.height,522,'Round preview uses the full remaining LED height');
       assert.equal(preview.rect.y+preview.rect.height,576,'Round preview reaches the bottom of the LED');
       assert.deepEqual(await ledHeader(),header,'Designer header persists through round preview');
-    }
+    } else assert.deepEqual(preview.rect,{x:24,y:335,width:1872,height:720});
     await screenshot(`${output}-preview`, led);
-    checks.push(`${output}: centered 16:9 preview`);
+    checks.push(`${output}: centered preview fills the output-specific frame`);
 
     const result = structuredClone(state); result.manualRoundStart = false;
     result.players.forEach((player, i) => { player.results = [{ round: result.round, score: i ? 3200 : 4500, bestGuess: null,

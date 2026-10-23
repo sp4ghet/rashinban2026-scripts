@@ -190,7 +190,7 @@ function frame() {
     element('transition').hidden = true;
     write('round-number', scene.previewRound === null ? timing.round === null ? '—' : String(timing.round) : String(scene.previewRound));
     const mode = state?.mode;
-    write('mode', mode === 'NM' ? 'NO MOVE' : mode === 'NMPZ' ? 'NMPZ' : mode === 'MOVE' ? 'MOVING' : '—');
+    write('mode', mode === 'NM' ? 'NO MOVE' : mode === 'NMPZ' ? 'NMPZ' : mode === 'MOVE' ? 'MOVE' : '—');
     if (!ledOutput) write('match-label', currentMatch.value?.id === match.id ? currentMatch.value.label : '');
     // Series wins count completed games; the active game is the next one.
     write('game-number', String(match.left.wins + match.right.wins + 1));
