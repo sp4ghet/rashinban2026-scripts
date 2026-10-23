@@ -26,6 +26,9 @@ body {
 
 .layer[hidden] { display: none; }
 
+#layer-slides { background: #000; }
+#layer-slides img { display: block; width: 1920px; height: 1080px; object-fit: contain; }
+
 /* Palette shared by the layers: red (P1) / blue (P2), condensed headings. */
 :root {
   --p1: #cc2626;

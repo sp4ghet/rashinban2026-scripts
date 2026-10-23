@@ -1,6 +1,7 @@
 // Declarative description of the switcher's layer strip, shared by both
 // outputs. The panel renders rows from this; tests check the data logic.
 import { layersEqual, type BroadcastOutput, type PlayerCardsLayer } from "./state.ts";
+import { SLIDE_MODES, MODE_LABELS, slideSelection, type SlideMode } from "./slides.ts";
 
 export type Control =
   | { kind: "toggle"; path: readonly string[]; label: string }
@@ -40,6 +41,15 @@ const BRACKET: Row = {
 };
 
 const STREAM_ROWS: readonly Row[] = [
+  {
+    id: "slides", title: "Slides",
+    controls: [
+      { kind: "toggle", path: ["slides", "visible"], label: "Visible" },
+      { kind: "select", path: ["slides", "mode"], label: "Mode",
+        options: SLIDE_MODES.map(mode => [mode, MODE_LABELS[mode]] as const) },
+      { kind: "select", path: ["slides", "index"], label: "Slide", options: [] },
+    ],
+  },
   {
     id: "playerCameras", title: "Player cameras",
     controls: [
@@ -131,6 +141,13 @@ function selectCard(player: "left" | "right", layers: unknown): Partial<PlayerCa
  */
 export function patchAt(path: readonly string[], value: unknown, layers: unknown): Record<string, unknown> {
   if (path.length === 0) throw new Error("patchAt: path must not be empty");
+  if (path.length === 2 && path[0] === "slides") {
+    const mode = valueAt(layers, ["slides", "mode"]) as SlideMode;
+    const index = valueAt(layers, ["slides", "index"]) as number;
+    if (path[1] === "mode") return slideSelection(value as SlideMode, 0);
+    if (path[1] === "index") return slideSelection(mode, Number(value));
+    if (path[1] === "visible") return slideSelection(mode, index, value === true);
+  }
   if (path.length === 2 && path[0] === "casters" && path[1] === "slots" && typeof value === "boolean") {
     return { casters: { slots: [value, value] } };
   }
@@ -160,8 +177,8 @@ export function patchAt(path: readonly string[], value: unknown, layers: unknown
   }
   // Fullscreen stream scenes replace each other in preview; TAKE remains explicit.
   if (path.length === 2 && path[1] === "visible" && value === true && valueAt(layers, ["interval"]) !== undefined) {
-    if (path[0] === "interval") return { interval: { visible: true }, bracket: { visible: false } };
-    if (path[0] === "bracket") return { bracket: { visible: true }, interval: { visible: false } };
+    if (path[0] === "interval") return { interval: { visible: true }, bracket: { visible: false }, slides: { visible: false } };
+    if (path[0] === "bracket") return { bracket: { visible: true }, interval: { visible: false }, slides: { visible: false } };
   }
   const keys = [...path];
   let leaf: unknown = value;

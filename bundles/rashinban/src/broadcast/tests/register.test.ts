@@ -95,6 +95,7 @@ test("swap exchanges both buses in one update and can restore the previous progr
 test("clear preview hides every layer while preserving selections and program", () => {
   const a = app();
   a.message(BROADCAST_MESSAGES.setPreview, { output: "stream", patch: {
+    slides: { visible: true, mode: "day2-opening", index: 2 },
     playerCameras: { left: true, right: true, relay: "other" },
     playerCards: { visible: true, page: "stats", player: "right", position: "right" },
     lowerThird: { visible: true, mode: "text", title: "Title", subtitle: "Subtitle", comingUp: true },
@@ -108,6 +109,7 @@ test("clear preview hides every layer while preserving selections and program", 
   assert.equal(response.error, null);
   assert.deepEqual(response.value, a.state());
   assert.deepEqual(a.state().stream.preview, {
+    slides: { visible: false, mode: "day2-opening", index: 2 },
     playerCameras: { left: false, right: false, relay: "other" },
     playerCards: { visible: false, page: "stats", player: "right", position: "right" },
     lowerThird: { visible: false, mode: "text", title: "Title", subtitle: "Subtitle", comingUp: true },

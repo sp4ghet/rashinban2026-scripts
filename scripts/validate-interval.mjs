@@ -1,6 +1,7 @@
 // Built dashboard -> real extension handlers -> replicated state -> built graphics.
 // Uses isolated NodeCG transport fixtures and a disposable headless browser.
 import assert from 'node:assert/strict';
+import { validateStreamSlides } from './lib/validate-stream-slides.mjs';
 import { validateSponsorRotation } from './lib/validate-sponsor-rotation.mjs';
 import { EventEmitter } from 'node:events';
 import { readFile, writeFile, mkdir, mkdtemp } from 'node:fs/promises';
@@ -156,6 +157,11 @@ try {
     } else if (result.method === 'Runtime.exceptionThrown') errors.push(result.params.exceptionDetails);
   };
   await command('Runtime.enable'); await command('Page.enable');
+  if (process.argv.includes('--slides-only')) {
+    await validateStreamSlides({ navigate, evaluate, until, click, screenshot, delay, values });
+    assert.equal(errors.length, 0, JSON.stringify(errors));
+    console.log('Slide sequences, Preview/TAKE, bracket entry/exit and both interval crossfades passed.');
+  } else {
   const range = await fetch(origin + '/rashinban/media/background/kv.mp4', {headers: {range: 'bytes=0-31'}});
   assert.equal(range.status, 206);
   assert.equal((await range.arrayBuffer()).byteLength, 32);
@@ -302,7 +308,7 @@ try {
     await message('broadcast:take', { output: 'stream' });
     if (adobeFonts) console.log(`${output}: Adobe heading font loaded: ${await evaluate('document.fonts.check(\'700 112px "kaneda-gothic"\')')}`);
     assert.equal(await evaluate('document.querySelector(".interval-match-players").textContent'), 'SHIINA VS EURYA');
-    assert.equal(await evaluate('[...document.querySelectorAll("#layer-interval img")].every(img => img.complete && img.naturalWidth > 0)'), true);
+    await until('[...document.querySelectorAll("#layer-interval img[src]")].every(img => img.complete && img.naturalWidth > 0) && document.querySelector(".interval-slide.visible")?.naturalWidth > 0');
     await screenshot(output);
     if (output === 'led') {
       await screenshot('led-band', { x: 0, y: 0, width: 1920, height: 576, scale: 1 });
@@ -427,6 +433,7 @@ try {
   assert.equal(errors.length, 0, JSON.stringify(errors));
   console.log('Interval/bracket browser validation passed: inline switcher timer start/pause/resume/clear and validation, preview/revert/TAKE, KV playback/loop/mute/hidden pause/range delivery, standalone Stream and LED, dashboard saves, Next Match/profile updates, timer controls/JST, sponsor fades, layout bounds and text safety.');
   console.log('Screenshots: ' + artifacts);
+  }
 } finally {
   socket?.close(); chrome.kill(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
 }

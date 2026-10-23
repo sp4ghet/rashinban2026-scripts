@@ -9,6 +9,7 @@ import { BROADCAST_MESSAGES, REPLICANTS } from "../types/replicants.ts";
 import { mountIntervalTimer } from "./components/interval-timer.ts";
 import { recoverMonitor } from "./components/monitor-recovery.ts";
 import { mountMonitorResize } from "./components/monitor-resize.ts";
+import { SLIDE_SEQUENCES, adjacentSlideIndex, type SlidesLayer } from "../broadcast/slides.ts";
 
 const output: BroadcastOutput = document.body.dataset.output === "en" ? "en" : document.body.dataset.output === "led" ? "led" : "stream";
 const rep = nodecg.Replicant<BroadcastState>(REPLICANTS.broadcast);
@@ -41,6 +42,7 @@ function blurAfterMouse(event: MouseEvent) {
 // ---- Strip -------------------------------------------------------------------
 type Widget = HTMLButtonElement | HTMLInputElement | HTMLSelectElement;
 const widgets = new Map<Control, Widget>();
+const slideButtons: HTMLButtonElement[] = [];
 function buildRow(row: Row): HTMLElement {
   const section = document.createElement("div");
   section.className = "row";
@@ -84,6 +86,26 @@ function buildRow(row: Row): HTMLElement {
     }
   }
   section.append(title, controls);
+  if (output === "stream" && row.id === "slides") {
+    for (const [direction, label] of [[-1, "Previous"], [1, "Next"]] as const) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.dataset.slideDirection = String(direction);
+      button.onclick = event => {
+        const slides = state.stream.preview.slides;
+        const patch = patchAt(["slides", "index"], adjacentSlideIndex(slides, direction), state.stream.preview);
+        void send(BROADCAST_MESSAGES.setPreview, { output, patch });
+        blurAfterMouse(event);
+      };
+      slideButtons.push(button);
+      controls.append(button);
+    }
+    const hint = document.createElement("span");
+    hint.className = "slide-hint";
+    hint.textContent = "Stage in Preview → TAKE";
+    controls.append(hint);
+  }
   if (output !== "led" && row.id === "interval") {
     mountIntervalTimer(controls, message => { el("error").textContent = message; }, output === "en");
   }
@@ -111,6 +133,19 @@ function render() {
     for (const control of row.controls) {
       const widget = widgets.get(control)!;
       const value = valueAt(preview, control.path);
+      if (row.id === "slides" && control.path[1] === "index") {
+        const slides = valueAt(preview, ["slides"]) as SlidesLayer;
+        const select = widget as HTMLSelectElement;
+        if (select.dataset.mode !== slides.mode) {
+          select.replaceChildren(...SLIDE_SEQUENCES[slides.mode].map((cue, i) => new Option(`${i + 1}. ${cue.label}`, String(i))));
+          select.dataset.mode = slides.mode;
+        }
+        // The selection may have changed via Previous/Next while the select was focused.
+        select.value = String(slides.index);
+        slideButtons.forEach((button, i) => {
+          button.disabled = adjacentSlideIndex(slides, i === 0 ? -1 : 1) === slides.index;
+        });
+      }
       if (row.id === "lowerThird") {
         const mode = valueAt(preview, ["lowerThird", "mode"]);
         const container = control.kind === "toggle" ? widget : widget.parentElement!;

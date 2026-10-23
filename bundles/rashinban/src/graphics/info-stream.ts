@@ -9,6 +9,7 @@ import { mountLowerThird } from "./layers/lower-third.ts";
 import { mountInterval } from "./layers/interval.ts";
 import { mountBracket } from "./layers/bracket.ts";
 import { mountPlayerCards } from "./layers/player-cards.ts";
+import { mountSlides } from "./layers/slides.ts";
 
 import { mountPlayerCameras } from "./layers/player-cameras.ts";
 
@@ -30,6 +31,7 @@ const cards = mountPlayerCards(mustQuery(document, "#layer-cards"), output);
 const lowerThird = mountLowerThird(mustQuery(document, "#layer-lower-third"), english);
 const interval = mountInterval(mustQuery(document, "#layer-interval"), "stream", english);
 const bracket = mountBracket(mustQuery(document, "#layer-bracket"), "stream", english);
+const slides = english ? null : mountSlides(mustQuery(document, "#layer-slides"));
 
 bindLayers(output, channel, (layers) => {
   playerCameras.apply(layers.playerCameras);
@@ -39,4 +41,5 @@ bindLayers(output, channel, (layers) => {
   lowerThird.apply(layers.lowerThird);
   interval.apply(layers.interval);
   bracket.apply({ visible: layers.bracket.visible && !layers.interval.visible });
+  slides?.apply({ ...layers.slides, visible: layers.slides.visible && !layers.interval.visible && !layers.bracket.visible });
 });

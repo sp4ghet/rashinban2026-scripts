@@ -41,3 +41,6 @@ button.toggle.on { background: #2e7d32; border-color: #43a047; }
 .monitor-status { position: absolute; z-index: 1; top: 12px; left: 12px; right: 12px; display: flex; gap: 12px; align-items: center; padding: 12px; color: #fff; background: #1b2333; }
 .monitor-status[hidden] { display: none; }
 .monitor-status button { flex: none; }
+/* Slide cues are staged alongside the existing fullscreen scenes. */
+[data-row="slides"] select { max-width: 310px; }
+[data-row="slides"] .slide-hint { color: #aaa; font-size: 12px; }
