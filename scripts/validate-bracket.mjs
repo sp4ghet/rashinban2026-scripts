@@ -11,6 +11,7 @@ import express from 'express';
 import { build } from 'esbuild';
 import { createMediaRouter } from '../bundles/rashinban/src/extension/config/assets.ts';
 import { resolveInstallationRoots } from '../bundles/rashinban/src/extension/config/roots.ts';
+import { rowToProfile } from '../bundles/rashinban/src/sheet/players.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifacts = path.join(root, 'artifacts/bracket-validation');
@@ -80,6 +81,34 @@ try {
   for (const page of ['brackets-finals', 'bracket-en', 'bracket-led']) {
     await command('Page.navigate', { url: `${origin}/bundles/rashinban/graphics/${page}.html` });
     await until(`document.querySelector('#match1-top')?.textContent === 'TOZANGEZAN' && document.readyState === 'complete'`);
+    // Canonical names must reach the actual SVG, including when sheet data
+    // arrives after bracket data or changes without another start.gg poll.
+    const namedRows = structuredClone(rows);
+    Object.assign(namedRows[0], { top: 'Renamed start.gg tag', topEntrantId: 101, bottom: '  LEGACY PLAYER  ', bottomEntrantId: null, topScore: '2', bottomScore: '1' });
+    const sharedProfiles = [
+      rowToProfile({ startgg_entrant_id: '101', startgg_tag: 'Old start.gg tag', geoguessr_player_uid: '0123456789abcdef01234567', name: 'Canonical Player' }),
+      rowToProfile({ startgg_tag: 'LegacyPlayer', name: 'Canonical Opponent' }),
+    ];
+    const names = () => evaluate(`[document.querySelector('#match1-top').textContent,document.querySelector('#match1-bottom').textContent]`);
+    await evaluate(`emit('bracketFinals',{rows:${JSON.stringify(namedRows)}})`);
+    await evaluate(`emit('players',${JSON.stringify(sharedProfiles)})`);
+    check(page + ' uses canonical sheet names by entrant ID and normalized tag', await names(), ['Canonical Player', 'Canonical Opponent']);
+    check(page + ' names do not change scores or winner', await evaluate(`[document.querySelector('#match1-score-top').textContent,document.querySelector('#match1-score-bottom').textContent,document.querySelector('#match1-top').parentElement.classList.contains('winner')]`), ['2', '1', true]);
+    sharedProfiles[0].name = 'Updated Canonical Player';
+    await evaluate(`emit('players',${JSON.stringify(sharedProfiles)})`);
+    check(page + ' refreshes names when the sheet changes', await names(), ['Updated Canonical Player', 'Canonical Opponent']);
+    const translated = rowToProfile({ geoguessr_player_uid: '0123456789abcdef01234567', name: 'English Player' });
+    await evaluate(`emit('playersEn',${JSON.stringify([translated])})`);
+    check(page + ' applies English names by shared UID only on the English output', await names(), [page === 'bracket-en' ? 'English Player' : 'Updated Canonical Player', 'Canonical Opponent']);
+    await evaluate(`emit('playersEn',[])`);
+    check(page + ' retains canonical names without English translations', await names(), ['Updated Canonical Player', 'Canonical Opponent']);
+    await evaluate(`emit('players',${JSON.stringify([...sharedProfiles, { ...sharedProfiles[1], name: 'Ambiguous Opponent' }])})`);
+    check(page + ' does not choose an ambiguous sheet profile', await names(), ['Updated Canonical Player', '  LEGACY PLAYER  ']);
+    await evaluate(`emit('players',[])`);
+    check(page + ' retains start.gg names when sheet profiles are missing', await names(), ['Renamed start.gg tag', '  LEGACY PLAYER  ']);
+    await evaluate(`emit('players',${JSON.stringify(sharedProfiles)});emit('bracketFinals',{rows:${JSON.stringify(rows)}})`);
+    check(page + ' leaves unfilled slots empty', await evaluate(`[document.querySelector('#match11-top').textContent,document.querySelector('#match11-bottom').textContent]`), ['', '']);
+    await evaluate(`emit('players',[])`);
     await evaluate(`document.fonts.ready`);
     await evaluate(`document.fonts.load('700 24px "kaneda-gothic"', 'TOZANGEZAN')`);
     await until(`Array.from(document.fonts).some(f=>f.family.includes('kaneda-gothic') && f.weight==='700' && f.status==='loaded')`);
