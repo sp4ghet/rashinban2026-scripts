@@ -53,9 +53,9 @@ export function mountBracketView(root: SVGSVGElement, layout: BracketLayout, eng
       border.classList.toggle("active", row.active);
       for (const [index, side] of (["top", "bottom"] as const).entries()) {
         const identity = { entrantId: row[`${side}EntrantId`], tag: row[side] };
-        const shared = english ? matchProfile(sharedProfiles, identity).profile : null;
+        const shared = matchProfile(sharedProfiles, identity).profile;
         const translated = english ? matchProfile(profiles, { ...identity, uid: shared?.geoguessrPlayerUid }).profile : null;
-        names[index]!.textContent = translated?.name || row[side];
+        names[index]!.textContent = translated?.name || shared?.name || row[side];
         names[index]!.parentElement?.classList.toggle("winner", row.winner === side);
         scores[index]!.textContent = row[`${side}Score`];
       }
@@ -72,9 +72,9 @@ export function mountBracketView(root: SVGSVGElement, layout: BracketLayout, eng
   document.fonts.addEventListener("loadingdone", fitNames);
   render();
   nodecg.Replicant<BracketFinals>(REPLICANTS.bracketFinals).on("change", next => { value = next; render(); });
+  nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players).on("change", next => { sharedProfiles = next ?? []; render(); });
   if (english) {
     nodecg.Replicant<PlayerProfile[]>(REPLICANTS.playersEn).on("change", next => { profiles = next ?? []; render(); });
-    nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players).on("change", next => { sharedProfiles = next ?? []; render(); });
   }
   return { fitNames };
 }
