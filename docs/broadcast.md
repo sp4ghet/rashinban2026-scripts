@@ -76,11 +76,14 @@ External font stylesheets load without blocking graphic startup.
 | stream | Interval | visible; minutes, Start, Pause/Resume, Clear, live countdown |
 | stream | Bracket | visible |
 | stream | Slides | visible; six script modes; cue selection; Previous / Next |
+| stream / English | Player info slides | visible; player; Day 1 results / Profile; Previous page / Next page |
 | LED | Presenter | always on, selected in OBS/ATEM |
 | LED | Player cards + Ban & Pick | always on; both cards follow Stream Program page |
 | LED | Bracket | always on; top 1920x576 band |
 
 See [Stream slides](slides/README.md) for script ordering and operator controls.
+See [Player info slides](slides/player-info.md) for the Top 8 introduction design,
+photo uploads, automatic sheet/start.gg text and the separate English source.
 Slides are selected in Preview and published with TAKE. Scripted bracket cues
 enable the live bracket; the following cue disables it in the same staged patch.
 

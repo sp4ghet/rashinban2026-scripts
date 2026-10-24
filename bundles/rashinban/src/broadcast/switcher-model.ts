@@ -52,6 +52,14 @@ const STREAM_ROWS: readonly Row[] = [
     ],
   },
   {
+    id: "playerInfo", title: "Player info slides",
+    controls: [
+      { kind: "toggle", path: ["playerInfo", "visible"], label: "Visible" },
+      { kind: "select", path: ["playerInfo", "playerId"], label: "Player", options: [] },
+      { kind: "select", path: ["playerInfo", "page"], label: "Page", options: [["results", "1 · Day 1 results"], ["profile", "2 · Profile"]] },
+    ],
+  },
+  {
     id: "playerCameras", title: "Player cameras",
     controls: [
       { kind: "toggle", path: ["playerCameras", "left"], label: "Player Camera 1" },
@@ -109,7 +117,7 @@ const LED_ROWS: readonly Row[] = [
 ];
 
 const ENGLISH_ROWS: readonly Row[] = [
-  ...STREAM_ROWS.filter(row => ["playerCameras", "playerCards", "casters"].includes(row.id)),
+  ...STREAM_ROWS.filter(row => ["playerInfo", "playerCameras", "playerCards", "casters"].includes(row.id)),
   { ...INTERVAL, controls: [] },
 ];
 
@@ -186,8 +194,10 @@ export function patchAt(path: readonly string[], value: unknown, layers: unknown
   }
   // Fullscreen stream scenes replace each other in preview; TAKE remains explicit.
   if (path.length === 2 && path[1] === "visible" && value === true && valueAt(layers, ["interval"]) !== undefined) {
-    if (path[0] === "interval") return { interval: { visible: true }, bracket: { visible: false }, slides: { visible: false } };
-    if (path[0] === "bracket") return { bracket: { visible: true }, interval: { visible: false }, slides: { visible: false } };
+    if (["interval", "bracket", "playerInfo"].includes(path[0]!)) return {
+      interval: { visible: path[0] === "interval" }, bracket: { visible: path[0] === "bracket" },
+      playerInfo: { visible: path[0] === "playerInfo" }, slides: { visible: false },
+    };
   }
   const keys = [...path];
   let leaf: unknown = value;
@@ -209,7 +219,7 @@ export function patchAt(path: readonly string[], value: unknown, layers: unknown
  * program lease; presenter-led.html implies the led role by itself and
  * shows exactly what the wall shows.
  */
-export type EnglishScene = "player-cards" | "interval" | "bracket" | "casters";
+export type EnglishScene = "player-cards" | "player-info" | "interval" | "bracket" | "casters";
 export function monitorUrls(output: BroadcastOutput, channel: "preview" | "program", englishScene: EnglishScene = "player-cards"): { info: string; presenter: string } {
   const base = "/bundles/rashinban/graphics";
   return {

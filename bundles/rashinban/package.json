@@ -6,6 +6,11 @@
     "compatibleRange": "^2.0.0",
     "assetCategories": [
       {
+        "name": "player-info",
+        "title": "Player info slides — blank player photos",
+        "allowedTypes": ["jpg", "jpeg", "png", "webp"]
+      },
+      {
         "name": "music",
         "title": "Presenter music",
         "allowedTypes": [
@@ -35,6 +40,11 @@
       }
     ],
     "graphics": [
+      {
+        "file": "player-info-en.html",
+        "width": 1920,
+        "height": 1080
+      },
       {
         "file": "presenter-capture.html",
         "width": 1280,

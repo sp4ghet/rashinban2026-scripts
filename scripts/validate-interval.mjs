@@ -2,6 +2,7 @@
 // Uses isolated NodeCG transport fixtures and a disposable headless browser.
 import assert from 'node:assert/strict';
 import { validateStreamSlides } from './lib/validate-stream-slides.mjs';
+import { validatePlayerInfo } from './lib/validate-player-info.mjs';
 import { validateSponsorRotation } from './lib/validate-sponsor-rotation.mjs';
 import { EventEmitter } from 'node:events';
 import { readFile, writeFile, mkdir, mkdtemp } from 'node:fs/promises';
@@ -22,7 +23,8 @@ import { registerBroadcast } from '../bundles/rashinban/src/extension/broadcast.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const adobeFonts = process.argv.includes('--adobe-fonts');
-const artifacts = path.join(root, 'artifacts/interval', adobeFonts ? '' : 'offline');
+const playerInfoOnly = process.argv.includes('--player-info-only');
+const artifacts = path.join(root, playerInfoOnly ? 'artifacts/player-info' : 'artifacts/interval', adobeFonts ? '' : 'offline');
 await mkdir(artifacts, { recursive: true });
 const values = {}, handlers = new Map(), reps = new Map();
 const nodecg = {
@@ -80,6 +82,10 @@ const server = createServer(async (req, res) => {
       res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(value)); return;
     }
     const url = new URL(req.url, 'http://localhost');
+    if (playerInfoOnly && url.pathname === '/assets/rashinban/player-info/meishin-blank.jpg') {
+      const photo = process.argv.find(arg => arg.startsWith('--photo='))?.slice(8) || path.join(root, 'references/local/player-info/meishin-blank.jpg');
+      res.setHeader('Content-Type', 'image/jpeg'); res.end(await readFile(photo)); return;
+    }
     if (url.pathname === '/dashboard/') {
       // Same-origin shell around the panel, matching NodeCG's fullbleed iframe.
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -168,7 +174,11 @@ try {
     } else if (result.method === 'Runtime.exceptionThrown') errors.push(result.params.exceptionDetails);
   };
   await command('Runtime.enable'); await command('Page.enable');
-  if (process.argv.includes('--slides-only')) {
+  if (playerInfoOnly) {
+    await validatePlayerInfo({ navigate, evaluate, until, click, screenshot, delay, values, message, adobeFonts });
+    assert.equal(errors.length, 0, JSON.stringify(errors));
+    console.log('Player info: both pages/languages, uploads, live data, text fitting, cue 24, Preview/TAKE/Revert/Swap/Clear and independent EN passed.');
+  } else if (process.argv.includes('--slides-only')) {
     await validateStreamSlides({ navigate, evaluate, until, click, pressKey, screenshot, delay, values });
     assert.equal(errors.length, 0, JSON.stringify(errors));
     console.log('Slide sequences, Preview/TAKE, bracket entry/exit and both interval crossfades passed.');

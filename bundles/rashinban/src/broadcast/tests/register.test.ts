@@ -109,6 +109,7 @@ test("clear preview hides every layer while preserving selections and program", 
   assert.equal(response.error, null);
   assert.deepEqual(response.value, a.state());
   assert.deepEqual(a.state().stream.preview, {
+    playerInfo: { visible: false, playerId: "", page: "results" },
     slides: { visible: false, mode: "day2-opening", index: 2 },
     playerCameras: { left: false, right: false, relay: "other" },
     playerCards: { visible: false, page: "stats", player: "right", position: "right" },

@@ -25,8 +25,10 @@ export type CastersLayer = {
 export type ToggleLayer = { visible: boolean };
 
 export type PlayerCamerasLayer = { left: boolean; right: boolean; relay: string };
+export type PlayerInfoLayer = { visible: boolean; playerId: string; page: "results" | "profile" };
 
 export type StreamLayers = {
+  playerInfo: PlayerInfoLayer;
   slides: SlidesLayer;
   playerCameras: PlayerCamerasLayer;
   interval: ToggleLayer;
@@ -84,6 +86,7 @@ const CARD_SPEC = { visible: "boolean", page: ["profile", "stats", "compact"], p
 const TOGGLE_SPEC = { visible: "boolean" } as const satisfies SpecOf<ToggleLayer>;
 const POSITION_SPEC = { x: "offsetX", y: "offsetY" } as const;
 const STREAM_SPEC = {
+  playerInfo: { visible: "boolean", playerId: "text", page: ["results", "profile"] },
   slides: { visible: "boolean", mode: SLIDE_MODES, index: "slideIndex" },
   playerCameras: { left: "boolean", right: "boolean", relay: "relay" },
   interval: TOGGLE_SPEC,
@@ -287,6 +290,7 @@ export function swap(state: BroadcastState, output: BroadcastOutput): BroadcastS
 export function clearPreview(state: BroadcastState, output: BroadcastOutput): BroadcastState {
   const o = parseOutput(output);
   if (o !== "led") return setPreview(state, o, {
+    playerInfo: { visible: false },
     slides: { visible: false },
     playerCameras: { left: false, right: false },
     playerCards: { visible: false },

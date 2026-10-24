@@ -6,6 +6,7 @@ Build with `npm run build`, restart NodeCG, then refresh the dashboard and OBS b
 | --- | --- |
 | Interval | `http://localhost:9090/bundles/rashinban/graphics/interval-en.html` |
 | Player cameras/cards | `http://localhost:9090/bundles/rashinban/graphics/player-cards-en.html` |
+| Player info slides | `http://localhost:9090/bundles/rashinban/graphics/player-info-en.html` |
 | Bracket | `http://localhost:9090/bundles/rashinban/graphics/bracket-en.html` |
 | Casters | `http://localhost:9090/bundles/rashinban/graphics/casters-en.html` |
 
@@ -13,7 +14,14 @@ Build with `npm run build`, restart NodeCG, then refresh the dashboard and OBS b
 
 Interval retains the Stream layout's 25% black dimming. Bracket EN has a fully transparent background with no black dimming or red/blue tint. For the tinted bracket background, place `assets/images/bracket-multiply.png` in an OBS Image source at 100% opacity with **Blending Mode > Multiply**, below Bracket EN and above the KV loop. The PNG supplies both tint and darkening; no Custom CSS override is needed on Bracket EN. OBS controls which scene is on air.
 
-The **English** dashboard retains Preview/Program, TAKE, SWAP, Clear preview and Revert preview for player cameras/cards and caster selections. Lower-third, Ban & Pick, bracket visibility and interval visibility controls are removed. The interval timer controls remain live and independent of TAKE. **Monitor scene** selects which of the four URLs appears in both dashboard monitors; it does not switch OBS. Camera monitors use placeholders; the OBS player source receives live camera video. Append `?channel=preview` to the player or caster source to inspect staged selections.
+The **English** dashboard retains Preview/Program, TAKE, SWAP, Clear preview and Revert preview for player cameras/cards, player info slides and caster selections. Lower-third, Ban & Pick, bracket visibility and interval visibility controls are removed. The interval timer controls remain live and independent of TAKE. **Monitor scene** selects which of the five URLs appears in both dashboard monitors; it does not switch OBS. Camera monitors use placeholders; the OBS player source receives live camera video. Append `?channel=preview` to a controlled source to inspect staged selections.
+
+## Player info slides
+
+The **Player info slides** row independently selects a player and the Day 1 results
+or profile page. Enable it in Preview and TAKE, then use the new OBS source.
+Choose **Monitor scene → Player info slides** to preview it. Photos are shared with
+Stream; profile text uses English sheet rows. See [upload and operation instructions](slides/player-info.md).
 
 ## Caster placement
 

@@ -10,6 +10,10 @@ import { mountIntervalTimer } from "./components/interval-timer.ts";
 import { recoverMonitor } from "./components/monitor-recovery.ts";
 import { mountMonitorResize } from "./components/monitor-resize.ts";
 import { SLIDE_SEQUENCES, adjacentSlideIndex, type SlidesLayer } from "../broadcast/slides.ts";
+import { playerInfoPlayers, playerInfoPhoto, type InfoAsset } from "../broadcast/player-info.ts";
+import type { PlayerProfile } from "../sheet/players.ts";
+import type { StartggBracket } from "../startgg/types.ts";
+import type { PlayerInfoLayer } from "../broadcast/state.ts";
 
 const output: BroadcastOutput = document.body.dataset.output === "en" ? "en" : document.body.dataset.output === "led" ? "led" : "stream";
 const rep = nodecg.Replicant<BroadcastState>(REPLICANTS.broadcast);
@@ -18,6 +22,9 @@ const strip = el("strip");
 const rows = controlRows(output);
 let state = withDefaults(undefined);
 let casters: Caster[] = [];
+let infoProfiles: PlayerProfile[] = [], infoEnglish: PlayerProfile[] = [], infoAssets: InfoAsset[] = [];
+let infoBracket: StartggBracket | null = null;
+const infoPlayers = () => playerInfoPlayers(infoProfiles, infoBracket, output === "en" ? infoEnglish : []);
 
 async function send(name: string, body: unknown) {
   try {
@@ -86,6 +93,23 @@ function buildRow(row: Row): HTMLElement {
     }
   }
   section.append(title, controls);
+  if (row.id === "playerInfo") {
+    for (const [direction, label] of [[-1, "Previous page"], [1, "Next page"]] as const) {
+      const button = document.createElement("button");
+      button.type = "button"; button.textContent = label; button.dataset.infoDirection = String(direction);
+      button.onclick = event => {
+        const players = infoPlayers(), current = valueAt(layers().preview, ["playerInfo"]) as PlayerInfoLayer;
+        if (!players.length) return;
+        const index = current.playerId ? players.findIndex(p => p.id === current.playerId) : 0;
+        const next = Math.max(0, Math.min(players.length * 2 - 1, Math.max(0, index) * 2 + (current.page === "profile" ? 1 : 0) + direction));
+        void send(BROADCAST_MESSAGES.setPreview, { output, patch: { playerInfo: { playerId: players[Math.floor(next / 2)]!.id, page: next % 2 ? "profile" : "results" } } });
+        blurAfterMouse(event);
+      };
+      controls.append(button);
+    }
+    const hint = document.createElement("span"); hint.className = "slide-hint"; hint.id = "player-info-status";
+    controls.append(hint);
+  }
   if (output === "stream" && row.id === "slides") {
     for (const [direction, label] of [[-1, "Previous"], [1, "Next"]] as const) {
       const button = document.createElement("button");
@@ -134,6 +158,25 @@ function render() {
     for (const control of row.controls) {
       const widget = widgets.get(control)!;
       let value = valueAt(preview, control.path);
+      if (row.id === "playerInfo" && control.path[1] === "playerId") {
+        const players = infoPlayers(), current = valueAt(preview, ["playerInfo"]) as PlayerInfoLayer;
+        const select = widget as HTMLSelectElement;
+        if (document.activeElement !== select) {
+          const options = [new Option(players.length ? `Auto · ${players[0]!.name}` : "— no players —", ""),
+            ...players.map(p => new Option(`${p.top8 ? "TOP 8 · " : ""}${p.name}`, p.id))];
+          if (current.playerId && !players.some(p => p.id === current.playerId)) options.push(new Option(`${current.playerId} (not in sheet)`, current.playerId));
+          select.replaceChildren(...options);
+        }
+        const player = current.playerId ? players.find(p => p.id === current.playerId) : players[0];
+        const photo = player ? playerInfoPhoto(player, current.page, infoAssets) : null;
+        el("player-info-status").textContent = !player ? "Select a player after refreshing Sheets / start.gg"
+          : photo ? `Photo: ${decodeURIComponent(photo.split('/').at(-1)!.split('?')[0]!)}`
+          : `Upload ${player.tag || player.entrantId || player.source?.geoguessrPlayerUid}-blank.jpg in Assets → Player info slides`;
+        const index = Math.max(0, players.findIndex(p => p.id === player?.id)) * 2 + (current.page === "profile" ? 1 : 0);
+        strip.querySelectorAll<HTMLButtonElement>("[data-info-direction]").forEach(button => {
+          button.disabled = !players.length || (button.dataset.infoDirection === "-1" ? index === 0 : index >= players.length * 2 - 1);
+        });
+      }
       if (row.id === "casters" && control.path.length === 3) {
         const custom = valueAt(preview, ["casters", "custom", control.path[2]!]) === true;
         if (control.kind === "text") widget.parentElement!.hidden = !custom;
@@ -188,6 +231,10 @@ rep.on("change", (value) => {
   render();
 });
 if (output !== "led") {
+  nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players).on("change", value => { infoProfiles = value ?? []; render(); });
+  if (output === "en") nodecg.Replicant<PlayerProfile[]>(REPLICANTS.playersEn).on("change", value => { infoEnglish = value ?? []; render(); });
+  nodecg.Replicant<StartggBracket | null>(REPLICANTS.startggBracket).on("change", value => { infoBracket = value ?? null; render(); });
+  nodecg.Replicant<InfoAsset[]>("assets:player-info").on("change", value => { infoAssets = value ?? []; render(); });
   nodecg.Replicant<Caster[]>(output === "en" ? REPLICANTS.castersEn : REPLICANTS.casters).on("change", value => {
     casters = value ?? [];
     render();

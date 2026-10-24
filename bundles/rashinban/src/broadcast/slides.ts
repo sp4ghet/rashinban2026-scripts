@@ -10,7 +10,7 @@ export const MODE_LABELS: Record<SlideMode, string> = {
 };
 export type SlideCue =
   | { kind: "image"; label: string; file: string }
-  | { kind: "bracket" | "clear"; label: string };
+  | { kind: "bracket" | "player-info" | "clear"; label: string };
 const image = (file: string, label = file.replace(/\.png$/i, "")): SlideCue => ({ kind: "image", label, file });
 const bracket: SlideCue = { kind: "bracket", label: "BRACKET · live tournament bracket" };
 const clear: SlideCue = { kind: "clear", label: "CLEAR · return to talk / cameras" };
@@ -40,7 +40,7 @@ export const SLIDE_SEQUENCES: Record<SlideMode, readonly SlideCue[]> = {
     image("DAY2 PINPOINTING DUELS.png"), image("DAY2 REGULATION - MOVE.png"),
     image("DAY2 REGULATION - NM,NMPZ.png"), image("DAY2 TIE RANGE.png"),
     bracket, ...prizes, ...bonus, ...sponsors,
-    { kind: "clear", label: "TOP 8 introductions · use player controls" },
+    { kind: "player-info", label: "TOP 8 introductions · player info slides" },
     image("day2スケジュール.png", "DAY 2 · broadcast schedule"), clear,
   ],
   "day1-ending": [bracket, image("SPONSOR.png"), image("day2スケジュール.png", "Tomorrow · DAY 2 schedule"), clear],
@@ -75,5 +75,6 @@ export function adjacentSlideIndex(layer: SlidesLayer, direction: -1 | 1): numbe
 export function slideSelection(mode: SlideMode, index: number, visible = true) {
   const slides = { mode, index, visible };
   return { slides, bracket: { visible: visible && slideCue(slides).kind === "bracket" },
+    playerInfo: { visible: visible && slideCue(slides).kind === "player-info" },
     ...(visible ? { interval: { visible: false } } : {}) };
 }
