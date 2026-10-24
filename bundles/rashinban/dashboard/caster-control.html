@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Caster nameplates</title>
+  <link rel="stylesheet" href="caster-control.css">
+</head>
+<body>
+  <label class="output">Output <select id="output"><option value="stream">Stream</option><option value="en">English</option></select></label>
+  <p>Offsets in 1920 × 1080 pixels. Positive X moves right; positive Y moves down. Zero restores the original position.</p>
+  <div class="screen"><iframe id="preview" title="Caster position preview"></iframe></div>
+  <p>Changes stage in Preview. Select and show cards in the output's Casters row; choose <strong>Custom name</strong> there for a name without role or handle.</p>
+  <div id="positions"></div>
+  <div class="actions"><button id="take" type="button">TAKE output preview</button><button id="revert" type="button">Revert output preview</button></div>
+  <p>TAKE and Revert apply to all staged layers for the selected output.</p>
+  <p id="error" role="alert"></p>
+  <script src="caster-control.js"></script>
+</body>
+</html>

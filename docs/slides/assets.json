@@ -1398,5 +1398,14 @@
     "width": 1920,
     "height": 1080,
     "sha256": "88553d085ac5508419e89fd4d9a05c899b020ea294dab70e443d5091e52ff5e1"
+  },
+  {
+    "name": "GIVEAWAY.png",
+    "path": "stream-slides/GIVEAWAY.png",
+    "source": "User-supplied GIVEAWAY.png, 2026-10-24",
+    "size": 3032496,
+    "width": 1920,
+    "height": 1080,
+    "sha256": "6570404e5631665691ecfea8d53e94204e33ab11ce0b7be1d2bcd6a807e4dcec"
   }
 ]

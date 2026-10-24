@@ -54,9 +54,9 @@ export const SLIDE_SEQUENCES: Record<SlideMode, readonly SlideCue[]> = {
     ...tamura, image("スポンサー紹介-VOICEMOD様.png", "Voicemod 1 · overview"),
     { kind: "clear", label: "Voicemod demonstration · return to cameras" },
     image("スポンサー紹介-Voicemod様-副賞紹介.png", "Voicemod 2 · product and trial"),
-    image("副賞紹介-Voicemod様.png", "Voicemod 3 · bonus prize"), clear,
+    image("副賞紹介-Voicemod様.png", "Voicemod 3 · bonus prize"), image("GIVEAWAY.png"), clear,
   ],
-  "one-sponsor": [...tamura, clear],
+  "one-sponsor": [...tamura, image("GIVEAWAY.png"), clear],
 };
 export function slideCue(layer: Pick<SlidesLayer, "mode" | "index">): SlideCue {
   return SLIDE_SEQUENCES[layer.mode][layer.index] ?? clear;

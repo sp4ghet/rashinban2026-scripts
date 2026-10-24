@@ -27,6 +27,7 @@ export function mountCasters(host: HTMLElement, english = false): Layer<CastersL
     el: mustQuery(host, `#caster-${index + 1}`),
     visible: false,
     name: "",
+    custom: false,
     animations: [] as Animation[],
   }));
 
@@ -102,7 +103,13 @@ export function mountCasters(host: HTMLElement, english = false): Layer<CastersL
 
   function render() {
     for (const [index, card] of cards.entries()) {
-      const caster = findCaster(casters, layer.names[card.side]);
+      const position = layer.positions[card.side];
+      card.el.style.translate = `${position.x}px ${position.y}px`;
+      const custom = layer.custom[card.side];
+      const customName = layer.customNames[card.side].trim();
+      const caster = custom
+        ? (customName ? { name: customName, role: "", twitter: "" } : null)
+        : findCaster(casters, layer.names[card.side]);
       const visible = Boolean((index === 2 ? layer.center : layer.slots[index]) && caster);
       if (!visible || !caster) {
         if (card.visible) animate(card, false);
@@ -117,8 +124,9 @@ export function mountCasters(host: HTMLElement, english = false): Layer<CastersL
       const handle = mustQuery(card.el, ".handle");
       handle.hidden = !caster.twitter;
       mustQuery(handle, ".band-content").textContent = caster.twitter ? `@${caster.twitter}` : "";
-      if (!card.visible || card.name !== caster.name) animate(card, true);
+      if (!card.visible || card.name !== caster.name || card.custom !== custom) animate(card, true);
       card.name = caster.name;
+      card.custom = custom;
     }
     fitEnglishText();
   }

@@ -8,6 +8,7 @@ export type Control =
   | { kind: "select"; path: readonly string[]; label: string; options: readonly (readonly [string, string])[] }
   | { kind: "text"; path: readonly string[]; label: string };
 export type Row = { id: string; title: string; controls: readonly Control[] };
+export const CUSTOM_CASTER = "\u0000custom";
 
 const PAGE: Control = {
   kind: "select",
@@ -89,9 +90,12 @@ const STREAM_ROWS: readonly Row[] = [
     controls: [
       { kind: "toggle", path: ["casters", "slots"], label: "L/R Caster" },
       { kind: "select", path: ["casters", "names", "left"], label: "Left", options: [["", "— none —"]] },
+      { kind: "text", path: ["casters", "customNames", "left"], label: "Left name" },
       { kind: "select", path: ["casters", "names", "right"], label: "Right", options: [["", "— none —"]] },
+      { kind: "text", path: ["casters", "customNames", "right"], label: "Right name" },
       { kind: "toggle", path: ["casters", "center"], label: "Center Card" },
       { kind: "select", path: ["casters", "names", "center"], label: "Center", options: [["", "— none —"]] },
+      { kind: "text", path: ["casters", "customNames", "center"], label: "Center name" },
     ],
   },
   INTERVAL,
@@ -141,6 +145,11 @@ function selectCard(player: "left" | "right", layers: unknown): Partial<PlayerCa
  */
 export function patchAt(path: readonly string[], value: unknown, layers: unknown): Record<string, unknown> {
   if (path.length === 0) throw new Error("patchAt: path must not be empty");
+  if (path.length === 3 && path[0] === "casters" && path[1] === "names") {
+    const side = path[2]!;
+    return { casters: { custom: { [side]: value === CUSTOM_CASTER },
+      ...(value === CUSTOM_CASTER ? {} : { names: { [side]: value } }) } };
+  }
   if (path.length === 2 && path[0] === "slides") {
     const mode = valueAt(layers, ["slides", "mode"]) as SlideMode;
     const index = valueAt(layers, ["slides", "index"]) as number;
@@ -214,5 +223,6 @@ export function monitorUrls(output: BroadcastOutput, channel: "preview" | "progr
 
 /** True when any control in the row differs between the two layer sets. */
 export function rowDirty(row: Row, preview: unknown, program: unknown): boolean {
+  if (row.id === "casters") return !layersEqual(valueAt(preview, ["casters"]), valueAt(program, ["casters"]));
   return row.controls.some((c) => !layersEqual(valueAt(preview, c.path), valueAt(program, c.path)));
 }

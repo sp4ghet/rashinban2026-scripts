@@ -98,6 +98,13 @@ export async function validateStreamSlides({ navigate, evaluate, until, click, p
       await until(`window.fixtureValues.broadcast.stream.preview.slides.index === ${index}`);
       if (expected.kind === 'image') {
         await until(`(() => { const host=${monitor('preview')}?.querySelector('#layer-slides');return host && !host.hidden && host.dataset.status === 'ready' && host.dataset.slide === ${JSON.stringify(expected.file)} && host.querySelector('img')?.naturalWidth > 0; })()`);
+        if (expected.file === 'GIVEAWAY.png') {
+          assert.equal(index, SLIDE_SEQUENCES[selected].length - 2, 'giveaway is the last visible slide before Clear');
+          await click('#take');
+          await until(`${monitor('program')}?.querySelector('#layer-slides')?.dataset.slide === 'GIVEAWAY.png' && ${monitor('program')}?.querySelector('#layer-slides')?.dataset.status === 'ready'`);
+          assert.deepEqual(await evaluate(`(()=>{const img=${monitor('program')}.querySelector('#layer-slides img');return [img.naturalWidth,img.naturalHeight]})()`), [1920,1080]);
+          await screenshot('giveaway-' + selected);
+        }
       } else {
         await until(`${monitor('preview')}?.querySelector('#layer-slides')?.hidden === true`);
         assert.equal(values.broadcast.stream.preview.bracket.visible, expected.kind === 'bracket');

@@ -113,7 +113,12 @@ test("clear preview hides every layer while preserving selections and program", 
     playerCameras: { left: false, right: false, relay: "other" },
     playerCards: { visible: false, page: "stats", player: "right", position: "right" },
     lowerThird: { visible: false, mode: "text", title: "Title", subtitle: "Subtitle", comingUp: true },
-    casters: { slots: [false, false], center: false, names: { left: "Stephen", right: "Kai", center: "SD" } },
+    casters: {
+      slots: [false, false], center: false, names: { left: "Stephen", right: "Kai", center: "SD" },
+      custom: { left: false, right: false, center: false },
+      customNames: { left: "", right: "", center: "" },
+      positions: { left: { x: 0, y: 0 }, right: { x: 0, y: 0 }, center: { x: 0, y: 0 } },
+    },
     interval: { visible: false }, bracket: { visible: false }, banpick: { visible: false },
   });
   assert.deepEqual(a.state().stream.program, before.stream.program);

@@ -1,0 +1,16 @@
+* { box-sizing: border-box; }
+body { margin: 0; padding: 14px; background: #141a22; color: #edf1f8; font: 14px "Segoe UI", sans-serif; }
+p { color: #bbc8dd; font-size: 12px; line-height: 1.5; }
+label.output, .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+select, input[type="number"], button { color: #f5f7fc; background: #2c3950; border: 1px solid #52637d; border-radius: 4px; padding: 6px 8px; font: inherit; }
+fieldset { margin: 12px 0; border: 1px solid #52637d; border-radius: 4px; }
+legend { padding: 0 6px; font-weight: 600; }
+.axis { display: grid; grid-template-columns: 18px minmax(80px, 1fr) 78px; align-items: center; gap: 8px; margin-bottom: 10px; }
+input { width: 100%; min-width: 0; }
+input[type="range"] { accent-color: #ff6b6b; }
+button { cursor: pointer; }
+button:disabled { opacity: .4; cursor: default; }
+#take { background: #c62828; border-color: #ef5350; }
+#error { color: #ff9eaa; }
+.screen { position: relative; aspect-ratio: 16 / 9; background: #080d16; overflow: hidden; border: 2px solid #2c3950; }
+.screen iframe { position: absolute; width: 1920px; height: 1080px; border: 0; pointer-events: none; transform-origin: top left; transform: scale(var(--scale, .2)); }

@@ -17,6 +17,10 @@ export type CastersLayer = {
   slots: [boolean, boolean];
   center: boolean;
   names: { left: string; right: string; center: string };
+  custom: { left: boolean; right: boolean; center: boolean };
+  customNames: { left: string; right: string; center: string };
+  /** Pixel offsets from the output's original 1920 x 1080 layout. */
+  positions: Record<"left" | "right" | "center", { x: number; y: number }>;
 };
 export type ToggleLayer = { visible: boolean };
 
@@ -56,7 +60,7 @@ export const MAX_TEXT = 120;
 // "boolean:true" to true. Arrays are described by "booleanPair" because the
 // only array in the buses is the caster slot pair. A string list is an enum
 // whose first entry is the default.
-type Leaf = "boolean" | "boolean:true" | "text" | "relay" | "booleanPair" | "slideIndex" | readonly string[];
+type Leaf = "boolean" | "boolean:true" | "text" | "relay" | "booleanPair" | "slideIndex" | "offsetX" | "offsetY" | readonly string[];
 type Spec = { [key: string]: Leaf | Spec };
 
 /**
@@ -73,11 +77,12 @@ type SpecOf<L> = {
         ? string extends L[K]
           ? "text" | "relay"
           : readonly L[K][]
-        : L[K] extends number ? "slideIndex" : SpecOf<L[K]>;
+        : L[K] extends number ? "slideIndex" | "offsetX" | "offsetY" : SpecOf<L[K]>;
 };
 
 const CARD_SPEC = { visible: "boolean", page: ["profile", "stats", "compact"], player: ["left", "right"], position: ["left", "right"] } as const satisfies SpecOf<PlayerCardsLayer>;
 const TOGGLE_SPEC = { visible: "boolean" } as const satisfies SpecOf<ToggleLayer>;
+const POSITION_SPEC = { x: "offsetX", y: "offsetY" } as const;
 const STREAM_SPEC = {
   slides: { visible: "boolean", mode: SLIDE_MODES, index: "slideIndex" },
   playerCameras: { left: "boolean", right: "boolean", relay: "relay" },
@@ -85,7 +90,12 @@ const STREAM_SPEC = {
   bracket: TOGGLE_SPEC,
   playerCards: { ...CARD_SPEC, position: ["right", "left"] },
   lowerThird: { visible: "boolean", mode: ["match", "scores", "text"], title: "text", subtitle: "text", comingUp: "boolean" },
-  casters: { slots: "booleanPair", center: "boolean", names: { left: "text", right: "text", center: "text" } },
+  casters: {
+    slots: "booleanPair", center: "boolean", names: { left: "text", right: "text", center: "text" },
+    custom: { left: "boolean", right: "boolean", center: "boolean" },
+    customNames: { left: "text", right: "text", center: "text" },
+    positions: { left: POSITION_SPEC, right: POSITION_SPEC, center: POSITION_SPEC },
+  },
   banpick: TOGGLE_SPEC,
 } as const satisfies SpecOf<StreamLayers>;
 const LED_SPEC = { playerCards: CARD_SPEC, banpick: TOGGLE_SPEC, presenter: TOGGLE_SPEC, bracket: TOGGLE_SPEC } as const satisfies SpecOf<LedLayers>;
@@ -96,7 +106,7 @@ function isLeaf(spec: Leaf | Spec): spec is Leaf {
 }
 
 function defaultFor(spec: Leaf | Spec): unknown {
-  if (spec === "slideIndex") return 0;
+  if (spec === "slideIndex" || spec === "offsetX" || spec === "offsetY") return 0;
   if (spec === "boolean") return false;
   if (spec === "boolean:true") return true;
   if (spec === "text") return "";
@@ -109,6 +119,9 @@ function defaultFor(spec: Leaf | Spec): unknown {
 }
 
 function validLeaf(spec: Leaf, value: unknown): boolean {
+  if (spec === "offsetX" || spec === "offsetY") {
+    return typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= (spec === "offsetX" ? 1920 : 1080);
+  }
   if (spec === "slideIndex") return typeof value === "number" && Number.isInteger(value) && value >= 0;
   if (spec === "relay") {
     if (typeof value !== "string") return false;

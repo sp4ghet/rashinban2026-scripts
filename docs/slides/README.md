@@ -21,8 +21,8 @@ Script ordering comes from [配信資料_RASHINBAN2026](https://docs.google.com/
 | DAY 2 OPENING | GeoGuessr 1–2 → Game Modes → Duels 1–4 → RASHINBAN → tournament format → map pool → Ban & Pick → Pinpointing Duels → Move/NM rules → tie range → **live bracket** → prizes/sponsors/partners/bonus prizes → clear for Top 8 introductions → Day 2 schedule → clear |
 | DAY 1 ENDING | **Live bracket** → sponsors → tomorrow's Day 2 schedule → clear |
 | DAY 2 ENDING | Tamura Builds award → ceremony prizes → clear for organizer address → sponsors → clear |
-| 2 SPONSORS | Tamura company → service → recruitment → Voicemod overview → clear for demonstration → product/trial → annual-license prize → clear |
-| 1 SPONSOR | Tamura company → service → recruitment → clear |
+| 2 SPONSORS | Tamura company → service → recruitment → Voicemod overview → clear for demonstration → product/trial → annual-license prize → GIVEAWAY → clear |
+| 1 SPONSOR | Tamura company → service → recruitment → GIVEAWAY → clear |
 
 A bracket cue uses the existing live bracket graphic, not an image. Advancing
 past it stages the bracket off and the next image on; TAKE applies both together.
@@ -31,10 +31,11 @@ Interval or Bracket manually hides Slides; selecting a slide hides Interval.
 Clear cues remove slide/bracket output while preserving other selected layers,
 so the operator can use the existing camera/player controls during talk.
 
-33 unique images are bundled in `graphics/assets/stream-slides/`. They are
-unchanged local copies, with Drive provenance, sizes, dimensions and hashes in
+34 unique images are bundled in `graphics/assets/stream-slides/`. They are
+unchanged local copies, with provenance, sizes, dimensions and hashes in
 [assets.json](assets.json). No Google login or network access is needed for
-playback. The filenames mentioning Voicemod prizes are ambiguous: visual
+playback. GIVEAWAY is the user-supplied 1920 × 1080 artwork added on 2026-10-24.
+The filenames mentioning Voicemod prizes are ambiguous: visual
 inspection identifies the product/trial promotion separately from the actual
 Top 8 annual-license prize.
 

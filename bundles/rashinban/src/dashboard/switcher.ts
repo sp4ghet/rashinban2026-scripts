@@ -2,7 +2,7 @@
 // output's preview bus; TAKE copies preview to program and SWAP exchanges them. The monitors are
 // the real graphics pages opened on the preview/program channel.
 import { MAX_TEXT, withDefaults, layersEqual, type BroadcastOutput, type BroadcastState } from "../broadcast/state.ts";
-import { controlRows, monitorUrls, patchAt, rowDirty, valueAt, type Control, type Row, type EnglishScene } from "../broadcast/switcher-model.ts";
+import { CUSTOM_CASTER, controlRows, monitorUrls, patchAt, rowDirty, valueAt, type Control, type Row, type EnglishScene } from "../broadcast/switcher-model.ts";
 import { bindMatch } from "../graphics/broadcast/match.ts";
 import { findCaster, type Caster } from "../casters/casters.ts";
 import { BROADCAST_MESSAGES, REPLICANTS } from "../types/replicants.ts";
@@ -133,7 +133,12 @@ function render() {
     strip.querySelector<HTMLElement>(`[data-row="${row.id}"]`)!.classList.toggle("dirty", rowDirty(row, preview, program));
     for (const control of row.controls) {
       const widget = widgets.get(control)!;
-      const value = valueAt(preview, control.path);
+      let value = valueAt(preview, control.path);
+      if (row.id === "casters" && control.path.length === 3) {
+        const custom = valueAt(preview, ["casters", "custom", control.path[2]!]) === true;
+        if (control.kind === "text") widget.parentElement!.hidden = !custom;
+        if (control.kind === "select" && custom) value = CUSTOM_CASTER;
+      }
       if (row.id === "slides" && control.path[1] === "index") {
         const slides = valueAt(preview, ["slides"]) as SlidesLayer;
         const select = widget as HTMLSelectElement;
@@ -157,11 +162,12 @@ function render() {
         const select = widget as HTMLSelectElement;
         const selected = findCaster(casters, String(value ?? ""));
         const options = [new Option(casters.length ? "— none —" : "— no casters in sheet —", "")];
+        options.push(new Option("Custom name (name only)", CUSTOM_CASTER));
         for (const caster of casters) {
           options.push(new Option(caster.role ? `${caster.name} (${caster.role})` : caster.name,
             caster === selected ? String(value) : caster.name));
         }
-        if (value && !selected) options.push(new Option(`${value} (not in sheet)`, String(value)));
+        if (value && value !== CUSTOM_CASTER && !selected) options.push(new Option(`${value} (not in sheet)`, String(value)));
         select.replaceChildren(...options);
       }
       if (control.kind === "toggle") {

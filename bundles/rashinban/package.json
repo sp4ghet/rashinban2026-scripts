@@ -171,6 +171,14 @@
         "headerColor": "#b71c1c"
       },
       {
+        "name": "caster-control",
+        "workspace": "config",
+        "title": "Caster Nameplates",
+        "file": "caster-control.html",
+        "width": 4,
+        "headerColor": "#335f9b"
+      },
+      {
         "name": "presenter-control",
         "workspace": "config",
         "title": "Duels Presenter",
