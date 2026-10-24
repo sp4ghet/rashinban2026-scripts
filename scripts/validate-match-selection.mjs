@@ -98,13 +98,14 @@ try {
   await choose('current-left','profile:0'); await choose('current-right','profile:1'); await label('current','Manual final');
   await click('current-apply'); await until(`fixtureValues.matchState.label==='Manual final'`); await ready();
   assert.equal(state('matchState').left.name,'Alpha');
-  assert.equal(state('presenterSeries').left.playerId,'venue-blue');
-  assert.equal(state('presenterSeries').right.playerId,'venue-red');
+  assert.equal(state('presenterSeries').left.playerId,'venue-red');
+  assert.equal(state('presenterSeries').right.playerId,'venue-blue');
   const currentBefore=JSON.stringify(state('matchState'));
   await choose('next-left','profile:2'); await choose('next-right','profile:3'); await click('next-apply');
   await until(`fixtureValues.nextMatchState.left.name==='Gamma'`); await ready();
   assert.equal(JSON.stringify(state('matchState')),currentBefore);
   await load('next',8);
+  assert.deepEqual(state('nextMatchState').gameMapping,{left:'red',right:'blue'});
   assert.equal(JSON.stringify(state('matchState')),currentBefore);
   await command('Page.reload'); await until(`document.querySelector('#next-left')?.value==='profile:2'`); await ready();
   assert.equal(await evaluate(`document.querySelector('#next-label').value`),'Match 2','next slot survives reload');
@@ -112,10 +113,17 @@ try {
   assert.equal(state('matchState').left.wins,1);
   assert.equal(state('nextMatchState').setId,8);
   await screenshot('current-and-next-desktop');
+  assert.deepEqual(state('matchState').gameMapping,{left:'red',right:'blue'});
+  await click('current-swap'); await until(`fixtureValues.matchState.left.name==='Beta'`); await ready();
+  assert.equal(state('presenterSeries').left.playerId,'venue-red');
+  assert.equal(state('presenterSeries').right.playerId,'venue-blue');
+  await load('current',7);
   await click('next-swap'); await until(`fixtureValues.nextMatchState.left.name==='Delta'`); await ready();
+  assert.deepEqual(state('nextMatchState').gameMapping,{left:'red',right:'blue'});
   await click('promote-next'); await until(`fixtureValues.matchState.setId===8 && fixtureValues.nextMatchState.left.name===''`); await ready();
   assert.equal(state('presenterSeries').left.name,'Delta');
-  assert.equal(state('presenterSeries').left.playerId,'venue-red','swapped tournament account mapping survives promotion');
+  assert.equal(state('presenterSeries').left.playerId,'venue-red','team binding stays fixed through next swap and promotion');
+  assert.equal(state('presenterSeries').right.playerId,'venue-blue');
   assert.equal(await evaluate(`document.querySelector('#promote-next').disabled`),true);
   await choose('next-left','profile:0'); await choose('next-right','profile:1'); await label('next','Prepared draft');
   await load('current',7);
@@ -138,7 +146,7 @@ try {
   await screenshot('current-and-next-mobile');
   assert.equal(await evaluate('document.documentElement.scrollWidth<=window.innerWidth'),true,'mobile page fits');
   assert.deepEqual(errors,[]);
-  console.log('Match selection browser flow passed: removed fields, both player selectors, independent start.gg targets, persisted staging, promotion, swapped account mapping, preserved drafts, stale score protection, duplicate rejection, mobile.');
+  console.log('Match selection browser flow passed: removed fields, both player selectors, independent start.gg targets, persisted staging, promotion, fixed team bindings through both swaps, preserved drafts, stale score protection, duplicate rejection, mobile.');
   console.log('Screenshots: '+artifacts);
 } catch(error) {
   if(socket?.readyState===WebSocket.OPEN) {

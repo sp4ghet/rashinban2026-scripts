@@ -139,10 +139,12 @@ test("start.gg loads independently into next or current and retains imported sna
   reps.get("startggBracket").value = bracket;
   send("match:next:load", { setId: 7, revision: 0 });
   assert.equal(reps.get("nextMatchState").value.setId, 7);
+  assert.deepEqual(reps.get("nextMatchState").value.gameMapping, { left: "red", right: "blue" });
   assert.equal(reps.get("nextMatchState").value.left.wins, 1);
   assert.equal(reps.get("matchState").value.setId, null);
   send("match:load", { setId: 7, revision: 0 });
   assert.equal(reps.get("matchState").value.setId, 7);
+  assert.deepEqual(reps.get("matchState").value.gameMapping, { left: "red", right: "blue" });
   assert.equal(reps.get("nextMatchState").value.revision, 1);
   reps.get("startggBracket").value = normalizeEvent(null, [], null, 1);
   assert.equal(reps.get("nextMatchState").value.left.name, "Alpha");
@@ -158,7 +160,7 @@ test("next match rejects stale drafts and duplicate players without changing sav
   assert.equal(reps.get("nextMatchState").value.revision, 1);
   send("match:next:swap", { revision: 1 });
   assert.equal(reps.get("nextMatchState").value.left.name, "Next B");
-  assert.deepEqual(reps.get("nextMatchState").value.gameMapping, { left: "blue", right: "red" });
+  assert.deepEqual(reps.get("nextMatchState").value.gameMapping, { left: "red", right: "blue" });
 });
 
 test("making next current checks both revisions and clears next only after success", () => {
@@ -213,4 +215,42 @@ test("startup corrects saved current and next match team defaults before publish
   assert.deepEqual([series.right.name, series.right.playerId, series.right.wins], ["Next B", "venue-blue", 2]);
   assert.deepEqual(reps.get("nextMatchState").value.gameMapping, { left: "red", right: "blue" });
   assert.equal(reps.get("nextMatchResolved").value.left.name, "Next A");
+});
+
+
+test("startup repairs reversed version-2 team bindings in both match slots", () => {
+  const saved = { ...selectedMatch(), schemaVersion: 2, gameMapping: { left: "blue", right: "red" } };
+  const { reps } = harness({ matchState: structuredClone(saved), nextMatchState: structuredClone(saved),
+    presenterDuel: { players: [{ id: "venue-blue", teamColor: "blue" }, { id: "venue-red", teamColor: "red" }] } });
+  assert.equal(reps.get("presenterSeries").value.left.playerId, "venue-red");
+  assert.equal(reps.get("presenterSeries").value.right.playerId, "venue-blue");
+  assert.deepEqual(reps.get("nextMatchState").value.gameMapping, { left: "red", right: "blue" });
+});
+
+test("current and next swaps, save and promotion keep red-left/blue-right bindings", () => {
+  const { reps, send } = harness({ presenterDuel: {
+    players: [{ id: "venue-blue", teamColor: "blue" }, { id: "venue-red", teamColor: "red" }] } });
+  const expectMapping = () => {
+    const series = reps.get("presenterSeries").value;
+    assert.equal(series.left.playerId, "venue-red");
+    assert.equal(series.right.playerId, "venue-blue");
+  };
+  send("match:apply", selectedMatch());
+  send("match:swap", { revision: 1 });
+  assert.equal(reps.get("presenterSeries").value.left.name, "Next B");
+  expectMapping();
+  send("match:next:apply", selectedMatch());
+  send("match:next:swap", { revision: 1 });
+  const draft = structuredClone(reps.get("nextMatchState").value);
+  // A previously open panel can submit an old hidden mapping.
+  draft.gameMapping = { left: "blue", right: "red" };
+  send("match:next:apply", draft);
+  assert.deepEqual(reps.get("nextMatchState").value.gameMapping, { left: "red", right: "blue" });
+  send("match:next:promote", { revision: 2, nextRevision: 3 });
+  assert.equal(reps.get("presenterSeries").value.left.name, "Next B");
+  expectMapping();
+  const current = structuredClone(reps.get("matchState").value);
+  current.gameMapping = { left: "blue", right: "red" };
+  send("match:apply", current);
+  expectMapping();
 });

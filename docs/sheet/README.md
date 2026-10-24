@@ -82,17 +82,21 @@ own panels.
 ### Venue game accounts
 
 Personal GeoGuessr UIDs identify spreadsheet profiles. They do not need to be
-the accounts logged into venue PCs. Each side has an **In-game account** selector:
-Left/A defaults to **Auto — red team**, Right/B to **Auto — blue team**. Detection
-uses the connected party's current duel, including its pre-round preview. Before
-a duel is available, the defaults wait for its team accounts.
+the accounts logged into venue PCs. The presenter binds Left/A to the **red
+team** and Right/B to the **blue team**. Detection uses the connected party's
+current duel, including its pre-round preview. Before a duel is available,
+the bindings wait for its team accounts.
 
-Automatic mappings follow the team's account when another duel starts. You can
-instead choose a detected account explicitly; if it disappears, the selection
-stays visible as unavailable and results remain unmapped. Duplicate effective
-mappings leave both sides unmapped. Swap moves the mapping with its competitor;
-loading a new start.gg match restores red-left/blue-right defaults. Names, profile
-data and series wins still come from Current Match, regardless of venue logins.
+Automatic bindings follow replacement accounts when another duel starts.
+Swap moves competitor identities and wins while keeping team bindings fixed;
+loading a new start.gg match also restores red-left/blue-right defaults.
+Startup and saves repair reversed automatic bindings, including those saved
+by older Swap sides actions. Player-card placement is independent.
+
+The current panel does not expose an in-game account selector. Legacy explicit
+account assignments are preserved internally on their display side; missing
+accounts remain unmapped, and duplicate effective mappings leave both sides
+unmapped. Names, profile data and series wins still come from Current Match.
 
 The supplied [player datastore](https://docs.google.com/spreadsheets/d/1xozkRDAEeRLqVPzvpqqDFAcpC3vcbTrd9xekrQ28B50/edit#gid=0)
 has a `players` tab (gid 0), populated with the 11 event registrants' names and

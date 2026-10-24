@@ -106,10 +106,10 @@ export function parseMatch(input: unknown): MatchState {
     left: account(value.gameMapping?.left, DEFAULT_GAME_MAPPING.left),
     right: account(value.gameMapping?.right, DEFAULT_GAME_MAPPING.right),
   };
-  // Version 1 retained the old blue-left default after the presenter changed
-  // to red-left. Correct that saved default once; preserve explicit account
-  // assignments and already-correct mappings. Version 2 keeps later swaps.
-  if (value.schemaVersion !== 2 && gameMapping.left === "blue" && gameMapping.right === "red") {
+  // Team colors belong to the presenter's physical sides. Repair old defaults
+  // and saved swaps, including version 2 and drafts from an older dashboard.
+  // Explicit venue-account assignments remain attached to their display side.
+  if (gameMapping.left === "blue" && gameMapping.right === "red") {
     Object.assign(gameMapping, DEFAULT_GAME_MAPPING);
   }
   if (gameMapping.left === gameMapping.right)
@@ -199,7 +199,7 @@ export function swapMatch(match: MatchState): MatchState {
     ...match,
     left: { ...match.right },
     right: { ...match.left },
-    gameMapping: { left: mapping.right, right: mapping.left },
+    gameMapping: { ...mapping },
   };
 }
 export function toSeries(

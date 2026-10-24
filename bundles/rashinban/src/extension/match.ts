@@ -92,8 +92,10 @@ export function registerMatch(nodecg: NodeCG.ServerAPI) {
     }
     state.value = parseMatch(next);
   }
-  if (state.value.schemaVersion !== 2 || !state.value.gameMapping) state.value = parseMatch(state.value);
-  if (nextState.value.schemaVersion !== 2 || !nextState.value.gameMapping) nextState.value = parseMatch(nextState.value);
+  // Normalize persisted bindings even after the initial schema migration:
+  // older dashboard swaps could reverse an already-version-2 match.
+  state.value = parseMatch(state.value);
+  nextState.value = parseMatch(nextState.value);
   const publish = () => {
     if (!state.value) return;
     const value = resolveMatch(state.value, profiles.value ?? []);

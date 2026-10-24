@@ -48,11 +48,11 @@ test("explicit mapping stays selected but does not map a missing account", () =>
   );
   assert.equal(match.gameMapping.left, red);
 });
-test("swap moves mapping with competitor and migration supplies red-left/blue-right defaults", () => {
+test("swap keeps team bindings fixed and migration supplies red-left/blue-right defaults", () => {
   const match = emptyMatch();
   assert.deepEqual(swapMatch(match).gameMapping, {
-    left: "blue",
-    right: "red",
+    left: "red",
+    right: "blue",
   });
   const old: any = { ...match };
   delete old.gameMapping;
@@ -67,7 +67,7 @@ test("duplicate effective accounts leave both sides unmapped", () => {
 });
 
 
-test("legacy automatic mapping is corrected once without changing player info or wins", () => {
+test("legacy automatic mapping is corrected without changing player info or wins", () => {
   const old = { ...emptyMatch(), schemaVersion: 1, gameMapping: { left: "blue", right: "red" } };
   old.left.name = "Red player"; old.left.wins = 1;
   old.right.name = "Blue player"; old.right.wins = 2;
@@ -78,9 +78,9 @@ test("legacy automatic mapping is corrected once without changing player info or
   assert.deepEqual([series.right.name, series.right.playerId, series.right.wins], ["Blue player", blue, 2]);
   assert.deepEqual(parseMatch(migrated), migrated);
   assert.deepEqual(old, snapshot);
-  // A later deliberate swap must survive parsing/restart.
+  // Swapping competitors keeps each physical side bound to the same team.
   const swapped = parseMatch(swapMatch(migrated));
-  assert.equal(toSeries(resolveMatch(swapped, []), duel).right.playerId, red);
+  assert.equal(toSeries(resolveMatch(swapped, []), duel).right.playerId, blue);
   assert.equal(swapped.right.name, "Red player");
 });
 
@@ -119,4 +119,15 @@ test("presenter names, wins, HP, round scores and result pins follow red-left/bl
     assert.equal(map.pins.find(pin => pin.label === "left")!.point.lat, 10);
     assert.equal(map.pins.find(pin => pin.label === "right")!.point.lat, 20);
   }
+});
+
+
+test("schema-2 automatic bindings reversed by the old Swap sides action are repaired", () => {
+  const match = emptyMatch();
+  match.gameMapping = { left: "blue", right: "red" };
+  const normalized = parseMatch(match);
+  const series = toSeries(resolveMatch(normalized, []), duel);
+  assert.equal(series.left.playerId, red);
+  assert.equal(series.right.playerId, blue);
+  assert.deepEqual(parseMatch(normalized), normalized);
 });
