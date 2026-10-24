@@ -39,8 +39,9 @@ const match = emptyMatch();
 match.left.entrantId = 10; match.right.entrantId = 20;
 match.source = 'startgg'; match.setId = 50; match.label = 'Top 8';
 let state = createInitialState();
+// Reference crops and Preview/TAKE comparisons need a fixed starting position.
 for (const output of ['stream', 'led']) {
-  state = take(setPreview(state, output, { playerCards: { visible: true } }), output);
+  state = take(setPreview(state, output, { playerCards: { visible: true, position: 'left' } }), output);
 }
 const makeSet = (id, when, round, ownScore = 2, opponentScore = 0) => ({
   id, groupId: 1, phaseId: 1, identifier: String(id), round: id, side: 'winners', roundText: round,
