@@ -124,4 +124,31 @@ export async function validatePlayerInfo({ navigate, evaluate, until, click, scr
   await until(`${monitor('program')}?.querySelector('.player-info')?.dataset.page === 'profile'`);
   assert.deepEqual(values.broadcast.stream, streamBefore);
   await screenshot('english-switcher');
+
+  // The rundown must drive both the menu and every two-page Next transition,
+  // independently of sheet order and translated display names.
+  const openingPlayers = [
+    ['meishin174', 'meishin'], ['ここす', 'cocos'], ['しよえ', 'shiyoe'], ['Tozan', 'tozangezan'],
+    ['nowlo', 'Nowlo'], ['Stephen', 'Stephen'], ['Zion', 'Zion'], ['RTD | kmap', 'kmap'],
+  ].map(([tag, name], index) => rowToProfile({ startgg_tag: tag, name, startgg_entrant_id: String(100 + index) }));
+  values.players = [...openingPlayers].reverse();
+  values.playersEn = openingPlayers.map(player => ({ ...player, name: `EN ${player.name}` }));
+  values.startggBracket = null;
+  const playerSelect = '[data-row=playerInfo] label:first-of-type select';
+  for (const output of ['stream', 'en']) {
+    await message('broadcast:setPreview', { output, patch: { playerInfo: { visible: false, playerId: '', page: 'results' } } });
+    const programBefore = structuredClone(values.broadcast[output].program);
+    await navigate(`dashboard/switcher-${output}.html`, 1600, 1080);
+    await until(`document.querySelector(${JSON.stringify(playerSelect)})?.options.length === 9`);
+    const options = await evaluate(`Array.from(document.querySelector(${JSON.stringify(playerSelect)}).options).slice(1).map(option=>({value:option.value,label:option.textContent}))`);
+    assert.deepEqual(options.map(option => option.value), openingPlayers.map((_, i) => `entrant:${100 + i}`));
+    assert.deepEqual(options.map(option => option.label), openingPlayers.map(player => output === 'en' ? `EN ${player.name}` : player.name));
+    for (let step = 1; step < 16; step++) {
+      await click('[data-info-direction="1"]');
+      const expected = { visible: false, playerId: `entrant:${100 + Math.floor(step / 2)}`, page: step % 2 ? 'profile' : 'results' };
+      await until(`fixtureValues.broadcast.${output}.preview.playerInfo.playerId === ${JSON.stringify(expected.playerId)} && fixtureValues.broadcast.${output}.preview.playerInfo.page === ${JSON.stringify(expected.page)}`);
+    }
+    assert.equal(await evaluate(`document.querySelector('[data-info-direction="1"]').disabled`), true);
+    assert.deepEqual(values.broadcast[output].program, programBefore, 'ordering/navigation does not change program before TAKE');
+  }
 }

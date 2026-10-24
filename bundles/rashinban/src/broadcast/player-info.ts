@@ -16,6 +16,18 @@ export type InfoResults = {
   status: 'ready' | 'unavailable' | 'unlinked' | 'empty';
 };
 
+// Day 2 opening rundown. Match shared source aliases so translations and sheet
+// row order cannot change the introduction sequence. 鳴神 is listed as meishin.
+const INTRODUCTION_ORDER = [
+  ['meishin174', 'meishin', '鳴神'], ['ここす', 'cocos'], ['しよえ', 'shiyoe'], ['Tozan', 'tozangezan'],
+  ['Nowlo'], ['Stephen'], ['Zion'], ['kmap', 'RTD | kmap'],
+].map(aliases => aliases.map(normalizeTag));
+
+function introductionRank(player: InfoPlayer): number {
+  const index = INTRODUCTION_ORDER.findIndex(aliases => aliases.some(alias => player.photoKeys.includes(alias)));
+  return index < 0 ? INTRODUCTION_ORDER.length : index;
+}
+
 function phases(bracket: StartggBracket | null) {
   const ordered = [...(bracket?.phases ?? [])].sort((a, b) => a.order - b.order);
   const day1 = ordered.find(p => /DAY\s*1/i.test(p.name.normalize('NFKC'))) ?? (ordered.length > 1 ? ordered[0] : undefined);
@@ -66,7 +78,7 @@ export function playerInfoPlayers(profiles: PlayerProfile[], bracket: StartggBra
   }
   return result.filter(player => identities.get(player.id) === 1)
     .map(player => ({ ...player, photoKeys: player.photoKeys.filter(key => owners.get(key) === 1) }))
-    .sort((a, b) => Number(b.top8) - Number(a.top8));
+    .sort((a, b) => introductionRank(a) - introductionRank(b) || Number(b.top8) - Number(a.top8));
 }
 
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'}`;

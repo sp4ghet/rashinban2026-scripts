@@ -17,7 +17,7 @@ The control row shows the matched filename, or the filename to upload. Missing/d
 
 ## Stream operation
 
-**Player info slides** is directly below **Slides**. Choose **Player**, choose **1 · Day 1 results** or **2 · Profile**, enable **Visible**, inspect Preview, then **TAKE**. Player selection is independent of Current Match. Top 8 entrants appear first when start.gg has seeded Day 2; other sheet players remain available for preparation. Auto selects the first listed player. Selecting a named player pins that identity across refreshes.
+**Player info slides** is directly below **Slides**. Choose **Player**, choose **1 · Day 1 results** or **2 · Profile**, enable **Visible**, inspect Preview, then **TAKE**. Player selection is independent of Current Match. The opening order is **鳴神 (meishin) → ここす (cocos) → しよえ (shiyoe) → tozangezan → Nowlo → Stephen → Zion → kmap** on both Stream and EN, including Previous/Next navigation. Matching uses shared source names/tags, so English translations and sheet row order do not reorder players. Other Top 8 entrants and sheet players remain available after these eight. Auto selects the first listed player. Selecting a named player pins that identity across refreshes.
 
 **Previous page / Next page** move through each player's results then profile, stopping at either end. Navigation preserves visibility. Revert, SWAP and Clear preview include the new layer.
 

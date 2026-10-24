@@ -74,6 +74,22 @@ test('translated identity keeps source linkage and falls back safely for ambiguo
   assert.equal(info.playerInfoPlayers([profile, duplicate], fixture()).find(p => p.id === 'entrant:99')?.entrantId, null);
 });
 
+test('opening introductions follow the requested order across sheet order and translations', () => {
+  const ordered = [
+    ['meishin174', 'meishin'], ['ここす', 'cocos'], ['しよえ', 'shiyoe'], ['Tozan', 'tozangezan'],
+    ['nowlo', 'Nowlo'], ['Stephen', 'Stephen'], ['Zion', 'Zion'], ['RTD | kmap', 'kmap'],
+  ].map(([tag, name], index) => rowToProfile({ startgg_tag: tag!, name: name!, startgg_entrant_id: String(100 + index) }));
+  const extra = rowToProfile({ startgg_tag: 'other', name: 'Other player' });
+  const shuffled = [extra, ...[...ordered].reverse()];
+  const expected = [...ordered, extra].map(p => p.startggTag);
+  assert.deepEqual(info.playerInfoPlayers(shuffled, null).map(p => p.tag), expected);
+  const translated = ordered.map((p, index) => ({ ...p, name: `Translated player ${index}` }));
+  const english = info.playerInfoPlayers(shuffled, null, translated);
+  assert.deepEqual(english.map(p => p.tag), expected);
+  assert.deepEqual(english.slice(0, 8).map(p => p.name), translated.map(p => p.name));
+  assert.deepEqual(info.playerInfoPlayers([...shuffled].reverse(), null).slice(0, 8).map(p => p.tag), expected.slice(0, 8));
+});
+
 test('photos match source identity with per-page overrides, single-photo fallback and no ambiguous guess', () => {
   const player = info.playerInfoPlayers([profile], fixture())[0]!;
   const asset = (base: string) => ({ base, url: '/assets/rashinban/player-info/' + base, sum: 'v1' });
