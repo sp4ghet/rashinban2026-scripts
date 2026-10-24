@@ -16,7 +16,7 @@ function set(id: number, time: string, patch: Partial<BracketSet> = {}): Bracket
 }
 function bracket(sets: BracketSet[]): StartggBracket {
   return { fetchedAt: now, event: null, phases: [], groups: {}, streamQueue: [],
-    entrants: { 20: { id: 20, name: "Sponsor | Opponent", tag: "Opponent", prefix: "Sponsor", initialSeedNum: null } },
+    entrants: { 10: { id: 10, name: "Player", tag: "Player", prefix: null, initialSeedNum: null }, 20: { id: 20, name: "Sponsor | Opponent", tag: "Opponent", prefix: "Sponsor", initialSeedNum: null } },
     sets: Object.fromEntries(sets.map(s => [s.id, s])) };
 }
 
@@ -86,4 +86,35 @@ test("DQ results are labeled without negative scores and unknown scores stay unk
   const dq = set(1, "2026-10-11T02:00:00Z"); dq.slots[1]!.score = -1;
   const unknown = set(2, "2026-10-11T03:00:00Z"); unknown.slots[0]!.score = null;
   assert.deepEqual(playerCardResults(bracket([dq, unknown]), player, [], null, 5, now).rows.map(r => r.score), ["—", "W–DQ"]);
+});
+
+test("a corrected sheet entrant ID replaces an obsolete saved selection for recent games", () => {
+  const profile = rowToProfile({ geoguessr_player_uid: "64179ee2585e69f92ec514fc", startgg_entrant_id: "10", startgg_tag: "Player", name: "cocos" });
+  const side = { ...player, uid: profile.geoguessrPlayerUid, entrantId: 22820766, profile };
+  const b = bracket([set(1, "2026-10-11T02:00:00Z")]);
+  assert.deepEqual(playerCardResults(b, side, [profile], null, 5, now).rows.map(row => row.id), [1]);
+  assert.equal(side.entrantId, 22820766, "results lookup does not rewrite the selected match");
+});
+
+test("current sheet linkage repairs an obsolete ID copied into a localized profile", () => {
+  const profile = rowToProfile({ geoguessr_player_uid: "64179ee2585e69f92ec514fc", startgg_entrant_id: "10", startgg_tag: "Player", name: "cocos" });
+  const side = { ...player, uid: profile.geoguessrPlayerUid, entrantId: 22820766, profile: { ...profile, startggEntrantId: 22820766 } };
+  assert.equal(playerCardResults(bracket([set(1, "2026-10-11T02:00:00Z")]), side, [profile], null, 5, now).status, "ready");
+});
+
+test("an entrant present in the bracket remains authoritative over a different sheet ID", () => {
+  const profile = rowToProfile({ startgg_entrant_id: "20", startgg_tag: "Opponent" });
+  const b = bracket([set(1, "2026-10-11T02:00:00Z")]);
+  assert.equal(playerCardResults(b, { ...player, profile }, [], null, 5, now).rows[0]!.score, "2\u20130");
+  b.sets[1]!.slots[0]!.entrantId = 30;
+  assert.equal(playerCardResults(b, { ...player, profile }, [], null, 5, now).status, "empty", "having no results does not switch to another valid entrant");
+});
+
+test("an obsolete sheet ID can fall back to a unique current tag but not an ambiguous one", () => {
+  const profile = rowToProfile({ startgg_entrant_id: "22820766", startgg_tag: "Player" });
+  const side = { ...player, entrantId: null, profile };
+  const b = bracket([set(1, "2026-10-11T02:00:00Z")]);
+  assert.equal(playerCardResults(b, side, [profile], null, 5, now).status, "ready");
+  b.entrants[30] = { ...b.entrants[10]!, id: 30 };
+  assert.equal(playerCardResults(b, side, [profile], null, 5, now).status, "unlinked");
 });

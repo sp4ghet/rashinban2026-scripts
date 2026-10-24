@@ -28,13 +28,21 @@ export function playerCardResults(
   now = Date.now(),
 ): PlayerCardResults {
   if (!bracket) return { rows: [], status: "unavailable" };
-  let entrantId = player.entrantId ?? player.profile?.startggEntrantId;
-  if (entrantId == null && player.profile) {
-    // Entrant IDs are optional in the player sheet. Reuse the directory's
-    // normalized tag/name rules, but never choose among ambiguous entrants.
-    const candidates = Object.values(bracket.entrants).filter(entrant =>
-      matchProfile([player.profile!], { entrantId: entrant.id, tag: entrant.tag, name: entrant.name }).status === "matched");
-    if (candidates.length === 1) entrantId = candidates[0]!.id;
+  let entrantId = player.entrantId ?? player.profile?.startggEntrantId ?? null;
+  if (entrantId == null || (Object.keys(bracket.entrants).length > 0 && !bracket.entrants[entrantId])) {
+    // Selections (and localized profiles) can retain an obsolete entrant ID
+    // after the sheet is corrected. Use its current linkage without changing
+    // a selected entrant that still belongs to this bracket.
+    const current = matchProfile(profiles, { uid: player.uid || player.profile?.geoguessrPlayerUid,
+      entrantId: player.entrantId, tag: player.tag, name: player.name });
+    const profile = current.status === "missing" ? player.profile : current.profile;
+    entrantId = profile?.startggEntrantId ?? null;
+    if (entrantId != null && !bracket.entrants[entrantId]) entrantId = null;
+    if (entrantId == null && profile) {
+      const candidates = Object.values(bracket.entrants).filter(entrant =>
+        matchProfile([profile], { entrantId: entrant.id, tag: entrant.tag, name: entrant.name }).status === "matched");
+      if (candidates.length === 1) entrantId = candidates[0]!.id;
+    }
   }
   if (entrantId == null) return { rows: [], status: "unlinked" };
   const current = currentSetId == null ? undefined : bracket.sets[currentSetId];
