@@ -36,12 +36,12 @@ export function paintResultMapLabel(root: ParentNode, frame: MapFrame | null, re
 }
 const sides = ['left', 'right'] as const;
 const colors = { left: '#458af2', right: '#f05060' };
-const streamColors = { left: '#ff3030', right: '#3083ff' };
+const outputColors = { left: '#ff3030', right: '#3083ff' };
 // Keep regional context when a comparison map has only the submitted guess.
 const SINGLE_PIN_ZOOM = 6;
 function mapColors(frame: MapFrame, output: RenderFrame['output']): MapFrame {
-  if (output !== 'stream') return frame;
-  const recolor = (color: string) => color === colors.left ? streamColors.left : color === colors.right ? streamColors.right : color;
+  if (output !== 'stream' && output !== 'led') return frame;
+  const recolor = (color: string) => color === colors.left ? outputColors.left : color === colors.right ? outputColors.right : color;
   return { ...frame, pins: frame.pins.map(pin => ({ ...pin, color: recolor(pin.color) })),
     lines: frame.lines.map(line => ({ ...line, color: recolor(line.color) })),
     tieRange: frame.tieRange && { ...frame.tieRange, circles: frame.tieRange.circles.map(circle => ({ ...circle, color: recolor(circle.color) })) } };

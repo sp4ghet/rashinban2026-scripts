@@ -235,7 +235,7 @@ test('orchestrator retains fixed NMPZ POV, independent maps and explicit side sw
   assert.deepEqual(fake.maps[0].frames.at(-1)?.pins, []);
 });
 
-test('stream maps use the designer side colors after a player-side swap without mutating LED colors', () => {
+test('stream and LED maps keep red-left/blue-right colors after a player-side swap', () => {
   const f = frame(); f.output = 'stream';
   f.views.players[f.playerIds!.left!]!.pin = { lat: 1, lng: 2 };
   f.views.players[f.playerIds!.right!]!.pin = { lat: 3, lng: 4 };
@@ -248,8 +248,8 @@ test('stream maps use the designer side colors after a player-side swap without 
   assert.deepEqual(fake.maps[0].frames.at(-1)!.pins[0].point, { lat: 3, lng: 4 });
   assert.equal(fake.maps[0].frames.at(-1)!.pins[0].color, '#ff3030');
   f.output = 'led'; renderer.render(f);
-  assert.equal(fake.maps[0].frames.at(-1)!.pins[0].color, '#458af2');
-  assert.equal(fake.maps[1].frames.at(-1)!.pins[0].color, '#f05060');
+  assert.equal(fake.maps[0].frames.at(-1)!.pins[0].color, '#ff3030');
+  assert.equal(fake.maps[1].frames.at(-1)!.pins[0].color, '#3083ff');
 });
 test('MOVE and NM retain per-slot Google objects across mode, source, phase and round changes', () => {
   const f = frame(); const fake = surfaces(); const renderer = createRenderer(fake.adapter, assert.fail);

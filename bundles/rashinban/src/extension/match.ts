@@ -92,7 +92,8 @@ export function registerMatch(nodecg: NodeCG.ServerAPI) {
     }
     state.value = parseMatch(next);
   }
-  if (!state.value.gameMapping) state.value = parseMatch(state.value);
+  if (state.value.schemaVersion !== 2 || !state.value.gameMapping) state.value = parseMatch(state.value);
+  if (nextState.value.schemaVersion !== 2 || !nextState.value.gameMapping) nextState.value = parseMatch(nextState.value);
   const publish = () => {
     if (!state.value) return;
     const value = resolveMatch(state.value, profiles.value ?? []);

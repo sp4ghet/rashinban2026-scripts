@@ -7,7 +7,7 @@ import { rowToProfile } from "../players.ts";
 import { emptyMatch } from "../../match/state.ts";
 import { normalizeEvent } from "../../startgg/normalize.ts";
 const uid = "65fc3453702bba73b4c0a398";
-function harness() {
+function harness(saved: Record<string, unknown> = {}) {
   const owners = new WeakMap<object, string>();
   function own(value: unknown, name: string): void {
     if (!value || typeof value !== "object") return;
@@ -38,6 +38,7 @@ function harness() {
   }
   Replicant("banPick").value = createInitialState();
   Replicant("players").value = [];
+  for (const [name, value] of Object.entries(saved)) Replicant(name).value = value;
   registerMatch({
     Replicant,
     listenFor: (name: string, fn: Function) => listeners.set(name, fn),
@@ -71,14 +72,14 @@ test("match service publishes shared names, UID mapping and profile refreshes", 
     }),
   ];
   assert.equal(reps.get("presenterSeries").value.left.name, "On air");
-  assert.equal(reps.get("presenterSeries").value.left.playerId, "venue-blue");
+  assert.equal(reps.get("presenterSeries").value.left.playerId, "venue-red");
   reps.get("presenterDuel").value = {
     players: [
-      { id: "new-blue", teamColor: "blue" },
-      { id: "venue-red", teamColor: "red" },
+      { id: "venue-blue", teamColor: "blue" },
+      { id: "new-red", teamColor: "red" },
     ],
   };
-  assert.equal(reps.get("presenterSeries").value.left.playerId, "new-blue");
+  assert.equal(reps.get("presenterSeries").value.left.playerId, "new-red");
   assert.equal(reps.get("banPick").value.players.A, "On air");
   assert.equal(reps.get("matchResolved").value.left.profile.name, "Eurya");
 });
@@ -157,7 +158,7 @@ test("next match rejects stale drafts and duplicate players without changing sav
   assert.equal(reps.get("nextMatchState").value.revision, 1);
   send("match:next:swap", { revision: 1 });
   assert.equal(reps.get("nextMatchState").value.left.name, "Next B");
-  assert.deepEqual(reps.get("nextMatchState").value.gameMapping, { left: "red", right: "blue" });
+  assert.deepEqual(reps.get("nextMatchState").value.gameMapping, { left: "blue", right: "red" });
 });
 
 test("making next current checks both revisions and clears next only after success", () => {
@@ -199,4 +200,17 @@ test("score updates remain available during ban/pick when a sheet refresh discov
   send("match:apply", update);
   assert.equal(reps.get("matchState").value.left.uid, uid);
   assert.equal(reps.get("presenterSeries").value.left.wins, 1);
+});
+
+
+test("startup corrects saved current and next match team defaults before publishing", () => {
+  const legacy = { ...selectedMatch(), schemaVersion: 1, gameMapping: { left: "blue", right: "red" } };
+  legacy.left.wins = 1; legacy.right.wins = 2;
+  const { reps } = harness({ matchState: structuredClone(legacy), nextMatchState: structuredClone(legacy),
+    presenterDuel: { players: [{ id: "venue-blue", teamColor: "blue" }, { id: "venue-red", teamColor: "red" }] } });
+  const series = reps.get("presenterSeries").value;
+  assert.deepEqual([series.left.name, series.left.playerId, series.left.wins], ["Next A", "venue-red", 1]);
+  assert.deepEqual([series.right.name, series.right.playerId, series.right.wins], ["Next B", "venue-blue", 2]);
+  assert.deepEqual(reps.get("nextMatchState").value.gameMapping, { left: "red", right: "blue" });
+  assert.equal(reps.get("nextMatchResolved").value.left.name, "Next A");
 });

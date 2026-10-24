@@ -83,7 +83,7 @@ own panels.
 
 Personal GeoGuessr UIDs identify spreadsheet profiles. They do not need to be
 the accounts logged into venue PCs. Each side has an **In-game account** selector:
-Left/A defaults to **Auto — blue team**, Right/B to **Auto — red team**. Detection
+Left/A defaults to **Auto — red team**, Right/B to **Auto — blue team**. Detection
 uses the connected party's current duel, including its pre-round preview. Before
 a duel is available, the defaults wait for its team accounts.
 
@@ -91,7 +91,7 @@ Automatic mappings follow the team's account when another duel starts. You can
 instead choose a detected account explicitly; if it disappears, the selection
 stays visible as unavailable and results remain unmapped. Duplicate effective
 mappings leave both sides unmapped. Swap moves the mapping with its competitor;
-loading a new start.gg match restores blue-left/red-right defaults. Names, profile
+loading a new start.gg match restores red-left/blue-right defaults. Names, profile
 data and series wins still come from Current Match, regardless of venue logins.
 
 The supplied [player datastore](https://docs.google.com/spreadsheets/d/1xozkRDAEeRLqVPzvpqqDFAcpC3vcbTrd9xekrQ28B50/edit#gid=0)

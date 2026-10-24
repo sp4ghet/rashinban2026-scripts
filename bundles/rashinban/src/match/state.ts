@@ -14,7 +14,7 @@ export type MatchSide = {
   wins: number;
 };
 export type MatchState = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   revision: number;
   id: string;
   label: string;
@@ -33,6 +33,8 @@ export type ResolvedMatch = Omit<MatchState, "left" | "right"> & {
   left: ResolvedSide;
   right: ResolvedSide;
 };
+const DEFAULT_GAME_MAPPING = { left: "red", right: "blue" } as const;
+
 export function emptyMatch(): MatchState {
   const side = (id: string): MatchSide => ({
     id,
@@ -45,13 +47,13 @@ export function emptyMatch(): MatchState {
     wins: 0,
   });
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     revision: 0,
     id: "current",
     label: "",
     source: "manual",
     setId: null,
-    gameMapping: { left: "blue", right: "red" },
+    gameMapping: { ...DEFAULT_GAME_MAPPING },
     left: side("left"),
     right: side("right"),
   };
@@ -101,13 +103,19 @@ export function parseMatch(input: unknown): MatchState {
     return geoUid(v)!;
   };
   const gameMapping = {
-    left: account(value.gameMapping?.left, "blue"),
-    right: account(value.gameMapping?.right, "red"),
+    left: account(value.gameMapping?.left, DEFAULT_GAME_MAPPING.left),
+    right: account(value.gameMapping?.right, DEFAULT_GAME_MAPPING.right),
   };
+  // Version 1 retained the old blue-left default after the presenter changed
+  // to red-left. Correct that saved default once; preserve explicit account
+  // assignments and already-correct mappings. Version 2 keeps later swaps.
+  if (value.schemaVersion !== 2 && gameMapping.left === "blue" && gameMapping.right === "red") {
+    Object.assign(gameMapping, DEFAULT_GAME_MAPPING);
+  }
   if (gameMapping.left === gameMapping.right)
     throw new Error("Choose different game accounts for each side");
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     revision: Number.isSafeInteger(value.revision) ? value.revision : 0,
     id: str(value.id),
     label: str(value.label),
@@ -186,7 +194,7 @@ export function importSet(
   return parseMatch(match);
 }
 export function swapMatch(match: MatchState): MatchState {
-  const mapping = match.gameMapping ?? { left: "blue", right: "red" };
+  const mapping = match.gameMapping ?? DEFAULT_GAME_MAPPING;
   return {
     ...match,
     left: { ...match.right },
@@ -198,7 +206,7 @@ export function toSeries(
   match: ResolvedMatch,
   duel: Pick<DuelState, "players"> | null = null,
 ): SeriesState {
-  const mapping = match.gameMapping ?? { left: "blue", right: "red" };
+  const mapping = match.gameMapping ?? DEFAULT_GAME_MAPPING;
   const find = (selection: string) => {
     const players = (duel?.players ?? []).filter((p) =>
       selection === "blue" || selection === "red"
