@@ -30,12 +30,23 @@ function fixture(): StartggBracket {
 
 test('Day 1 record uses completed group matches, own score orientation and actual standings', () => {
   const data = info.playerInfoResults(fixture(), 10, []);
-  assert.equal(data.placement, '1st - GROUP A');
+  assert.equal(data.placement, '1st - Group A');
   assert.deepEqual(data.setRecord, { wins: 1, losses: 1, percent: '50.0%' });
   assert.deepEqual(data.gameRecord, { wins: 3, losses: 2, percent: '60.0%' });
   assert.deepEqual(data.rows.map(row => [row.opponent, row.score]), [['consus', '2-0'], ['consus', '1-2']]);
   const reversed = fixture(); reversed.sets[1]!.slots.reverse();
   assert.deepEqual(info.playerInfoResults(reversed, 10, []), data);
+});
+
+test('numeric start.gg group identifiers map to broadcast letters independently of fetch order', () => {
+  for (const [identifier, label] of [['1', 'A'], ['2', 'B'], ['3', 'C'], ['4', 'D'], ['a', 'A']]) {
+    const bracket = fixture();
+    bracket.groups[1]!.identifier = identifier!;
+    assert.equal(info.playerInfoResults(bracket, 10, []).placement, `1st - Group ${label}`);
+    bracket.groups[1]!.seeds[0]!.placement = null;
+    bracket.groups[2]!.seeds[0]!.source = null;
+    assert.equal(info.playerInfoResults(bracket, 10, []).placement, `Group ${label}`);
+  }
 });
 
 test('missing and DQ scores never become fabricated games; byes are excluded', () => {

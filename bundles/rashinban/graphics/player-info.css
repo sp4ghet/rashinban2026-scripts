@@ -15,8 +15,10 @@
 .player-info .pi-record small { font-size: 44px; }
 .player-info .pi-day { position: absolute; top: 720px; }
 .player-info .pi-day .pi-label { font-size: 96px; line-height: .8; }
-.player-info .pi-matches { position: absolute; top: 818px; width: 700px; height: 190px; display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--rows, 4), minmax(0, 1fr)); grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
-.player-info .pi-match { min-width: 0; font-family: 'Noto Sans JP', sans-serif; font-size: 38px; line-height: 1.2; white-space: nowrap; text-transform: uppercase; }
+.player-info .pi-matches { position: absolute; top: 818px; width: 950px; height: 190px; display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--rows, 4), minmax(0, 1fr)); grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
+.player-info .pi-match { display: grid; grid-template-columns: 48px minmax(0, 1fr) 84px; gap: 12px; align-items: center; min-width: 0; font-family: 'Noto Sans JP', sans-serif; font-size: 38px; line-height: 1.2; white-space: nowrap; }
+.player-info .pi-match > span { display: flex; align-items: center; min-width: 0; height: 100%; }
+.player-info .pi-score { justify-content: flex-end; font-variant-numeric: tabular-nums; }
 .player-info .pi-empty { position: absolute; top: 834px; font-family: 'Noto Sans JP', sans-serif; font-size: 28px; }
 .player-info .pi-numbers { position: absolute; top: 283px; display: grid; grid-template-columns: 130px 100px 170px 170px; column-gap: 36px; align-items: center; }
 .player-info .pi-numbers .pi-label { border-radius: 7px; text-align: center; }

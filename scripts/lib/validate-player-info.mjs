@@ -4,19 +4,20 @@ import { rowToProfile } from '../../bundles/rashinban/src/sheet/players.ts';
 export async function validatePlayerInfo({ navigate, evaluate, until, click, screenshot, delay, values, message, adobeFonts }) {
   const profile = rowToProfile({ startgg_tag: 'meishin', startgg_entrant_id: '10', name: 'meishin', twitter: 'meishin174', age: '21', rating: '1514',
     favorite_mode: 'MOVE', strengths: '精査,日本マップ', favorite_food: 'そば米汁', message: '5K狙いでプレイします' });
-  values.players = [profile, rowToProfile({ startgg_tag: 'consus', startgg_entrant_id: '20', name: 'consus' })];
+  const opponentNames = ['consus', 'Kaede', 'raGe', 'AReallyLongPlayerName', '山田太郎', 'sp4ghet', 'J', 'MixedCaseName'];
+  values.players = [profile, ...opponentNames.map((name, i) => rowToProfile({ startgg_tag: `opponent-${20 + i}`, startgg_entrant_id: String(20 + i), name }))];
   values.playersEn = [{ ...profile, strengths: 'Scanning, Japan maps', favoriteFood: 'Soba rice soup', message: 'Playing for the 5K!' }];
   values['assets:player-info'] = [{ base: 'meishin-blank.jpg', url: '/assets/rashinban/player-info/meishin-blank.jpg', sum: 'v1' }];
   const sets = Object.fromEntries(Array.from({ length: 8 }, (_, index) => {
     const id = index + 1, won = index < 7, score = won ? index === 6 ? 2 : 3 : 0, other = won ? index < 2 ? 1 : 0 : 2;
     return [id, { id, groupId: 1, phaseId: 1, identifier: String(id), round: id, side: 'winners', roundText: 'Day 1', state: 'completed',
-      winnerEntrantId: won ? 10 : 20, loserEntrantId: won ? 20 : 10, completedAt: id,
-      slots: [{ entrantId: 10, score }, { entrantId: 20, score: other }] }];
+      winnerEntrantId: won ? 10 : 20 + index, loserEntrantId: won ? 20 + index : 10, completedAt: id,
+      slots: [{ entrantId: 10, score }, { entrantId: 20 + index, score: other }] }];
   }));
   values.startggBracket = { fetchedAt: 0, event: null, streamQueue: [], sets,
-    entrants: { 10: { id: 10, tag: 'meishin', name: 'meishin' }, 20: { id: 20, tag: 'consus', name: 'consus' } },
+    entrants: { 10: { id: 10, tag: 'meishin', name: 'meishin' }, ...Object.fromEntries(opponentNames.map((name, i) => [20 + i, { id: 20 + i, tag: `opponent-${20 + i}`, name }])) },
     phases: [{ id: 1, name: 'DAY1', order: 1, groupIds: [1] }, { id: 2, name: 'DAY2', order: 2, groupIds: [2] }],
-    groups: { 1: { id: 1, identifier: 'A', seeds: [{ entrantId: 10, placement: 1 }], setIds: Object.keys(sets).map(Number) },
+    groups: { 1: { id: 1, identifier: '1', seeds: [{ entrantId: 10, placement: 1 }], setIds: Object.keys(sets).map(Number) },
       2: { id: 2, identifier: 'TOP8', seeds: [{ entrantId: 10, seedNum: 1 }], setIds: [] } } };
   const choose = (selector, value) => evaluate(`{const el=document.querySelector(${JSON.stringify(selector)});el.value=${JSON.stringify(value)};el.dispatchEvent(new Event('change',{bubbles:true}));}`);
   const host = 'document.querySelector("#layer-player-info")';
@@ -57,6 +58,10 @@ export async function validatePlayerInfo({ navigate, evaluate, until, click, scr
     assert.deepEqual(bad, [], 'all text fits');
     const overlaps = await evaluate(`Array.from(document.querySelectorAll('.pi-field')).filter(el=>el.offsetParent!==null && el.nextElementSibling?.classList.contains('pi-field') && el.querySelector('.pi-value').getBoundingClientRect().bottom > el.nextElementSibling.getBoundingClientRect().top).map(el=>el.className)`);
     assert.deepEqual(overlaps, [], 'profile answers stay clear of the next label');
+    assert.equal(await evaluate('document.querySelector(".pi-name").getBoundingClientRect().height > 0 && document.querySelector(".pi-handle").getBoundingClientRect().height > 0'), true, 'name and handle remain visible on both pages');
+    if (await evaluate('document.querySelector(".player-info").dataset.page === "profile"')) {
+      assert.equal(await evaluate('document.querySelector(".pi-header").getBoundingClientRect().bottom <= document.querySelector(".pi-numbers").getBoundingClientRect().top'), true, 'page 2 header stays above Age/Rating');
+    }
   };
   for (const output of ['stream', 'en']) {
     for (const page of ['results', 'profile']) {
@@ -70,7 +75,18 @@ export async function validatePlayerInfo({ navigate, evaluate, until, click, scr
       }
       await bounds();
       assert.equal(await evaluate('(()=>{const image=document.querySelector(".pi-photo"); return image.naturalWidth / image.naturalHeight;})()'), 16 / 9);
-      assert.equal(await evaluate('document.querySelector(".pi-placement").textContent'), '1st - GROUP A');
+      assert.equal(await evaluate('document.querySelector(".pi-placement").textContent'), '1st - Group A');
+      assert.equal(await evaluate('document.querySelector(".pi-records .pi-label").textContent'), 'MATCH COUNT');
+      if (page === 'results') {
+        assert.deepEqual(await evaluate('Array.from(document.querySelectorAll(".pi-opponent"), el=>el.textContent)'), opponentNames, 'opponents retain sheet capitalization');
+        assert.equal(await evaluate('Array.from(document.querySelectorAll(".pi-opponent"), el=>getComputedStyle(el).textTransform).every(value=>value==="none")'), true, 'CSS does not uppercase player names');
+        const scores = await evaluate('Array.from(document.querySelectorAll(".pi-score"), el=>({x:el.getBoundingClientRect().x,right:el.getBoundingClientRect().right,text:el.textContent}))');
+        assert.equal(scores.length, 8);
+        for (const column of [scores.slice(0, 4), scores.slice(4)]) {
+          assert.equal(new Set(column.map(score=>score.x)).size, 1, 'scores share one left edge per column');
+          assert.equal(new Set(column.map(score=>score.right)).size, 1, 'scores share one right edge per column');
+        }
+      }
       assert.equal(await evaluate('document.querySelector(".pi-sets").textContent'), '7-1 (87.5%)');
       assert.equal(await evaluate('document.querySelector(".pi-games").textContent'), '20-4 (83.3%)');
       if (output === 'en') assert.equal(await evaluate('document.querySelector(".pi-strengths .pi-value").textContent'), 'Scanning, Japan maps');

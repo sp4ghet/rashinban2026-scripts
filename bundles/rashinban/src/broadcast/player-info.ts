@@ -73,6 +73,17 @@ const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({
 const record = (wins: number, losses: number): InfoRecord | null => wins + losses ?
   { wins, losses, percent: `${(100 * wins / (wins + losses)).toFixed(1)}%` } : null;
 
+function groupLabel(identifier: string, index: number): string {
+  const normalized = identifier.normalize('NFKC').trim();
+  if (/^[a-z]+$/i.test(normalized)) return `Group ${normalized.toUpperCase()}`;
+  // start.gg calls the event's four pools 1–4; broadcast labels are A–D.
+  const numeric = Number(normalized);
+  let number = /^\d+$/.test(normalized) && Number.isSafeInteger(numeric) && numeric > 0 ? numeric : index + 1;
+  let letters = '';
+  while (number > 0) { number--; letters = String.fromCharCode(65 + number % 26) + letters; number = Math.floor(number / 26); }
+  return `Group ${letters}`;
+}
+
 /** Day 1 is selected by phase, so Day 2 scores can never leak into the introduction. */
 export function playerInfoResults(bracket: StartggBracket | null, entrantId: number | null, profiles: PlayerProfile[]): InfoResults {
   const empty: InfoResults = { placement: '', setRecord: null, gameRecord: null, rows: [], status: 'empty' };
@@ -86,7 +97,7 @@ export function playerInfoResults(bracket: StartggBracket | null, entrantId: num
   const progressed = (day2?.groupIds ?? []).flatMap(id => bracket.groups[id]?.seeds ?? [])
     .find(seed => seed.entrantId === entrantId && seed.source?.phaseGroupId === group?.id)?.source;
   const place = group?.seeds.find(seed => seed.entrantId === entrantId)?.placement ?? progressed?.placement;
-  const placement = group ? `${place && place > 0 ? `${ordinal(place)} - ` : ''}GROUP ${group.identifier}` : '';
+  const placement = group ? `${place && place > 0 ? `${ordinal(place)} - ` : ''}${groupLabel(group.identifier, day1.groupIds.indexOf(group.id))}` : '';
   let setWins = 0, setLosses = 0, gameWins = 0, gameLosses = 0, missingGames = false, missingWinner = false;
   const rows: InfoResults['rows'] = [];
   const sets = Object.values(bracket.sets).filter(s => day1.groupIds.includes(s.groupId) && s.state === 'completed')

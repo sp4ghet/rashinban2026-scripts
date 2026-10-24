@@ -10,11 +10,11 @@ export function mountPlayerInfo(host: HTMLElement, english = false): Layer<Playe
   host.innerHTML = `<div class="player-info">
     <img class="pi-photo" alt="" />
     <div class="pi-content">
+      <div class="pi-header"><span class="pi-name" data-fit></span><span class="pi-handle" data-fit></span></div>
       <section class="pi-results">
-        <div class="pi-header"><span class="pi-name" data-fit></span><span class="pi-handle" data-fit></span></div>
         <div class="pi-placement" data-fit></div>
         <div class="pi-records">
-          <div><span class="pi-label">SET COUNT</span><div class="pi-record pi-sets"></div></div>
+          <div><span class="pi-label">MATCH COUNT</span><div class="pi-record pi-sets"></div></div>
           <div><span class="pi-label">GAME COUNT</span><div class="pi-record pi-games"></div></div>
         </div>
         <div class="pi-day"><span class="pi-label">DAY 1</span></div>
@@ -89,8 +89,12 @@ export function mountPlayerInfo(host: HTMLElement, english = false): Layer<Playe
     const list = mustQuery(host, '.pi-matches');
     list.style.setProperty('--rows', String(Math.max(4, Math.ceil(results.rows.length / 2))));
     list.replaceChildren(...results.rows.map(result => {
-      const row = document.createElement('div'); row.className = 'pi-match'; row.dataset.fit = '';
-      row.textContent = `VS ${result.opponent} ${result.score}`; return row;
+      const row = document.createElement('div'); row.className = 'pi-match';
+      for (const [className, value] of [['pi-versus', 'VS'], ['pi-opponent', result.opponent], ['pi-score', result.score]]) {
+        const span = document.createElement('span'); span.className = className!;
+        span.dataset.fit = ''; span.textContent = value!; row.append(span);
+      }
+      return row;
     }));
     text('.pi-empty', { ready: '', empty: 'No recorded Day 1 results', unavailable: 'Day 1 results unavailable', unlinked: 'No tournament results linked' }[results.status]);
     showPhoto(playerInfoPhoto(player, layer.page, assets)); fit();

@@ -33,6 +33,8 @@ Profile text, age, rating and handle come from the existing `players` sheet. Eng
 
 Results use the configured start.gg **Day 1 phase**, not the current match or a rolling history. All completed two-entrant Day 1 sets appear in completion order, with scores from the selected player's perspective, total set/game wins and losses, and percentages. Day 2, incomplete sets and byes are excluded. DQs show W-DQ/DQ-W, count toward set records, and add no games. Missing scores or winners produce unavailable totals rather than invented numbers. Group placement appears only when start.gg supplies a group placement or a matching Day 2 progression source; otherwise only the group is shown.
 
+Both pages retain the player's name and handle. Numeric start.gg pools 1–4 appear as Group A–D. The results page labels the series total MATCH COUNT; Day 1 opponents retain their sheet-name capitalization, with separate fixed score columns so scores align regardless of name length.
+
 Sheet and bracket refreshes update content live. TAKE stages player/page/visibility, not a frozen copy of their text. Kaneda Gothic uses the existing Adobe kit; bundled fonts provide an offline fallback. Long text shrinks within the fixed layout.
 
 ## Validation
