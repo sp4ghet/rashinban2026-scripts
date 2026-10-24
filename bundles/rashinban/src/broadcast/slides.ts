@@ -39,7 +39,7 @@ export const SLIDE_SEQUENCES: Record<SlideMode, readonly SlideCue[]> = {
     ...intro, ...tournament, image("DAY2 GAME MODES & MAP POOL.png"), image("DAY2 BAN & PICK.png"),
     image("DAY2 PINPOINTING DUELS.png"), image("DAY2 REGULATION - MOVE.png"),
     image("DAY2 REGULATION - NM,NMPZ.png"), image("DAY2 TIE RANGE.png"),
-    bracket, ...prizes, ...sponsors, ...bonus,
+    bracket, ...prizes, ...bonus, ...sponsors,
     { kind: "clear", label: "TOP 8 introductions · use player controls" },
     image("day2スケジュール.png", "DAY 2 · broadcast schedule"), clear,
   ],
