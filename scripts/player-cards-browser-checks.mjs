@@ -16,6 +16,44 @@ export async function verifyPlayerCardsDesign({ navigate, evaluate, card, screen
   const emit = (key, value) => evaluate(`emit(${JSON.stringify(key)},${JSON.stringify(value)})`);
   const visibleLabels = () => evaluate(`[...document.querySelectorAll('#card-1 .label')].filter(el=>el.getClientRects().length).map(el=>el.textContent)`);
   const height = () => evaluate(`document.querySelector('#card-1').getBoundingClientRect().height`);
+  async function verifyTransparency() {
+    const samples = await evaluate(`[...document.querySelectorAll('.pcard:not([hidden])')].map(card => {
+      const rect = card.getBoundingClientRect(), style = getComputedStyle(card);
+      const head = card.querySelector('.head'), band = getComputedStyle(head, '::before');
+      const scale = parseFloat(style.getPropertyValue('--card-scale'));
+      const bandBottom = head.getBoundingClientRect().bottom - parseFloat(band.bottom);
+      return { fill: style.backgroundColor, header: band.backgroundColor,
+        outline: getComputedStyle(card, '::after').borderTopColor,
+        opaque: [card, ...card.querySelectorAll('*')].every(el => getComputedStyle(el).opacity === '1'),
+        headerFits: [...head.children].filter(el=>el.getClientRects().length).every(el=>el.getBoundingClientRect().bottom <= bandBottom),
+        points: [[rect.right - 12 * scale, rect.top + 70 * scale],
+          [rect.right - 12 * scale, rect.bottom - 72 * scale],
+          [rect.right - 3 * scale, rect.bottom - 72 * scale]] };
+    })`);
+    for (const sample of samples) {
+      assert.ok(sample.opaque, 'card backgrounds must not lower text opacity');
+      assert.ok(sample.headerFits, 'name and handle stay inside the solid header');
+      assert.equal(sample.fill, sample.header.replace('rgb(', 'rgba(').replace(')', ', 0.6)'));
+      assert.equal(sample.outline, sample.header, 'outline uses the solid player color');
+    }
+    await evaluate(`document.body.style.setProperty('background', 'transparent', 'important')`);
+    await command('Emulation.setDefaultBackgroundColorOverride', { color: { r: 0, g: 0, b: 0, a: 0 } });
+    try {
+      const shot = await command('Page.captureScreenshot', { format: 'png' });
+      const points = samples.flatMap(sample => sample.points);
+      const alpha = await evaluate(`(async () => {
+        const image = new Image(); image.src = 'data:image/png;base64,' + ${JSON.stringify(shot.data)};
+        await image.decode();
+        const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+        const context = canvas.getContext('2d'); context.drawImage(image, 0, 0);
+        return ${JSON.stringify(points)}.map(([x,y])=>context.getImageData(Math.floor(x),Math.floor(y),1,1).data[3]);
+      })()`);
+      assert.deepEqual(alpha, samples.flatMap(() => [255, 153, 255]), 'rendered header / info fill / outline alpha');
+    } finally {
+      await evaluate(`document.body.style.removeProperty('background')`);
+      await command('Emulation.setDefaultBackgroundColorOverride');
+    }
+  }
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
   for (const output of ['stream', 'led', 'en']) {
     await navigate('/bundles/rashinban/graphics/' + (output === 'en' ? 'player-cards-en.html' : `info-${output}.html`), 'document.querySelector("#cards")');
@@ -32,7 +70,8 @@ export async function verifyPlayerCardsDesign({ navigate, evaluate, card, screen
     assert.ok(await fits(), `${output}: reference profile fits`);
     const profileHeight = await height();
     assert.equal(await evaluate(`document.querySelector('#card-1').getBoundingClientRect().top`), output === 'led' ? 24 : 90);
-    assert.equal(await evaluate(`getComputedStyle(document.querySelector('#card-1')).backgroundColor`), 'rgb(255, 45, 45)');
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('#card-1')).backgroundColor`), 'rgba(255, 48, 48, 0.6)');
+    await verifyTransparency();
     await screenshot(`design-${output}-profile`);
     await select({ page: 'stats', resultsDate: '1900-01-01', resultsPage: 99 });
     assert.deepEqual(await visibleLabels(), ['Career highlights', 'Recent matches', 'Day 1 results']);
@@ -41,6 +80,7 @@ export async function verifyPlayerCardsDesign({ navigate, evaluate, card, screen
     assert.equal(await evaluate(`document.querySelector('#card-1 .game-record').textContent`), '20-4 (83.3%)');
     assert.equal(await evaluate(`document.querySelectorAll('#card-1 .result-row').length`), 5);
     assert.ok(await fits(), `${output}: results and highlights fit`);
+    await verifyTransparency();
     await screenshot(`design-${output}-highlights`);
     if (output === 'en') {
       await emit('playersEn', [{ ...translated, extra: { major_tournament: 'Translated highlight' } }]);
@@ -53,12 +93,14 @@ export async function verifyPlayerCardsDesign({ navigate, evaluate, card, screen
     await emit('matchResolved', noHighlights);
     assert.deepEqual(await visibleLabels(), ['Age', 'Rating', 'Recent matches', 'Day 1 results']);
     assert.ok(await fits(), `${output}: results without highlights fit`);
+    await verifyTransparency();
     await screenshot(`design-${output}-results`);
     await select({ page: 'compact' });
     assert.deepEqual(await visibleLabels(), ['Favorite game mode', 'Strengths', 'Day 1 results']);
     assert.equal(await evaluate(`document.querySelectorAll('#card-1 .result-row').length`), 0);
     assert.ok(await height() < profileHeight, `${output}: compact shrinks vertically`);
     assert.ok(await fits(), `${output}: compact fits`);
+    await verifyTransparency();
     await screenshot(`design-${output}-compact`);
     await emit('startggBracket', null);
     assert.equal(await evaluate(`document.querySelector('#card-1 .day1-empty').textContent`), 'Day 1 results unavailable');
@@ -73,6 +115,7 @@ export async function verifyPlayerCardsDesign({ navigate, evaluate, card, screen
     await select({ page: 'profile' });
     assert.deepEqual(await visibleLabels(), ['Strengths']);
     assert.ok(await height() < profileHeight, `${output}: empty fields disappear and card shrinks`);
+    await verifyTransparency();
     await screenshot(`design-${output}-sparse`);
     const long = structuredClone(match);
     long.left.name = 'たいけい/Taikei';
@@ -81,6 +124,7 @@ export async function verifyPlayerCardsDesign({ navigate, evaluate, card, screen
     for (const page of ['profile', 'stats', 'compact']) {
       await select({ page });
       assert.ok(await fits(), `${output}: long ${page} text fits`);
+      await verifyTransparency();
     }
     await emit('players', [profile, { ...values.players[1], name: 'Very long opponent display name that wraps across the card' }]);
     await select({ page: 'stats' });
@@ -99,7 +143,8 @@ export async function verifyPlayerCardsDesign({ navigate, evaluate, card, screen
   for (const page of ['profile', 'stats', 'compact']) for (const player of ['left', 'right']) for (const position of ['left', 'right']) {
     await card({ page, player, position });
     const shown = await evaluate(`[...document.querySelectorAll('.pcard:not([hidden])')].map(el=>({name:el.querySelector('.name').textContent,x:el.getBoundingClientRect().x,color:getComputedStyle(el).backgroundColor}))`);
-    assert.deepEqual(shown, [{ name: player === 'left' ? 'Stephen' : 'eeeeeeeeeeee', x: position === 'left' ? 110 : 1010, color: player === 'left' ? 'rgb(255, 45, 45)' : 'rgb(48, 131, 255)' }]);
+    assert.deepEqual(shown, [{ name: player === 'left' ? 'Stephen' : 'eeeeeeeeeeee', x: position === 'left' ? 110 : 1010, color: player === 'left' ? 'rgba(255, 48, 48, 0.6)' : 'rgba(48, 131, 255, 0.6)' }]);
     assert.ok(await fits(), `${page}: ${player} at ${position} fits`);
+    await verifyTransparency();
   }
 }

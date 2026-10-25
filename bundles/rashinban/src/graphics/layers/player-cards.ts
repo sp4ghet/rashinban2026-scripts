@@ -128,10 +128,12 @@ export function mountPlayerCards(host: HTMLElement, output: BroadcastOutput): La
       const scale = parseFloat(getComputedStyle(card).getPropertyValue("--card-scale"));
       const maxHeight = 900 * scale;
       const head = mustQuery(card, ".head");
+      const bandGap = parseFloat(getComputedStyle(head, "::before").bottom);
+      const clearance = Math.max(24 * scale, bandGap + 8 * scale);
       const headerContent = Math.max(...Array.from(head.children, child => child.getBoundingClientRect().bottom)) - head.getBoundingClientRect().top;
-      card.style.setProperty("--head-height", `${Math.max(169 * scale, headerContent + 32 * scale)}px`);
+      card.style.setProperty("--head-height", `${Math.max(169 * scale, headerContent + Math.max(32 * scale, clearance))}px`);
       if (card.getBoundingClientRect().height <= maxHeight + 1) continue;
-      card.style.setProperty("--head-height", `${headerContent + 24 * scale}px`);
+      card.style.setProperty("--head-height", `${headerContent + clearance}px`);
       for (let gap = 32; gap >= 12 && card.getBoundingClientRect().height > maxHeight + 1; gap -= 4) {
         card.style.setProperty("--section-gap", `${gap * scale}px`);
       }

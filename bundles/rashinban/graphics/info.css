@@ -44,6 +44,7 @@ body {
 #cards {
   --card-w: 800px;
   --card-scale: 1;
+  --info-background-opacity: 0.6;
   position: absolute;
   inset: 0;
   display: grid;
@@ -58,29 +59,46 @@ body {
 }
 #cards.visible { opacity: 1; }
 #cards .pcard {
-  --accent: #ff2d2d;
+  --accent-rgb: 255, 48, 48;
+  --accent: rgb(var(--accent-rgb));
+  --card-pad-top: calc(30px * var(--card-scale));
+  --card-pad-x: calc(46px * var(--card-scale));
+  --card-radius: calc(60px * var(--card-scale));
+  --card-outline: calc(6px * var(--card-scale));
+  --header-bottom-gap: calc(14px * var(--card-scale));
   --section-gap: calc(36px * var(--card-scale));
   --head-height: calc(169px * var(--card-scale));
   --text-scale: 1;
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: calc(30px * var(--card-scale)) calc(46px * var(--card-scale)) calc(44px * var(--card-scale));
+  padding: var(--card-pad-top) var(--card-pad-x) calc(44px * var(--card-scale));
   box-sizing: border-box;
-  border-radius: calc(60px * var(--card-scale));
-  background: var(--accent);
+  border-radius: var(--card-radius);
+  background: rgba(var(--accent-rgb), var(--info-background-opacity));
   transform: translateY(24px);
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Keep fills independent of text opacity and preserve the solid outline. */
+#cards .pcard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: var(--card-outline) solid var(--accent);
+  border-radius: inherit;
+  pointer-events: none;
 }
 #cards.visible .pcard { transform: none; }
 #cards [hidden] { display: none !important; }
 #cards #card-1 { grid-column: 1; }
-#cards #card-2 { --accent: #3083ff; grid-column: 3; }
+#cards #card-2 { --accent-rgb: 48, 131, 255; grid-column: 3; }
 body:is([data-output="stream"], [data-output="en"]) #cards[data-position="left"] :is(#card-1, #card-2) { grid-column: 1; }
 body:is([data-output="stream"], [data-output="en"]) #cards[data-position="right"] :is(#card-1, #card-2) { grid-column: 3; }
 
 #cards .head {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -88,6 +106,14 @@ body:is([data-output="stream"], [data-output="en"]) #cards[data-position="right"
   gap: 0 calc(36px * var(--card-scale));
   min-height: var(--head-height);
   flex-shrink: 0;
+}
+#cards .head::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: calc(-1 * var(--card-pad-top)) calc(-1 * var(--card-pad-x)) var(--header-bottom-gap);
+  background: var(--accent);
+  border-radius: var(--card-radius) var(--card-radius) 0 0;
 }
 #cards .name, #cards .twitter {
   font-family: var(--heading);
@@ -164,6 +190,8 @@ body[data-output="led"] #cards {
   height: 576px;
   padding: 24px 36px;
 }
+
+body[data-output="led"] #cards .pcard { --header-bottom-gap: 24px; }
 
 /* ==== Casters desk ======================================================= */
 /* Caster name cards over the camera feed, composited behind this transparent page by OBS. */

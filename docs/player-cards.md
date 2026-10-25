@@ -10,10 +10,16 @@ English cards use the English output's own Program selection.
 
 ## Layout and pages
 
-Cards follow the supplied rounded red/blue design with a solid fill, white text,
+Cards follow the supplied rounded red/blue design with a solid header and outline, white text,
 outlined labels, and Kaneda Gothic headings. Free text uses Noto Sans JP;
 names, handles, and career highlights preserve their submitted capitalization.
 Oswald is the bundled offline heading fallback.
+
+The name/handle background and the outer player-colored outline are **100% opaque**.
+The supporting-info background is **60% opaque**, allowing the camera feed to show
+through. All text and label outlines stay **100% opaque**; field labels retain their
+**25% white fill**, while Age/Rating labels remain unfilled. These transparency
+requirements apply to every page and output, including cards that shrink.
 
 Stream cards are 800 px wide, positioned at x = 110 or 1010 and y = 90 in the
 1920×1080 frame. Height follows the visible content, up to 900 px for the tested
@@ -90,7 +96,7 @@ node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON s
 The browser checks use built graphics, isolated fixture replicants, and the real
 broadcast reducer. They verify all three pages on Stream, LED, and English;
 highlights presence and translation fallback; Day 1 totals; sparse and long text;
-safe text rendering; independent player/position controls; and Preview/TAKE.
+safe text rendering; rendered background alpha and opaque header/outline checks; independent player/position controls; and Preview/TAKE.
 Saved start.gg responses exercise newest-first ordering and current/later match
 exclusions. The full command without `--cards-only` also checks other info layers.
 Chrome must be installed, or supplied through `CHROME_PATH`.
