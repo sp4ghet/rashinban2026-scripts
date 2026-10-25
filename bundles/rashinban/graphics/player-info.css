@@ -10,22 +10,31 @@
 .player-info .pi-handle { font-size: 58px; flex: 1; min-width: 0; height: 70px; white-space: nowrap; }
 .player-info .pi-placement { position: absolute; top: 270px; width: 950px; height: 70px; font-size: 68px; white-space: nowrap; }
 .player-info .pi-label { display: inline-block; background: #fff; color: #ff2d2d; padding: 4px 10px 6px; font-size: 64px; line-height: .85; white-space: nowrap; }
-.player-info .pi-records { position: absolute; top: 527px; display: flex; gap: 44px; }
+.player-info .pi-results-body, .player-info .pi-profile-body { position: absolute; bottom: 72px; width: 950px; display: flex; flex-direction: column; }
+.player-info .pi-results-body { max-height: 650px; }
+.player-info .pi-records { display: flex; gap: 44px; flex-shrink: 0; }
+.player-info .pi-records > div { display: flex; flex-direction: column; align-items: flex-start; }
 .player-info .pi-record { margin-top: 22px; font-size: 72px; white-space: nowrap; }
 .player-info .pi-record small { font-size: 44px; }
-.player-info .pi-day { position: absolute; top: 720px; }
+.player-info .pi-day { margin-top: 34px; flex-shrink: 0; line-height: 0; }
 .player-info .pi-day .pi-label { font-size: 96px; line-height: .8; }
-.player-info .pi-matches { position: absolute; top: 818px; width: 950px; height: 190px; display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--rows, 4), minmax(0, 1fr)); grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; }
-.player-info .pi-match { display: grid; grid-template-columns: 48px minmax(0, 1fr) 84px; gap: 12px; align-items: center; min-width: 0; font-family: 'Noto Sans JP', sans-serif; font-size: 38px; line-height: 1.2; white-space: nowrap; }
+.player-info .pi-day-results { position: relative; margin-top: 6px; flex-shrink: 0; }
+.player-info .pi-matches { width: 950px; height: 190px; display: grid; grid-auto-flow: column; grid-template-rows: repeat(var(--rows, 4), minmax(0, 1fr)); grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 120px; }
+.player-info .pi-match { display: grid; grid-template-columns: 48px minmax(0, 1fr) 64px; gap: 12px; align-items: center; min-width: 0; font-family: 'Noto Sans JP', sans-serif; font-size: 38px; line-height: 1.2; white-space: nowrap; }
 .player-info .pi-match > span { display: flex; align-items: center; min-width: 0; height: 100%; }
 .player-info .pi-score { justify-content: flex-end; font-variant-numeric: tabular-nums; }
-.player-info .pi-empty { position: absolute; top: 834px; font-family: 'Noto Sans JP', sans-serif; font-size: 28px; }
-.player-info .pi-numbers { position: absolute; top: 283px; display: grid; grid-template-columns: 130px 100px 170px 170px; column-gap: 36px; align-items: center; }
+.player-info .pi-empty { position: absolute; top: 16px; font-family: 'Noto Sans JP', sans-serif; font-size: 28px; }
+.player-info .pi-highlights { display: flex; flex-direction: column; min-height: 0; margin-top: 24px; }
+.player-info .pi-highlights[hidden] { display: none; }
+.player-info .pi-highlights .pi-label, .player-info .pi-field .pi-label { flex-shrink: 0; align-self: flex-start; }
+.player-info .pi-highlights-text { margin-top: 14px; min-height: 0; font-family: 'Noto Sans JP', sans-serif; font-size: 38px; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.player-info[data-highlights=true] .pi-day { margin-top: 24px; }
+.player-info[data-highlights=true] .pi-matches { height: 168px; }
+.player-info[data-highlights=true] .pi-match { font-size: 34px; }
+.player-info[data-compact-highlights=true] .pi-highlights-text { font-family: 'kaneda-gothic', 'Oswald', 'Noto Sans JP', sans-serif; font-size: 24px; font-weight: 700; line-height: 1.4; }
+.player-info .pi-profile-body { max-height: 725px; gap: 20px; }
+.player-info .pi-numbers { display: grid; grid-template-columns: 130px 100px 170px 170px; column-gap: 36px; align-items: center; flex-shrink: 0; margin-bottom: 26px; }
 .player-info .pi-numbers .pi-label { border-radius: 7px; text-align: center; }
 .player-info .pi-age, .player-info .pi-rating { font-size: 72px; height: 78px; white-space: nowrap; }
-.player-info .pi-field { position: absolute; width: 950px; height: 145px; }
-.player-info .pi-mode { top: 411px; }
-.player-info .pi-strengths { top: 563px; }
-.player-info .pi-food { top: 715px; }
-.player-info .pi-message { top: 867px; }
-.player-info .pi-value { margin-top: 14px; font-family: 'Noto Sans JP', sans-serif; font-size: 38px; font-weight: 700; line-height: 1.3; width: 950px; height: 65px; overflow-wrap: anywhere; }
+.player-info .pi-field { display: flex; flex-direction: column; width: 950px; min-height: 0; }
+.player-info .pi-value { margin-top: 14px; font-family: 'Noto Sans JP', sans-serif; font-size: 38px; font-weight: 700; line-height: 1.5; width: 950px; min-height: 0; white-space: pre-line; overflow-wrap: anywhere; }

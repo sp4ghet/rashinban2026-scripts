@@ -1,6 +1,6 @@
 import { defaultLayers, type PlayerInfoLayer } from '../../broadcast/state.ts';
 import { playerInfoPlayers, playerInfoPhoto, playerInfoResults, type InfoAsset, type InfoRecord } from '../../broadcast/player-info.ts';
-import type { PlayerProfile } from '../../sheet/players.ts';
+import { normalizeTag, type PlayerProfile } from '../../sheet/players.ts';
 import type { StartggBracket } from '../../startgg/types.ts';
 import { matchProfile } from '../../match/identity.ts';
 import { REPLICANTS } from '../../types/replicants.ts';
@@ -13,19 +13,24 @@ export function mountPlayerInfo(host: HTMLElement, english = false): Layer<Playe
       <div class="pi-header"><span class="pi-name" data-fit></span><span class="pi-handle" data-fit></span></div>
       <section class="pi-results">
         <div class="pi-placement" data-fit></div>
-        <div class="pi-records">
-          <div><span class="pi-label">MATCH COUNT</span><div class="pi-record pi-sets"></div></div>
-          <div><span class="pi-label">GAME COUNT</span><div class="pi-record pi-games"></div></div>
+        <div class="pi-results-body">
+          <div class="pi-records">
+            <div><span class="pi-label">MATCH COUNT</span><div class="pi-record pi-sets"></div></div>
+            <div><span class="pi-label">GAME COUNT</span><div class="pi-record pi-games"></div></div>
+          </div>
+          <div class="pi-day"><span class="pi-label">DAY 1</span></div>
+          <div class="pi-day-results"><div class="pi-matches"></div><div class="pi-empty"></div></div>
+          <div class="pi-highlights" hidden><span class="pi-label">CAREER HIGHLIGHTS</span><div class="pi-highlights-text" data-fit></div></div>
         </div>
-        <div class="pi-day"><span class="pi-label">DAY 1</span></div>
-        <div class="pi-matches"></div><div class="pi-empty"></div>
       </section>
       <section class="pi-profile">
-        <div class="pi-numbers"><span class="pi-label">AGE</span><span class="pi-age" data-fit></span><span class="pi-label">RATING</span><span class="pi-rating" data-fit></span></div>
-        <div class="pi-field pi-mode"><span class="pi-label">FAVORITE GAME MODE</span><div class="pi-value" data-fit></div></div>
-        <div class="pi-field pi-strengths"><span class="pi-label">STRENGTHS</span><div class="pi-value" data-fit></div></div>
-        <div class="pi-field pi-food"><span class="pi-label">FAVORITE FOOD</span><div class="pi-value" data-fit></div></div>
-        <div class="pi-field pi-message"><span class="pi-label">MESSAGE</span><div class="pi-value" data-fit></div></div>
+        <div class="pi-profile-body">
+          <div class="pi-numbers"><span class="pi-label">AGE</span><span class="pi-age" data-fit></span><span class="pi-label">RATING</span><span class="pi-rating" data-fit></span></div>
+          <div class="pi-field pi-mode"><span class="pi-label">FAVORITE GAME MODE</span><div class="pi-value" data-fit></div></div>
+          <div class="pi-field pi-strengths"><span class="pi-label">STRENGTHS</span><div class="pi-value" data-fit></div></div>
+          <div class="pi-field pi-food"><span class="pi-label">FAVORITE FOOD</span><div class="pi-value" data-fit></div></div>
+          <div class="pi-field pi-message"><span class="pi-label">MESSAGE</span><div class="pi-value" data-fit></div></div>
+        </div>
       </section>
     </div>
   </div>`;
@@ -39,10 +44,14 @@ export function mountPlayerInfo(host: HTMLElement, english = false): Layer<Playe
   const visible = () => { host.hidden = !layer.visible || !photoReady; };
   function fit() {
     if (host.hidden) return;
-    for (const el of host.querySelectorAll<HTMLElement>('[data-fit]')) {
-      el.style.removeProperty('font-size');
+    const fields = Array.from(host.querySelectorAll<HTMLElement>('[data-fit]')).filter(el => el.getClientRects().length);
+    // Flex siblings share available height. Reset the whole page before fitting
+    // any field so repeated sheet/bus refreshes always use the same baseline.
+    for (const el of fields) el.style.removeProperty('font-size');
+    for (const el of fields) {
       let size = parseFloat(getComputedStyle(el).fontSize);
-      while ((el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) && size > 20) {
+      const minimum = el.classList.contains('pi-highlights-text') && root.dataset.compactHighlights === 'true' ? 24 : 20;
+      while ((el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) && size > minimum) {
         size -= 1; el.style.fontSize = `${size}px`;
       }
     }
@@ -74,6 +83,11 @@ export function mountPlayerInfo(host: HTMLElement, english = false): Layer<Playe
     host.dataset.player = player?.id ?? '';
     if (!player) { showPhoto(null); host.dataset.status = 'missing-player'; return; }
     const profile = player.profile;
+    const highlights = profile?.extra?.major_tournament?.trim() || player.source?.extra?.major_tournament?.trim() || '';
+    root.dataset.highlights = String(Boolean(highlights));
+    root.dataset.compactHighlights = String(normalizeTag(player.tag) === 'nowlo');
+    mustQuery(host, '.pi-highlights').hidden = !highlights;
+    text('.pi-highlights-text', highlights);
     text('.pi-name', player.name);
     text('.pi-handle', player.handle ? '@' + player.handle.replace(/^@/, '') : '');
     text('.pi-age', profile?.age || '—'); text('.pi-rating', profile?.rating || '—');

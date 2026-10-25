@@ -4,7 +4,7 @@ import { rowToProfile } from '../../bundles/rashinban/src/sheet/players.ts';
 export async function validatePlayerInfo({ navigate, evaluate, until, click, screenshot, delay, values, message, adobeFonts }) {
   const profile = rowToProfile({ startgg_tag: 'meishin', startgg_entrant_id: '10', name: 'meishin', twitter: 'meishin174', age: '21', rating: '1514',
     favorite_mode: 'MOVE', strengths: '精査,日本マップ', favorite_food: 'そば米汁', message: '5K狙いでプレイします' });
-  const opponentNames = ['consus', 'Kaede', 'raGe', 'AReallyLongPlayerName', '山田太郎', 'sp4ghet', 'J', 'MixedCaseName'];
+  const opponentNames = ['consus', 'Kaede', 'raGe', 'eeeeeeeeeee', '山田太郎', 'sp4ghet', 'J', 'nasi-goreng'];
   values.players = [profile, ...opponentNames.map((name, i) => rowToProfile({ startgg_tag: `opponent-${20 + i}`, startgg_entrant_id: String(20 + i), name }))];
   values.playersEn = [{ ...profile, strengths: 'Scanning, Japan maps', favoriteFood: 'Soba rice soup', message: 'Playing for the 5K!' }];
   values['assets:player-info'] = [{ base: 'meishin-blank.jpg', url: '/assets/rashinban/player-info/meishin-blank.jpg', sum: 'v1' }];
@@ -62,6 +62,8 @@ export async function validatePlayerInfo({ navigate, evaluate, until, click, scr
     if (await evaluate('document.querySelector(".player-info").dataset.page === "profile"')) {
       assert.equal(await evaluate('document.querySelector(".pi-header").getBoundingClientRect().bottom <= document.querySelector(".pi-numbers").getBoundingClientRect().top'), true, 'page 2 header stays above Age/Rating');
     }
+    const bottom = await evaluate(`document.querySelector(document.querySelector('.player-info').dataset.page === 'profile' ? '.pi-profile-body' : '.pi-results-body')?.getBoundingClientRect().bottom`);
+    assert.ok(Math.abs(bottom - 1008) < 1, 'the entire content block aligns 72px above the bottom on both pages');
   };
   for (const output of ['stream', 'en']) {
     for (const page of ['results', 'profile']) {
@@ -74,6 +76,7 @@ export async function validatePlayerInfo({ navigate, evaluate, until, click, scr
         assert.equal(await evaluate('Array.from(document.fonts).some(f=>f.family.includes("kaneda-gothic") && f.weight==="700" && f.status==="loaded")'), true, 'Adobe font loaded');
       }
       await bounds();
+      if (page === 'profile') assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.pi-value'), el=>getComputedStyle(el).fontSize)`), ['38px', '38px', '38px', '38px'], 'short profile answers retain their authored font size');
       assert.equal(await evaluate('(()=>{const image=document.querySelector(".pi-photo"); return image.naturalWidth / image.naturalHeight;})()'), 16 / 9);
       assert.equal(await evaluate('document.querySelector(".pi-placement").textContent'), '1st - Group A');
       assert.equal(await evaluate('document.querySelector(".pi-records .pi-label").textContent'), 'MATCH COUNT');
@@ -86,6 +89,9 @@ export async function validatePlayerInfo({ navigate, evaluate, until, click, scr
           assert.equal(new Set(column.map(score=>score.x)).size, 1, 'scores share one left edge per column');
           assert.equal(new Set(column.map(score=>score.right)).size, 1, 'scores share one right edge per column');
         }
+        assert.ok(await evaluate(`document.querySelectorAll('.pi-versus')[4].getBoundingClientRect().left - document.querySelectorAll('.pi-score')[0].getBoundingClientRect().right >= 100`), 'scores have a generous gap before the second VS column');
+        assert.equal(await evaluate(`getComputedStyle(document.querySelectorAll('.pi-opponent')[3]).fontSize`), await evaluate(`getComputedStyle(document.querySelector('.pi-opponent')).fontSize`), 'the longest expected name fits at the same size as short names');
+        assert.equal(await evaluate('document.querySelector(".pi-highlights").hidden'), true, 'no empty highlights label');
       }
       assert.equal(await evaluate('document.querySelector(".pi-sets").textContent'), '7-1 (87.5%)');
       assert.equal(await evaluate('document.querySelector(".pi-games").textContent'), '20-4 (83.3%)');
@@ -99,6 +105,13 @@ export async function validatePlayerInfo({ navigate, evaluate, until, click, scr
     message: 'I am looking forward to competing with everyone. Thank you for supporting this tournament and all the players!' };
   await until('document.querySelector(".pi-name").textContent.startsWith("A very long")');
   await bounds(); await screenshot('en-profile-long');
+  const profileSizes = () => evaluate(`Array.from(document.querySelectorAll('.pi-value'), el=>getComputedStyle(el).fontSize)`);
+  const initialProfileSizes = await profileSizes();
+  for (let refresh = 0; refresh < 3; refresh++) {
+    values.playersEn[0].extra = { ...values.playersEn[0].extra, validation_tick: String(refresh) };
+    await until(`fixtureValues.playersEn[0].extra.validation_tick === '${refresh}'`);
+    assert.deepEqual(await profileSizes(), initialProfileSizes, 'unrelated sheet refreshes cannot change fitted profile sizes');
+  }
   await message('broadcast:setPreview', { output: 'en', patch: { playerInfo: { page: 'results' } } });
   await message('broadcast:take', { output: 'en' });
   await until('document.querySelector(".player-info").dataset.page === "results"');
@@ -124,6 +137,56 @@ export async function validatePlayerInfo({ navigate, evaluate, until, click, scr
   await until(`${monitor('program')}?.querySelector('.player-info')?.dataset.page === 'profile'`);
   assert.deepEqual(values.broadcast.stream, streamBefore);
   await screenshot('english-switcher');
+
+  const highlights = [
+    ['cocos', 'ここす', 'RASHINBAN 2025 TOP 8'],
+    ['tozangezan', 'Tozan', 'RASHINBAN 2025 BEST 8\nAPAC CUP 2026 本戦出場'],
+    ['Nowlo', 'nowlo', 'RASHINBAN 2025 BEST 6\nAPAC CUP 2026 BEST 16\nGeoGuessr World Championship 2026 Open Wildcard BEST 8'],
+  ];
+  for (const [name, tag, career] of highlights) {
+    values.players[0] = { ...profile, name, startggTag: tag, extra: { major_tournament: career } };
+    values.playersEn[0] = { ...values.players[0], name: `EN ${name}`, extra: {} };
+    values['assets:player-info'] = [{ base: `${tag}-blank.jpg`, url: '/assets/rashinban/player-info/meishin-blank.jpg', sum: 'career' }];
+    for (const output of ['stream', 'en']) {
+      await message('broadcast:setPreview', { output, patch: { playerInfo: { visible: true, playerId: 'entrant:10', page: 'results' } } });
+      await message('broadcast:take', { output });
+      await navigate(output === 'stream' ? 'graphics/info-stream.html' : 'graphics/player-info-en.html');
+      await until(photoVisible);
+      if (adobeFonts) await evaluate('document.fonts.load("700 24px kaneda-gothic")');
+      await bounds();
+      assert.equal(await evaluate('document.querySelector(".pi-highlights-text").textContent'), career, 'English falls back to the shared highlights');
+      assert.equal(await evaluate('document.querySelector(".pi-highlights").hidden'), false);
+      assert.equal(await evaluate('getComputedStyle(document.querySelector(".pi-highlights-text")).whiteSpace'), 'pre-line', 'sheet line breaks are preserved');
+      assert.ok(await evaluate(`document.querySelector('.pi-results-body').getBoundingClientRect().top >= document.querySelector('.pi-placement').getBoundingClientRect().bottom + 12`), 'results stay clear of the placement');
+      assert.ok(await evaluate(`document.querySelector('.pi-highlights').getBoundingClientRect().top >= document.querySelector('.pi-matches').getBoundingClientRect().bottom + 24`), 'highlights stay clear of match results');
+      assert.ok(await evaluate(`Math.abs(document.querySelector('.pi-highlights-text').getBoundingClientRect().bottom - 1008) < 1`), 'career text shares the content bottom edge');
+      if (name === 'Nowlo') {
+        const style = await evaluate(`(()=>{const s=getComputedStyle(document.querySelector('.pi-highlights-text'));return {family:s.fontFamily,size:s.fontSize,weight:s.fontWeight}})()`);
+        assert.equal(style.size, '24px'); assert.equal(style.weight, '700'); assert.ok(style.family.startsWith('kaneda-gothic'));
+        if (adobeFonts) assert.equal(await evaluate('Array.from(document.fonts).some(f=>f.family.includes("kaneda-gothic") && f.weight==="700" && f.status==="loaded")'), true);
+      }
+      await screenshot(`${output}-${name}-highlights`);
+      if (output === 'en') {
+        values.playersEn[0].extra.major_tournament = 'English career highlight';
+        await until('document.querySelector(".pi-highlights-text").textContent === "English career highlight"');
+        values.playersEn[0].extra.major_tournament = '<img src=x onerror=alert(1)>';
+        await until('document.querySelector(".pi-highlights-text").textContent.startsWith("<img")');
+        assert.equal(await evaluate('document.querySelector(".pi-highlights img")'), null, 'career highlights remain literal sheet text');
+        delete values.playersEn[0].extra.major_tournament;
+      }
+      await message('broadcast:setPreview', { output, patch: { playerInfo: { page: 'profile' } } });
+      await message('broadcast:take', { output });
+      await until('document.querySelector(".player-info").dataset.page === "profile"');
+      await bounds();
+      assert.equal(await evaluate('document.querySelector(".pi-highlights").getBoundingClientRect().height'), 0, 'career highlights appear only on results');
+    }
+  }
+  values.players[0].extra.major_tournament = ' \n ';
+  await message('broadcast:setPreview', { output: 'en', patch: { playerInfo: { page: 'results' } } });
+  await message('broadcast:take', { output: 'en' });
+  await until('document.querySelector(".pi-highlights").hidden && document.querySelector(".player-info").dataset.page === "results"');
+  await bounds();
+  assert.ok(await evaluate(`Math.abs(document.querySelector('.pi-matches').getBoundingClientRect().bottom - 1008) < 1`), 'clearing highlights moves the full result block back to the bottom');
 
   // The rundown must drive both the menu and every two-page Next transition,
   // independently of sheet order and translated display names.
