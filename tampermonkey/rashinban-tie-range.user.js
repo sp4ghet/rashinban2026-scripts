@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.3.5
+// @version      0.3.6
 // @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Automatically detects Moving duels above 50,000 starting HP.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start
@@ -602,7 +602,8 @@
       if (fiveKs === 2) {
         reason = "fastest-5k";
         const [blueAt, redAt] = settled.guessedAtMs;
-        if (blueAt !== null && redAt !== null && blueAt !== redAt) winner = blueAt < redAt ? 0 : 1;
+        if (blueAt !== null && (redAt === null || blueAt < redAt)) winner = 0;
+        else if (redAt !== null && (blueAt === null || redAt < blueAt)) winner = 1;
         if (winner !== null) points[winner] = 1;
       } else if (fiveKs === 1) {
         reason = "solo-5k";
@@ -2258,7 +2259,7 @@
     </section>
     <div class="terminal" data-rb="terminal" aria-live="assertive" hidden><strong data-rb="terminal-headline"></strong><span data-rb="terminal-detail"></span></div>
     <div class="settings" data-rb="settings-panel" role="dialog" aria-modal="true" aria-labelledby="rb-settings-title" hidden>
-      <div class="settings-card"><h2 id="rb-settings-title">RASHINBAN player rules</h2><label>Tie range<select data-rb="mode-select"><option value="off">Off</option><option value="full">Full</option><option value="half">Half</option></select></label><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-rb="pinpointing-check"> Force Pinpointing Duels</label><p>Moving duels with starting HP above 50,000 automatically use Pinpointing Duels. Tick the box to enable it for other settings too. Pinpointing Duels replaces HP with points: a solo 5K scores 2, the faster of two 5Ks scores 1, otherwise the closer guess scores 1 (inside the tie band, when tie range is on, nothing). First to 7 wins. Rules are captured when a duel begins. Changes apply to the next duel.</p><button type="button" data-rb="settings-close">Close</button></div>
+      <div class="settings-card"><h2 id="rb-settings-title">RASHINBAN player rules</h2><label>Tie range<select data-rb="mode-select"><option value="off">Off</option><option value="full">Full</option><option value="half">Half</option></select></label><label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-rb="pinpointing-check"> Force Pinpointing Duels</label><p>Moving duels with starting HP above 50,000 automatically use Pinpointing Duels. Tick the box to enable it for other settings too. Pinpointing Duels replaces HP with points: a solo 5K scores 2, two 5Ks award 1 to the first player to lock in (neither locks in: tie), otherwise the closer guess scores 1 (inside the tie band, when tie range is on, nothing). First to 7 wins. Rules are captured when a duel begins. Changes apply to the next duel.</p><button type="button" data-rb="settings-close">Close</button></div>
     </div>`;
     (document2.body ?? document2.documentElement).append(host);
     const byRb = (name) => {

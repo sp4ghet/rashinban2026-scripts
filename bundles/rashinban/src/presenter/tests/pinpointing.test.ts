@@ -93,7 +93,26 @@ test('a double 5K goes to the earlier deliberate guess', () => {
   assert.deepEqual(earlier.pinpointing!.rounds[0].points, [0, 1]);
   const late = derivePinpointing(state([{ scores: [5000, 5000], guessedAt: [1500, 500] }]), 'off');
   assert.deepEqual(late.pinpointing!.rounds[0].guessedAtMs, [null, 500]);
-  assert.deepEqual(late.pinpointing!.rounds[0].points, [0, 0]);
+  assert.deepEqual(late.pinpointing!.rounds[0].points, [0, 1]);
+});
+
+test('10K rounds distinguish lock-ins from missing and deadline-submitted guesses', () => {
+  for (const mode of ['off', 'full', 'half'] as const) {
+    for (const [times, decoded, points] of [
+      [[500, null], [500, null], [1, 0]],
+      [[null, 500], [null, 500], [0, 1]],
+      [[500, 1000], [500, null], [1, 0]],
+      [[1000, 500], [null, 500], [0, 1]],
+      [[1000, 1500], [null, null], [0, 0]],
+      [[null, null], [null, null], [0, 0]],
+      [[500, 500], [500, 500], [0, 0]],
+    ] as const) {
+      const derived = derivePinpointing(state([{ scores: [5000, 5000], guessedAt: [...times] }]), mode);
+      assert.deepEqual(derived.pinpointing!.rounds[0].guessedAtMs, decoded);
+      assert.deepEqual(derived.pinpointing!.rounds[0].points, points);
+      assert.deepEqual(derived.pinpointing!.totals, points);
+    }
+  }
 });
 
 test('tournament Half tie range withholds boundary points but preserves the double 5K exception', () => {

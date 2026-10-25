@@ -608,6 +608,43 @@ test('captures Pinpointing Duels per duel and decodes deliberate guess times', (
   assert.equal(banded.output, null);
 });
 
+test('player 10K points use deliberate lock-ins and survive a reload', async () => {
+  const deadline = Date.parse('2026-09-10T12:23:35.552+00:00');
+  for (const mode of ['off', 'full', 'half'] as const) {
+    for (const [offsets, points] of [
+      [[-2000, -1000], [1, 0]],
+      [[-1000, -2000], [0, 1]],
+      [[-1000, null], [1, 0]],
+      [[null, -1000], [0, 1]],
+      [[-1000, 0], [1, 0]],
+      [[1000, -1000], [0, 1]],
+      [[0, 1000], [0, 0]],
+      [[null, null], [0, 0]],
+      [[-1000, -1000], [0, 0]],
+    ] as const) {
+      const accepted = acceptPlayerSnapshot(null, snapshot(value => {
+        for (const [index, team] of value.teams.entries()) {
+          // All remaining rounds are 10Ks with neither player locked in.
+          for (const result of team.roundResults) result.score = 5000;
+          const offset = offsets[index];
+          team.players[0].guesses = offset === null ? [] : [{
+            roundNumber: 1, score: 5000, created: new Date(deadline + offset).toISOString(),
+          }];
+        }
+      }), { mode, pinpointing: true });
+      assert.equal(accepted.accepted, true);
+      assert.deepEqual(accepted.pinpointing?.rounds[0].points, points);
+      assert.deepEqual(accepted.pinpointing?.totals, points);
+      assert.equal(accepted.pinpointing?.rounds[0].reason, 'fastest-5k');
+
+      const storage = new MemoryStorage();
+      await savePlayerContext(storage, accepted.context!);
+      const restored = await loadPlayerContext(storage, accepted.context!.gameId);
+      assert.deepEqual(restored.pinpointing?.totals, points);
+    }
+  }
+});
+
 test('Pinpointing Duels pins the seven-point finish across later rounds', () => {
   const sweep = (value: any) => {
     for (const result of value.teams[0].roundResults) result.score = 5000;

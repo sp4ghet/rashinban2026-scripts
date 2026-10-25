@@ -2,20 +2,22 @@
 
 Points replace health. The rulebook in force for RASHINBAN 2026:
 
-- Both players score 5000: only the player who guessed first scores 1 point.
+- Both players score 5000 (10K): the first player to deliberately lock in scores 1 point.
+  If only one player locks in, that player scores 1; if neither locks in, the round is a tie.
 - Only one player scores 5000: that player scores 2 points.
 - Both players score 4999 or less: only the higher score scores 1 point.
 - The first player to reach 7 points wins the game.
 
 Equal scores below 5000 score nothing. Two 5Ks with the same guess time, or
-with no deliberate guess time on record, score nothing. When tie range is
+with neither deliberate guess time on record, score nothing. The lock-in rule
+applies only to 10K rounds; solo 5Ks and lower scores keep the rules above. When tie range is
 enabled as well, the "higher score" rule only awards the point if the
 difference exceeds the tie band (`floor((5000 - best) / divisor)`); otherwise
 the round is a tie. There is no early-send penalty.
 
 A player's guess time is the server time of their first guess made before the
 round deadline. A guess auto-submitted at the deadline never counts as a guess
-time, so it cannot win a double 5K.
+time, so it cannot win a double 5K against a player who deliberately locked in.
 
 ## Presenter
 
@@ -68,8 +70,8 @@ custom winner".
 
 The player endpoint carries both players' guess timestamps (confirmed live on
 2026-10-07, client web-1.8229): the HUD awards the faster 5K exactly as the
-presenter does. Should a snapshot ever omit them, a double 5K scores nothing
-for either side and the host's presenter decides.
+presenter does. If only one side has a deliberate timestamp, that side scores
+1 point for a double 5K. If neither side has one, neither scores.
 
 ## Verification
 

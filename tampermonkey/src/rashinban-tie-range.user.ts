@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RASHINBAN Player Tie-Range
 // @namespace    rashinban2026
-// @version      0.3.5
+// @version      0.3.6
 // @description  Player HP, multipliers and Pinpointing Duels points for RASHINBAN's rules. Automatically detects Moving duels above 50,000 starting HP.
 // @match        https://www.geoguessr.com/*
 // @run-at       document-start

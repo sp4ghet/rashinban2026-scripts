@@ -38,14 +38,31 @@ test('a double 5K scores one point for the earlier guess', () => {
   assert.equal(output.rounds[0].fiveKs, 2);
 });
 
-test('a double 5K with equal or unknown guess times scores nothing', () => {
-  for (const [blueAt, redAt] of [[1000, 1000], [null, 1000], [1000, null], [null, null]] as const) {
+test('a double 5K with equal guess times or neither player locked in scores nothing', () => {
+  for (const [blueAt, redAt] of [[1000, 1000], [null, null]] as const) {
     const output = foldPinpointing(input([[5000, 5000, blueAt, redAt]]));
     assert.deepEqual(output.rounds[0].points, [0, 0]);
     assert.equal(output.rounds[0].reason, 'fastest-5k');
     assert.equal(output.rounds[0].winner, null);
   }
 });
+
+for (const mode of ['off', 'full', 'half'] as const) {
+  test(`a double 5K awards one point to the only locked-in player with tie range ${mode}`, () => {
+    for (const [blueAt, redAt, points, winner] of [
+      [0, null, [1, 0], 0],
+      [null, 1000, [0, 1], 1],
+    ] as const) {
+      const output = foldPinpointing(input([[5000, 5000, blueAt, redAt]], mode));
+      assert.deepEqual(output.rounds[0].points, points);
+      assert.deepEqual(output.totals, points);
+      assert.equal(output.rounds[0].winner, winner);
+      assert.equal(output.rounds[0].reason, 'fastest-5k');
+      assert.equal(output.rounds[0].fiveKs, 2);
+      assert.equal(output.rounds[0].withinBand, false);
+    }
+  });
+}
 
 test('the closer guess scores one point without tie range', () => {
   const output = foldPinpointing(input([[4000, 4001]]));

@@ -87,7 +87,9 @@ export function foldPinpointing(input: PinpointingInput): PinpointingOutput {
     if (fiveKs === 2) {
       reason = 'fastest-5k';
       const [blueAt, redAt] = settled.guessedAtMs;
-      if (blueAt !== null && redAt !== null && blueAt !== redAt) winner = blueAt < redAt ? 0 : 1;
+      // A deliberate lock-in beats a timeout 5K; neither lock-in (or equal times) is a tie.
+      if (blueAt !== null && (redAt === null || blueAt < redAt)) winner = 0;
+      else if (redAt !== null && (blueAt === null || redAt < blueAt)) winner = 1;
       if (winner !== null) points[winner] = 1;
     } else if (fiveKs === 1) {
       reason = 'solo-5k';
