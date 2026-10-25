@@ -1,6 +1,7 @@
 import type { ResolvedSide } from "../match/state.ts";
 import { matchProfile } from "../match/identity.ts";
 import type { PlayerProfile } from "../sheet/players.ts";
+import { playerInfoResults, type InfoResults } from "./player-info.ts";
 import type { StartggBracket } from "../startgg/types.ts";
 
 export type PlayerCardResult = {
@@ -18,16 +19,7 @@ export type PlayerCardResults = {
 const timestamp = (seconds: number | null | undefined): number | null =>
   typeof seconds === "number" && Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null;
 
-/** Latest completed games before the selected match, newest first, across all dates. */
-export function playerCardResults(
-  bracket: StartggBracket | null,
-  player: ResolvedSide,
-  profiles: PlayerProfile[],
-  currentSetId: number | null,
-  limit: 3 | 5,
-  now = Date.now(),
-): PlayerCardResults {
-  if (!bracket) return { rows: [], status: "unavailable" };
+function cardEntrantId(bracket: StartggBracket, player: ResolvedSide, profiles: PlayerProfile[]): number | null {
   let entrantId = player.entrantId ?? player.profile?.startggEntrantId ?? null;
   if (entrantId == null || (Object.keys(bracket.entrants).length > 0 && !bracket.entrants[entrantId])) {
     // Selections (and localized profiles) can retain an obsolete entrant ID
@@ -44,6 +36,20 @@ export function playerCardResults(
       if (candidates.length === 1) entrantId = candidates[0]!.id;
     }
   }
+  return entrantId;
+}
+
+/** Latest completed matches before the selected match, newest first, across all dates. */
+export function playerCardResults(
+  bracket: StartggBracket | null,
+  player: ResolvedSide,
+  profiles: PlayerProfile[],
+  currentSetId: number | null,
+  limit: 3 | 5,
+  now = Date.now(),
+): PlayerCardResults {
+  if (!bracket) return { rows: [], status: "unavailable" };
+  const entrantId = cardEntrantId(bracket, player, profiles);
   if (entrantId == null) return { rows: [], status: "unlinked" };
   const current = currentSetId == null ? undefined : bracket.sets[currentSetId];
   const cutoff = Math.min(now, timestamp(current?.startedAt) ?? timestamp(current?.completedAt) ?? now);
@@ -74,4 +80,20 @@ export function playerCardResults(
     });
   }
   return { rows, status: rows.length ? "ready" : "empty" };
+}
+
+/** Day 1 totals share the recent-match identity and historical cutoff rules. */
+export function playerCardDay1Results(
+  bracket: StartggBracket | null, player: ResolvedSide, profiles: PlayerProfile[],
+  currentSetId: number | null, now = Date.now(),
+): InfoResults {
+  if (!bracket) return playerInfoResults(null, null, profiles);
+  const entrantId = cardEntrantId(bracket, player, profiles);
+  const current = currentSetId == null ? undefined : bracket.sets[currentSetId];
+  const cutoff = Math.min(now, timestamp(current?.startedAt) ?? timestamp(current?.completedAt) ?? now);
+  const sets = Object.fromEntries(Object.entries(bracket.sets).filter(([, set]) => {
+    const completed = timestamp(set.completedAt);
+    return set.id !== currentSetId && completed !== null && completed < cutoff;
+  }));
+  return playerInfoResults({ ...bracket, sets }, entrantId, profiles);
 }

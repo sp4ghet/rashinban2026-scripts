@@ -1,8 +1,10 @@
 // Shared cards: stream shows the selected player; LED shows both.
 import { bindMatch } from "../broadcast/match.ts";
 import type { ResolvedMatch, ResolvedSide } from "../../match/state.ts";
+import { matchProfile } from "../../match/identity.ts";
 import { defaultLayers, type BroadcastOutput, type PlayerCardsLayer } from "../../broadcast/state.ts";
-import { playerCardResults, type PlayerCardResults } from "../../broadcast/player-card-results.ts";
+import { playerCardResults, playerCardDay1Results, type PlayerCardResults } from "../../broadcast/player-card-results.ts";
+import type { InfoRecord, InfoResults } from "../../broadcast/player-info.ts";
 import type { StartggBracket } from "../../startgg/types.ts";
 import type { PlayerProfile } from "../../sheet/players.ts";
 import { REPLICANTS } from "../../types/replicants.ts";
@@ -11,22 +13,36 @@ import { mustQuery, type Layer } from "./layer.ts";
 function cardMarkup(id: string): string {
   return `<div class="pcard" id="${id}">
   <div class="head"><span class="name">TBD</span><span class="twitter"></span></div>
-  <div class="page page-profile">
+  <div class="card-body">
     <div class="pair">
       <div class="field"><span class="label">Age</span><span class="value age"></span></div>
       <div class="field"><span class="label">Rating</span><span class="value rating"></span></div>
     </div>
-    <div class="field"><span><span class="label">Favorite game mode</span></span><span class="value favorite-mode"></span></div>
-    <div class="field"><span><span class="label">Strengths</span></span><span class="value strengths"></span></div>
-  </div>
-  <div class="page page-details profile-only">
-    <div class="field"><span><span class="label">Favorite food</span></span><span class="value favorite-food"></span></div>
-    <div class="field"><span><span class="label">Message</span></span><span class="value message"></span></div>
-  </div>
-  <div class="page page-results">
-    <div class="results-heading"><span class="label">Recent games</span></div>
-    <ol class="result-list"></ol>
-    <div class="results-empty"></div>
+    <div class="page page-profile">
+      <div class="field"><span><span class="label">Favorite game mode</span></span><span class="value favorite-mode"></span></div>
+      <div class="field"><span><span class="label">Strengths</span></span><span class="value strengths"></span></div>
+    </div>
+    <div class="page page-details profile-only">
+      <div class="field"><span><span class="label">Favorite food</span></span><span class="value favorite-food"></span></div>
+      <div class="field"><span><span class="label">Message</span></span><span class="value message"></span></div>
+    </div>
+    <div class="page page-highlights" hidden>
+      <div><span class="label">Career highlights</span></div>
+      <div class="highlights-text"></div>
+    </div>
+    <div class="page page-results">
+      <div class="results-heading"><span class="label">Recent matches</span></div>
+      <ol class="result-list"></ol>
+      <div class="results-empty"></div>
+    </div>
+    <div class="page page-day1">
+      <div><span class="label">Day 1 results</span></div>
+      <div class="records">
+        <div class="record"><span class="record-label">Matches</span><div class="record-value match-record"></div></div>
+        <div class="record"><span class="record-label">Games</span><div class="record-value game-record"></div></div>
+      </div>
+      <div class="day1-empty"></div>
+    </div>
   </div>
 </div>`;
 }
@@ -55,18 +71,42 @@ function renderResults(card: HTMLElement, results: PlayerCardResults) {
   text(card, ".results-empty", empty[results.status]);
 }
 
-function renderCard(card: HTMLElement, side: ResolvedSide | null) {
+function renderDay1(card: HTMLElement, results: InfoResults) {
+  const renderRecord = (selector: string, record: InfoRecord | null) => {
+    const value = mustQuery(card, selector);
+    const count = document.createElement("span"), percent = document.createElement("small");
+    count.textContent = record ? `${record.wins}-${record.losses}` : "—";
+    percent.textContent = record ? ` (${record.percent})` : "";
+    value.replaceChildren(count, percent);
+  };
+  renderRecord(".match-record", results.setRecord);
+  renderRecord(".game-record", results.gameRecord);
+  mustQuery(card, ".records").hidden = results.status !== "ready";
+  text(card, ".day1-empty", { ready: "", unavailable: "Day 1 results unavailable", unlinked: "No tournament results linked", empty: "No recorded Day 1 results" }[results.status]);
+}
+
+function renderCard(card: HTMLElement, side: ResolvedSide | null, profiles: PlayerProfile[]) {
   const profile = side?.profile;
+  const source = side ? matchProfile(profiles, { uid: side.uid, entrantId: side.entrantId, tag: side.tag || profile?.startggTag, name: side.name }).profile : null;
+  const highlights = profile?.extra?.major_tournament?.trim() || source?.extra?.major_tournament?.trim() || "";
+  card.dataset.highlights = String(Boolean(highlights));
+  mustQuery(card, ".page-highlights").hidden = !highlights;
+  text(card, ".highlights-text", highlights);
   card.dataset.missing = side && !profile ? "true" : "false";
   card.dataset.empty = !side || side.name === "TBD" ? "true" : "false";
   text(card, ".name", side?.name || "TBD");
   text(card, ".twitter", side?.handle ? `@${side.handle.replace(/^@/, "")}` : "");
-  text(card, ".age", profile?.age ?? "");
-  text(card, ".rating", profile?.rating ?? "");
-  text(card, ".favorite-mode", profile?.favoriteMode ?? "");
-  text(card, ".strengths", profile?.strengths ?? "");
-  text(card, ".favorite-food", profile?.favoriteFood ?? "");
-  text(card, ".message", profile?.message ?? "");
+  for (const [selector, value] of [["age", profile?.age], ["rating", profile?.rating],
+    ["favorite-mode", profile?.favoriteMode], ["strengths", profile?.strengths],
+    ["favorite-food", profile?.favoriteFood], ["message", profile?.message]]) {
+    const el = mustQuery(card, `.${selector}`);
+    el.textContent = value?.trim() ?? "";
+    el.closest<HTMLElement>(".field")!.hidden = !value?.trim();
+  }
+  for (const selector of [".pair", ".page-profile", ".page-details"]) {
+    const group = mustQuery(card, selector);
+    group.hidden = !group.querySelector(".field:not([hidden])");
+  }
 }
 
 export function mountPlayerCards(host: HTMLElement, output: BroadcastOutput): Layer<PlayerCardsLayer> {
@@ -75,46 +115,30 @@ export function mountPlayerCards(host: HTMLElement, output: BroadcastOutput): La
   const cards = [mustQuery(host, "#card-1"), mustQuery(host, "#card-2")];
   let match: ResolvedMatch | null = null;
   let bracket: StartggBracket | null = null;
-  let profiles: PlayerProfile[] = [];
+  let profiles: PlayerProfile[] = [], sharedProfiles: PlayerProfile[] = [];
   let layer = defaultLayers(output).playerCards;
 
-  // Measure the full profile even in Compact, so its shared fields never jump
-  // when the lower section switches to results. Only surplus spacing shrinks.
-  function fitProfileSpacing() {
-    const kanedaLoaded = Array.from(document.fonts).some(font => font.family.includes("kaneda-gothic") && font.weight === "700" && font.status === "loaded");
-    root.dataset.headingFont = kanedaLoaded ? "kaneda" : "fallback";
-    const page = root.dataset.page;
-    root.dataset.page = "profile";
+  // Natural height handles sparse profiles; tighten spacing before reducing type
+  // only when a long card would extend beyond the Stream or mapped LED frame.
+  function fitCards() {
+    root.dataset.headingFont = Array.from(document.fonts).some(font => font.family.includes("kaneda-gothic") && font.weight === "700" && font.status === "loaded") ? "kaneda" : "fallback";
     for (const card of cards) {
-      if (card.hidden) continue;
-      card.style.removeProperty("--profile-gap");
-      card.style.removeProperty("--profile-head-h");
-      const style = getComputedStyle(card);
-      const scale = parseFloat(style.getPropertyValue("--card-scale"));
-      const gap = parseFloat(getComputedStyle(mustQuery(card, ".page-profile")).rowGap);
+      if (card.hidden || !card.getClientRects().length) continue;
+      for (const prop of ["--section-gap", "--head-height", "--text-scale"]) card.style.removeProperty(prop);
+      const scale = parseFloat(getComputedStyle(card).getPropertyValue("--card-scale"));
+      const maxHeight = 900 * scale;
       const head = mustQuery(card, ".head");
-      let headBounds = head.getBoundingClientRect();
-      const contentBottom = Math.max(...Array.from(head.children, child => child.getBoundingClientRect().bottom));
-      // Keep names inside the solid band even when LED leaves a larger gap
-      // between that band and the profile fields.
-      const bandGap = parseFloat(getComputedStyle(head, "::before").bottom);
-      const clearance = Math.max(28 * scale, bandGap + 8 * scale);
-      const requiredHeadHeight = contentBottom - headBounds.top + clearance;
-      if (requiredHeadHeight > headBounds.height) {
-        card.style.setProperty("--profile-head-h", `${requiredHeadHeight}px`);
-        headBounds = head.getBoundingClientRect();
+      const headerContent = Math.max(...Array.from(head.children, child => child.getBoundingClientRect().bottom)) - head.getBoundingClientRect().top;
+      card.style.setProperty("--head-height", `${Math.max(169 * scale, headerContent + 32 * scale)}px`);
+      if (card.getBoundingClientRect().height <= maxHeight + 1) continue;
+      card.style.setProperty("--head-height", `${headerContent + 24 * scale}px`);
+      for (let gap = 32; gap >= 12 && card.getBoundingClientRect().height > maxHeight + 1; gap -= 4) {
+        card.style.setProperty("--section-gap", `${gap * scale}px`);
       }
-      const bottom = card.getBoundingClientRect().bottom - parseFloat(style.paddingBottom);
-      let overflow = mustQuery(card, ".page-details").getBoundingClientRect().bottom - bottom;
-      if (overflow <= 0) continue;
-      const spare = Math.max(0, headBounds.bottom - contentBottom - clearance);
-      const reduction = Math.min(spare, overflow);
-      card.style.setProperty("--profile-head-h", `${headBounds.height - reduction}px`);
-      overflow -= reduction;
-      // Two upper gaps, the details margin, and the gap between food/message.
-      if (overflow > 0) card.style.setProperty("--profile-gap", `${Math.max(0, gap - Math.ceil(overflow / 4))}px`);
+      for (let size = 95; size >= 60 && card.getBoundingClientRect().height > maxHeight + 1; size -= 5) {
+        card.style.setProperty("--text-scale", (size / 100).toFixed(2));
+      }
     }
-    root.dataset.page = page;
   }
 
   function render() {
@@ -127,21 +151,27 @@ export function mountPlayerCards(host: HTMLElement, output: BroadcastOutput): La
       const card = cards[index]!;
       const side = match?.[sideName] ?? null;
       card.hidden = output !== "led" && layer.player !== sideName;
-      renderCard(card, side);
-      const results: PlayerCardResults = side && layer.visible && !card.hidden && layer.page !== "profile"
-        ? playerCardResults(bracket, side, profiles, match?.setId ?? null, layer.page === "compact" ? 3 : 5, now)
-        : { rows: [], status: "empty" };
-      renderResults(card, results);
+      renderCard(card, side, sharedProfiles);
+      const showResults = side && layer.visible && !card.hidden && layer.page !== "profile";
+      renderResults(card, showResults && layer.page === "stats"
+        ? playerCardResults(bracket, side, profiles, match?.setId ?? null, 5, now)
+        : { rows: [], status: "empty" });
+      renderDay1(card, showResults ? playerCardDay1Results(bracket, side, profiles, match?.setId ?? null, now)
+        : { rows: [], status: "empty", placement: "", setRecord: null, gameRecord: null });
     }
-    fitProfileSpacing();
+    fitCards();
   }
 
   bindMatch(value => { match = value; render(); }, output === "en");
   nodecg.Replicant<StartggBracket | null>(REPLICANTS.startggBracket).on("change", value => { bracket = value ?? null; render(); });
-  nodecg.Replicant<PlayerProfile[]>(output === "en" ? REPLICANTS.playersEn : REPLICANTS.players).on("change", value => { profiles = value ?? []; render(); });
-  // Adobe and the Japanese fallback may finish loading after the first render.
-  document.fonts.ready.then(fitProfileSpacing);
-  document.fonts.addEventListener("loadingdone", fitProfileSpacing);
+  nodecg.Replicant<PlayerProfile[]>(REPLICANTS.players).on("change", value => {
+    sharedProfiles = value ?? [];
+    if (output !== "en") profiles = sharedProfiles;
+    render();
+  });
+  if (output === "en") nodecg.Replicant<PlayerProfile[]>(REPLICANTS.playersEn).on("change", value => { profiles = value ?? []; render(); });
+  document.fonts.ready.then(fitCards);
+  document.fonts.addEventListener("loadingdone", fitCards);
   render();
   return { apply(next) { layer = next; render(); } };
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { playerCardResults } from "../player-card-results.ts";
+import { playerCardResults, playerCardDay1Results } from "../player-card-results.ts";
 import type { BracketSet, StartggBracket } from "../../startgg/types.ts";
 import { emptyMatch, resolveMatch } from "../../match/state.ts";
 import { rowToProfile } from "../../sheet/players.ts";
@@ -117,4 +117,29 @@ test("an obsolete sheet ID can fall back to a unique current tag but not an ambi
   assert.equal(playerCardResults(b, side, [profile], null, 5, now).status, "ready");
   b.entrants[30] = { ...b.entrants[10]!, id: 30 };
   assert.equal(playerCardResults(b, side, [profile], null, 5, now).status, "unlinked");
+});
+function day1Bracket(sets: BracketSet[]): StartggBracket {
+  return { ...bracket(sets), phases: [
+    { id: 1, name: "DAY 1", order: 1, groupIds: [1], bracketType: null, groupCount: 1, numSeeds: null, state: null },
+    { id: 2, name: "DAY 2", order: 2, groupIds: [2], bracketType: null, groupCount: 1, numSeeds: null, state: null },
+  ] };
+}
+
+test("Day 1 records include every eligible match, independent of the five recent matches", () => {
+  const sets = Array.from({ length: 8 }, (_, i) => set(i + 1, "2026-10-11T02:00:00Z"));
+  sets[7]!.winnerEntrantId = 20;
+  sets[7]!.slots[0]!.score = 0; sets[7]!.slots[1]!.score = 2;
+  const day2 = set(20, "2026-10-12T02:00:00Z", { groupId: 2, phaseId: 2 });
+  const result = playerCardDay1Results(day1Bracket([...sets, day2]), player, [], null, now);
+  assert.deepEqual(result.setRecord, { wins: 7, losses: 1, percent: "87.5%" });
+  assert.deepEqual(result.gameRecord, { wins: 14, losses: 2, percent: "87.5%" });
+});
+
+test("Day 1 records use the corrected sheet identity and exclude current and future matches", () => {
+  const profile = rowToProfile({ startgg_entrant_id: "10", startgg_tag: "Player", geoguessr_player_uid: "64179ee2585e69f92ec514fc" });
+  const side = { ...player, uid: profile.geoguessrPlayerUid, entrantId: 999, profile: { ...profile, startggEntrantId: 999 } };
+  const b = day1Bracket([set(1, "2026-10-10T02:00:00Z"), set(2, "2026-10-11T02:00:00Z"), set(3, "2026-10-12T02:00:00Z")]);
+  assert.deepEqual(playerCardDay1Results(b, side, [profile], 2, now).setRecord, { wins: 1, losses: 0, percent: "100.0%" });
+  assert.equal(playerCardDay1Results(null, side, [profile], null, now).status, "unavailable");
+  assert.equal(playerCardDay1Results(b, { ...player, entrantId: null }, [], null, now).status, "unlinked");
 });
